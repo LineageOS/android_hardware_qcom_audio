@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2014, 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2017-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -21,7 +21,7 @@
 //#define LOG_NDEBUG 0
 
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include <audio_effects/effect_environmentalreverb.h>
@@ -467,7 +467,6 @@ int reverb_get_parameter(effect_context_t *context, effect_param_t *p,
     int32_t param = *param_tmp++;
     void *value = p->data + voffset;
     reverb_settings_t *reverb_settings;
-    int i;
 
     ALOGV("%s: ctxt %p, param %d", __func__, reverb_ctxt, param);
 
@@ -697,10 +696,8 @@ int reverb_set_device(effect_context_t *context, uint32_t device)
     return 0;
 }
 
-int reverb_reset(effect_context_t *context)
+int reverb_reset(effect_context_t *context __unused)
 {
-    reverb_context_t *reverb_ctxt = (reverb_context_t *)context;
-
     return 0;
 }
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -26,12 +26,14 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#define LOG_TAG "split_a2dp"
+#define LOG_TAG "a2dp_offload"
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
 #include <errno.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <dlfcn.h>
+#include <pthread.h>
+#include <vndfwk-detect.h>
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
@@ -48,9 +50,9 @@
 #include <log_utils.h>
 #endif
 
-#ifdef SPLIT_A2DP_ENABLED
 #define AUDIO_PARAMETER_A2DP_STARTED "A2dpStarted"
 #define BT_IPC_SOURCE_LIB_NAME  "libbthost_if.so"
+#define BT_IPC_SOURCE_LIB_NAME_QTI "libbthost_if_qti.so"
 #define BT_IPC_SINK_LIB_NAME    "libbthost_if_sink.so"
 #define MEDIA_FMT_NONE                                     0
 #define MEDIA_FMT_AAC                                      0x00010DA6
@@ -93,6 +95,7 @@
 #define MIXER_ENC_FMT_APTX         "APTX"
 #define MIXER_FMT_TWS_CHANNEL_MODE "TWS Channel Mode"
 #define MIXER_ENC_FMT_APTXHD       "APTXHD"
+#define MIXER_END_FMT_LDAC         "LDAC"
 #define MIXER_ENC_FMT_NONE         "NONE"
 #define ENCODER_LATENCY_SBC        10
 #define ENCODER_LATENCY_APTX       40
@@ -101,6 +104,7 @@
 //To Do: Fine Tune Encoder CELT/LDAC latency.
 #define ENCODER_LATENCY_CELT       40
 #define ENCODER_LATENCY_LDAC       40
+#define ENCODER_LATENCY_PCM        50
 #define DEFAULT_SINK_LATENCY_SBC       140
 #define DEFAULT_SINK_LATENCY_APTX      160
 #define DEFAULT_SINK_LATENCY_APTX_HD   180
@@ -108,6 +112,17 @@
 //To Do: Fine Tune Default CELT/LDAC Latency.
 #define DEFAULT_SINK_LATENCY_CELT      180
 #define DEFAULT_SINK_LATENCY_LDAC      180
+#define DEFAULT_SINK_LATENCY_PCM       140
+
+#define SYSPROP_A2DP_OFFLOAD_SUPPORTED "ro.bluetooth.a2dp_offload.supported"
+#define SYSPROP_A2DP_OFFLOAD_DISABLED  "persist.bluetooth.a2dp_offload.disabled"
+#define SYSPROP_A2DP_CODEC_LATENCIES   "vendor.audio.a2dp.codec.latency"
+
+// Default encoder bit width
+#define DEFAULT_ENCODER_BIT_FORMAT 16
+
+// Default encoder latency
+#define DEFAULT_ENCODER_LATENCY    200
 
 // Slimbus Tx sample rate for ABR feedback channel
 #define ABR_TX_SAMPLE_RATE             "KHZ_8"
@@ -146,6 +161,7 @@ typedef enum {
     CODEC_TYPE_LDAC = AUDIO_FORMAT_LDAC, // 0x23000000UL
     CODEC_TYPE_CELT = 603979776u, // 0x24000000UL
     CODEC_TYPE_APTX_AD = 620756992u, // 0x25000000UL
+    CODEC_TYPE_PCM = AUDIO_FORMAT_PCM_16_BIT, // 0x1u
 }codec_t;
 
 /*
@@ -212,6 +228,10 @@ typedef enum {
     MTU_SIZE,
     PEAK_BIT_RATE,
 } frame_control_type_t;
+
+// --- external function dependency ---
+fp_platform_get_pcm_device_id_t fp_platform_get_pcm_device_id;
+fp_check_a2dp_restore_t fp_check_a2dp_restore;
 
 /* PCM config for ABR Feedback hostless front end */
 static struct pcm_config pcm_config_abr = {
@@ -605,6 +625,7 @@ typedef struct {
     uint32_t sampling_rate;
     uint32_t bitrate;
     uint32_t bits_per_sample;
+    struct aac_frame_size_control_t frame_ctl;
 } audio_aac_encoder_config;
 #endif
 
@@ -667,60 +688,15 @@ typedef struct {
 
 /*********** END of DSP configurable structures ********************/
 
-/* API to identify DSP encoder captabilities */
-static void a2dp_offload_codec_cap_parser(char *value)
-{
-    char *tok = NULL,*saveptr;
-
-    tok = strtok_r(value, "-", &saveptr);
-    while (tok != NULL) {
-        if (strcmp(tok, "sbc") == 0) {
-            ALOGD("%s: SBC offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
-            break;
-        } else if (strcmp(tok, "aptx") == 0) {
-            ALOGD("%s: aptx offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
-            break;
-        } else if (strcmp(tok, "aptxtws") == 0) {
-            ALOGD("%s: aptx dual mono offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
-            break;
-        } else if (strcmp(tok, "aptxhd") == 0) {
-            ALOGD("%s: aptx HD offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
-            break;
-        } else if (strcmp(tok, "aac") == 0) {
-            ALOGD("%s: aac offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
-            break;
-        } else if (strcmp(tok, "celt") == 0) {
-            ALOGD("%s: celt offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
-            break;
-        } else if (strcmp(tok, "ldac") == 0) {
-            ALOGD("%s: ldac offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
-            break;
-        } else if( strcmp(tok, "aptxadaptive") == 0) {
-            ALOGD("%s: aptx adaptive offload supported\n",__func__);
-            a2dp.is_a2dp_offload_supported = true;
-        }
-        tok = strtok_r(NULL, "-", &saveptr);
-    };
-}
-
 static void update_offload_codec_capabilities()
 {
-    char value[PROPERTY_VALUE_MAX] = {'\0'};
 
-    property_get("persist.vendor.bt.a2dp_offload_cap", value, "false");
-    ALOGD("get_offload_codec_capabilities = %s",value);
     a2dp.is_a2dp_offload_supported =
-            property_get_bool("persist.vendor.bt.a2dp_offload_cap", false);
-    if (strcmp(value, "false") != 0)
-        a2dp_offload_codec_cap_parser(value);
-    ALOGD("%s: codec cap = %s",__func__,value);
+            property_get_bool(SYSPROP_A2DP_OFFLOAD_SUPPORTED, false) &&
+            !property_get_bool(SYSPROP_A2DP_OFFLOAD_DISABLED, false);
+
+    ALOGD("%s: A2DP offload supported = %d",__func__,
+          a2dp.is_a2dp_offload_supported);
 }
 
 static int stop_abr()
@@ -811,7 +787,7 @@ static int start_abr()
     }
 
     // Open hostless front end and prepare ABR Tx path
-    abr_device_id = platform_get_pcm_device_id(USECASE_AUDIO_A2DP_ABR_FEEDBACK,
+    abr_device_id = fp_platform_get_pcm_device_id(USECASE_AUDIO_A2DP_ABR_FEEDBACK,
                                                PCM_CAPTURE);
     if (!a2dp.abr_config.abr_tx_handle) {
         a2dp.abr_config.abr_tx_handle = pcm_open(a2dp.adev->snd_card,
@@ -840,41 +816,50 @@ static void open_a2dp_source()
     int ret = 0;
 
     ALOGD(" Open A2DP source start ");
-    if (a2dp.bt_lib_source_handle == NULL){
-        ALOGD(" Requesting for BT lib handle");
-        a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME, RTLD_NOW);
-
-        if (a2dp.bt_lib_source_handle == NULL) {
-            ALOGE("%s: DLOPEN failed for %s", __func__, BT_IPC_SOURCE_LIB_NAME);
-            ret = -ENOSYS;
-            goto init_fail;
+    if (a2dp.bt_lib_source_handle == NULL) {
+        if(!isRunningWithVendorEnhancedFramework()) {
+            ALOGD(" Requesting for BT lib handle");
+            a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME, RTLD_NOW);
+            if (a2dp.bt_lib_source_handle == NULL) {
+                ALOGE("%s: DLOPEN failed for %s", __func__, BT_IPC_SOURCE_LIB_NAME);
+                ret = -ENOSYS;
+                goto init_fail;
+            }
         } else {
-            a2dp.audio_source_open = (audio_source_open_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_stream_open");
-            a2dp.audio_source_start = (audio_source_start_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_start_stream");
-            a2dp.audio_get_enc_config = (audio_get_enc_config_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_get_codec_config");
-            a2dp.audio_source_suspend = (audio_source_suspend_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_suspend_stream");
-            a2dp.audio_source_handoff_triggered = (audio_source_handoff_triggered_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_handoff_triggered");
-            a2dp.clear_source_a2dpsuspend_flag = (clear_source_a2dpsuspend_flag_t)
-                          dlsym(a2dp.bt_lib_source_handle, "clear_a2dpsuspend_flag");
-            a2dp.audio_source_stop = (audio_source_stop_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_stop_stream");
-            a2dp.audio_source_close = (audio_source_close_t)
-                          dlsym(a2dp.bt_lib_source_handle, "audio_stream_close");
-            a2dp.audio_source_check_a2dp_ready = (audio_source_check_a2dp_ready_t)
-                        dlsym(a2dp.bt_lib_source_handle,"audio_check_a2dp_ready");
-            a2dp.audio_sink_get_a2dp_latency = (audio_sink_get_a2dp_latency_t)
-                        dlsym(a2dp.bt_lib_source_handle,"audio_sink_get_a2dp_latency");
-            a2dp.audio_is_source_scrambling_enabled = (audio_is_source_scrambling_enabled_t)
-                        dlsym(a2dp.bt_lib_source_handle,"audio_is_scrambling_enabled");
-           a2dp.audio_is_tws_mono_mode_enable = (audio_is_tws_mono_mode_enable_t)
-                        dlsym(a2dp.bt_lib_source_handle,"isTwsMonomodeEnable");
+            ALOGD(" Requesting for BT QTI lib handle");
+            a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME_QTI, RTLD_NOW);
+            if (a2dp.bt_lib_source_handle == NULL) {
+                ALOGE("%s: DLOPEN failed for %s", __func__, BT_IPC_SOURCE_LIB_NAME_QTI);
+                ret = -ENOSYS;
+                goto init_fail;
+            }
         }
     }
+
+    a2dp.audio_source_open = (audio_source_open_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_stream_open");
+    a2dp.audio_source_start = (audio_source_start_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_start_stream");
+    a2dp.audio_get_enc_config = (audio_get_enc_config_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_get_codec_config");
+    a2dp.audio_source_suspend = (audio_source_suspend_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_suspend_stream");
+    a2dp.audio_source_handoff_triggered = (audio_source_handoff_triggered_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_handoff_triggered");
+    a2dp.clear_source_a2dpsuspend_flag = (clear_source_a2dpsuspend_flag_t)
+                  dlsym(a2dp.bt_lib_source_handle, "clear_a2dpsuspend_flag");
+    a2dp.audio_source_stop = (audio_source_stop_t)
+                   dlsym(a2dp.bt_lib_source_handle, "audio_stop_stream");
+    a2dp.audio_source_close = (audio_source_close_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_stream_close");
+    a2dp.audio_source_check_a2dp_ready = (audio_source_check_a2dp_ready_t)
+                  dlsym(a2dp.bt_lib_source_handle,"audio_check_a2dp_ready");
+    a2dp.audio_sink_get_a2dp_latency = (audio_sink_get_a2dp_latency_t)
+                  dlsym(a2dp.bt_lib_source_handle,"audio_sink_get_a2dp_latency");
+    a2dp.audio_is_source_scrambling_enabled = (audio_is_source_scrambling_enabled_t)
+                  dlsym(a2dp.bt_lib_source_handle,"audio_is_scrambling_enabled");
+    a2dp.audio_is_tws_mono_mode_enable = (audio_is_tws_mono_mode_enable_t)
+                   dlsym(a2dp.bt_lib_source_handle,"isTwsMonomodeEnable");
 
     if (a2dp.bt_lib_source_handle && a2dp.audio_source_open) {
         if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED) {
@@ -1024,6 +1009,11 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
          (a2dp.bt_decoder_format == AUDIO_FORMAT_AAC)) &&
         (sampling_rate == 48000 || sampling_rate == 44100 )) {
         sampling_rate = sampling_rate *2;
+    }
+
+    // No need to configure backend for PCM format.
+    if (a2dp.bt_encoder_format == CODEC_TYPE_PCM) {
+        return 0;
     }
 
     //Configure backend sampling rate
@@ -2168,6 +2158,11 @@ bool configure_a2dp_encoder_format()
                  configure_a2dp_source_decoder_format(MEDIA_FMT_APTX_AD));
             break;
 #endif
+        case CODEC_TYPE_PCM:
+            ALOGD("Received PCM format for BT device");
+            a2dp.bt_encoder_format = CODEC_TYPE_PCM;
+            is_configured = true;
+            break;
         default:
             ALOGD(" Received Unsupported encoder formar");
             is_configured = false;
@@ -2176,11 +2171,11 @@ bool configure_a2dp_encoder_format()
     return is_configured;
 }
 
-int audio_extn_a2dp_start_playback()
+int a2dp_start_playback()
 {
     int ret = 0;
 
-    ALOGD("audio_extn_a2dp_start_playback start");
+    ALOGD("a2dp_start_playback start");
 
     if(!(a2dp.bt_lib_source_handle && a2dp.audio_source_start
        && a2dp.audio_get_enc_config)) {
@@ -2228,7 +2223,7 @@ int audio_extn_a2dp_start_playback()
     return ret;
 }
 
-uint64_t audio_extn_a2dp_get_decoder_latency()
+uint64_t a2dp_get_decoder_latency()
 {
     uint32_t latency = 0;
 
@@ -2251,7 +2246,7 @@ bool a2dp_send_sink_setup_complete(void) {
     uint64_t system_latency = 0;
     bool is_complete = false;
 
-    system_latency = audio_extn_a2dp_get_decoder_latency();
+    system_latency = a2dp_get_decoder_latency();
 
     if (a2dp.audio_sink_session_setup_complete(system_latency) == 0) {
         is_complete = true;
@@ -2259,11 +2254,22 @@ bool a2dp_send_sink_setup_complete(void) {
     return is_complete;
 }
 
-int audio_extn_a2dp_start_capture()
+bool a2dp_sink_is_ready()
+{
+    bool ret = false;
+
+    if ((a2dp.bt_state_sink != A2DP_STATE_DISCONNECTED) &&
+        (a2dp.is_a2dp_offload_supported) &&
+        (a2dp.audio_sink_check_a2dp_ready))
+           ret = a2dp.audio_sink_check_a2dp_ready();
+    return ret;
+}
+
+int a2dp_start_capture()
 {
     int ret = 0;
 
-    ALOGD("audio_extn_a2dp_start_capture start");
+    ALOGD("a2dp_start_capture start");
 
     if(!(a2dp.bt_lib_sink_handle && a2dp.audio_sink_start
        && a2dp.audio_get_dec_config)) {
@@ -2281,7 +2287,7 @@ int audio_extn_a2dp_start_capture()
            a2dp.a2dp_sink_started = false;
         } else {
 
-           if(!audio_extn_a2dp_sink_is_ready()) {
+           if(!a2dp_sink_is_ready()) {
                 ALOGD("Wait for capture ready not successful");
                 ret = -ETIMEDOUT;
            }
@@ -2318,7 +2324,7 @@ static void reset_a2dp_enc_config_params()
 {
     int ret =0;
 
-    struct mixer_ctl *ctl_enc_config, *ctrl_bit_format, *ctl_channel_mode;
+    struct mixer_ctl *ctl_enc_config, *ctl_channel_mode;
     struct sbc_enc_cfg_t dummy_reset_config;
     char* channel_mode;
 
@@ -2332,16 +2338,9 @@ static void reset_a2dp_enc_config_params()
                                         sizeof(struct sbc_enc_cfg_t));
          a2dp.bt_encoder_format = MEDIA_FMT_NONE;
     }
-    ctrl_bit_format = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                            MIXER_ENC_BIT_FORMAT);
-    if (!ctrl_bit_format) {
-        ALOGE(" ERROR  bit format CONFIG data mixer control not identified");
-    } else {
-        ret = mixer_ctl_set_enum_by_string(ctrl_bit_format, "S16_LE");
-        if (ret != 0) {
-            ALOGE("%s: Failed to set bit format to encoder", __func__);
-        }
-    }
+
+    a2dp_set_bit_format(DEFAULT_ENCODER_BIT_FORMAT);
+
     ctl_channel_mode = mixer_get_ctl_by_name(a2dp.adev->mixer,MIXER_FMT_TWS_CHANNEL_MODE);
 
     if (!ctl_channel_mode) {
@@ -2408,11 +2407,11 @@ static void reset_a2dp_sink_dec_config_params()
     }
 }
 
-int audio_extn_a2dp_stop_playback()
+int a2dp_stop_playback()
 {
     int ret =0;
 
-    ALOGV("audio_extn_a2dp_stop_playback start");
+    ALOGV("a2dp_stop_playback start");
     if(!(a2dp.bt_lib_source_handle && a2dp.audio_source_stop)) {
         ALOGE("a2dp handle is not identified, Ignoring stop request");
         return -ENOSYS;
@@ -2420,6 +2419,8 @@ int audio_extn_a2dp_stop_playback()
 
     if (a2dp.a2dp_source_total_active_session_requests > 0)
         a2dp.a2dp_source_total_active_session_requests--;
+    else
+        ALOGE("%s: No active playback session requests on A2DP", __func__);
 
     if ( a2dp.a2dp_source_started && !a2dp.a2dp_source_total_active_session_requests) {
         ALOGV("calling BT module stream stop");
@@ -2444,11 +2445,11 @@ int audio_extn_a2dp_stop_playback()
     return 0;
 }
 
-int audio_extn_a2dp_stop_capture()
+int a2dp_stop_capture()
 {
     int ret =0;
 
-    ALOGV("audio_extn_a2dp_stop_capture start");
+    ALOGV("a2dp_stop_capture start");
     if(!(a2dp.bt_lib_sink_handle && a2dp.audio_sink_stop)) {
         ALOGE("a2dp handle is not identified, Ignoring stop request");
         return -ENOSYS;
@@ -2474,16 +2475,17 @@ int audio_extn_a2dp_stop_capture()
     return 0;
 }
 
-void audio_extn_a2dp_set_parameters(struct str_parms *parms)
+int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
 {
-     int ret, val;
+     int ret = 0, val, status = 0;
      char value[32]={0};
      struct audio_usecase *uc_info;
      struct listnode *node;
 
      if(a2dp.is_a2dp_offload_supported == false) {
-        ALOGV("no supported codecs identified,ignoring a2dp setparam");
-        return;
+        ALOGV("no supported encoders identified,ignoring a2dp setparam");
+        status = -EINVAL;
+        goto param_handled;
      }
 
      ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value,
@@ -2532,6 +2534,10 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
      if (ret >= 0) {
          if (a2dp.bt_lib_source_handle) {
              if ((!strncmp(value,"true",sizeof(value)))) {
+                if (a2dp.a2dp_source_suspended) {
+                    ALOGD("%s: A2DP is already suspended", __func__);
+                    goto param_handled;
+                }
                 ALOGD("Setting a2dp to suspend state");
                 a2dp.a2dp_source_suspended = true;
                 if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED)
@@ -2541,7 +2547,7 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                     if (uc_info->type == PCM_PLAYBACK &&
                          (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
                         pthread_mutex_unlock(&a2dp.adev->lock);
-                        check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
+                        fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
                         pthread_mutex_lock(&a2dp.adev->lock);
                     }
                 }
@@ -2582,7 +2588,7 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
                     if (uc_info->type == PCM_PLAYBACK &&
                          (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
                         pthread_mutex_unlock(&a2dp.adev->lock);
-                        check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
+                        fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
                         pthread_mutex_lock(&a2dp.adev->lock);
                     }
                 }
@@ -2590,16 +2596,28 @@ void audio_extn_a2dp_set_parameters(struct str_parms *parms)
         }
         goto param_handled;
      }
+
+     ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value,
+                         sizeof(value));
+     if (ret >= 0) {
+         if (a2dp.is_a2dp_offload_supported &&
+                a2dp.bt_state_source != A2DP_STATE_DISCONNECTED) {
+             *reconfig = true;
+         }
+         goto param_handled;
+     }
+
 param_handled:
      ALOGV("end of a2dp setparam");
+     return status;
 }
 
-void audio_extn_a2dp_set_handoff_mode(bool is_on)
+void a2dp_set_handoff_mode(bool is_on)
 {
     a2dp.is_handoff_in_progress = is_on;
 }
 
-bool audio_extn_a2dp_is_force_device_switch()
+bool a2dp_is_force_device_switch()
 {
     //During encoder reconfiguration mode, force a2dp device switch
     // Or if a2dp device is selected but earlier start failed ( as a2dp
@@ -2607,17 +2625,17 @@ bool audio_extn_a2dp_is_force_device_switch()
     return a2dp.is_handoff_in_progress || !a2dp.a2dp_source_started;
 }
 
-void audio_extn_a2dp_get_enc_sample_rate(int *sample_rate)
+void a2dp_get_enc_sample_rate(int *sample_rate)
 {
     *sample_rate = a2dp.enc_sampling_rate;
 }
 
-void audio_extn_a2dp_get_dec_sample_rate(int *sample_rate)
+void a2dp_get_dec_sample_rate(int *sample_rate)
 {
     *sample_rate = a2dp.dec_sampling_rate;
 }
 
-bool audio_extn_a2dp_source_is_ready()
+bool a2dp_source_is_ready()
 {
     bool ret = false;
 
@@ -2631,23 +2649,13 @@ bool audio_extn_a2dp_source_is_ready()
     return ret;
 }
 
-bool audio_extn_a2dp_sink_is_ready()
-{
-    bool ret = false;
-
-    if ((a2dp.bt_state_sink != A2DP_STATE_DISCONNECTED) &&
-        (a2dp.is_a2dp_offload_supported) &&
-        (a2dp.audio_sink_check_a2dp_ready))
-           ret = a2dp.audio_sink_check_a2dp_ready();
-    return ret;
-}
-
-bool audio_extn_a2dp_source_is_suspended()
+bool a2dp_source_is_suspended()
 {
     return a2dp.a2dp_source_suspended;
 }
 
-void audio_extn_a2dp_init (void *adev)
+void a2dp_init(void *adev,
+               a2dp_offload_init_config_t *init_config)
 {
   a2dp.adev = (struct audio_device*)adev;
   a2dp.bt_lib_source_handle = NULL;
@@ -2665,6 +2673,12 @@ void audio_extn_a2dp_init (void *adev)
   a2dp.abr_config.imc_instance = 0;
   a2dp.abr_config.abr_tx_handle = NULL;
   a2dp.is_tws_mono_mode_on = false;
+
+  // init function pointers
+  fp_platform_get_pcm_device_id =
+              init_config->fp_platform_get_pcm_device_id;
+  fp_check_a2dp_restore = init_config->fp_check_a2dp_restore;
+
   reset_a2dp_enc_config_params();
   reset_a2dp_source_dec_config_params();
   reset_a2dp_sink_dec_config_params();
@@ -2679,7 +2693,7 @@ void audio_extn_a2dp_init (void *adev)
   update_offload_codec_capabilities();
 }
 
-uint32_t audio_extn_a2dp_get_encoder_latency()
+uint32_t a2dp_get_encoder_latency()
 {
     uint32_t latency = 0;
     int avsync_runtime_prop = 0;
@@ -2688,7 +2702,7 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
     char value[PROPERTY_VALUE_MAX];
 
     memset(value, '\0', sizeof(char)*PROPERTY_VALUE_MAX);
-    avsync_runtime_prop = property_get("vendor.audio.a2dp.codec.latency", value, NULL);
+    avsync_runtime_prop = property_get(SYSPROP_A2DP_CODEC_LATENCIES, value, NULL);
     if (avsync_runtime_prop > 0) {
         if (sscanf(value, "%d/%d/%d/%d/%d%d",
                   &sbc_offset, &aptx_offset, &aptxhd_offset, &aac_offset, &celt_offset, &ldac_offset) != 6) {
@@ -2730,10 +2744,30 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
         case CODEC_TYPE_APTX_AD: // for aptx adaptive the latency depends on the mode (HQ/LL) and
             latency = slatency;      // BT IPC will take care of accomodating the mode factor and return latency
             break;
+        case CODEC_TYPE_PCM:
+            latency = ENCODER_LATENCY_PCM;
+            latency += DEFAULT_SINK_LATENCY_PCM;
+            break;
         default:
             latency = 200;
             break;
     }
     return latency;
 }
-#endif // SPLIT_A2DP_ENABLED
+
+int a2dp_get_parameters(struct str_parms *query,
+                                   struct str_parms *reply)
+{
+    int ret, val = 0;
+    char value[32]={0};
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_A2DP_RECONFIG_SUPPORTED,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        val = a2dp.is_a2dp_offload_supported;
+        str_parms_add_int(reply, AUDIO_PARAMETER_A2DP_RECONFIG_SUPPORTED, val);
+        ALOGV("%s: called ... isReconfigA2dpSupported %d", __func__, val);
+    }
+
+    return 0;
+}

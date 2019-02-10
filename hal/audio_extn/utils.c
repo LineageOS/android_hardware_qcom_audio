@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <cutils/str_parms.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/misc.h>
 #include <unistd.h>
 
@@ -164,7 +164,6 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_DTS_HD),
     STRING_TO_ENUM(AUDIO_FORMAT_DOLBY_TRUEHD),
     STRING_TO_ENUM(AUDIO_FORMAT_IEC61937),
-#ifdef AUDIO_EXTN_FORMATS_ENABLED
     STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
     STRING_TO_ENUM(AUDIO_FORMAT_WMA),
     STRING_TO_ENUM(AUDIO_FORMAT_WMA_PRO),
@@ -179,7 +178,6 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_FLAC),
     STRING_TO_ENUM(AUDIO_FORMAT_ALAC),
     STRING_TO_ENUM(AUDIO_FORMAT_APE),
-    STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_LC),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V1),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_HE_V2),
@@ -193,7 +191,6 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM_HE_V1),
     STRING_TO_ENUM(AUDIO_FORMAT_AAC_LATM_HE_V2),
     STRING_TO_ENUM(AUDIO_FORMAT_APTX),
-#endif
 };
 
 /* payload structure avt_device drift query */
@@ -894,6 +891,132 @@ void audio_extn_btsco_get_sample_rate(int snd_device, int *sample_rate)
     }
 }
 
+static int set_stream_app_type_mixer_ctrl(struct audio_device *adev,
+                                          int pcm_device_id, int app_type,
+                                          int acdb_dev_id, int sample_rate,
+                                          int stream_type,
+                                          snd_device_t snd_device)
+{
+
+    char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT];
+    struct mixer_ctl *ctl;
+    int app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT], len = 0, rc = 0;
+    int snd_device_be_idx = -1;
+
+    if (stream_type == PCM_PLAYBACK) {
+        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "Audio Stream %d App Type Cfg", pcm_device_id);
+    } else if (stream_type == PCM_CAPTURE) {
+        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "Audio Stream Capture %d App Type Cfg", pcm_device_id);
+    }
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+             __func__, mixer_ctl_name);
+        rc = -EINVAL;
+        goto exit;
+    }
+    app_type_cfg[len++] = app_type;
+    app_type_cfg[len++] = acdb_dev_id;
+    app_type_cfg[len++] = sample_rate;
+
+    snd_device_be_idx = platform_get_snd_device_backend_index(snd_device);
+    if (snd_device_be_idx > 0)
+        app_type_cfg[len++] = snd_device_be_idx;
+    ALOGV("%s: stream type %d app_type %d, acdb_dev_id %d "
+          "sample rate %d, snd_device_be_idx %d",
+          __func__, stream_type, app_type, acdb_dev_id, sample_rate,
+          snd_device_be_idx);
+    mixer_ctl_set_array(ctl, app_type_cfg, len);
+
+exit:
+    return rc;
+}
+
+static int audio_extn_utils_send_app_type_cfg_hfp(struct audio_device *adev,
+                                       struct audio_usecase *usecase)
+{
+    int pcm_device_id, acdb_dev_id = 0, snd_device = usecase->out_snd_device;
+    int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+    int app_type = 0, rc = 0;
+
+    ALOGV("%s", __func__);
+
+    if (usecase->type != PCM_HFP_CALL) {
+        ALOGV("%s: not a playback or HFP path, no need to cfg app type", __func__);
+        rc = 0;
+        goto exit_send_app_type_cfg;
+    }
+    if ((usecase->id != USECASE_AUDIO_HFP_SCO) &&
+        (usecase->id != USECASE_AUDIO_HFP_SCO_WB)) {
+        ALOGV("%s: a playback path where app type cfg is not required", __func__);
+        rc = 0;
+        goto exit_send_app_type_cfg;
+    }
+
+    snd_device = usecase->out_snd_device;
+    pcm_device_id = platform_get_pcm_device_id(usecase->id, PCM_PLAYBACK);
+
+    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
+    if (acdb_dev_id < 0) {
+        ALOGE("%s: Couldn't get the acdb dev id", __func__);
+        rc = -EINVAL;
+        goto exit_send_app_type_cfg;
+    }
+
+    if (usecase->type == PCM_HFP_CALL) {
+
+        /* config HFP session:1 playback path */
+        app_type = platform_get_default_app_type_v2(adev->platform, PCM_PLAYBACK);
+        sample_rate= CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
+                                            acdb_dev_id, sample_rate,
+                                            PCM_PLAYBACK,
+                                            SND_DEVICE_NONE); // use legacy behavior
+        if (rc < 0)
+            goto exit_send_app_type_cfg;
+
+        /* config HFP session:1 capture path */
+        app_type = platform_get_default_app_type_v2(adev->platform, PCM_CAPTURE);
+        rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
+                                            acdb_dev_id, sample_rate,
+                                            PCM_CAPTURE,
+                                            SND_DEVICE_NONE);
+        if (rc < 0)
+            goto exit_send_app_type_cfg;
+
+        /* config HFP session:2 capture path */
+        pcm_device_id = HFP_ASM_RX_TX;
+        snd_device = usecase->in_snd_device;
+        acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
+        if (acdb_dev_id <= 0) {
+            ALOGE("%s: Couldn't get the acdb dev id", __func__);
+            rc = -EINVAL;
+            goto exit_send_app_type_cfg;
+        }
+        app_type = platform_get_default_app_type_v2(adev->platform, PCM_CAPTURE);
+        rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
+                                            acdb_dev_id, sample_rate, PCM_CAPTURE,
+                                            SND_DEVICE_NONE);
+        if (rc < 0)
+            goto exit_send_app_type_cfg;
+
+        /* config HFP session:2 playback path */
+        app_type = platform_get_default_app_type_v2(adev->platform, PCM_PLAYBACK);
+        rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
+                                            acdb_dev_id, sample_rate,
+                                            PCM_PLAYBACK, SND_DEVICE_NONE);
+        if (rc < 0)
+            goto exit_send_app_type_cfg;
+    }
+
+    rc = 0;
+exit_send_app_type_cfg:
+    return rc;
+}
+
 static int send_app_type_cfg_for_device(struct audio_device *adev,
                                         struct audio_usecase *usecase,
                                         int split_snd_device)
@@ -1117,6 +1240,10 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
     snd_device_t new_snd_devices[SND_DEVICE_OUT_END] = {0};
     snd_device_t in_snd_device = usecase->in_snd_device;
     int rc = 0;
+
+    if (usecase->type == PCM_HFP_CALL) {
+        return audio_extn_utils_send_app_type_cfg_hfp(adev, usecase);
+    }
 
     switch (usecase->type) {
     case PCM_PLAYBACK:
@@ -2132,6 +2259,66 @@ int audio_extn_utils_compress_set_start_delay(
 #define MAX_SND_CARD 8
 #define RETRY_US 1000000
 #define RETRY_NUMBER 40
+#define PLATFORM_INFO_XML_PATH          "audio_platform_info.xml"
+#define PLATFORM_INFO_XML_BASE_STRING   "audio_platform_info"
+
+#ifdef LINUX_ENABLED
+static const char *kConfigLocationList[] =
+        {"/etc"};
+#else
+static const char *kConfigLocationList[] =
+        {"/vendor/etc"};
+#endif
+static const int kConfigLocationListSize =
+        (sizeof(kConfigLocationList) / sizeof(kConfigLocationList[0]));
+
+bool audio_extn_utils_resolve_config_file(char file_name[MIXER_PATH_MAX_LENGTH])
+{
+    char full_config_path[MIXER_PATH_MAX_LENGTH];
+    for (int i = 0; i < kConfigLocationListSize; i++) {
+        snprintf(full_config_path,
+                 MIXER_PATH_MAX_LENGTH,
+                 "%s/%s",
+                 kConfigLocationList[i],
+                 file_name);
+        if (F_OK == access(full_config_path, 0)) {
+            strcpy(file_name, full_config_path);
+            return true;
+        }
+    }
+    return false;
+}
+
+/* platform_info_file should be size 'MIXER_PATH_MAX_LENGTH' */
+int audio_extn_utils_get_platform_info(const char* snd_card_name, char* platform_info_file)
+{
+    if (NULL == snd_card_name) {
+        return -1;
+    }
+
+    struct snd_card_split *snd_split_handle = NULL;
+    int ret = 0;
+    audio_extn_set_snd_card_split(snd_card_name);
+    snd_split_handle = audio_extn_get_snd_card_split();
+
+    snprintf(platform_info_file, MIXER_PATH_MAX_LENGTH, "%s_%s_%s.xml",
+                     PLATFORM_INFO_XML_BASE_STRING, snd_split_handle->snd_card,
+                     snd_split_handle->form_factor);
+
+    if (!audio_extn_utils_resolve_config_file(platform_info_file)) {
+        memset(platform_info_file, 0, MIXER_PATH_MAX_LENGTH);
+        snprintf(platform_info_file, MIXER_PATH_MAX_LENGTH, "%s_%s.xml",
+                     PLATFORM_INFO_XML_BASE_STRING, snd_split_handle->snd_card);
+
+        if (!audio_extn_utils_resolve_config_file(platform_info_file)) {
+            memset(platform_info_file, 0, MIXER_PATH_MAX_LENGTH);
+            strlcpy(platform_info_file, PLATFORM_INFO_XML_PATH, MIXER_PATH_MAX_LENGTH);
+            ret = audio_extn_utils_resolve_config_file(platform_info_file) ? 0 : -1;
+        }
+    }
+
+    return ret;
+}
 
 int audio_extn_utils_get_snd_card_num()
 {
@@ -2544,3 +2731,24 @@ struct audio_license_params *license_params
     return platform_get_license_by_product(adev->platform, (const char*)license_params->product, &license_params->key, license_params->license);
 }
 
+int audio_extn_utils_send_app_type_gain(struct audio_device *adev,
+                                        int app_type,
+                                        int *gain)
+{
+    int gain_cfg[4];
+    const char *mixer_ctl_name = "App Type Gain";
+    struct mixer_ctl *ctl;
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get volume ctl mixer %s", __func__,
+              mixer_ctl_name);
+        return -EINVAL;
+    }
+    gain_cfg[0] = 0;
+    gain_cfg[1] = app_type;
+    gain_cfg[2] = gain[0];
+    gain_cfg[3] = gain[1];
+    ALOGV("%s app_type %d l(%d) r(%d)", __func__,  app_type, gain[0], gain[1]);
+    return mixer_ctl_set_array(ctl, gain_cfg,
+                               sizeof(gain_cfg)/sizeof(gain_cfg[0]));
+}

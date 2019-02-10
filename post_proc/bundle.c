@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, 2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -40,7 +40,7 @@
 
 #include <stdlib.h>
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
 #include <hardware/audio_effect.h>
@@ -290,7 +290,6 @@ __attribute__ ((visibility ("default")))
 int offload_effects_bundle_hal_stop_output(audio_io_handle_t output, int pcm_id)
 {
     int ret = -1;
-    struct listnode *node;
     struct listnode *fx_node;
     output_context_t *out_ctxt;
 
@@ -450,7 +449,6 @@ int offload_effects_bundle_set_hpx_state(bool hpx_state)
         }
     }
 
-exit:
     pthread_mutex_unlock(&lock);
     return ret;
 }
@@ -768,7 +766,6 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
 {
 
     effect_context_t * context = (effect_context_t *)self;
-    int retsize;
     int status = 0;
 
     pthread_mutex_lock(&lock);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, 2019 The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -56,7 +56,7 @@
 
 #include <stdbool.h>
 #include <errno.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include <sound/devdep_params.h>
@@ -860,7 +860,6 @@ int offload_soft_volume_send_params(struct mixer_ctl *ctl,
 {
     long param_values[128] = {0};
     long *p_param_values = param_values;
-    uint32_t i;
 
     ALOGV("%s", __func__);
     *p_param_values++ = SOFT_VOLUME_MODULE;
@@ -926,7 +925,6 @@ int offload_transition_soft_volume_send_params(struct mixer_ctl *ctl,
 {
     long param_values[128] = {0};
     long *p_param_values = param_values;
-    uint32_t i;
 
     ALOGV("%s", __func__);
     *p_param_values++ = SOFT_VOLUME2_MODULE;
@@ -969,7 +967,6 @@ static int hpx_send_params(eff_mode_t mode, void *ctl,
 {
     long param_values[128] = {0};
     long *p_param_values = param_values;
-    uint32_t i;
 
     ALOGV("%s", __func__);
     if (!ctl) {

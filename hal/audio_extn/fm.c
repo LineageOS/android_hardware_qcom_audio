@@ -38,7 +38,6 @@
 #include <log_utils.h>
 #endif
 
-#ifdef FM_POWER_OPT
 #define AUDIO_PARAMETER_KEY_HANDLE_FM "handle_fm"
 #define AUDIO_PARAMETER_KEY_FM_VOLUME "fm_volume"
 #define AUDIO_PARAMETER_KEY_REC_PLAY_CONC "rec_play_conc_on"
@@ -251,7 +250,7 @@ exit:
     return ret;
 }
 
-void audio_extn_fm_get_parameters(struct str_parms *query, struct str_parms *reply)
+void fm_get_parameters(struct str_parms *query, struct str_parms *reply)
 {
     int ret, val;
     char value[32]={0};
@@ -264,7 +263,7 @@ void audio_extn_fm_get_parameters(struct str_parms *query, struct str_parms *rep
     }
 }
 
-void audio_extn_fm_set_parameters(struct audio_device *adev,
+void fm_set_parameters(struct audio_device *adev,
                                   struct str_parms *parms)
 {
     int ret, val;
@@ -387,4 +386,3 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
 exit:
     ALOGV("%s: exit", __func__);
 }
-#endif /* FM_POWER_OPT end */

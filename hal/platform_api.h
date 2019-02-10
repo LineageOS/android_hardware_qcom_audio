@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -156,6 +156,9 @@ int platform_start_voice_call(void *platform, uint32_t vsid);
 int platform_stop_voice_call(void *platform, uint32_t vsid);
 int platform_set_mic_break_det(void *platform, bool enable);
 int platform_set_voice_volume(void *platform, int volume);
+void platform_set_speaker_gain_in_combo(struct audio_device *adev,
+                                        snd_device_t snd_device,
+                                        bool enable);
 int platform_set_mic_mute(void *platform, bool state);
 int platform_get_sample_rate(void *platform, uint32_t *rate);
 int platform_set_device_mute(void *platform, bool state, char *dir);
@@ -163,11 +166,21 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
 snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device);
 int platform_set_hdmi_channels(void *platform, int channel_count);
 int platform_edid_get_max_channels(void *platform);
+void platform_add_operator_specific_device(snd_device_t snd_device,
+                                           const char *operator,
+                                           const char *mixer_path,
+                                           unsigned int acdb_id);
 void platform_get_parameters(void *platform, struct str_parms *query,
                              struct str_parms *reply);
 int platform_set_parameters(void *platform, struct str_parms *parms);
 int platform_set_incall_recording_session_id(void *platform, uint32_t session_id,
                                              int rec_mode);
+#ifndef INCALL_STEREO_CAPTURE_ENABLED
+#define platform_set_incall_recording_session_channels(p, sc)  (0)
+#else
+int platform_set_incall_recording_session_channels(void *platform,
+                                                   uint32_t session_channels);
+#endif
 int platform_stop_incall_recording_usecase(void *platform);
 int platform_start_incall_music_usecase(void *platform);
 int platform_stop_incall_music_usecase(void *platform);
@@ -187,6 +200,9 @@ int platform_set_snd_device_backend(snd_device_t snd_device, const char * backen
                                     const char * hw_interface);
 int platform_get_snd_device_backend_index(snd_device_t device);
 const char * platform_get_snd_device_backend_interface(snd_device_t device);
+void platform_add_app_type(const char *uc_type,
+                           const char *mode,
+                           int bw, int app_type, int max_sr);
 
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *, caller_t);

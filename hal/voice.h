@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -23,11 +23,7 @@
 #define BASE_SESS_IDX       0
 #define VOICE_SESS_IDX     (BASE_SESS_IDX)
 
-#ifdef MULTI_VOICE_SESSION_ENABLED
 #define MAX_VOICE_SESSIONS 7
-#else
-#define MAX_VOICE_SESSIONS 1
-#endif
 
 #define BASE_CALL_STATE     1
 #define CALL_INACTIVE       (BASE_CALL_STATE)
@@ -60,6 +56,7 @@ struct voice_session {
 struct voice {
     struct voice_session session[MAX_VOICE_SESSIONS];
     int tty_mode;
+    bool hac;
     bool mic_mute;
     bool use_device_mute;
     float volume;

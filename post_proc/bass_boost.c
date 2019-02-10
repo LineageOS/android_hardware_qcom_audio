@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, 2017-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -21,7 +21,7 @@
 //#define LOG_NDEBUG 0
 
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/properties.h>
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
@@ -98,7 +98,6 @@ int bass_get_parameter(effect_context_t *context, effect_param_t *p,
     int32_t *param_tmp = (int32_t *)p->data;
     int32_t param = *param_tmp++;
     void *value = p->data + voffset;
-    int i;
 
     ALOGV("%s", __func__);
 
@@ -384,18 +383,16 @@ int bassboost_set_device(effect_context_t *context, uint32_t device)
     return 0;
 }
 
-int bassboost_reset(effect_context_t *context)
+int bassboost_reset(effect_context_t *context __unused)
 {
-    bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
-
     return 0;
 }
 
 int bassboost_init(effect_context_t *context)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
-
     ALOGV("%s: ctxt %p", __func__, bass_ctxt);
+
     context->config.inputCfg.accessMode = EFFECT_BUFFER_ACCESS_READ;
     context->config.inputCfg.channels = AUDIO_CHANNEL_OUT_STEREO;
     context->config.inputCfg.format = AUDIO_FORMAT_PCM_16_BIT;
@@ -574,10 +571,8 @@ int pbe_set_device(effect_context_t *context, uint32_t device)
     return 0;
 }
 
-int pbe_reset(effect_context_t *context)
+int pbe_reset(effect_context_t *context __unused)
 {
-    pbe_context_t *pbe_ctxt = (pbe_context_t *)context;
-
     return 0;
 }
 

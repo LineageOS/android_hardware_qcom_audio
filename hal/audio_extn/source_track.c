@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +32,7 @@
 
 #include <errno.h>
 #include <math.h>
-#include <cutils/log.h>
+#include <log/log.h>
 
 #include "audio_hw.h"
 #include "platform.h"
@@ -47,7 +47,6 @@
 #include <log_utils.h>
 #endif
 
-#ifdef SOURCE_TRACKING_ENABLED
 /* Audio Paramater Key to identify the list of start angles.
  * Starting angle (in degrees) defines the boundary starting angle for each sector.
  */
@@ -143,7 +142,7 @@ static bool is_stt_supported_snd_device(snd_device_t snd_device)
     case SND_DEVICE_IN_HANDSET_DMIC_AEC:
     case SND_DEVICE_IN_HANDSET_DMIC_NS:
     case SND_DEVICE_IN_HANDSET_DMIC_AEC_NS:
-    case SND_DEVICE_IN_HANDSET_STEREO_DMIC:
+    case SND_DEVICE_IN_HANDSET_DMIC_STEREO:
     case SND_DEVICE_IN_HANDSET_QMIC:
     case SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO:
     case SND_DEVICE_IN_VOICE_DMIC:
@@ -500,7 +499,7 @@ static void send_soundfocus_sourcetracking_params(struct str_parms *reply,
     }
 }
 
-int audio_extn_get_soundfocus_data(const struct audio_device *adev,
+int get_soundfocus_data(const struct audio_device *adev,
                                    struct sound_focus_param *payload)
 {
     int ret = 0;
@@ -515,7 +514,7 @@ int audio_extn_get_soundfocus_data(const struct audio_device *adev,
     return ret ;
 }
 
-int audio_extn_get_sourcetrack_data(const struct audio_device *adev,
+int get_sourcetrack_data(const struct audio_device *adev,
                               struct source_tracking_param *payload)
 {
     int ret = 0;
@@ -530,7 +529,7 @@ int audio_extn_get_sourcetrack_data(const struct audio_device *adev,
     return ret ;
 }
 
-void audio_extn_source_track_get_parameters(const struct audio_device *adev,
+void source_track_get_parameters(const struct audio_device *adev,
                                             struct str_parms *query,
                                             struct str_parms *reply)
 {
@@ -605,7 +604,7 @@ static int set_source_track_data(struct audio_device *adev,
     return ret;
 }
 
-int audio_extn_set_soundfocus_data(struct audio_device *adev,
+int set_soundfocus_data(struct audio_device *adev,
                               struct sound_focus_param *payload)
 {
     int ret = 0;
@@ -616,7 +615,7 @@ int audio_extn_set_soundfocus_data(struct audio_device *adev,
     return ret ;
 }
 
-void audio_extn_source_track_set_parameters(struct audio_device *adev,
+void source_track_set_parameters(struct audio_device *adev,
                                             struct str_parms *parms)
 {
     int len, ret;
@@ -695,4 +694,3 @@ done:
         free(value);
     return;
 }
-#endif /* SOURCE_TRACKING_ENABLED end */

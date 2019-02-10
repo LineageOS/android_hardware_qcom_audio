@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2017, 2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,11 +31,12 @@
 //#define LOG_NDEBUG 0
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <math.h>
 #include <unistd.h>
 #include <pthread.h>
 
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <hardware/audio_effect.h>
 #include <cutils/properties.h>
 #include <platform_api.h>
@@ -62,6 +63,7 @@
 
 #define AHAL_GAIN_DEPENDENT_INTERFACE_FUNCTION "audio_hw_send_gain_dep_calibration"
 #define AHAL_GAIN_GET_MAPPING_TABLE "audio_hw_get_gain_level_mapping"
+#define DEFAULT_CAL_STEP 0
 
 #ifdef AUDIO_FEATURE_ENABLED_GCOV
 extern void  __gcov_flush();
@@ -224,15 +226,22 @@ struct listnode vol_effect_list;
 /* lock must be held when modifying or accessing created_effects_list */
 pthread_mutex_t vol_listner_init_lock;
 
+static bool headset_cal_enabled;
+
 /*
  *  Local functions
  */
 static bool verify_context(vol_listener_context_t *context)
 {
-    if (context->stream_type == VC_CALL)
+    if (context->stream_type == VC_CALL &&
+        headset_cal_enabled &&
+        (context->dev_id == AUDIO_DEVICE_OUT_EARPIECE ||
+        context->dev_id == AUDIO_DEVICE_OUT_WIRED_HEADSET ||
+        context->dev_id == AUDIO_DEVICE_OUT_WIRED_HEADPHONE))
         return true;
     else {
-        if (context->dev_id & AUDIO_DEVICE_OUT_SPEAKER)
+        if (context->dev_id & AUDIO_DEVICE_OUT_SPEAKER ||
+            context->dev_id & AUDIO_DEVICE_OUT_SPEAKER_SAFE)
             return true;
         else
             return false;
@@ -266,12 +275,13 @@ static void check_and_set_gain_dep_cal()
 {
     // iterate through list and make decision to set new gain dep cal level for speaker device
     // 1. find all usecase active on speaker
-    // 2. find average of left and right for each usecase
+    // 2. find energy sum for each usecase
     // 3. find the highest of all the active usecase
     // 4. if new value is different than the current value then load new calibration
 
     struct listnode *node = NULL;
-    float new_vol = 0.0;
+    float new_vol = -1.0, sum_energy = 0.0, temp_vol = 0.0;
+    bool sum_energy_used = false;
     int max_level = 0;
     vol_listener_context_t *context = NULL;
     if (dumping_enabled) {
@@ -280,14 +290,19 @@ static void check_and_set_gain_dep_cal()
 
     ALOGV("%s ==> Start ...", __func__);
 
-    // select the highest volume on speaker device
+    // compute energy sum for the active speaker device (pick loudest of both channels)
     list_for_each(node, &vol_effect_list) {
         context = node_to_item(node, struct vol_listener_context_s, effect_list_node);
         if ((context->state == VOL_LISTENER_STATE_ACTIVE) &&
-            verify_context(context) &&
-            (new_vol < (context->left_vol + context->right_vol) / 2)) {
-            new_vol = (context->left_vol + context->right_vol) / 2;
+            verify_context(context)) {
+            sum_energy_used = true;
+            temp_vol = fmax(context->left_vol, context->right_vol);
+            sum_energy += temp_vol * temp_vol;
         }
+    }
+
+    if (sum_energy_used) {
+        new_vol = fmin(sqrt(sum_energy), 1.0);
     }
 
     if (new_vol != current_vol) {
@@ -300,7 +315,9 @@ static void check_and_set_gain_dep_cal()
 
             if (new_vol >= 1 && total_volume_cal_step > 0) { // max amplitude, use highest DRC level
                 gain_dep_cal_level = volume_curve_gain_mapping_table[total_volume_cal_step - 1].level;
-            } else if (new_vol <= 0) {
+            } else if (new_vol == -1) {
+                gain_dep_cal_level = DEFAULT_CAL_STEP;
+            } else if (new_vol == 0) {
                 gain_dep_cal_level = volume_curve_gain_mapping_table[0].level;
             } else {
                 for (max_level = 0; max_level + 1 < total_volume_cal_step; max_level++) {
@@ -430,7 +447,9 @@ static int vol_effect_command(effect_handle_t self,
             ALOGE("%s: EFFECT_CMD_INIT: %s, sending -EINVAL", __func__,
                   (p_reply_data == NULL) ? "p_reply_data is NULL" :
                   "*reply_size != sizeof(int)");
-            return -EINVAL;
+            android_errorWriteLog(0x534e4554, "32669549");
+            status = -EINVAL;
+            goto exit;
         }
         *(int *)p_reply_data = 0;
         break;
@@ -439,7 +458,9 @@ static int vol_effect_command(effect_handle_t self,
         ALOGV("%s :: cmd called EFFECT_CMD_SET_CONFIG", __func__);
         if (p_cmd_data == NULL || cmd_size != sizeof(effect_config_t)
                 || p_reply_data == NULL || reply_size == NULL || *reply_size != sizeof(int)) {
-            return -EINVAL;
+            android_errorWriteLog(0x534e4554, "32669549");
+            status = -EINVAL;
+            goto exit;
         }
         context->config = *(effect_config_t *)p_cmd_data;
         *(int *)p_reply_data = 0;
@@ -463,7 +484,9 @@ static int vol_effect_command(effect_handle_t self,
             ALOGE("%s: EFFECT_CMD_OFFLOAD: %s, sending -EINVAL", __func__,
                   (p_reply_data == NULL) ? "p_reply_data is NULL" :
                   "*reply_size != sizeof(int)");
-            return -EINVAL;
+            android_errorWriteLog(0x534e4554, "32669549");
+            status = -EINVAL;
+            goto exit;
         }
         *(int *)p_reply_data = 0;
         break;
@@ -547,13 +570,10 @@ static int vol_effect_command(effect_handle_t self,
                    __func__, context->dev_id, new_device);
 
             // check if old or new device is speaker for playback usecase
-            if (context->stream_type == VC_CALL)
+            if (verify_context(context) ||
+                new_device & AUDIO_DEVICE_OUT_SPEAKER ||
+                new_device & AUDIO_DEVICE_OUT_SPEAKER_SAFE)
                 recompute_gain_dep_cal_Level = true;
-            else {
-                if (context->dev_id & AUDIO_DEVICE_OUT_SPEAKER ||
-                    new_device & AUDIO_DEVICE_OUT_SPEAKER)
-                    recompute_gain_dep_cal_Level = true;
-            }
 
             context->dev_id = new_device;
 
@@ -692,9 +712,15 @@ static void init_once()
     // check system property to see if dumping is required
     char check_dump_val[PROPERTY_VALUE_MAX];
     property_get("vendor.audio.volume.listener.dump", check_dump_val, "0");
-    if (atoi(check_dump_val)) {
+    if (atoi(check_dump_val))
         dumping_enabled = true;
+    else {
+        property_get("audio.volume.listener.dump", check_dump_val, "0");
+        if (atoi(check_dump_val))
+            dumping_enabled = true;
     }
+    headset_cal_enabled = property_get_bool(
+                            "audio.volume.headset.gain.depcal", false);
 
     init_status = 0;
     list_init(&vol_effect_list);
@@ -773,7 +799,7 @@ static int vol_prc_lib_create(const effect_uuid_t *uuid,
 
 static int vol_prc_lib_release(effect_handle_t handle)
 {
-    struct listnode *node = NULL;
+    struct listnode *node = NULL, *temp_node_next;
     vol_listener_context_t *context = NULL;
     vol_listener_context_t *recv_contex = (vol_listener_context_t *)handle;
     int status = -EINVAL;
@@ -791,10 +817,18 @@ static int vol_prc_lib_release(effect_handle_t handle)
     pthread_mutex_lock(&vol_listner_init_lock);
     session_id = recv_contex->session_id;
     stream_type = recv_contex->stream_type;
+
+    if (recv_contex->desc == NULL) {
+        ALOGE("%s: Got NULL descriptor, session %u, stream type %u",
+                __func__, session_id, stream_type);
+        dump_list_l();
+        pthread_mutex_unlock(&vol_listner_init_lock);
+        return status;
+    }
     uuid = recv_contex->desc->uuid;
 
     // check if the handle/context provided is valid
-    list_for_each(node, &vol_effect_list) {
+    list_for_each_safe(node, temp_node_next, &vol_effect_list) {
         context = node_to_item(node, struct vol_listener_context_s, effect_list_node);
         if ((memcmp(&(context->desc->uuid), &uuid, sizeof(effect_uuid_t)) == 0)
             && (context->session_id == session_id)

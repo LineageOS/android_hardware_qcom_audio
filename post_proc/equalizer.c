@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2017-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -21,7 +21,7 @@
 //#define LOG_NDEBUG 0
 
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include <audio_effects/effect_equalizer.h>
@@ -358,6 +358,13 @@ int equalizer_get_parameter(effect_context_t *context, effect_param_t *p,
                 }
                 break;
         }
+
+        if (p->vsize < 1) {
+            p->status = -EINVAL;
+            android_errorWriteLog(0x534e4554, "37536407");
+            break;
+        }
+
         name = (char *)value;
         strlcpy(name, equalizer_get_preset_name(eq_ctxt, param2), p->vsize - 1);
         name[p->vsize - 1] = 0;
@@ -450,7 +457,7 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
             if (vsize < (2 + NUM_EQ_BANDS) * sizeof(int16_t)) {
                 android_errorWriteLog(0x534e4554, "37563371");
                 ALOGE("\tERROR EQ_PARAM_PROPERTIES valueSize %d < %d",
-                                  vsize, (2 + NUM_EQ_BANDS) * sizeof(int16_t));
+                      vsize, (int) ((2 + NUM_EQ_BANDS) * sizeof(int16_t)));
                 p->status = -EINVAL;
                 break;
             }
@@ -480,10 +487,8 @@ int equalizer_set_device(effect_context_t *context,  uint32_t device)
     return 0;
 }
 
-int equalizer_reset(effect_context_t *context)
+int equalizer_reset(effect_context_t *context __unused)
 {
-    equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
-
     return 0;
 }
 
