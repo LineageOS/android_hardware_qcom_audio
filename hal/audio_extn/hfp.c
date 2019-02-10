@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -58,7 +58,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define HFP_RX_VOLUME     "PRI AUXPCM LOOPBACK Volume"
 #elif defined PLATFORM_AUTO
 #define HFP_RX_VOLUME     "Playback 36 Volume"
-#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET)
+#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_MSMFALCON) || \
+      defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) || \
+      defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || \
+      defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_TRINKET) || \
+      defined (PLATFORM_KONA)
 #define HFP_RX_VOLUME     "SLIMBUS_7 LOOPBACK Volume"
 #else
 #define HFP_RX_VOLUME     "Internal HFP RX Volume"

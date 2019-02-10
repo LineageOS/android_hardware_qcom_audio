@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -992,6 +992,7 @@ int enable_audio_route(struct audio_device *adev,
         if (out && out->compr)
             audio_extn_utils_compress_set_clk_rec_mode(usecase);
     }
+    audio_extn_set_custom_mtmx_params(adev, usecase, true);
 
     strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
     platform_add_backend_name(mixer_path, snd_device, usecase);
@@ -1028,6 +1029,7 @@ int disable_audio_route(struct audio_device *adev,
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_FREE);
+    audio_extn_set_custom_mtmx_params(adev, usecase, false);
     ALOGV("%s: exit", __func__);
     return 0;
 }
@@ -1116,7 +1118,8 @@ int enable_snd_device(struct audio_device *adev,
                                               "true-native-mode");
             adev->native_playback_enabled = true;
         }
-        if ((snd_device == SND_DEVICE_IN_HANDSET_6MIC) &&
+        if (((snd_device == SND_DEVICE_IN_HANDSET_6MIC) ||
+            (snd_device == SND_DEVICE_IN_HANDSET_QMIC)) &&
             (audio_extn_ffv_get_stream() == adev->active_input)) {
             ALOGD("%s: init ec ref loopback", __func__);
             audio_extn_ffv_init_ec_ref_loopback(adev, snd_device);
@@ -6928,9 +6931,12 @@ error:
 static char* adev_get_parameters(const struct audio_hw_device *dev,
                                  const char *keys)
 {
+    ALOGD("%s:%s", __func__, keys);
+
     struct audio_device *adev = (struct audio_device *)dev;
     struct str_parms *reply = str_parms_create();
     struct str_parms *query = str_parms_create_str(keys);
+
     char *str;
     char value[256] = {0};
     int ret = 0;
@@ -6982,7 +6988,7 @@ exit:
     str_parms_destroy(query);
     str_parms_destroy(reply);
 
-    ALOGV("%s: exit: returns - %s", __func__, str);
+    ALOGD("%s: exit: returns - %s", __func__, str);
     return str;
 }
 

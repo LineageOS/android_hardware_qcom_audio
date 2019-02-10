@@ -263,6 +263,10 @@ vendor.audio.offload.pstimeout.secs=3
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.af.client_heap_size_kbyte=7168
 
+#keep alive is needed by default for ffv
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.keep_alive.disabled=false
+
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \

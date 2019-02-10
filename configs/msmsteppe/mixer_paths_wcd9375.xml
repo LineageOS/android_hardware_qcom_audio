@@ -1580,6 +1580,10 @@
         <path name="audio-playback-voip bt-sco" />
     </path>
 
+    <path name="audio-playback-voip bt-a2dp">
+        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
     <path name="audio-playback-voip afe-proxy">
         <ctl name="AFE_PCM_RX Audio Mixer MultiMedia10" value="1" />
     </path>
