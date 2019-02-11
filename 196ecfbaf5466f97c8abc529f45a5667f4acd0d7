@@ -2,6 +2,29 @@
   "comments": [
     {
       "key": {
+        "uuid": "1d29ca4c_084b7426",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1179,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-02-11T00:38:25Z",
+      "side": 1,
+      "message": "If you know you never intend to allow channel swapping if ultrasound is enabled, why not ifdef the swap_channels function?",
+      "range": {
+        "startLine": 1179,
+        "startChar": 12,
+        "endLine": 1179,
+        "endChar": 38
+      },
+      "revId": "196ecfbaf5466f97c8abc529f45a5667f4acd0d7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "b7525bfa_a8fb0188",
         "filename": "hal/audio_hw.c",
         "patchSetId": 2
