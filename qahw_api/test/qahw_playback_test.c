@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -36,9 +36,9 @@
 #define KV_PAIR_MAX_LENGTH  1000
 
 #define FORMAT_PCM 1
-#define WAV_HEADER_LENGTH_MAX 128
+#define WAV_HEADER_LENGTH_MAX  256
 
-#define MAX_PLAYBACK_STREAMS   105 //This value is changed to suppport 100 clips in playlist
+#define MAX_PLAYBACK_STREAMS   105 //This value is changed to suppport 100 clips in the playlist
 #define PRIMARY_STREAM_INDEX   0
 
 #define KVPAIRS_MAX 100
@@ -47,6 +47,7 @@
 #define FORMAT_DESCRIPTOR_SIZE 12
 #define SUBCHUNK1_SIZE(x) ((8) + (x))
 #define SUBCHUNK2_SIZE 8
+#define DATA_CHUNK_SIZE 8
 
 #define DEFAULT_PRESET_STRENGTH -1
 
@@ -61,6 +62,12 @@
 static ssize_t get_bytes_to_read(FILE* file, int filetype);
 static void init_streams(void);
 int pthread_cancel(pthread_t thread);
+
+//START OF TRUMPET TEST
+#ifdef TRUMPET_CERTIFICATION
+#include <dlfcn.h>
+#endif
+//END OF TRUMPET TEST
 
 struct wav_header {
     uint32_t riff_id;
@@ -501,9 +508,26 @@ static int __unused is_eof (stream_config *stream) {
         return true;
     return false;
 }
-static int read_bytes(stream_config *stream, void *buff, int size) {
-    if (stream->filename)
-        return fread(buff, 1, size, stream->file_stream);
+static int read_bytes(stream_config *stream, void *buff, int size, unsigned int *total_bytes_read) {
+    unsigned int bytes_read = 0;
+    if (stream->filename) {
+
+        if (stream->filetype == FILE_WAV) {
+
+            /* Read only valid data from a wav file and ignore incase of any metadata at the end*/
+            if (size < stream->raw_data_len_in_bytes - *total_bytes_read) {
+                bytes_read = fread(buff, 1, size, stream->file_stream);
+                *total_bytes_read += bytes_read;
+                return (int)bytes_read;
+            } else {
+                bytes_read = fread(buff, 1, stream->raw_data_len_in_bytes - *total_bytes_read, stream->file_stream);
+                *total_bytes_read += bytes_read;
+                return (int)bytes_read;
+            }
+        } else {
+            return fread(buff, 1, size, stream->file_stream);
+        }
+    }
     else if (AUDIO_DEVICE_NONE != stream->input_device) {
         qahw_in_buffer_t in_buf;
         memset(&in_buf,0, sizeof(qahw_in_buffer_t));
@@ -675,6 +699,23 @@ void *start_stream_playback (void* stream_data)
         qahw_out_set_callback(params->out_handle, async_callback, params);
     }
 
+    /* Mapping for 10 channels*/
+    struct qahw_out_channel_map_param chmap_param ={0};
+    chmap_param.channels = params->channels;
+    if (chmap_param.channels == 10) {
+        chmap_param.channel_map[0] = QAHW_PCM_CHANNEL_FL ;
+        chmap_param.channel_map[1] = QAHW_PCM_CHANNEL_FR ;
+        chmap_param.channel_map[2] = QAHW_PCM_CHANNEL_FC ;
+        chmap_param.channel_map[3] = QAHW_PCM_CHANNEL_LFE ;
+        chmap_param.channel_map[4] = QAHW_PCM_CHANNEL_LB ;
+        chmap_param.channel_map[5] = QAHW_PCM_CHANNEL_RB;
+        chmap_param.channel_map[6] = 18 ;
+        chmap_param.channel_map[7] = 19 ;
+        chmap_param.channel_map[8] = QAHW_PCM_CHANNEL_FLC ;
+        chmap_param.channel_map[9] = QAHW_PCM_CHANNEL_FRC ;
+        qahw_out_set_param_data(params->out_handle, QAHW_PARAM_OUT_CHANNEL_MAP, (qahw_param_payload *) &chmap_param);
+    }
+
     // create effect thread, use thread_data to transfer command
     if (params->ethread_func &&
             (params->flags & (AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_DIRECT))) {
@@ -805,11 +846,11 @@ void *start_stream_playback (void* stream_data)
             fprintf(stderr, "stream %s: failed to set kvpairs\n", params->set_params);
         }
     }
-
+    unsigned int total_bytes_read = 0;
     while (!exit && !stop_playback) {
         if (!bytes_remaining) {
             fprintf(log_file, "\nstream %d: reading bytes %zd\n", params->stream_index, bytes_wanted);
-            bytes_read = read_bytes(params, data_ptr, bytes_wanted);
+            bytes_read = read_bytes(params, data_ptr, bytes_wanted, &total_bytes_read);
             fprintf(log_file, "stream %d: read bytes %zd\n", params->stream_index, bytes_read);
             if ((!read_complete_file && (bytes_to_read <= 0)) || (bytes_read <= 0)) {
                 fprintf(log_file, "stream %d: end of file\n", params->stream_index);
@@ -1032,7 +1073,7 @@ void get_file_format(stream_config *stream_info)
 
     char header[WAV_HEADER_LENGTH_MAX] = {0};
     int wav_header_len = 0;
-
+    int file_length = 0;
     switch (stream_info->filetype) {
         case FILE_WAV:
             /*
@@ -1042,6 +1083,13 @@ void get_file_format(stream_config *stream_info)
                 fprintf(log_file, "wav header length is invalid:%d\n", wav_header_len);
                 exit(1);
             }
+            if(wav_header_len > WAV_HEADER_LENGTH_MAX)
+            {
+                fprintf(log_file, " Wave header length is not supported to exiting\n");
+                exit(1);
+            }
+            fseek(stream_info->file_stream, 0, SEEK_END);
+            file_length = ftell(stream_info->file_stream);
             fseek(stream_info->file_stream, 0, SEEK_SET);
             rc = fread (header, wav_header_len , 1, stream_info->file_stream);
             if (rc != 1) {
@@ -1057,6 +1105,13 @@ void get_file_format(stream_config *stream_info)
             memcpy (&stream_info->channels, &header[22], 2);
             memcpy (&stream_info->config.offload_info.sample_rate, &header[24], 4);
             memcpy (&stream_info->config.offload_info.bit_width, &header[34], 2);
+            /*Check if it's a data chunk*/
+            if (0 == strncmp (&header[wav_header_len - 8], "data", 4)) {
+                memcpy (&stream_info->raw_data_len_in_bytes, &header[wav_header_len - 4],4);
+                fprintf(log_file, "wav data length is:%d bytes\n", stream_info->raw_data_len_in_bytes);
+            } else {
+                stream_info->raw_data_len_in_bytes = file_length - wav_header_len;
+            }
             if (stream_info->config.offload_info.bit_width == 32)
                 stream_info->config.offload_info.format = AUDIO_FORMAT_PCM_32_BIT;
             else if (stream_info->config.offload_info.bit_width == 24)
@@ -1643,19 +1698,40 @@ void usage() {
 int get_wav_header_length (FILE* file_stream)
 {
     int subchunk_size = 0, wav_header_len = 0;
-
+    char chunk_id[5];
+    chunk_id[4] = '\0';
     fseek(file_stream, 16, SEEK_SET);
+    wav_header_len += FORMAT_DESCRIPTOR_SIZE; //FORMAT_DESCRIPTOR_SIZE
+    wav_header_len += 4; // 'fmt '
+
     if(fread(&subchunk_size, 4, 1, file_stream) != 1) {
         fprintf(log_file, "Unable to read subchunk:\n");
         fprintf(stderr, "Unable to read subchunk:\n");
         exit (1);
     }
+    wav_header_len += 4; // chunk_1_size
+
     if(subchunk_size < 16) {
         fprintf(log_file, "This is not a valid wav file \n");
         fprintf(stderr, "This is not a valid wav file \n");
     } else {
-         wav_header_len = FORMAT_DESCRIPTOR_SIZE + SUBCHUNK1_SIZE(subchunk_size) + SUBCHUNK2_SIZE;
+        fseek(file_stream, subchunk_size, SEEK_CUR); /* Read complet 'fmt 'chunck size*/
+        wav_header_len += subchunk_size; // chunk_1_size
+        while(fread(chunk_id, 4, 1, file_stream)) {
+            wav_header_len += 4; /* 4 bytes chunk id*/
+
+            if(!strncmp (chunk_id, "data", 4)) {
+                wav_header_len += 4;
+                break;
+            } else {
+                fread(&subchunk_size, 4, 1, file_stream);
+                wav_header_len +=  4;
+                fseek(file_stream, subchunk_size, SEEK_CUR);
+                wav_header_len += subchunk_size;
+            }
+        }
     }
+    printf("Wave Header Length: %d\n", wav_header_len);
     return wav_header_len;
 }
 
@@ -2583,6 +2659,33 @@ int main(int argc, char* argv[]) {
             stream_param[i].play_later = true;
             fprintf(log_file, "stream %d: play_later = %d\n", i, stream_param[i].play_later);
         }
+
+//START OF TRUMPET TEST
+#ifdef TRUMPET_CERTIFICATION
+
+      void *handle_trumpet = dlopen("/usr/lib/libtrumpetcertification.so", RTLD_NOW | RTLD_GLOBAL);
+      const char* error_trumpet = NULL;
+
+      if (handle_trumpet == NULL) {
+          fprintf(stderr, "failed to open libtrumpetcertification.so\n");
+      } else {
+          typedef int32_t (*_trumpet_test_main)(int, char **);  //prototype of the certification function
+          _trumpet_test_main trumpet_test_main = (_trumpet_test_main) dlsym(handle_trumpet, "trumpet_test_main");
+          error_trumpet = dlerror();
+
+          if (error_trumpet != NULL)
+              fprintf(stderr, "%s\n", error_trumpet);
+
+          if (trumpet_test_main == NULL) {
+              perror("dlsym");
+              fprintf(stderr, "Failed to find the function trumpet_test_main in libtrumpetcertification.so\n");
+          } else {
+              trumpet_test_main(argc, argv);
+          }
+          dlclose(handle_trumpet);
+      }
+#endif
+//END OF TRUMPET TEST
 
         rc = pthread_create(&playback_thread[i], NULL, start_stream_playback, (void *)&stream_param[i]);
         if (rc) {
