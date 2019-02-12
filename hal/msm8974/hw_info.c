@@ -671,6 +671,13 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
     } else if (!strncmp(snd_card_name, "trinket-tavil-snd-card",
                  sizeof("trinket-tavil-snd-card"))) {
         strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "sa6155-adp-star-snd-card",
+                  sizeof("sa6155-adp-star-snd-card"))) {
+        strlcpy(hw_info->type, "adp", sizeof(hw_info->type));
+        strlcpy(hw_info->name, "sa6155", sizeof(hw_info->name));
+        hw_info->snd_devices = (snd_device_t *)auto_variant_devices;
+        hw_info->num_snd_devices = ARRAY_SIZE(auto_variant_devices);
+        strlcpy(hw_info->dev_extn, "-adp", sizeof(hw_info->dev_extn));
     } else {
         ALOGW("%s: Not an SDM device", __func__);
     }
@@ -722,7 +729,9 @@ void *hw_info_init(const char *snd_card_name)
         ALOGV("SDM845 - variant soundcard");
         update_hardware_info_sdm845(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "sdm660") || strstr(snd_card_name, "sdm670")
-               || strstr(snd_card_name, "sm6150") || strstr(snd_card_name, "trinket")) {
+               || strstr(snd_card_name, "sm6150") || strstr(snd_card_name, "qcs605-lc")
+               || strstr(snd_card_name, "qcs405") || strstr(snd_card_name, "qcs605-ipc")
+               || strstr(snd_card_name, "trinket") || strstr(snd_card_name, "sa6155")) {
         ALOGV("Bear - variant soundcard");
         update_hardware_info_bear(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "sdx")) {
