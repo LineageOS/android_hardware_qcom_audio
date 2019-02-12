@@ -42,20 +42,17 @@
 #include "voice_extn.h"
 #include "audio_feature_manager.h"
 
-extern AHalValues* confValues;
-
 #ifdef __LP64__
 #define VNDK_FWK_LIB_PATH "/vendor/lib64/libqti_vndfwk_detect.so"
 #else
 #define VNDK_FWK_LIB_PATH "/vendor/lib/libqti_vndfwk_detect.so"
 #endif
 
+AHalValues* confValues = NULL;
 static void *vndk_fwk_lib_handle = NULL;
 
 typedef int (*vndk_fwk_isVendorEnhancedFwk_t)();
 static vndk_fwk_isVendorEnhancedFwk_t vndk_fwk_isVendorEnhancedFwk;
-
-
 
 void audio_feature_manager_init()
 {
@@ -78,7 +75,7 @@ void audio_feature_manager_init()
 
     ALOGD("%s: vndk_fwk_isVendorEnhancedFwk=%d", __func__, is_running_with_enhanced_fwk);
     audio_extn_ahal_config_helper_init(is_running_with_enhanced_fwk);
-    confValues = audio_extn_get_feature_values();
+    audio_extn_get_feature_values(&confValues);
     audio_extn_feature_init(is_running_with_enhanced_fwk);
     voice_extn_feature_init(is_running_with_enhanced_fwk);
 
@@ -92,13 +89,11 @@ bool audio_feature_manager_is_feature_enabled(audio_ext_feature feature)
 {
     ALOGV("%s: Enter", __func__);
 
-#ifdef AHAL_EXT_ENABLED
-    if (!audio_extn_is_config_from_remote())
-        confValues = audio_extn_get_feature_values();
-#endif /* AHAL_EXT_ENABLED */
-
-    if (!confValues)
-        return false;
+    if (confValues == NULL) {
+        audio_extn_get_feature_values(&confValues);
+        if (!confValues)
+            return false;
+    }
 
     switch (feature) {
         case SND_MONITOR:
@@ -155,10 +150,26 @@ bool audio_feature_manager_is_feature_enabled(audio_ext_feature feature)
             return confValues->usb_offload_sidetone_vol_enabled;
         case A2DP_OFFLOAD:
             return confValues->a2dp_offload_enabled;
+        case HFP:
+            return confValues->hfp_enabled;
         case VBAT:
             return confValues->vbat_enabled;
+        case EXT_HW_PLUGIN:
+            return confValues->ext_hw_plugin_enabled;
+        case RECORD_PLAY_CONCURRENCY:
+            return confValues->record_play_concurrency;
+        case HDMI_PASSTHROUGH:
+            return confValues->hdmi_passthrough_enabled;
+        case CONCURRENT_CAPTURE:
+            return confValues->concurrent_capture_enabled;
+        case COMPRESS_IN_CAPTURE:
+            return confValues->compress_in_enabled;
+        case BATTERY_LISTENER:
+            return confValues->battery_listener_enabled;
         case COMPRESS_METADATA_NEEDED:
             return confValues->compress_metadata_needed;
+        case INCALL_MUSIC:
+            return confValues->incall_music_enabled;
         case COMPRESS_VOIP:
             return confValues->compress_voip_enabled;
         case DYNAMIC_ECNS:

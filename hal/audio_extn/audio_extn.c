@@ -616,7 +616,7 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
         str_parms_destroy(reply_44_1);
     }
 
-    ALOGD("%s: anc_enabled:%d", __func__, aextnmod.anc_enabled);
+    ALOGV("%s: anc_enabled:%d", __func__, aextnmod.anc_enabled);
 }
 // END: ANC_HEADSET -------------------------------------------------------
 
