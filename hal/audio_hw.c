@@ -1531,7 +1531,8 @@ int select_devices(struct audio_device *adev,
                                                get_voice_usecase_id_from_list(adev));
             if ((vc_usecase != NULL) &&
                 ((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) ||
-                (usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL))) {
+                 (vc_usecase->devices == AUDIO_DEVICE_OUT_HEARING_AID) ||
+                 (usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL))) {
                 in_snd_device = vc_usecase->in_snd_device;
                 out_snd_device = vc_usecase->out_snd_device;
             }
@@ -1577,8 +1578,13 @@ int select_devices(struct audio_device *adev,
                         out_device = AUDIO_DEVICE_OUT_TELEPHONY_TX;
                     } else if (voip_usecase) {
                         out_device = voip_usecase->stream.out->devices;
-                    } else if (adev->primary_output) {
+                    } else if (adev->primary_output &&
+                                  !adev->primary_output->standby) {
                         out_device = adev->primary_output->devices;
+                    } else {
+                        /* forcing speaker o/p device to get matching i/p pair
+                           in case o/p is not routed from same primary HAL */
+                        out_device = AUDIO_DEVICE_OUT_SPEAKER;
                     }
                 }
                 in_snd_device = platform_get_input_snd_device(adev->platform,
@@ -2234,14 +2240,19 @@ static int stop_output_stream(struct stream_out *out)
         }
         ret = 0;
     }
-
+    /* 1) media + voip output routing to handset must route media back to
+          speaker when voip stops.
+       2) trigger voip input to reroute when voip output changes to
+          hearing aid. */
     if (has_voip_usecase ||
             out->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
         struct listnode *node;
         struct audio_usecase *usecase;
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_CAPTURE || usecase == uc_info)
+            if ((usecase->type == PCM_CAPTURE &&
+                     usecase->id != USECASE_AUDIO_RECORD_VOIP)
+                || usecase == uc_info)
                 continue;
 
             ALOGD("%s: select_devices at usecase(%d: %s) after removing the usecase(%d: %s)",
@@ -4512,6 +4523,52 @@ static int in_set_microphone_field_dimension(const struct audio_stream_in *strea
     return -ENOSYS;
 }
 
+static void in_update_sink_metadata(struct audio_stream_in *stream,
+                                    const struct sink_metadata *sink_metadata) {
+
+    if (stream == NULL
+            || sink_metadata == NULL
+            || sink_metadata->tracks == NULL) {
+        return;
+    }
+
+    int error = 0;
+    struct stream_in *in = (struct stream_in *)stream;
+    struct audio_device *adev = in->dev;
+    audio_devices_t device = AUDIO_DEVICE_NONE;
+
+    if (sink_metadata->track_count != 0)
+        device = sink_metadata->tracks->dest_device;
+
+    lock_input_stream(in);
+    pthread_mutex_lock(&adev->lock);
+    ALOGV("%s: in->usecase: %d, device: %x", __func__, in->usecase, device);
+
+    if (in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY
+            && device != AUDIO_DEVICE_NONE
+            && adev->voice_tx_output != NULL) {
+        /* Use the rx device from afe-proxy record to route voice call because
+           there is no routing if tx device is on primary hal and rx device
+           is on other hal during voice call. */
+        adev->voice_tx_output->devices = device;
+
+        if (!voice_is_call_state_active(adev)) {
+            if (adev->mode == AUDIO_MODE_IN_CALL) {
+                adev->current_call_output = adev->voice_tx_output;
+                error = voice_start_call(adev);
+                if (error != 0)
+                    ALOGE("%s: start voice call failed %d", __func__, error);
+            }
+        } else {
+            adev->current_call_output = adev->voice_tx_output;
+            voice_update_devices_for_all_voice_usecases(adev);
+        }
+    }
+
+    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&in->lock);
+}
+
 static int adev_open_output_stream(struct audio_hw_device *dev,
                                    audio_io_handle_t handle,
                                    audio_devices_t devices,
@@ -5479,6 +5536,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.get_active_microphones = in_get_active_microphones;
     in->stream.set_microphone_direction = in_set_microphone_direction;
     in->stream.set_microphone_field_dimension = in_set_microphone_field_dimension;
+    in->stream.update_sink_metadata = in_update_sink_metadata;
 
     in->device = devices;
     in->source = source;

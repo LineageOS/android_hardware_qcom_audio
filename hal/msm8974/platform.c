@@ -295,6 +295,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_SCO] = "speaker-safe-and-bt-sco",
     [SND_DEVICE_OUT_SPEAKER_AND_BT_SCO_WB] = "speaker-and-bt-sco-wb",
     [SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_SCO_WB] = "speaker-safe-and-bt-sco-wb",
+    [SND_DEVICE_OUT_VOICE_HEARING_AID] = "hearing-aid",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -374,6 +375,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT] = "camcorder-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = "quad-mic",
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = "quad-mic",
+    [SND_DEVICE_IN_VOICE_HEARING_AID] = "hearing-aid-mic",
 };
 
 static struct audio_effect_config \
@@ -446,6 +448,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_PROTECTED] = 124,
     [SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED] = 101,
     [SND_DEVICE_OUT_VOICE_SPEAKER_HFP] = ACDB_ID_VOICE_SPEAKER,
+    [SND_DEVICE_OUT_VOICE_HEARING_AID] = 45,
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_HANDSET_MIC_AEC] = 106,
@@ -523,6 +526,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT] = 61,
     [SND_DEVICE_IN_SPEAKER_QMIC_NS] = 129,
     [SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS] = 129,
+    [SND_DEVICE_IN_VOICE_HEARING_AID] = 44,
 };
 
 // Platform specific backend bit width table
@@ -581,6 +585,7 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_USB_HEADSET_SPEC)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEARING_AID)},
 
     /* in */
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
@@ -657,6 +662,8 @@ static const struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_SELFIE_LANDSCAPE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_HEARING_AID)},
+
     /* For legacy xml file parsing */
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_QMIC_NS)},
@@ -1288,6 +1295,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = strdup("speaker-and-bt-a2dp");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP] = strdup("speaker-safe-and-bt-a2dp");
     backend_tag_table[SND_DEVICE_OUT_USB_HEADSET_SPEC] = strdup("usb-headset");
+    backend_tag_table[SND_DEVICE_OUT_VOICE_HEARING_AID] = strdup("hearing-aid");
 
     hw_interface_table[SND_DEVICE_OUT_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER] = strdup("SLIMBUS_0_RX");
@@ -1336,6 +1344,11 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_AND_BT_SCO_WB] = strdup("SLIMBUS_0_RX-and-SEC_AUX_PCM_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_SCO] = strdup("QUAT_TDM_RX_0-and-SLIMBUS_7_RX"),
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_SCO_WB] = strdup("QUAT_TDM_RX_0-and-SLIMBUS_7_RX"),
+    /* So far, primary hal doesn't support hearing aid device.
+       Need snd_device to route voice call and use specific acdb tuning.
+       Also, BT_RX is a virtual port to indicate bluetooth hearing aid. */
+    hw_interface_table[SND_DEVICE_OUT_VOICE_HEARING_AID] = strdup("BT_RX"),
+
     hw_interface_table[SND_DEVICE_IN_USB_HEADSET_MIC] = strdup("USB_AUDIO_TX");
     hw_interface_table[SND_DEVICE_IN_VOICE_USB_HEADSET_MIC] = strdup("USB_AUDIO_TX");
     hw_interface_table[SND_DEVICE_IN_USB_HEADSET_MIC_AEC] =  strdup("USB_AUDIO_TX");
@@ -1403,6 +1416,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_CAMCORDER_SELFIE_LANDSCAPE] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT] = strdup("SLIMBUS_0_TX");
+    hw_interface_table[SND_DEVICE_IN_VOICE_HEARING_AID] = strdup("SLIMBUS_0_TX");
+
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
 }
 
@@ -2901,8 +2916,11 @@ snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devi
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET_TMUS;
             else
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
-        } else if (devices & AUDIO_DEVICE_OUT_TELEPHONY_TX)
+        } else if (devices & AUDIO_DEVICE_OUT_TELEPHONY_TX) {
             snd_device = SND_DEVICE_OUT_VOICE_TX;
+        } else if (devices & AUDIO_DEVICE_OUT_HEARING_AID) {
+            snd_device = SND_DEVICE_OUT_VOICE_HEARING_AID;
+        }
 
         if (snd_device != SND_DEVICE_NONE) {
             goto exit;
@@ -3194,6 +3212,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
                     snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
                 }
             }
+        } else if (out_device & AUDIO_DEVICE_OUT_HEARING_AID) {
+            snd_device = SND_DEVICE_IN_VOICE_HEARING_AID;
         }
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
