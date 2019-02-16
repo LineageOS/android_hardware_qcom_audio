@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "0f38b929_46b5b9a5",
+        "filename": "hal/msm8916/platform.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 4238,
+      "author": {
+        "id": 19955
+      },
+      "writtenOn": "2019-02-16T22:48:06Z",
+      "side": 1,
+      "message": "What about this?",
+      "revId": "6b62c5b104e7ae5d345273d6b0a4764e4e044878",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
