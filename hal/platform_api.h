@@ -204,6 +204,7 @@ int platform_set_usb_service_interval(void *platform,
 int platform_get_usb_service_interval(void *platform,
                                       bool playback,
                                       unsigned long *service_interval);
+int platform_get_haptics_pcm_device_id();
 
 /* callback functions from platform to common audio HAL */
 struct stream_in *adev_get_active_input(const struct audio_device *adev);

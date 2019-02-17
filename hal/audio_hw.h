@@ -82,6 +82,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_TTS,
     USECASE_AUDIO_PLAYBACK_ULL,
     USECASE_AUDIO_PLAYBACK_MMAP,
+    USECASE_AUDIO_PLAYBACK_WITH_HAPTICS,
 
     /* HFP Use case*/
     USECASE_AUDIO_HFP_SCO,
@@ -381,6 +382,13 @@ struct audio_device {
 
     void *adm_data;
     void *adm_lib;
+
+    struct pcm_config haptics_config;
+    struct pcm *haptic_pcm;
+    int    haptic_pcm_device_id;
+    uint8_t *haptic_buffer;
+    size_t haptic_buffer_size;
+
     adm_init_t adm_init;
     adm_deinit_t adm_deinit;
     adm_register_input_stream_t adm_register_input_stream;
