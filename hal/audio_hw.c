@@ -4427,6 +4427,21 @@ static int in_start(const struct audio_stream_in* stream)
     return ret;
 }
 
+// Read offset for the input positional timestamp from a property.
+// This is to workaround apparent inaccuracies in the timing info that
+// are causing glitches.
+static int64_t in_get_mmap_time_offset() {
+    // Roughly 100 usec is needed on some devices to cover inaccuracy in DSP.
+    // This should be set in a property. But I cannot read the property!
+    // So I am setting the offset here to 101 as a test.
+    const int32_t kDefaultOffsetMicros = 101; // should be zero if no bug
+    // FIXME - why is the property not being read?! The default is used.
+    int32_t mmap_time_offset_micros = property_get_int32(
+        "persist.audio.in_mmap_delay_micros", kDefaultOffsetMicros);
+    ALOGI("in_get_mmap_time_offset set to %d micros", mmap_time_offset_micros);
+    return mmap_time_offset_micros * (int64_t)1000;
+}
+
 static int in_create_mmap_buffer(const struct audio_stream_in *stream,
                                   int32_t min_size_frames,
                                   struct audio_mmap_buffer_info *info)
@@ -4507,6 +4522,8 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
         goto exit;
     }
 
+    in->mmap_time_offset_nanos = in_get_mmap_time_offset();
+
     in->standby = false;
     ret = 0;
 
@@ -4550,6 +4567,8 @@ static int in_get_mmap_position(const struct audio_stream_in *stream,
         goto exit;
     }
     position->time_nanoseconds = audio_utils_ns_from_timespec(&ts);
+    position->time_nanoseconds += in->mmap_time_offset_nanos;
+
 exit:
     pthread_mutex_unlock(&in->lock);
     return ret;
