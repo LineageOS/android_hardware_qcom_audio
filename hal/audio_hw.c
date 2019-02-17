@@ -3994,6 +3994,17 @@ static int in_start(const struct audio_stream_in* stream)
     return ret;
 }
 
+// Read offset for the positional timestamp from a persistent vendor property.
+// This is to workaround apparent inaccuracies in the timing information that
+// is used by the AAudio timing model. The inaccuracies can cause glitches.
+static int64_t in_get_mmap_time_offset() {
+    const int32_t kDefaultOffsetMicros = 0;
+    int32_t mmap_time_offset_micros = property_get_int32(
+            "persist.audio.in_mmap_delay_micros", kDefaultOffsetMicros);
+    ALOGI("mmap_time_offset_micros = %d for input", mmap_time_offset_micros);
+    return mmap_time_offset_micros * (int64_t)1000;
+}
+
 static int in_create_mmap_buffer(const struct audio_stream_in *stream,
                                   int32_t min_size_frames,
                                   struct audio_mmap_buffer_info *info)
@@ -4074,6 +4085,8 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
         goto exit;
     }
 
+    in->mmap_time_offset_nanos = in_get_mmap_time_offset();
+
     in->standby = false;
     ret = 0;
 
@@ -4116,7 +4129,9 @@ static int in_get_mmap_position(const struct audio_stream_in *stream,
         ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
         goto exit;
     }
-    position->time_nanoseconds = audio_utils_ns_from_timespec(&ts);
+    position->time_nanoseconds = audio_utils_ns_from_timespec(&ts)
+            + in->mmap_time_offset_nanos;
+
 exit:
     pthread_mutex_unlock(&in->lock);
     return ret;
