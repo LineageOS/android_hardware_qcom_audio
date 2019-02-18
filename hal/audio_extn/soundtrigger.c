@@ -373,8 +373,6 @@ int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
         ALOGE(" %s: Sound trigger is not active", __func__);
         goto exit;
     }
-    if(in->standby)
-        in->standby = false;
 
     pthread_mutex_lock(&st_dev->lock);
     st_info = get_sound_trigger_info(in->capture_handle);

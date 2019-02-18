@@ -5616,6 +5616,7 @@ static int in_standby(struct audio_stream *stream)
     if (!in->standby && in->is_st_session) {
         ALOGD("%s: sound trigger pcm stop lab", __func__);
         audio_extn_sound_trigger_stop_lab(in);
+        adev->num_va_sessions--;
         in->standby = 1;
     }
 
@@ -5648,6 +5649,10 @@ static int in_standby(struct audio_stream *stream)
             platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
             status = stop_input_stream(in);
         }
+
+        if (in->source == AUDIO_SOURCE_VOICE_RECOGNITION)
+            adev->num_va_sessions--;
+
         pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&in->lock);
@@ -5897,6 +5902,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         ALOGVV(" %s: reading on st session bytes=%zu", __func__, bytes);
         /* Read from sound trigger HAL */
         audio_extn_sound_trigger_read(in, buffer, bytes);
+        if (in->standby) {
+            adev->num_va_sessions++;
+            in->standby = 0;
+        }
         pthread_mutex_unlock(&in->lock);
         return bytes;
     }
@@ -5912,6 +5921,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ret = voice_extn_compress_voip_start_input_stream(in);
         else
             ret = start_input_stream(in);
+        if (!ret && in->source == AUDIO_SOURCE_VOICE_RECOGNITION)
+            adev->num_va_sessions++;
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0) {
             goto exit;
@@ -5960,11 +5971,18 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     release_in_focus(in);
 
     /*
-     * Instead of writing zeroes here, we could trust the hardware
-     * to always provide zeroes when muted.
+     * Instead of writing zeroes here, we could trust the hardware to always
+     * provide zeroes when muted. This is also muted with voice recognition
+     * usecases so that other clients do not have access to voice recognition
+     * data.
      */
-    if (ret == 0 && voice_get_mic_mute(adev) && !voice_is_in_call_rec_stream(in) &&
-            in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY)
+    if ((ret == 0 && voice_get_mic_mute(adev) &&
+         !voice_is_in_call_rec_stream(in) &&
+         in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY) ||
+        (adev->num_va_sessions &&
+         in->source != AUDIO_SOURCE_VOICE_RECOGNITION &&
+         property_get_bool("persist.vendor.audio.va_concurrency_mute_enabled",
+            false)))
         memset(buffer, 0, bytes);
 
 exit:
