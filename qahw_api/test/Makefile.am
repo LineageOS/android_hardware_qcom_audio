@@ -2,9 +2,10 @@ bin_PROGRAMS = hal_play_test
 
 PLAY_CFLAGS = -Wno-sign-compare -Werror
 PLAY_CFLAGS += -D__unused=__attribute__\(\(__unused__\)\)
-PLAY_INCLUDES = -I $(top_srcdir)/qahw_api/inc
-PLAY_INCLUDES += -I $(top_srcdir)/qahw/inc
 
+PLAY_INCLUDES = -I $(top_srcdir)/qahw_api/inc
+PLAY_INCLUDES += -I $(top_srcdir)/qahw/inc \
+                -I $(top_srcdir)/hal
 hal_play_test_SOURCES = qahw_playback_test.c \
                         qahw_effect_test.c
 
@@ -21,6 +22,23 @@ endif
 hal_play_test_CFLAGS = $(PLAY_CFLAGS) $(PLAY_INCLUDES)
 hal_play_test_CFLAGS += $(AM_CFLAGS) -DLINUX_ENABLED
 
+#hal_play_test_dolby_certification
+bin_PROGRAMS += hal_play_test_dolby_certification
+
+hal_play_test_dolby_certification_SOURCES = qahw_playback_test.c \
+                                            qahw_effect_test.c
+
+hal_play_test_dolby_certification_LDADD = -lutils ../libqahw.la
+
+if QAP
+hal_play_test_dolby_certification_SOURCES += qap_wrapper_extn.c
+hal_play_test_dolby_certification_LDADD += -lqap_wrapper
+endif
+
+hal_play_test_dolby_certification_CFLAGS = $(PLAY_CFLAGS) $(PLAY_INCLUDES) -DTRUMPET_CERTIFICATION=1
+hal_play_test_dolby_certification_CFLAGS += $(AM_CFLAGS) -DLINUX_ENABLED
+
+#hal_play_rec
 bin_PROGRAMS += hal_rec_test
 
 REC_CFLAGS = $(PLAY_CFLAGS) -Dnullptr=NULL

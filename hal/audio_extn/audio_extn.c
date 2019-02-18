@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -372,6 +372,157 @@ exit:
     return;
 }
 #endif /* CUSTOM_STEREO_ENABLED */
+
+static int update_custom_mtmx_coefficients(struct audio_device *adev,
+                                           struct audio_custom_mtmx_params *params,
+                                           int pcm_device_id)
+{
+    struct mixer_ctl *ctl = NULL;
+    char *mixer_name_prefix = "AudStr";
+    char *mixer_name_suffix = "ChMixer Weight Ch";
+    char mixer_ctl_name[128] = {0};
+    struct audio_custom_mtmx_params_info *pinfo = &params->info;
+    int i = 0, err = 0;
+
+    ALOGI("%s: ip_channels %d, op_channels %d, pcm_device_id %d",
+          __func__, pinfo->ip_channels, pinfo->op_channels, pcm_device_id);
+
+    for (i = 0; i < (int)pinfo->op_channels; i++) {
+         snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "%s %d %s %d",
+                  mixer_name_prefix, pcm_device_id, mixer_name_suffix, i+1);
+         ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+         if (!ctl) {
+             ALOGE("%s: ERROR. Could not get ctl for mixer cmd - %s",
+                   __func__, mixer_ctl_name);
+             return -EINVAL;
+         }
+
+         err = mixer_ctl_set_array(ctl,
+                                   &params->coeffs[pinfo->ip_channels * i],
+                                   pinfo->ip_channels);
+         if (err) {
+             ALOGE("%s: ERROR. Mixer ctl set failed", __func__);
+             return -EINVAL;
+         }
+    }
+    return 0;
+}
+
+static void set_custom_mtmx_params(struct audio_device *adev,
+                                   struct audio_custom_mtmx_params_info *pinfo,
+                                   int pcm_device_id, bool enable)
+{
+    struct mixer_ctl *ctl = NULL;
+    char *mixer_name_prefix = "AudStr";
+    char *mixer_name_suffix = "ChMixer Cfg";
+    char mixer_ctl_name[128] = {0};
+    int chmixer_cfg[5] = {0}, len = 0;
+    int be_id = -1, err = 0;
+
+    be_id = platform_get_snd_device_backend_index(pinfo->snd_device);
+
+    ALOGI("%s: ip_channels %d,op_channels %d,pcm_device_id %d,be_id %d",
+          __func__, pinfo->ip_channels, pinfo->op_channels, pcm_device_id, be_id);
+
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "%s %d %s", mixer_name_prefix, pcm_device_id, mixer_name_suffix);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: ERROR. Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return;
+    }
+    chmixer_cfg[len++] = enable ? 1 : 0;
+    chmixer_cfg[len++] = 0; /* rule index */
+    chmixer_cfg[len++] = pinfo->ip_channels;
+    chmixer_cfg[len++] = pinfo->op_channels;
+    chmixer_cfg[len++] = be_id + 1;
+
+    err = mixer_ctl_set_array(ctl, chmixer_cfg, len);
+    if (err)
+        ALOGE("%s: ERROR. Mixer ctl set failed", __func__);
+}
+
+void audio_extn_set_custom_mtmx_params(struct audio_device *adev,
+                                        struct audio_usecase *usecase,
+                                        bool enable)
+{
+    struct audio_custom_mtmx_params_info info = {0};
+    struct audio_custom_mtmx_params *params = NULL;
+    int num_devices = 0, pcm_device_id = -1, i = 0, ret = 0;
+    snd_device_t new_snd_devices[SND_DEVICE_OUT_END] = {0};
+    struct audio_backend_cfg backend_cfg = {0};
+    uint32_t feature_id = 0;
+
+    switch(usecase->type) {
+    case PCM_PLAYBACK:
+        if (usecase->stream.out) {
+            pcm_device_id =
+                platform_get_pcm_device_id(usecase->id, PCM_PLAYBACK);
+            if (platform_split_snd_device(adev->platform,
+                                          usecase->out_snd_device,
+                                          &num_devices, new_snd_devices)) {
+                new_snd_devices[0] = usecase->out_snd_device;
+                num_devices = 1;
+            }
+        } else {
+            ALOGE("%s: invalid output stream for playback usecase id:%d",
+                  __func__, usecase->id);
+            return;
+        }
+        break;
+    case PCM_CAPTURE:
+        if (usecase->stream.in) {
+            pcm_device_id =
+                platform_get_pcm_device_id(usecase->id, PCM_CAPTURE);
+            if (platform_split_snd_device(adev->platform,
+                                          usecase->in_snd_device,
+                                          &num_devices, new_snd_devices)) {
+                new_snd_devices[0] = usecase->in_snd_device;
+                num_devices = 1;
+            }
+        } else {
+            ALOGE("%s: invalid input stream for capture usecase id:%d",
+                  __func__, usecase->id);
+            return;
+        }
+        break;
+    default:
+        ALOGV("%s: unsupported usecase id:%d", __func__, usecase->id);
+        return;
+    }
+
+    /*
+     * check and update feature_id before this assignment,
+     * if features like dual_mono is enabled and overrides the default(i.e. 0).
+     */
+    info.id = feature_id;
+    info.usecase_id = usecase->id;
+    for (i = 0, ret = 0; i < num_devices; i++) {
+         info.snd_device = new_snd_devices[i];
+         platform_get_codec_backend_cfg(adev, info.snd_device, &backend_cfg);
+         if (usecase->type == PCM_PLAYBACK) {
+             info.ip_channels = audio_channel_count_from_out_mask(
+                                    usecase->stream.out->channel_mask);
+             info.op_channels = backend_cfg.channels;
+         } else {
+             info.ip_channels = backend_cfg.channels;
+             info.op_channels = audio_channel_count_from_in_mask(
+                                    usecase->stream.in->channel_mask);
+         }
+
+         params = platform_get_custom_mtmx_params(adev->platform, &info);
+         if (params) {
+             if (enable)
+                 ret = update_custom_mtmx_coefficients(adev, params,
+                                                       pcm_device_id);
+             if (ret < 0)
+                 ALOGE("%s: error updating mtmx coeffs err:%d", __func__, ret);
+             else
+                 set_custom_mtmx_params(adev, &info, pcm_device_id, enable);
+         }
+    }
+}
 
 #ifndef DTS_EAGLE
 #define audio_extn_hpx_set_parameters(adev, parms)         (0)
@@ -971,6 +1122,7 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     audio_extn_source_track_get_parameters(adev, query, reply);
     audio_extn_fbsp_get_parameters(query, reply);
     audio_extn_sound_trigger_get_parameters(adev, query, reply);
+    audio_extn_fm_get_parameters(query, reply);
     if (adev->offload_effects_get_parameters != NULL)
         adev->offload_effects_get_parameters(query, reply);
     audio_extn_ext_hw_plugin_get_parameters(adev->ext_hw_plugin, query, reply);

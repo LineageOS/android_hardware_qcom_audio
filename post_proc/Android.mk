@@ -42,6 +42,12 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
     LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GCOV)),true)
+    LOCAL_CFLAGS += --coverage -fprofile-arcs -ftest-coverage
+    LOCAL_CPPFLAGS += --coverage -fprofile-arcs -ftest-coverage
+    LOCAL_STATIC_LIBRARIES += libprofile_rt
+endif
+
 LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
 ifneq ($(strip $(AUDIO_FEATURE_DISABLED_DTS_EAGLE)),true)
@@ -131,7 +137,7 @@ endif
 
 ################################################################################
 
-ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm710 msm8953 msm8937 qcs605 msmnile $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm710 msm8953 msm8937 qcs605 msmnile $(MSMSTEPPE) $(TRINKET) kona,$(TARGET_BOARD_PLATFORM)),)
 
 include $(CLEAR_VARS)
 

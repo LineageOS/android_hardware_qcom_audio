@@ -48,6 +48,18 @@ const effect_descriptor_t bassboost_descriptor = {
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define PBE_CONF_APP_ID 0x00011134
 
+#ifdef AUDIO_FEATURE_ENABLED_GCOV
+extern void  __gcov_flush();
+static void enable_gcov()
+{
+    __gcov_flush();
+}
+#else
+static void enable_gcov()
+{
+}
+#endif
+
 enum {
         AUDIO_DEVICE_CAL_TYPE = 0,
         AUDIO_STREAM_CAL_TYPE,
@@ -221,7 +233,7 @@ int bass_init(effect_context_t *context)
 
     bassboost_init((effect_context_t *)&(bass_ctxt->bassboost_ctxt));
     pbe_init((effect_context_t *)&(bass_ctxt->pbe_ctxt));
-
+    enable_gcov();
     return 0;
 }
 
@@ -396,6 +408,7 @@ int bassboost_init(effect_context_t *context)
     bass_ctxt->temp_disabled = false;
     memset(&(bass_ctxt->offload_bass), 0, sizeof(struct bass_boost_params));
 
+    enable_gcov();
     return 0;
 }
 

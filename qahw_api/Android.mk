@@ -14,6 +14,12 @@ LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/qahw/inc
 LOCAL_SRC_FILES := \
     src/qahw_api.cpp
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GCOV)),true)
+LOCAL_CFLAGS += --coverage -fprofile-arcs -ftest-coverage
+LOCAL_CPPFLAGS += --coverage -fprofile-arcs -ftest-coverage
+LOCAL_STATIC_LIBRARIES += libprofile_rt
+endif
+
 LOCAL_SHARED_LIBRARIES := \
     liblog \
     libcutils \

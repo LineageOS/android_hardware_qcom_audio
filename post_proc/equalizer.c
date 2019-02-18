@@ -41,6 +41,19 @@ const effect_descriptor_t equalizer_descriptor = {
         "The Android Open Source Project",
 };
 
+#ifdef AUDIO_FEATURE_ENABLED_GCOV
+extern void  __gcov_flush();
+void enable_gcov()
+{
+    __gcov_flush();
+}
+#else
+void enable_gcov()
+{
+}
+#endif
+
+
 static const char *equalizer_preset_names[] = {
                                         "Normal",
                                         "Classical",
@@ -489,7 +502,7 @@ int equalizer_init(effect_context_t *context)
     eq_ctxt->hw_acc_fd = -1;
     memset(&(eq_ctxt->offload_eq), 0, sizeof(struct eq_params));
     offload_eq_set_preset(&(eq_ctxt->offload_eq), INVALID_PRESET);
-
+    enable_gcov();
     return 0;
 }
 
@@ -510,6 +523,7 @@ int equalizer_enable(effect_context_t *context)
                                   OFFLOAD_SEND_EQ_ENABLE_FLAG |
                                   OFFLOAD_SEND_EQ_BANDS_LEVEL);
     }
+    enable_gcov();
     return 0;
 }
 
@@ -527,6 +541,7 @@ int equalizer_disable(effect_context_t *context)
             hw_acc_eq_send_params(eq_ctxt->hw_acc_fd, &eq_ctxt->offload_eq,
                                   OFFLOAD_SEND_EQ_ENABLE_FLAG);
     }
+    enable_gcov();
     return 0;
 }
 
@@ -546,6 +561,7 @@ int equalizer_start(effect_context_t *context, output_context_t *output)
                                   OFFLOAD_SEND_EQ_ENABLE_FLAG |
                                   OFFLOAD_SEND_EQ_BANDS_LEVEL);
     }
+    enable_gcov();
     return 0;
 }
 
@@ -561,6 +577,7 @@ int equalizer_stop(effect_context_t *context, output_context_t *output __unused)
         offload_eq_send_params(eq_ctxt->ctl, &eq, OFFLOAD_SEND_EQ_ENABLE_FLAG);
     }
     eq_ctxt->ctl = NULL;
+    enable_gcov();
     return 0;
 }
 

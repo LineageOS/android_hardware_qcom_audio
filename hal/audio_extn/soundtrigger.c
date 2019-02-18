@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -81,6 +81,7 @@ typedef enum {
     AUDIO_EVENT_CAPTURE_STREAM_INACTIVE,
     AUDIO_EVENT_CAPTURE_STREAM_ACTIVE,
     AUDIO_EVENT_BATTERY_STATUS_CHANGED,
+    AUDIO_EVENT_GET_PARAM
 } audio_event_type_t;
 
 typedef enum {
@@ -123,6 +124,13 @@ struct sound_trigger_device_info {
     int device;
 };
 
+struct sound_trigger_get_param_data {
+    char *param;
+    int sm_handle;
+    struct str_parms *reply;
+};
+
+
 struct audio_event_info {
     union {
         ssr_event_status_t status;
@@ -131,6 +139,7 @@ struct audio_event_info {
         struct audio_read_samples_info aud_info;
         char str_value[ST_EVENT_CONFIG_MAX_STR_VALUE];
         struct audio_hal_usecase usecase;
+        struct sound_trigger_get_param_data st_get_param_data;
     } u;
     struct sound_trigger_device_info device_info;
 };
@@ -166,6 +175,11 @@ do {\
 #define SOUND_TRIGGER_LIBRARY_PATH "/vendor/lib/hw/sound_trigger.primary.%s.so"
 #endif
 
+#define SVA_PARAM_DIRECTION_OF_ARRIVAL "st_direction_of_arrival"
+#define SVA_PARAM_CHANNEL_INDEX "st_channel_index"
+
+#define MAX_STR_LENGTH_FFV_PARAMS 30
+#define MAX_FFV_SESSION_ID 100
 /*
  * Current proprietary API version used by AHAL. Queried by STHAL
  * for compatibility check with AHAL
@@ -567,13 +581,15 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
     }
 
     ret = str_parms_get_int(params, AUDIO_PARAMETER_DEVICE_CONNECT, &val);
-    if ((ret >= 0) && audio_is_input_device(val)) {
+    if ((ret >= 0) && (audio_is_input_device(val) ||
+           (val == AUDIO_DEVICE_OUT_LINE))) {
         event.u.value = val;
         st_dev->st_callback(AUDIO_EVENT_DEVICE_CONNECT, &event);
     }
 
     ret = str_parms_get_int(params, AUDIO_PARAMETER_DEVICE_DISCONNECT, &val);
-    if ((ret >= 0) && audio_is_input_device(val)) {
+    if ((ret >= 0) && (audio_is_input_device(val) ||
+           (val == AUDIO_DEVICE_OUT_LINE))) {
         event.u.value = val;
         st_dev->st_callback(AUDIO_EVENT_DEVICE_DISCONNECT, &event);
     }
@@ -585,12 +601,46 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
     }
 }
 
+static int extract_sm_handle(const char *keys, char *paramstr) {
+    char *tmpstr, *token;
+    char *inputstr = NULL;
+    int value = -EINVAL;
+
+    if (keys == NULL || paramstr == NULL)
+        goto exit;
+
+    inputstr = strdup(keys);
+    token =strtok_r(inputstr,":",&tmpstr);
+
+    if (token == NULL)
+        goto exit;
+
+    ALOGD("%s input string <%s> param string <%s>", __func__, keys,token);
+    strlcpy(paramstr, token, MAX_STR_LENGTH_FFV_PARAMS);
+    token =strtok_r(NULL,":=",&tmpstr);
+
+    if (token == NULL)
+        goto exit;
+
+    value = atoi(token);
+    if (value > 0 && value < MAX_FFV_SESSION_ID)
+        ALOGD(" %s SVA sm handle<=%d>",__func__, value);
+
+exit:
+    if (inputstr != NULL)
+        free(inputstr);
+
+    return value;
+}
 void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev __unused,
-                       struct str_parms *query, struct str_parms *reply)
+                                             struct str_parms *query,
+                                             struct str_parms *reply)
 {
     audio_event_info_t event;
     int ret;
-    char value[32];
+    char value[32], paramstr[MAX_STR_LENGTH_FFV_PARAMS];
+
+    ALOGD("%s input string<%s>", __func__, str_parms_to_str(query));
 
     ret = str_parms_get_str(query, "SVA_EXEC_MODE_STATUS", value,
                                                   sizeof(value));
@@ -598,6 +648,23 @@ void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev __u
         st_dev->st_callback(AUDIO_EVENT_SVA_EXEC_MODE_STATUS, &event);
         str_parms_add_int(reply, "SVA_EXEC_MODE_STATUS", event.u.value);
     }
+
+    ret = extract_sm_handle(str_parms_to_str(query), paramstr);
+
+    if ((ret >= 0) && !strncmp(paramstr, SVA_PARAM_DIRECTION_OF_ARRIVAL,
+            MAX_STR_LENGTH_FFV_PARAMS)) {
+        event.u.st_get_param_data.sm_handle = ret;
+        event.u.st_get_param_data.param = SVA_PARAM_DIRECTION_OF_ARRIVAL;
+        event.u.st_get_param_data.reply = reply;
+        st_dev->st_callback(AUDIO_EVENT_GET_PARAM, &event);
+    } else if ((ret >=0) && !strncmp(paramstr, SVA_PARAM_CHANNEL_INDEX,
+            MAX_STR_LENGTH_FFV_PARAMS)) {
+        event.u.st_get_param_data.sm_handle = ret;
+        event.u.st_get_param_data.param = SVA_PARAM_CHANNEL_INDEX;
+        event.u.st_get_param_data.reply = reply;
+        st_dev->st_callback(AUDIO_EVENT_GET_PARAM, &event);
+    }
+
 }
 
 int audio_extn_sound_trigger_init(struct audio_device *adev)

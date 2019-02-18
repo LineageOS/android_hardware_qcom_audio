@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--- Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.       -->
+<!--- Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.       -->
 <!---                                                                           -->
 <!--- Redistribution and use in source and binary forms, with or without        -->
 <!--- modification, are permitted provided that the following conditions are    -->
@@ -34,6 +34,7 @@
 <!--- 0x0103: app_type and in_channels added to <lsm usecase> and out_channels  -->
 <!--- added to <adm_config>                                                     -->
     <common_config>
+        <param implementer_version="0x0100" />
         <param max_cpe_sessions="1" />
         <param max_wdsp_sessions="2" />
         <param max_ape_sessions="8" />
@@ -44,15 +45,19 @@
         <param transit_to_adsp_on_battery_charging="false" />
         <!-- Below backend params must match with port used in mixer path file -->
         <!-- param used to configure backend sample rate, format and channels -->
-        <!-- uncomment TX_CDC_DMA_TX_3 values for internal codec and comment SLIM_0_TX values -->
-        <param backend_port_name="SLIM_0_TX" />
+        <!-- uncomment TX_CDC_DMA_TX_3 values for internal codec and comment SLIM_1_TX values -->
+        <param backend_port_name="SLIM_1_TX" />
         <!-- param backend_port_name="TX_CDC_DMA_TX_3" /-->
         <!-- Param used to match and obtain device backend index -->
-        <param backend_dai_name="SLIMBUS_0_TX" />
+        <param backend_dai_name="SLIMBUS_1_TX" />
         <!-- param backend_dai_name="TX_CDC_DMA_TX_3" /-->
-
+        <!-- Param used to indicate if SVA has dedicated SLIM ports -->
+        <!-- Set to false for platforms with internal codec -->
+        <param dedicated_sva_path="true" />
     </common_config>
     <acdb_ids>
+        <!--For internal codec please enable below device-->
+        <!--param DEVICE_HANDSET_MIC_APE="130" /-->
         <param DEVICE_HANDSET_MIC_APE="100" />
         <param DEVICE_HANDSET_MIC_CPE="128" />
         <param DEVICE_HANDSET_MIC_ECPP_CPE="128" />
@@ -61,7 +66,7 @@
         <param DEVICE_HANDSET_QMIC_APE="137" />
         <param DEVICE_HEADSET_MIC_CPE="139" />
         <param DEVICE_HANDSET_DMIC_APE="149" />
-        <param DEVICE_HANDSET_DMIC_CPE="153" />
+        <param DEVICE_HANDSET_DMIC_CPE="148" />
         <param DEVICE_HANDSET_TMIC_APE="157" />
     </acdb_ids>
     <!-- Multiple sound_model_config tags can be listed, each with unique   -->
@@ -125,6 +130,28 @@
             <param read_cmd_ids="0x00020013, 0x3, 0x00020015" />
             <param read_rsp_ids="0x00020013, 0x3, 0x00020016" />
             <param custom_config_ids="0x00012C0D, 0x3, 0x00012C20" />
+        </gcs_usecase>
+        <gcs_usecase>
+            <param uid="0x7" />
+            <param acdb_devices="DEVICE_HANDSET_DMIC_CPE" />
+            <param load_sound_model_ids="0x00012C0D, 0x7, 0x00012C14" />
+            <param confidence_levels_ids="0x00012C0D, 0x7, 0x00012C28" />
+            <param detection_event_ids="0x00012C0D, 0x7, 0x00012B05" />
+            <param read_cmd_ids="0x00020013, 0x7, 0x00020015" />
+            <param read_rsp_ids="0x00020013, 0x7, 0x00020016" />
+            <param custom_config_ids="0x00012C0D, 0x7, 0x00012C20" />
+            <param det_event_type_ids="0x00012C0D, 0x7, 0x00012C2A" />
+        </gcs_usecase>
+        <gcs_usecase>
+            <param uid="0x8" />
+            <param acdb_devices="DEVICE_HANDSET_DMIC_CPE" />
+            <param load_sound_model_ids="0x00012C0D, 0x8, 0x00012C14" />
+            <param confidence_levels_ids="0x00012C0D, 0x8, 0x00012C28" />
+            <param detection_event_ids="0x00012C0D, 0x8, 0x00012B05" />
+            <param read_cmd_ids="0x00020013, 0x8, 0x00020015" />
+            <param read_rsp_ids="0x00020013, 0x8, 0x00020016" />
+            <param custom_config_ids="0x00012C0D, 0x8, 0x00012C20" />
+            <param det_event_type_ids="0x00012C0D, 0x8, 0x00012C2A" />
         </gcs_usecase>
         <!-- Module and param ids with which the algorithm is integrated
             in non-graphite firmware (note these must come after gcs params)

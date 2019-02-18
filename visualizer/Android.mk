@@ -23,8 +23,14 @@ LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 
 LOCAL_CFLAGS += -Wno-unused-variable -Wno-unused-parameter -Wno-gnu-designator -Wno-unused-value -Wno-typedef-redefinition
 
-ifneq ($(filter sdm660 sdm845 msm8998 apq8098_latv sdm710 qcs605 msmnile $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm660 sdm845 msm8998 apq8098_latv sdm710 qcs605 msmnile $(MSMSTEPPE) $(TRINKET) kona,$(TARGET_BOARD_PLATFORM)),)
     LOCAL_CFLAGS += -DCAPTURE_DEVICE=7
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GCOV)),true)
+LOCAL_CFLAGS += --coverage -fprofile-arcs -ftest-coverage
+LOCAL_CPPFLAGS += --coverage -fprofile-arcs -ftest-coverage
+LOCAL_STATIC_LIBRARIES += libprofile_rt
 endif
 
 LOCAL_HEADER_LIBRARIES := libsystem_headers \
