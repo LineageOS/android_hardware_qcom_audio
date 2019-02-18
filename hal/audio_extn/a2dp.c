@@ -1623,7 +1623,6 @@ static int update_aptx_dsp_config_v2(struct aptx_enc_cfg_t *aptx_dsp_cfg,
             else {
                a2dp.is_tws_mono_mode_on = true;
                ALOGD("Update tws for mono_mode_on: %d",a2dp.is_tws_mono_mode_on);
-               audio_a2dp_update_tws_channel_mode();
             }
             break;
     }
@@ -2213,6 +2212,7 @@ int a2dp_start_playback()
     if (a2dp.a2dp_source_started) {
         a2dp.a2dp_source_total_active_session_requests++;
         a2dp_check_and_set_scrambler();
+        audio_a2dp_update_tws_channel_mode();
         a2dp_set_backend_cfg(SOURCE);
         if (a2dp.abr_config.is_abr_enabled)
             start_abr();
