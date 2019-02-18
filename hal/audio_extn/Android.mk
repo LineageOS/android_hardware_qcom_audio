@@ -7,7 +7,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE:= libsndmonitor
 LOCAL_MODULE_OWNER := third_party
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_VENDOR_MODULE := true
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
@@ -60,7 +60,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE:= libcomprcapture
 LOCAL_MODULE_OWNER := third_party
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_VENDOR_MODULE := true
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
@@ -180,7 +180,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE:= libhdmiedid
 LOCAL_MODULE_OWNER := third_party
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_VENDOR_MODULE := true
 
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
@@ -245,7 +245,7 @@ endif
 
 LOCAL_MODULE:= libspkrprot
 LOCAL_MODULE_OWNER := third_party
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_VENDOR_MODULE := true
 
 LOCAL_SRC_FILES:= \
         spkr_protection.c
@@ -298,7 +298,7 @@ endif
 
 LOCAL_MODULE:= libcirrusspkrprot
 LOCAL_MODULE_OWNER := third_party
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_VENDOR_MODULE := true
 
 LOCAL_SRC_FILES:= \
         cirrus_playback.c
@@ -345,7 +345,7 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE:= liba2dpoffload
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_VENDOR_MODULE := true
 
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
