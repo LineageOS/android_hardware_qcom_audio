@@ -62,6 +62,16 @@
 #include <log_utils.h>
 #endif
 
+#ifndef APTX_DECODER_ENABLED
+#define audio_extn_aptx_dec_set_license(adev) (0)
+#define audio_extn_set_aptx_dec_bt_addr(adev, parms) (0)
+#define audio_extn_parse_aptx_dec_bt_addr(value) (0)
+#else
+static void audio_extn_aptx_dec_set_license(struct audio_device *adev);
+static void audio_extn_set_aptx_dec_bt_addr(struct audio_device *adev, struct str_parms *parms);
+static void audio_extn_parse_aptx_dec_bt_addr(char *value);
+#endif
+
 #define MAX_SLEEP_RETRY 100
 #define WIFI_INIT_WAIT_SLEEP 50
 #define MAX_NUM_CHANNELS 8
@@ -1538,7 +1548,6 @@ int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
 static void audio_extn_aptx_dec_set_license(struct audio_device *adev)
 {
     int ret, key = 0;
-    char value[128] = {0};
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "APTX Dec License";
 
@@ -1556,7 +1565,7 @@ static void audio_extn_aptx_dec_set_license(struct audio_device *adev)
         ALOGE("%s: cannot set license, error:%d",__func__, ret);
 }
 
-static void audio_extn_set_aptx_dec_bt_addr(struct audio_device *adev, struct str_parms *parms)
+static void audio_extn_set_aptx_dec_bt_addr(struct audio_device *adev __unused, struct str_parms *parms)
 {
     int ret = 0;
     char value[256];
@@ -1575,6 +1584,7 @@ int audio_extn_set_aptx_dec_params(struct aptx_dec_param *payload)
     aextnmod.addr.nap = aptx_cfg->bt_addr.nap;
     aextnmod.addr.uap = aptx_cfg->bt_addr.uap;
     aextnmod.addr.lap = aptx_cfg->bt_addr.lap;
+    return 0;
 }
 
 static void audio_extn_parse_aptx_dec_bt_addr(char *value)
@@ -1602,11 +1612,7 @@ static void audio_extn_parse_aptx_dec_bt_addr(char *value)
 
 void audio_extn_send_aptx_dec_bt_addr_to_dsp(struct stream_out *out)
 {
-    char mixer_ctl_name[128];
-    struct mixer_ctl *ctl;
-    uint32_t addr[3];
-
-    ALOGV("%s", __func__);
+    ALOGD("%s", __func__);
     out->compr_config.codec->options.aptx_dec.nap = aextnmod.addr.nap;
     out->compr_config.codec->options.aptx_dec.uap = aextnmod.addr.uap;
     out->compr_config.codec->options.aptx_dec.lap = aextnmod.addr.lap;

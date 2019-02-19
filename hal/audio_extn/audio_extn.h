@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -971,16 +971,10 @@ void audio_extn_fm_get_parameters(struct str_parms *query, struct str_parms *rep
 #endif
 
 #ifndef APTX_DECODER_ENABLED
-#define audio_extn_aptx_dec_set_license(adev); (0)
-#define audio_extn_set_aptx_dec_bt_addr(adev, parms); (0)
-#define audio_extn_send_aptx_dec_bt_addr_to_dsp(out); (0)
-#define audio_extn_parse_aptx_dec_bt_addr(value); (0)
-#define audio_extn_set_aptx_dec_params(payload); (0)
+#define audio_extn_send_aptx_dec_bt_addr_to_dsp(out) (0)
+#define audio_extn_set_aptx_dec_params(payload) (0)
 #else
-static void audio_extn_aptx_dec_set_license(struct audio_device *adev);
-static void audio_extn_set_aptx_dec_bt_addr(struct audio_device *adev, struct str_parms *parms);
 void audio_extn_send_aptx_dec_bt_addr_to_dsp(struct stream_out *out);
-static void audio_extn_parse_aptx_dec_bt_addr(char *value);
 int audio_extn_set_aptx_dec_params(struct aptx_dec_param *payload);
 #endif
 int audio_extn_out_set_param_data(struct stream_out *out,
