@@ -2668,6 +2668,11 @@ static int out_dump(const struct audio_stream *stream, int fd)
     simple_stats_to_string(&out->fifo_underruns, buffer, sizeof(buffer));
     dprintf(fd, "      Fifo frame underruns: %s\n", buffer);
 
+    if (out->start_latency_ms.n > 0) {
+        simple_stats_to_string(&out->start_latency_ms, buffer, sizeof(buffer));
+        dprintf(fd, "      Start latency ms: %s\n", buffer);
+    }
+
     if (locked) {
         pthread_mutex_unlock(&out->lock);
     }
@@ -3214,6 +3219,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     const bool was_in_standby = out->standby;
     if (out->standby) {
         out->standby = false;
+        const int64_t startNs = systemTime(SYSTEM_TIME_MONOTONIC);
+
         pthread_mutex_lock(&adev->lock);
         ret = start_output_stream(out);
 
@@ -3230,6 +3237,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         send_gain_dep_calibration_l();
         pthread_mutex_unlock(&adev->lock);
 
+        // log startup time in ms.
+        simple_stats_log(
+                &out->start_latency_ms, (systemTime(SYSTEM_TIME_MONOTONIC) - startNs) * 1e-6);
         out->last_fifo_valid = false; // we're coming out of standby, last_fifo isn't valid.
     }
 
@@ -3839,6 +3849,12 @@ static int in_dump(const struct audio_stream *stream, int fd)
     dprintf(fd, "      Frames read: %lld\n", (long long)in->frames_read);
     dprintf(fd, "      Frames muted: %lld\n", (long long)in->frames_muted);
 
+    char buffer[256]; // for statistics formatting
+    if (in->start_latency_ms.n > 0) {
+        simple_stats_to_string(&in->start_latency_ms, buffer, sizeof(buffer));
+        dprintf(fd, "      Start latency ms: %s\n", buffer);
+    }
+
     if (locked) {
         pthread_mutex_unlock(&in->lock);
     }
@@ -4040,6 +4056,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     }
 
     if (in->standby) {
+        const int64_t startNs = systemTime(SYSTEM_TIME_MONOTONIC);
+
         pthread_mutex_lock(&adev->lock);
         ret = start_input_stream(in);
         pthread_mutex_unlock(&adev->lock);
@@ -4047,6 +4065,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             goto exit;
         }
         in->standby = 0;
+
+        // log startup time in ms.
+        simple_stats_log(
+                &in->start_latency_ms, (systemTime(SYSTEM_TIME_MONOTONIC) - startNs) * 1e-6);
     }
 
     // errors that occur here are read errors.

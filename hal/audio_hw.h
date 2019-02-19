@@ -265,6 +265,7 @@ struct stream_out {
     int64_t      last_fifo_time_ns;
 
     simple_stats_t fifo_underruns;  // TODO: keep a list of the last N fifo underrun times.
+    simple_stats_t start_latency_ms;
 };
 
 struct stream_in {
@@ -305,6 +306,8 @@ struct stream_in {
     uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES + 1];
 
     error_log_t *error_log;
+
+    simple_stats_t start_latency_ms;
 };
 
 typedef enum usecase_type_t {
