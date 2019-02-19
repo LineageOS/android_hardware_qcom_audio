@@ -3848,9 +3848,17 @@ static void out_snd_mon_cb(void * stream, struct str_parms * parms)
           use_case_table[out->usecase],
           status == CARD_STATUS_OFFLINE ? "offline" : "online");
 
-    if (status == CARD_STATUS_OFFLINE)
+    if (status == CARD_STATUS_OFFLINE) {
         out_on_error(stream);
-
+        if (voice_is_call_state_active(adev) &&
+            out == adev->primary_output) {
+            ALOGD("%s: SSR/PDR occurred, end all calls", __func__);
+            pthread_mutex_lock(&adev->lock);
+            voice_stop_call(adev);
+            adev->mode = AUDIO_MODE_NORMAL;
+            pthread_mutex_unlock(&adev->lock);
+        }
+    }
     return;
 }
 
