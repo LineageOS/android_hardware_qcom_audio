@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "b1b9e2e7_ba89ebac",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 8018,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-02-19T04:09:21Z",
+      "side": 1,
+      "message": "This is really screwy to introduce here because usecase-\u003estream.out-\u003edevices \u0026 AUDIO_DEVICE_OUT_SPEAKER is a bitmask check. Introducing an OR here breaks the existing logic because this becomes (1 \u0026 AUDIO_DEVICE_OUT_SPEAKER) or (0 \u0026 AUDIO_DEVICE_OUT_SPEAKER)",
+      "range": {
+        "startLine": 8016,
+        "startChar": 0,
+        "endLine": 8018,
+        "endChar": 6
+      },
+      "revId": "5bcde0ea7525bb750acab5abb445bf23869f3eb5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
