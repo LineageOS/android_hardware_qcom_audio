@@ -37,6 +37,9 @@
 #include <log/log.h>
 #include <unistd.h>
 #include <vndfwk-detect.h>
+#include "audio_hw.h"
+#include "audio_extn.h"
+#include "voice_extn.h"
 #include "audio_feature_manager.h"
 
 extern AHalValues* confValues;
@@ -47,6 +50,8 @@ void audio_feature_manager_init()
     audio_extn_ahal_config_helper_init(
                 isRunningWithVendorEnhancedFramework());
     confValues = audio_extn_get_feature_values();
+    audio_extn_feature_init();
+    voice_extn_feature_init();
 }
 
 bool audio_feature_manager_is_feature_enabled(audio_ext_feature feature)
