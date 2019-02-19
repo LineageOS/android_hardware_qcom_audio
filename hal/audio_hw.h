@@ -26,6 +26,7 @@
 
 #include <audio_route/audio_route.h>
 #include <audio_utils/ErrorLog.h>
+#include <audio_utils/Statistics.h>
 #include "voice.h"
 
 // dlopen() does not go through default library path search if there is a "/" in the library name.
@@ -255,6 +256,15 @@ struct stream_out {
     error_log_t *error_log;
 
     struct stream_app_type_cfg app_type_cfg;
+
+    size_t kernel_buffer_size;  // cached value of the alsa buffer size, const after open().
+
+    // last out_get_presentation_position() cached info.
+    bool         last_fifo_valid;
+    unsigned int last_fifo_frames_remaining;
+    int64_t      last_fifo_time_ns;
+
+    simple_stats_t fifo_underruns;  // TODO: keep a list of the last N fifo underrun times.
 };
 
 struct stream_in {

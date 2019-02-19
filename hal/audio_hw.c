@@ -40,6 +40,7 @@
 #include <cutils/str_parms.h>
 #include <cutils/properties.h>
 #include <cutils/atomic.h>
+#include <utils/Timers.h> // systemTime
 
 #include <hardware/audio_effect.h>
 #include <hardware/audio_alsaops.h>
@@ -2663,6 +2664,10 @@ static int out_dump(const struct audio_stream *stream, int fd)
     dprintf(fd, "      Standby: %s\n", out->standby ? "yes" : "no");
     dprintf(fd, "      Frames written: %lld\n", (long long)out->written);
 
+    char buffer[256]; // for statistics formatting
+    simple_stats_to_string(&out->fifo_underruns, buffer, sizeof(buffer));
+    dprintf(fd, "      Fifo frame underruns: %s\n", buffer);
+
     if (locked) {
         pthread_mutex_unlock(&out->lock);
     }
@@ -3206,6 +3211,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         }
     }
 
+    const bool was_in_standby = out->standby;
     if (out->standby) {
         out->standby = false;
         pthread_mutex_lock(&adev->lock);
@@ -3223,6 +3229,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         ALOGD("%s: retry previous failed cal level set", __func__);
         send_gain_dep_calibration_l();
         pthread_mutex_unlock(&adev->lock);
+
+        out->last_fifo_valid = false; // we're coming out of standby, last_fifo isn't valid.
     }
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
@@ -3242,6 +3250,13 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         if (avail == 0) {
             ret = 0;
         } else {
+            // check for compressed format underrun, essentially an empty buffer check
+            // for a lack of better measurement.
+            if (!was_in_standby && avail == out->kernel_buffer_size) {
+                ALOGW("%s: compressed buffer empty (underrun)", __func__);
+                simple_stats_log(&out->fifo_underruns, 1.); // Note: log one frame for compressed.
+            }
+
             if (avail > bytes) {
                 avail = bytes;
             }
@@ -3288,7 +3303,29 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 }
                 bytes_to_write /= 2;
             }
-            ALOGVV("%s: writing buffer (%zu bytes) to pcm device", __func__, bytes_to_write);
+
+            // Note: since out_get_presentation_position() is called alternating with out_write()
+            // by AudioFlinger, we can check underruns using the prior timestamp read.
+            // (Alternately we could check if the buffer is empty using pcm_get_htimestamp().
+            if (out->last_fifo_valid) {
+                // compute drain to see if there is an underrun.
+                const int64_t current_ns = systemTime(SYSTEM_TIME_MONOTONIC); // sys call
+                const int64_t frames_by_time =
+                        (current_ns - out->last_fifo_time_ns) * out->config.rate / NANOS_PER_SECOND;
+                const int64_t underrun = frames_by_time - out->last_fifo_frames_remaining;
+
+                if (underrun > 0) {
+                    simple_stats_log(&out->fifo_underruns, underrun);
+
+                    ALOGW("%s: underrun(%lld) "
+                            "frames_by_time(%lld) > out->last_fifo_frames_remaining(%lld)",
+                            __func__,
+                            (long long)out->fifo_underruns.n,
+                            (long long)frames_by_time,
+                            (long long)out->last_fifo_frames_remaining);
+                }
+                out->last_fifo_valid = false;  // we're writing below, mark fifo info as stale.
+            }
 
             long ns = (frames * (int64_t) NANOS_PER_SECOND) / out->config.rate;
             request_out_focus(out, ns);
@@ -3403,8 +3440,27 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
         if (out->pcm) {
             unsigned int avail;
             if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
-                size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
-                int64_t signed_frames = out->written - kernel_buffer_size + avail;
+
+                // pcm_get_htimestamp() computes the available frames by comparing
+                // the alsa driver hw_ptr and the appl_ptr levels.
+                // In underrun, the hw_ptr may keep running and report an excessively
+                // large number available number.
+                if (avail > out->kernel_buffer_size) {
+                    ALOGW("%s: avail:%u > kernel_buffer_size:%zu clamping!",
+                            __func__, avail, out->kernel_buffer_size);
+                    avail = out->kernel_buffer_size;
+                    out->last_fifo_frames_remaining = 0;
+                } else {
+                    out->last_fifo_frames_remaining = out->kernel_buffer_size - avail;
+                }
+                out->last_fifo_valid = true;
+                out->last_fifo_time_ns = audio_utils_ns_from_timespec(timestamp);
+
+                int64_t signed_frames = out->written - out->last_fifo_frames_remaining;
+
+                ALOGVV("%s: frames:%lld  avail:%u  kernel_buffer_size:%zu",
+                        __func__, (long long)signed_frames, avail, out->kernel_buffer_size);
+
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
                 signed_frames -=
@@ -4822,6 +4878,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->af_period_multiplier = af_period_multiplier;
     else
         out->af_period_multiplier = 1;
+
+    out->kernel_buffer_size = out->config.period_size * out->config.period_count;
 
     out->standby = 1;
     /* out->muted = false; by calloc() */
