@@ -67,15 +67,15 @@
     <ctl name="ADC4 Volume" value="0" />
     <ctl name="ADC5 Volume" value="12" />
     <ctl name="ADC6 Volume" value="12" />
-    <ctl name="DEC0 Volume" value="84" />
-    <ctl name="DEC1 Volume" value="84" />
-    <ctl name="DEC2 Volume" value="84" />
-    <ctl name="DEC3 Volume" value="84" />
-    <ctl name="DEC4 Volume" value="84" />
-    <ctl name="DEC5 Volume" value="84" />
-    <ctl name="DEC6 Volume" value="84" />
-    <ctl name="DEC7 Volume" value="84" />
-    <ctl name="DEC8 Volume" value="84" />
+    <ctl name="DEC0 Volume" value="102" />
+    <ctl name="DEC1 Volume" value="102" />
+    <ctl name="DEC2 Volume" value="102" />
+    <ctl name="DEC3 Volume" value="102" />
+    <ctl name="DEC4 Volume" value="102" />
+    <ctl name="DEC5 Volume" value="102" />
+    <ctl name="DEC6 Volume" value="102" />
+    <ctl name="DEC7 Volume" value="102" />
+    <ctl name="DEC8 Volume" value="102" />
     <ctl name="COMP1 Switch" value="1" />
     <ctl name="COMP2 Switch" value="1" />
     <ctl name="COMP7 Switch" value="0" />
@@ -2318,11 +2318,13 @@
     <path name="headset-mic">
         <path name="adc2" />
         <ctl name="ADC2 Volume" value="12" />
+        <ctl name="DEC0 Volume" value="84" />
     </path>
 
     <path name="headset-mic-liquid">
         <path name="adc2" />
         <ctl name="ADC2 Volume" value="12" />
+        <ctl name="DEC0 Volume" value="84" />
     </path>
 
     <path name="voice-handset">
