@@ -146,6 +146,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_OFFLOAD9,
     USECASE_AUDIO_PLAYBACK_ULL,
     USECASE_AUDIO_PLAYBACK_MMAP,
+    USECASE_AUDIO_PLAYBACK_WITH_HAPTICS,
     USECASE_AUDIO_PLAYBACK_HIFI,
     USECASE_AUDIO_PLAYBACK_TTS,
 
@@ -570,6 +571,12 @@ struct audio_device {
     unsigned int interactive_usecase_state;
     bool dp_allowed_for_voice;
     void *ext_hw_plugin;
+
+    struct pcm_config haptics_config;
+    struct pcm *haptic_pcm;
+    int    haptic_pcm_device_id;
+    uint8_t *haptic_buffer;
+    size_t haptic_buffer_size;
 
     /* logging */
     snd_device_t last_logged_snd_device[AUDIO_USECASE_MAX][2]; /* [out, in] */

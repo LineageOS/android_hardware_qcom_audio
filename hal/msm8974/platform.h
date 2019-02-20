@@ -463,6 +463,10 @@ enum {
 #define AUDIO_PLAYBACK_VOIP_PCM_DEVICE 16
 #define AUDIO_RECORD_VOIP_PCM_DEVICE 16
 
+// Update based on haptic device id
+#define AUDIO_HAPTICS_PCM_DEVICE 43
+#define HAPTICS_PCM_DEVICE 44
+
 #ifdef PLATFORM_MSM8610
 #define LOWLATENCY_PCM_DEVICE 12
 #define EC_REF_RX "SEC_I2S_RX"
