@@ -101,6 +101,12 @@ struct operator_specific_device {
     int acdb_id;
 };
 
+struct external_specific_device {
+    struct listnode list;
+    char *usbid;
+    int acdb_id;
+};
+
 #define BE_DAI_NAME_MAX_LENGTH 24
 struct be_dai_name_struct {
     unsigned int be_id;
@@ -114,6 +120,7 @@ struct snd_device_to_mic_map {
 
 static struct listnode operator_info_list;
 static struct listnode *operator_specific_device_table[SND_DEVICE_MAX];
+static struct listnode *external_specific_device_table[SND_DEVICE_MAX];
 
 #define AUDIO_PARAMETER_KEY_AUD_CALDATA "cal_data"
 
@@ -736,6 +743,27 @@ static bool is_tmus = false;
 
 static int init_be_dai_name_table(struct audio_device *adev);
 
+static bool is_usb_snd_dev(snd_device_t snd_device)
+{
+    if (snd_device < SND_DEVICE_IN_BEGIN) {
+        if (snd_device == SND_DEVICE_OUT_USB_HEADSET ||\
+            snd_device == SND_DEVICE_OUT_USB_HEADPHONES ||\
+            snd_device == SND_DEVICE_OUT_VOICE_USB_HEADPHONES ||\
+            snd_device == SND_DEVICE_OUT_VOICE_USB_HEADSET ||\
+            snd_device == SND_DEVICE_OUT_VOICE_TTY_FULL_USB ||\
+            snd_device == SND_DEVICE_OUT_VOICE_TTY_VCO_USB)
+            return true;
+    } else {
+        if (snd_device == SND_DEVICE_IN_USB_HEADSET_MIC ||\
+            snd_device == SND_DEVICE_IN_USB_HEADSET_MIC_AEC ||\
+            snd_device == SND_DEVICE_IN_VOICE_USB_HEADSET_MIC ||\
+            snd_device == SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC ||\
+            snd_device == SND_DEVICE_IN_VOICE_RECOG_USB_HEADSET_MIC)
+            return true;
+    }
+    return false;
+}
+
 static void check_operator()
 {
     char value[PROPERTY_VALUE_MAX];
@@ -822,6 +850,30 @@ static int get_operator_specific_device_acdb_id(snd_device_t snd_device)
     if (device != NULL)
         ret = device->acdb_id;
 
+    return ret;
+}
+
+static int get_external_specific_device_acdb_id(snd_device_t snd_device)
+{
+    struct external_specific_device *ext_dev;
+    int ret = acdb_device_table[snd_device];
+    char *usbid = NULL;
+    struct listnode *node;
+
+    if (is_usb_snd_dev(snd_device))
+        usbid = audio_extn_usb_usbid();
+
+    if (usbid) {
+        list_for_each(node, external_specific_device_table[snd_device]) {
+            ext_dev = node_to_item(node, struct external_specific_device, list);
+            if (ext_dev->usbid && !strcmp(usbid, ext_dev->usbid)) {
+                ret = ext_dev->acdb_id;
+                break;
+            }
+        }
+
+        free(usbid);
+    }
     return ret;
 }
 
@@ -1256,6 +1308,7 @@ static void set_platform_defaults(struct platform_data * my_data)
         backend_tag_table[dev] = NULL;
         hw_interface_table[dev] = NULL;
         operator_specific_device_table[dev] = NULL;
+        external_specific_device_table[dev] = NULL;
     }
 
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
@@ -1923,6 +1976,7 @@ void platform_deinit(void *platform)
     int32_t dev;
     struct operator_info *info_item;
     struct operator_specific_device *device_item;
+    struct external_specific_device *ext_dev;
     struct app_type_entry *ap;
     struct listnode *node;
 
@@ -1948,6 +2002,17 @@ void platform_deinit(void *platform)
                 free(device_item);
             }
             free(operator_specific_device_table[dev]);
+        }
+
+        if (external_specific_device_table[dev]) {
+            while (!list_empty(external_specific_device_table[dev])) {
+                node = list_head(external_specific_device_table[dev]);
+                list_remove(node);
+                ext_dev = node_to_item(node, struct external_specific_device, list);
+                free(ext_dev->usbid);
+                free(ext_dev);
+            }
+            free(external_specific_device_table[dev]);
         }
     }
 
@@ -2201,6 +2266,30 @@ void platform_add_operator_specific_device(snd_device_t snd_device,
 
 }
 
+void platform_add_external_specific_device(snd_device_t snd_device,
+                                           const char *usbid,
+                                           unsigned int acdb_id)
+{
+    struct external_specific_device *device;
+
+    if (external_specific_device_table[snd_device] == NULL) {
+        external_specific_device_table[snd_device] =
+            (struct listnode *)calloc(1, sizeof(struct listnode));
+        list_init(external_specific_device_table[snd_device]);
+    }
+
+    device = (struct external_specific_device *)calloc(1, sizeof(struct external_specific_device));
+
+    device->usbid = strdup(usbid);
+    device->acdb_id = acdb_id;
+
+    list_add_tail(external_specific_device_table[snd_device], &device->list);
+
+    ALOGD("%s: device[%s] usbid[%s] -> acdb_id[%d]", __func__,
+            platform_get_snd_device_name(snd_device), usbid, acdb_id);
+}
+
+
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id)
 {
     int ret = 0;
@@ -2234,6 +2323,8 @@ int platform_get_snd_device_acdb_id(snd_device_t snd_device)
 
     if (operator_specific_device_table[snd_device] != NULL)
         return get_operator_specific_device_acdb_id(snd_device);
+    else if (external_specific_device_table[snd_device] != NULL)
+        return get_external_specific_device_acdb_id(snd_device);
     else
         return acdb_device_table[snd_device];
 }

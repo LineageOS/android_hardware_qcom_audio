@@ -111,6 +111,9 @@ void platform_add_operator_specific_device(snd_device_t snd_device,
                                            const char *operator,
                                            const char *mixer_path,
                                            unsigned int acdb_id);
+void platform_add_external_specific_device(snd_device_t snd_device,
+                                           const char *name,
+                                           unsigned int acdb_id);
 /* return true if adding entry success
    return false if adding entry fails */
 
