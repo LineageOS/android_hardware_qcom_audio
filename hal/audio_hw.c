@@ -60,6 +60,7 @@
 #include "sound/compress_params.h"
 #include "audio_extn/tfa_98xx.h"
 #include "audio_extn/maxxaudio.h"
+#include "audio_extn/audiozoom.h"
 
 /* COMPRESS_OFFLOAD_FRAGMENT_SIZE must be more than 8KB and a multiple of 32KB if more than 32KB.
  * COMPRESS_OFFLOAD_FRAGMENT_SIZE * COMPRESS_OFFLOAD_NUM_FRAGMENTS must be less than 8MB. */
@@ -352,6 +353,11 @@ static int last_known_cal_step = -1 ;
 
 static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool restore);
 static int set_compr_volume(struct audio_stream_out *stream, float left, float right);
+
+static int in_set_microphone_direction(const struct audio_stream_in *stream,
+                                           audio_microphone_direction_t dir);
+static int in_set_microphone_field_dimension(const struct audio_stream_in *stream, float zoom);
+
 
 static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
                                int flags __unused)
@@ -1886,6 +1892,8 @@ int start_input_stream(struct stream_in *in)
     }
     register_in_stream(in);
     check_and_enable_effect(adev);
+    audio_extn_audiozoom_set_microphone_direction(in, in->zoom);
+    audio_extn_audiozoom_set_microphone_field_dimension(in, in->direction);
     audio_streaming_hint_end();
     audio_extn_perf_lock_release();
     ALOGV("%s: exit", __func__);
@@ -4606,17 +4614,32 @@ static int adev_get_microphones(const struct audio_hw_device *dev,
 
 static int in_set_microphone_direction(const struct audio_stream_in *stream,
                                            audio_microphone_direction_t dir) {
-    (void)stream;
-    (void)dir;
-    ALOGVV("%s", __func__);
-    return -ENOSYS;
+    struct stream_in *in = (struct stream_in *)stream;
+
+    ALOGVV("%s: standby %d source %d dir %d", __func__, in->standby, in->source, dir);
+
+    in->direction = dir;
+
+    if (in->standby)
+        return 0;
+
+    return audio_extn_audiozoom_set_microphone_direction(in, dir);
 }
 
 static int in_set_microphone_field_dimension(const struct audio_stream_in *stream, float zoom) {
-    (void)stream;
-    (void)zoom;
-    ALOGVV("%s", __func__);
-    return -ENOSYS;
+    struct stream_in *in = (struct stream_in *)stream;
+
+    ALOGVV("%s: standby %d source %d zoom %f", __func__, in->standby, in->source, zoom);
+
+    if (zoom > 1.0 || zoom < -1.0)
+        return -EINVAL;
+
+    in->zoom = zoom;
+
+    if (in->standby)
+        return 0;
+
+    return audio_extn_audiozoom_set_microphone_field_dimension(in, zoom);
 }
 
 static void in_update_sink_metadata(struct audio_stream_in *stream,
@@ -5642,6 +5665,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->standby = 1;
     in->capture_handle = handle;
     in->flags = flags;
+    in->direction = MIC_DIRECTION_UNSPECIFIED;
+    in->zoom = 0;
 
     ALOGV("%s: source %d, config->channel_mask %#x", __func__, source, config->channel_mask);
     if (source == AUDIO_SOURCE_VOICE_UPLINK ||
@@ -6324,6 +6349,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     audio_extn_tfa_98xx_init(adev);
     audio_extn_ma_init(adev->platform);
+    audio_extn_audiozoom_init();
 
     pthread_mutex_unlock(&adev_init_lock);
 
