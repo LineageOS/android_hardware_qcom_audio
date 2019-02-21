@@ -7296,7 +7296,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     audio_extn_qdsp_set_parameters(adev, parms);
 
     status = audio_extn_a2dp_set_parameters(parms, &a2dp_reconfig);
-    if (ret >= 0 && a2dp_reconfig) {
+    if (status >= 0 && a2dp_reconfig) {
         struct audio_usecase *usecase;
         struct listnode *node;
         list_for_each(node, &adev->usecase_list) {
