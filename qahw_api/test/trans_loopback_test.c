@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -134,6 +134,11 @@ typedef struct trnscode_loopback_config {
 } transcode_loopback_config_t;
 
 transcode_loopback_config_t g_trnscode_loopback_config;
+
+static int poll_data_event_exit()
+{
+   close(sock_event_fd);
+}
 
 void break_signal_handler(int signal __attribute__((unused)))
 {
@@ -492,9 +497,8 @@ void process_loopback_data(void *ptr)
         fds.fd = sock_event_fd;
         fds.events = POLLIN;
         fds.revents = 0;
-        /* poll wait time modified from wait forever to 5 msec to
-           avoid keeping the thread in hang state */
-        i = poll(&fds, 1, 5);
+        /* poll wait time modified to wait forever */
+        i = poll(&fds, 1, -1);
 
         if (i > 0 && (fds.revents & POLLIN)) {
             count = recv(sock_event_fd, buffer, (64*1024), 0 );
@@ -674,8 +678,8 @@ int main(int argc, char *argv[]) {
                        (void *) process_loopback_data, NULL);
     fprintf(log_file,"\nMain thread loop\n");
     while(!stop_loopback) {
-        usleep(100*1000);
-        play_duration_elapsed_msec += 100;
+        usleep(5000*1000);
+        play_duration_elapsed_msec += 5000;
         if(play_duration_in_msec <= play_duration_elapsed_msec)
         {
             stop_loopback = true;
@@ -686,6 +690,7 @@ int main(int argc, char *argv[]) {
     fprintf(log_file,"\nMain thread loop exit\n");
 
 exit_transcode_loopback_test:
+    poll_data_event_exit();
     /* Wait for process thread to exit */
     while (!exit_process_thread) {
         usleep(10*1000);
