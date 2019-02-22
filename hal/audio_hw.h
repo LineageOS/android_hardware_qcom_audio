@@ -409,6 +409,8 @@ struct stream_in {
     struct audio_device *dev;
     card_status_t card_status;
     int capture_started;
+    float zoom;
+    audio_microphone_direction_t direction;
 
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
