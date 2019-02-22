@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -553,7 +553,8 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
         inout->adsp_hdlr_stream_handle = NULL;
         goto exit;
     }
-    if (audio_extn_ip_hdlr_intf_supported(source_patch_config->format,false, true)) {
+    if (audio_extn_ip_hdlr_intf_supported(source_patch_config->format,false, true) ||
+        audio_extn_ip_hdlr_intf_supported_for_copp(adev->platform)) {
         ret = audio_extn_ip_hdlr_intf_init(&inout->ip_hdlr_handle, NULL, NULL, adev,
                                            USECASE_AUDIO_TRANSCODE_LOOPBACK_RX);
         if (ret < 0) {

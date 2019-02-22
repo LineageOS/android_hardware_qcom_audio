@@ -41,6 +41,8 @@ int audio_extn_ip_hdlr_intf_deinit(void *handle);
 bool audio_extn_ip_hdlr_intf_supported(audio_format_t format,
                                        bool is_direct_passthru,
                                        bool is_transcode_loopback);
+bool audio_extn_ip_hdlr_intf_supported_for_copp(void *platform);
+int audio_extn_ip_hdlr_copp_update_cal_info(void *cfg, void *data);
 
 #else
 
@@ -49,6 +51,8 @@ bool audio_extn_ip_hdlr_intf_supported(audio_format_t format,
 #define audio_extn_ip_hdlr_intf_init(handle, lib_path, lib_handlei, adev, usecase)     (0)
 #define audio_extn_ip_hdlr_intf_deinit(handle)                                (0)
 #define audio_extn_ip_hdlr_intf_supported(format, is_direct_passthru, is_loopback) (0)
+#define audio_extn_ip_hdlr_intf_supported_for_copp(platform) (0)
+#define audio_extn_ip_hdlr_copp_update_cal_info(cfg, data) (0)
 
 #endif
 

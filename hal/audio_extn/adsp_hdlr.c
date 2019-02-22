@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -457,7 +457,7 @@ int audio_extn_adsp_hdlr_stream_deregister_event(void *handle, void *data)
 
 int audio_extn_adsp_hdlr_stream_register_event(void *handle, void *data,
                                                adsp_event_callback_t cb,
-                                               void *cookie)
+                                               void *cookie, bool is_adm_event)
 {
     int ret = 0;
     char mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
@@ -480,14 +480,22 @@ int audio_extn_adsp_hdlr_stream_register_event(void *handle, void *data,
         ALOGE("%s: Invalid payload_length %d",__func__, param->payload_length);
         return -EINVAL;
     }
-    ret = snprintf(cb_mixer_ctl_name, sizeof(cb_mixer_ctl_name),
+
+    if (is_adm_event)
+        ret = snprintf(cb_mixer_ctl_name, sizeof(cb_mixer_ctl_name),
+            "ADSP COPP Callback Event");
+    else
+        ret = snprintf(cb_mixer_ctl_name, sizeof(cb_mixer_ctl_name),
             "ADSP Stream Callback Event %d", config->pcm_device_id);
+
     if (ret < 0) {
         ALOGE("%s: snprintf failed",__func__);
         ret = -EINVAL;
         goto done;
     }
+
     ctl = mixer_get_ctl_by_name(adsp_hdlr_inst->mixer, cb_mixer_ctl_name);
+
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s", __func__,
               cb_mixer_ctl_name);
@@ -495,8 +503,13 @@ int audio_extn_adsp_hdlr_stream_register_event(void *handle, void *data,
         goto done;
     }
 
-    ret = snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+    if (is_adm_event)
+        ret = snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+            "COPP Event Cmd");
+    else
+       ret = snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
             "ADSP Stream Cmd %d", config->pcm_device_id);
+
     if (ret < 0) {
         ALOGE("%s: snprintf failed",__func__);
         ret = -EINVAL;
@@ -504,12 +517,14 @@ int audio_extn_adsp_hdlr_stream_register_event(void *handle, void *data,
     }
 
     ctl = mixer_get_ctl_by_name(adsp_hdlr_inst->mixer, mixer_ctl_name);
+
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s", __func__,
               mixer_ctl_name);
         ret = -EINVAL;
         goto done;
     }
+
     ALOGD("%s: event = %d, payload_length %d", __func__, param->event_type, param->payload_length);
 
     /* copy event_type, payload size and payload */
@@ -521,6 +536,7 @@ int audio_extn_adsp_hdlr_stream_register_event(void *handle, void *data,
            param->payload, param->payload_length);
     ret = mixer_ctl_set_array(ctl, payload, (sizeof(param->event_type) +
                                sizeof(param->payload_length) + param->payload_length));
+
     if (ret < 0) {
         ALOGE("%s: Could not set ctl for mixer cmd - %s, ret %d", __func__,
               mixer_ctl_name, ret);
@@ -537,23 +553,27 @@ int audio_extn_adsp_hdlr_stream_register_event(void *handle, void *data,
 
         /* create event threads during first event registration */
         pthread_mutex_lock(&adsp_hdlr_inst->event_wait_lock);
+
         if (!adsp_hdlr_inst->event_wait_thread_active)
             create_event_wait_thread(adsp_hdlr_inst);
-        pthread_mutex_unlock(&adsp_hdlr_inst->event_wait_lock);
 
+        pthread_mutex_unlock(&adsp_hdlr_inst->event_wait_lock);
         pthread_mutex_lock(&adsp_hdlr_inst->event_callback_lock);
+
         if (!adsp_hdlr_inst->event_callback_thread_active)
             create_event_callback_thread(adsp_hdlr_inst);
-        pthread_mutex_unlock(&adsp_hdlr_inst->event_callback_lock);
 
+        pthread_mutex_unlock(&adsp_hdlr_inst->event_callback_lock);
         send_cmd_event_wait_thread(adsp_hdlr_inst, EVENT_CMD_WAIT);
     }
+
     event_info = (struct adsp_hdlr_event_info *) calloc(1,
                                    sizeof(struct adsp_hdlr_event_info));
     if (event_info == NULL) {
         ret = -ENOMEM;
         goto done;
     }
+
     event_info->event_type = param->event_type;
     event_info->cb = cb;
     event_info->cookie = cookie;
@@ -582,7 +602,7 @@ int audio_extn_adsp_hdlr_stream_set_param(void *handle,
 
     switch (cmd) {
         case ADSP_HDLR_STREAM_CMD_REGISTER_EVENT :
-            ret = audio_extn_adsp_hdlr_stream_register_event(handle, param, NULL, NULL);
+            ret = audio_extn_adsp_hdlr_stream_register_event(handle, param, NULL, NULL, false);
             if (ret)
                 ALOGE("%s:adsp_hdlr_stream_register_event failed error %d",
                        __func__, ret);
