@@ -283,7 +283,6 @@
     <!-- RX Controls -->
     <ctl name="RX_MACRO RX0 MUX" value="ZERO" />
     <ctl name="RX_MACRO RX1 MUX" value="ZERO" />
-    <ctl name="RX_Native" value="OFF" />
     <ctl name="RX_CDC_DMA_RX_0 Channels" value="One" />
     <ctl name="RX INT0_1 MIX1 INP0" value="ZERO" />
     <ctl name="RX INT0_1 MIX1 INP1" value="ZERO" />
@@ -375,10 +374,6 @@
     <!-- Headphone class-H mode  -->
     <ctl name="RX_HPH_PWR_MODE" value="ULP" />
     <ctl name="RX HPH Mode" value="CLS_H_ULP" />
-
-    <!-- TX HDR AMIC Default connections -->
-    <ctl name="TX HDR12" value="0" />
-    <ctl name="TX HDR34" value="0" />
 
     <!-- IIR/voice anc -->
     <ctl name="IIR0 Band1" id ="0" value="268435456" />
@@ -2166,7 +2161,6 @@
     </path>
 
     <path name="headphones-44.1">
-        <ctl name="RX_Native" value="ON" />
         <path name="headphones" />
     </path>
 
