@@ -79,7 +79,7 @@
 // System properties used for A2DP Offload
 #define SYSPROP_A2DP_OFFLOAD_SUPPORTED "ro.bluetooth.a2dp_offload.supported"
 #define SYSPROP_A2DP_OFFLOAD_DISABLED  "persist.bluetooth.a2dp_offload.disabled"
-#define SYSPROP_BLUETOOTH_AUDIO_HAL_ENABLED  "persist.vendor.bluetooth.bluetooth_audio_hal.enabled"
+#define SYSPROP_BLUETOOTH_AUDIO_HAL_DISABLED  "persist.vendor.bluetooth.bluetooth_audio_hal.disabled"
 #define SYSPROP_A2DP_CODEC_LATENCIES   "vendor.audio.a2dp.codec.latency"
 
 // Default encoder bit width
@@ -680,7 +680,7 @@ static int open_a2dp_output()
     int ret = 0;
     ALOGD("%s: Open A2DP output start", __func__);
     bool hal_v2_enabled =
-              property_get_bool(SYSPROP_BLUETOOTH_AUDIO_HAL_ENABLED, false);
+              !property_get_bool(SYSPROP_BLUETOOTH_AUDIO_HAL_DISABLED, false);
 
     if (a2dp.bt_state != A2DP_STATE_DISCONNECTED) {
         ALOGD("%s: Called A2DP open with improper state, Ignoring request state %d",
