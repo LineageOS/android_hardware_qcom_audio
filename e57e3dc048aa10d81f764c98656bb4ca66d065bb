@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ec425f3a_8b96ba1f",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 8
+      },
+      "lineNbr": 8015,
+      "author": {
+        "id": 16208
+      },
+      "writtenOn": "2019-02-25T08:00:09Z",
+      "side": 1,
+      "message": "I do not like this.\n\n#ifdef ELLIPTIC_ULTRASOUND_ENABLED\n        if (usecase-\u003eid \u003d\u003d USECASE_AUDIO_ULTRASOUND_RX)\n                return 0;\n#endif",
+      "revId": "e57e3dc048aa10d81f764c98656bb4ca66d065bb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
