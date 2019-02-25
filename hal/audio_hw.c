@@ -3987,9 +3987,17 @@ static void out_snd_mon_cb(void * stream, struct str_parms * parms)
           use_case_table[out->usecase],
           status == CARD_STATUS_OFFLINE ? "offline" : "online");
 
-    if (status == CARD_STATUS_OFFLINE)
+    if (status == CARD_STATUS_OFFLINE) {
         out_on_error(stream);
-
+        if (voice_is_call_state_active(adev) &&
+            out == adev->primary_output) {
+            ALOGD("%s: SSR/PDR occurred, end all calls\n", __func__);
+            pthread_mutex_lock(&adev->lock);
+            voice_stop_call(adev);
+            adev->mode = AUDIO_MODE_NORMAL;
+            pthread_mutex_unlock(&adev->lock);
+        }
+    }
     return;
 }
 
@@ -5608,6 +5616,7 @@ static int in_standby(struct audio_stream *stream)
     if (!in->standby && in->is_st_session) {
         ALOGD("%s: sound trigger pcm stop lab", __func__);
         audio_extn_sound_trigger_stop_lab(in);
+        adev->num_va_sessions--;
         in->standby = 1;
     }
 
@@ -5640,6 +5649,10 @@ static int in_standby(struct audio_stream *stream)
             platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
             status = stop_input_stream(in);
         }
+
+        if (in->source == AUDIO_SOURCE_VOICE_RECOGNITION)
+            adev->num_va_sessions--;
+
         pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&in->lock);
@@ -5889,6 +5902,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         ALOGVV(" %s: reading on st session bytes=%zu", __func__, bytes);
         /* Read from sound trigger HAL */
         audio_extn_sound_trigger_read(in, buffer, bytes);
+        if (in->standby) {
+            adev->num_va_sessions++;
+            in->standby = 0;
+        }
         pthread_mutex_unlock(&in->lock);
         return bytes;
     }
@@ -5904,6 +5921,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ret = voice_extn_compress_voip_start_input_stream(in);
         else
             ret = start_input_stream(in);
+        if (!ret && in->source == AUDIO_SOURCE_VOICE_RECOGNITION)
+            adev->num_va_sessions++;
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0) {
             goto exit;
@@ -5952,11 +5971,18 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     release_in_focus(in);
 
     /*
-     * Instead of writing zeroes here, we could trust the hardware
-     * to always provide zeroes when muted.
+     * Instead of writing zeroes here, we could trust the hardware to always
+     * provide zeroes when muted. This is also muted with voice recognition
+     * usecases so that other clients do not have access to voice recognition
+     * data.
      */
-    if (ret == 0 && voice_get_mic_mute(adev) && !voice_is_in_call_rec_stream(in) &&
-            in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY)
+    if ((ret == 0 && voice_get_mic_mute(adev) &&
+         !voice_is_in_call_rec_stream(in) &&
+         in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY) ||
+        (adev->num_va_sessions &&
+         in->source != AUDIO_SOURCE_VOICE_RECOGNITION &&
+         property_get_bool("persist.vendor.audio.va_concurrency_mute_enabled",
+            false)))
         memset(buffer, 0, bytes);
 
 exit:
@@ -7971,14 +7997,20 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
 
     ALOGD("%s: enter:stream_handle(%p)",__func__, in);
 
-    // must deregister from sndmonitor first to prevent races
-    // between the callback and close_stream
+    /* must deregister from sndmonitor first to prevent races
+     * between the callback and close_stream
+     */
     audio_extn_snd_mon_unregister_listener(stream);
 
-    // Disable echo reference if there are no active input and hfp call
-    // while closing input stream
-    if (!adev->active_input && !audio_extn_hfp_is_active(adev))
+    /* Disable echo reference if there are no active input, hfp call
+     * and sound trigger while closing input stream
+     */
+    if (!adev->active_input &&
+        !audio_extn_hfp_is_active(adev) &&
+        !audio_extn_sound_trigger_check_ec_ref_enable())
         platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
+    else
+        audio_extn_sound_trigger_update_ec_ref_status(false);
 
     error_log_destroy(in->error_log);
     in->error_log = NULL;

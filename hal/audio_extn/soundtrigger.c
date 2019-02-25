@@ -54,7 +54,8 @@
 
 /* Proprietary interface version used for compatibility with STHAL */
 #define STHAL_PROP_API_VERSION_1_0 MAKE_HAL_VERSION(1, 0)
-#define STHAL_PROP_API_CURRENT_VERSION STHAL_PROP_API_VERSION_1_0
+#define STHAL_PROP_API_VERSION_1_1 MAKE_HAL_VERSION(1, 1)
+#define STHAL_PROP_API_CURRENT_VERSION STHAL_PROP_API_VERSION_1_1
 
 #define ST_EVENT_CONFIG_MAX_STR_VALUE 32
 #define ST_DEVICE_HANDSET_MIC 1
@@ -64,6 +65,7 @@ typedef enum {
     ST_EVENT_SESSION_DEREGISTER,
     ST_EVENT_START_KEEP_ALIVE,
     ST_EVENT_STOP_KEEP_ALIVE,
+    ST_EVENT_UPDATE_ECHO_REF
 } sound_trigger_event_type_t;
 
 typedef enum {
@@ -82,7 +84,8 @@ typedef enum {
     AUDIO_EVENT_CAPTURE_STREAM_INACTIVE,
     AUDIO_EVENT_CAPTURE_STREAM_ACTIVE,
     AUDIO_EVENT_BATTERY_STATUS_CHANGED,
-    AUDIO_EVENT_GET_PARAM
+    AUDIO_EVENT_GET_PARAM,
+    AUDIO_EVENT_UPDATE_ECHO_REF
 } audio_event_type_t;
 
 typedef enum {
@@ -120,6 +123,7 @@ struct audio_hal_usecase {
 
 struct sound_trigger_event_info {
     struct sound_trigger_session_info st_ses;
+    bool st_ec_ref_enabled;
 };
 typedef struct sound_trigger_event_info sound_trigger_event_info_t;
 
@@ -141,6 +145,7 @@ struct audio_event_info {
         struct audio_read_samples_info aud_info;
         char str_value[ST_EVENT_CONFIG_MAX_STR_VALUE];
         struct audio_hal_usecase usecase;
+        bool audio_ec_ref_enabled;
         struct sound_trigger_get_param_data st_get_param_data;
     } u;
     struct sound_trigger_device_info device_info;
@@ -200,6 +205,7 @@ struct sound_trigger_audio_device {
     struct listnode st_ses_list;
     pthread_mutex_t lock;
     unsigned int sthal_prop_api_version;
+    bool st_ec_ref_enabled;
 };
 
 static struct sound_trigger_audio_device *st_dev;
@@ -335,6 +341,15 @@ int audio_hw_call_back(sound_trigger_event_type_t event,
         pthread_mutex_unlock(&st_dev->adev->lock);
         goto done;
 
+    case ST_EVENT_UPDATE_ECHO_REF:
+        if (!config) {
+            ALOGE("%s: NULL config", __func__);
+            status = -EINVAL;
+            break;
+        }
+        st_dev->st_ec_ref_enabled = config->st_ec_ref_enabled;
+        break;
+
     default:
         ALOGW("%s: Unknown event %d", __func__, event);
         break;
@@ -358,8 +373,6 @@ int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
         ALOGE(" %s: Sound trigger is not active", __func__);
         goto exit;
     }
-    if(in->standby)
-        in->standby = false;
 
     pthread_mutex_lock(&st_dev->lock);
     st_info = get_sound_trigger_info(in->capture_handle);
@@ -441,6 +454,42 @@ bool is_same_as_st_device(snd_device_t snd_device)
         return true;
     }
     return false;
+}
+
+bool audio_extn_sound_trigger_check_ec_ref_enable()
+{
+    bool ret = false;
+
+    if (!st_dev) {
+        ALOGE("%s: st_dev NULL", __func__);
+        return ret;
+    }
+
+    pthread_mutex_lock(&st_dev->lock);
+    if (st_dev->st_ec_ref_enabled) {
+        ret = true;
+        ALOGD("%s: EC Reference is enabled", __func__);
+    } else {
+        ALOGD("%s: EC Reference is disabled", __func__);
+    }
+    pthread_mutex_unlock(&st_dev->lock);
+
+    return ret;
+}
+
+void audio_extn_sound_trigger_update_ec_ref_status(bool on)
+{
+    struct audio_event_info ev_info;
+
+    if (!st_dev) {
+        ALOGE("%s: st_dev NULL", __func__);
+        return;
+    }
+
+    ev_info.u.audio_ec_ref_enabled = on;
+    st_dev->st_callback(AUDIO_EVENT_UPDATE_ECHO_REF, &ev_info);
+    ALOGD("%s: update audio echo ref status %s",__func__,
+                ev_info.u.audio_ec_ref_enabled == true ? "true" : "false");
 }
 
 void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
@@ -753,6 +802,7 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
     }
 
     st_dev->adev = adev;
+    st_dev->st_ec_ref_enabled = false;
     list_init(&st_dev->st_ses_list);
     audio_extn_snd_mon_register_listener(st_dev, stdev_snd_mon_cb);
 

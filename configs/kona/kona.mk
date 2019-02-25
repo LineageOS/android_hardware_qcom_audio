@@ -43,7 +43,6 @@ AUDIO_FEATURE_ENABLED_3D_AUDIO := false
 DOLBY_ENABLE := false
 endif
 
-USE_XML_AUDIO_POLICY_CONF := 1
 AUDIO_FEATURE_ENABLED_DLKM := true
 BOARD_SUPPORTS_SOUND_TRIGGER := true
 BOARD_SUPPORTS_GCS := false
@@ -244,6 +243,8 @@ audio.volume.headset.gain.depcal=true
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.audio.fluence.voicecomm=true
 endif
+
+USE_XML_AUDIO_POLICY_CONF := 1
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \
