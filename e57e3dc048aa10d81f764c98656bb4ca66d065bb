@@ -52,6 +52,24 @@
       "revId": "e57e3dc048aa10d81f764c98656bb4ca66d065bb",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "b83b793a_135cfdab",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 8
+      },
+      "lineNbr": 8015,
+      "author": {
+        "id": 16208
+      },
+      "writtenOn": "2019-02-25T08:11:57Z",
+      "side": 1,
+      "message": "I just feel the indentation does not look good now.",
+      "parentUuid": "66e2e6d6_a5934ef8",
+      "revId": "e57e3dc048aa10d81f764c98656bb4ca66d065bb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
