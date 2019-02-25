@@ -91,8 +91,6 @@ typedef enum MA_CMD {
     MA_CMD_SWAP_DISABLE,
     MA_CMD_ROTATE_ENABLE,
     MA_CMD_ROTATE_DISABLE,
-    MA_CMD_SOFT_MUTE_ENABLE,
-    MA_CMD_SOFT_MUTE_DISABLE,
 } ma_cmd_t;
 
 typedef struct ma_audio_cal_version {
@@ -223,6 +221,25 @@ static bool ma_set_param_l(
                                  audio_cal_settings, index, value);
 }
 
+static void print_state_log()
+{
+    ALOGD("%s: send volume table -(%i,%f,%s),(%i,%f,%s),(%i,%f,%s),(%i,%f,%s),"
+          "(%i,%f,%s),(%i,%f,%s)", __func__,
+          STREAM_VOICE, ma_cur_state_table[STREAM_VOICE].vol,
+          ma_cur_state_table[STREAM_VOICE].active ? "T" : "F",
+          STREAM_SYSTEM, ma_cur_state_table[STREAM_SYSTEM].vol,
+          ma_cur_state_table[STREAM_SYSTEM].active ? "T" : "F",
+          STREAM_RING, ma_cur_state_table[STREAM_RING].vol,
+          ma_cur_state_table[STREAM_RING].active ? "T" : "F",
+          STREAM_MUSIC, ma_cur_state_table[STREAM_MUSIC].vol,
+          ma_cur_state_table[STREAM_MUSIC].active ? "T" : "F",
+          STREAM_ALARM, ma_cur_state_table[STREAM_ALARM].vol,
+          ma_cur_state_table[STREAM_ALARM].active ? "T" : "F",
+          STREAM_NOTIFICATION, ma_cur_state_table[STREAM_NOTIFICATION].vol,
+          ma_cur_state_table[STREAM_NOTIFICATION].active ? "T" : "F");
+
+}
+
 static inline bool valid_usecase(struct audio_usecase *usecase)
 {
     if ((usecase->type == PCM_PLAYBACK) &&
@@ -294,13 +311,7 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
                         ALOGV("ma_set_volume_table_l success");
                     else
                         ALOGE("ma_set_volume_table_l returned with error.");
-
-                    ALOGV("%s: send volume table === Start", __func__);
-                    for (i = 0; i < STREAM_MAX_TYPES; i++)
-                        ALOGV("%s: stream(%d) volume(%f) active(%s)", __func__,
-                              i, ma_cur_state_table[i].vol,
-                              ma_cur_state_table[i].active ? "T" : "F");
-                    ALOGV("%s: send volume table === End", __func__);
+                    print_state_log();
                     break;
 
                 case MA_CMD_SWAP_ENABLE:
@@ -326,9 +337,11 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
                     if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
                         ret = ma_set_orientation_l(&ma_cal, my_data->dispaly_orientation);
                         if (ret)
-                            ALOGV("ma_set_orientation_l %d returned with success.", my_data->dispaly_orientation);
+                            ALOGV("ma_set_orientation_l %d returned with success.",
+                                  my_data->dispaly_orientation);
                         else
-                            ALOGE("ma_set_orientation_l %d returned with error.", my_data->dispaly_orientation);
+                            ALOGE("ma_set_orientation_l %d returned with error.",
+                                  my_data->dispaly_orientation);
                     }
                     break;
 
@@ -338,24 +351,6 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
                         ALOGV("ma_set_orientation_l 0 returned with success.");
                     else
                         ALOGE("ma_set_orientation_l 0 returned with error.");
-                    break;
-
-                case MA_CMD_SOFT_MUTE_ENABLE:
-                    if (usecase->id == USECASE_AUDIO_PLAYBACK_LOW_LATENCY) break;
-
-                    ma_cal.effect_scope_flag = EFFECTIVE_SCOPE_RTC;
-                    ret = ma_set_param_l(&ma_cal, MAAP_OUTPUT_GAIN, -96);
-                    if (!ret)
-                        ALOGE("soft mute enable returned with error.");
-                    break;
-
-                case MA_CMD_SOFT_MUTE_DISABLE:
-                    if (usecase->id == USECASE_AUDIO_PLAYBACK_LOW_LATENCY) break;
-
-                    ma_cal.effect_scope_flag = EFFECTIVE_SCOPE_RTC;
-                    ret = ma_set_param_l(&ma_cal, MAAP_OUTPUT_GAIN, 0);
-                    if (!ret)
-                        ALOGE("soft mute disable returned with error.");
                     break;
 
                 default:
@@ -484,7 +479,7 @@ void audio_extn_ma_init(void *platform)
 
     my_data->waves_handle = dlopen(lib_path, RTLD_NOW);
     if (my_data->waves_handle == NULL) {
-         ALOGE("%s: DLOPEN failed for %s", __func__, LIB_MA_PARAM);
+         ALOGE("%s: DLOPEN failed for %s, %s", __func__, LIB_MA_PARAM, dlerror());
          goto error;
     } else {
          ALOGV("%s: DLOPEN successful for %s", __func__, LIB_MA_PARAM);
@@ -617,7 +612,8 @@ void audio_extn_ma_init(void *platform)
     my_data->dispaly_orientation = 0;
 
     if (g_ma_audio_cal_handle && my_data->ma_is_feature_used) {
-        my_data->orientation_used = my_data->ma_is_feature_used(g_ma_audio_cal_handle, "SET_ORIENTATION");
+        my_data->orientation_used = my_data->ma_is_feature_used(
+                g_ma_audio_cal_handle, "SET_ORIENTATION");
     }
 
     return;
@@ -649,7 +645,6 @@ bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
                              float vol, bool active)
 {
     bool ret = false;
-    bool first_enable = false;
     struct ma_state pr_mstate;
 
     if (stream_type >= STREAM_MAX_TYPES ||
@@ -673,16 +668,9 @@ bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
     if (pr_mstate.vol != vol || pr_mstate.active != active) {
 
         pthread_mutex_lock(&my_data->lock);
-        // get active state before updating
-        first_enable = (!is_active()) && active;
 
         ma_cur_state_table[(ma_stream_type_t)stream_type].vol = vol;
         ma_cur_state_table[(ma_stream_type_t)stream_type].active = active;
-
-        if (first_enable) //all F -> one of T
-            ret = check_and_send_all_audio_cal(adev, MA_CMD_SOFT_MUTE_DISABLE);
-        else if (!is_active()) // all F
-            ret = check_and_send_all_audio_cal(adev, MA_CMD_SOFT_MUTE_ENABLE);
 
         ret = check_and_send_all_audio_cal(adev, MA_CMD_VOL);
 
@@ -724,7 +712,8 @@ void audio_extn_ma_set_device(struct audio_usecase *usecase)
 
         if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
             if (my_data->orientation_used)
-                ma_set_rotation_l(usecase->stream.out->dev, my_data->dispaly_orientation);
+                ma_set_rotation_l(usecase->stream.out->dev,
+                                  my_data->dispaly_orientation);
             else
                 ma_set_swap_l(usecase->stream.out->dev, my_data->speaker_lr_swap);
         } else {
@@ -734,19 +723,13 @@ void audio_extn_ma_set_device(struct audio_usecase *usecase)
                 ma_set_swap_l(usecase->stream.out->dev, false);
         }
 
-        ALOGV("%s: send volume table === Start", __func__);
-        for (i = 0; i < STREAM_MAX_TYPES; i++)
-            ALOGV("%s: stream(%d) volume(%f) active(%s)", __func__, i,
-                   ma_cur_state_table[i].vol,
-                   ma_cur_state_table[i].active ? "T" : "F");
-        ALOGV("%s: send volume table === End", __func__);
-
         if (!ma_set_volume_table_l(&ma_cal,
                                    STREAM_MAX_TYPES,
                                    ma_cur_state_table))
             ALOGE("ma_set_volume_table_l returned with error.");
         else
             ALOGV("ma_set_volume_table_l success");
+        print_state_log();
 
     }
     pthread_mutex_unlock(&my_data->lock);
