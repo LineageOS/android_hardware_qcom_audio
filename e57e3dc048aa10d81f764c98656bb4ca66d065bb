@@ -34,6 +34,24 @@
       "revId": "e57e3dc048aa10d81f764c98656bb4ca66d065bb",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "66e2e6d6_a5934ef8",
+        "filename": "hal/msm8974/platform.c",
+        "patchSetId": 8
+      },
+      "lineNbr": 8015,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-02-25T08:09:30Z",
+      "side": 1,
+      "message": "Check the change before this one and you\u0027ll see that the same approach is used. Doesn\u0027t make sense to do differently.",
+      "parentUuid": "53a5a2a6_25b89f2c",
+      "revId": "e57e3dc048aa10d81f764c98656bb4ca66d065bb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
