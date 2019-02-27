@@ -66,7 +66,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
       defined (PLATFORM_SDM845) || defined (PLATFORM_SDM710) || \
       defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || \
       defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
-      defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET)
+      defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
+      defined (PLATFORM_LITO)
 #define HFP_RX_VOLUME     "SLIMBUS_7 LOOPBACK Volume"
 #else
 #define HFP_RX_VOLUME     "Internal HFP RX Volume"
