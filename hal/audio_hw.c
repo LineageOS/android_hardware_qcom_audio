@@ -1203,7 +1203,8 @@ int disable_snd_device(struct audio_device *adev,
             disable_asrc_mode(adev);
             audio_route_apply_and_update_path(adev->audio_route, "hph-lowpower-mode");
         }
-        if ((snd_device == SND_DEVICE_IN_HANDSET_6MIC) &&
+        if (((snd_device == SND_DEVICE_IN_HANDSET_6MIC) ||
+            (snd_device == SND_DEVICE_IN_HANDSET_QMIC)) &&
             (audio_extn_ffv_get_stream() == adev->active_input)) {
             ALOGD("%s: deinit ec ref loopback", __func__);
             audio_extn_ffv_deinit_ec_ref_loopback(adev, snd_device);
