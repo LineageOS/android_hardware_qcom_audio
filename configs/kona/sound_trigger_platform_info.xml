@@ -45,18 +45,21 @@
         <param transit_to_adsp_on_battery_charging="false" />
         <!-- Below backend params must match with port used in mixer path file -->
         <!-- param used to configure backend sample rate, format and channels -->
-        <param backend_port_name="TX_CDC_DMA_TX_3" />
+        <param backend_port_name="VA_CDC_DMA_TX_0" />
         <!-- Param used to match and obtain device backend index -->
-        <param backend_dai_name="TX_CDC_DMA_TX_3" />
+        <param backend_dai_name="VA_CDC_DMA_TX_0" />
         <!-- Param used to indicate if SVA has dedicated SLIM ports -->
         <param dedicated_sva_path="true" />
     </common_config>
     <acdb_ids>
         <param DEVICE_HANDSET_MIC_APE="100" />
-        <param DEVICE_HANDSET_TMIC_APE="157" />
         <param DEVICE_HANDSET_MIC_PP_APE="135" />
-        <param DEVICE_HANDSET_QMIC_APE="137" />
         <param DEVICE_HANDSET_DMIC_APE="149" />
+        <param DEVICE_HANDSET_DMIC_LPI_APE="149" />
+        <param DEVICE_HANDSET_TMIC_APE="157" />
+        <param DEVICE_HANDSET_TMIC_LPI_APE="157" />
+        <param DEVICE_HANDSET_QMIC_APE="137" />
+        <param DEVICE_HANDSET_QMIC_LPI_APE="137" />
     </acdb_ids>
 
     <!-- Multiple sound_model_config tags can be listed, each with unique   -->
@@ -74,6 +77,7 @@
         <param sample_rate="16000" />
         <param bit_width="16" />
         <param out_channels="1"/> <!-- Module output channels -->
+        <param lpi_enable="true" />
 
         <arm_ss_usecase>
             <!-- Options are "KEYWORD_DETECTION", "USER_VERIFICATION", "CUSTOM_DETECTION"  -->
@@ -151,6 +155,7 @@
         <param sample_rate="16000" />
         <param bit_width="16" />
         <param out_channels="1"/> <!-- Module output channels -->
+        <param lpi_enable="true" />
         <!-- Module and param ids with which the algorithm is integrated
             in non-graphite firmware (note these must come after gcs params)
             Extends flexibility to have different ids based on execution type.
