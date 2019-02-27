@@ -67,7 +67,7 @@
 #define MAX_NUM_CHANNELS 8
 #define Q14_GAIN_UNITY 0x4000
 
-static bool is_running_on_stock_version = true;
+static int is_running_vendor_enhanced_fwk = 1;
 static bool is_compress_meta_data_enabled = false;
 
 struct snd_card_split cur_snd_card_split = {
@@ -1130,13 +1130,14 @@ static get_spkr_prot_snd_device_t get_spkr_prot_snd_device;
 
 void spkr_prot_feature_init(bool is_feature_enabled)
 {
-    ALOGD("%s: Called with feature %s", __func__, is_feature_enabled?"Enabled":"NOT Enabled");
+    ALOGD("%s: Called with feature %s, is_running_with_enhanced_fwk %d", __func__,
+            is_feature_enabled?"Enabled":"NOT Enabled", is_running_vendor_enhanced_fwk);
     if (is_feature_enabled) {
         //dlopen lib
-        if (is_running_on_stock_version)
-            spkr_prot_lib_handle = dlopen(CIRRUS_SPKR_PROT_LIB_PATH, RTLD_NOW);
-        else
+        if (is_running_vendor_enhanced_fwk)
             spkr_prot_lib_handle = dlopen(SPKR_PROT_LIB_PATH, RTLD_NOW);
+        else
+            spkr_prot_lib_handle = dlopen(CIRRUS_SPKR_PROT_LIB_PATH, RTLD_NOW);
 
         if (spkr_prot_lib_handle == NULL) {
             ALOGE("%s: dlopen failed", __func__);
@@ -2328,8 +2329,6 @@ size_t audio_extn_compr_cap_read(struct stream_in *in,
 
 void audio_extn_init(struct audio_device *adev)
 {
-    //fix-me: check running on vendor enhanced build
-    //is_running_on_stock_version = !isRunningWithVendorEnhancedFramework();
     aextnmod.anc_enabled = 0;
     aextnmod.aanc_enabled = 0;
     aextnmod.custom_stereo_enabled = 0;
@@ -3699,8 +3698,9 @@ int audio_extn_a2dp_stop_capture()
 }
 
 // END: A2DP_OFFLOAD =====================================================================
-void audio_extn_feature_init()
+void audio_extn_feature_init(int is_running_with_enhanced_fwk)
 {
+    is_running_vendor_enhanced_fwk = is_running_with_enhanced_fwk;
     for(int index = 0; index < VOICE_START; index++)
     {
         bool enable = audio_feature_manager_is_feature_enabled(index);
@@ -3733,6 +3733,7 @@ void audio_extn_feature_init()
                 break;
             case KPI_OPTIMIZE:
                 kpi_optimize_feature_init(enable);
+                break;
             case USB_OFFLOAD:
                 usb_offload_feature_init(enable);
                 break;
@@ -3762,6 +3763,24 @@ void audio_extn_feature_init()
                 break;
             case ANC_HEADSET:
                 anc_headset_feature_init(enable);
+                break;
+            case SPKR_PROT:
+                spkr_prot_feature_init(enable);
+                break;
+            case FM_POWER_OPT_FEATURE:
+                fm_feature_init(enable);
+                break;
+            case EXTERNAL_QDSP:
+                external_qdsp_feature_init(enable);
+                break;
+            case EXTERNAL_SPEAKER:
+                external_speaker_feature_init(enable);
+                break;
+            case EXTERNAL_SPEAKER_TFA:
+                external_speaker_tfa_feature_init(enable);
+                break;
+            case HWDEP_CAL:
+                hwdep_cal_feature_init(enable);
                 break;
             default:
                 break;

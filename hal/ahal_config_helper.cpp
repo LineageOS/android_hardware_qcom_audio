@@ -74,6 +74,12 @@ void AHalConfigHelper::initDefaultConfig(bool isVendorEnhancedFwk)
             true,        /* FLUENCE */
             true,        /* CUSTOM_STEREO */
             true,        /* ANC_HEADSET */
+            true,        /* SPKR_PROT */
+            true,        /* FM_POWER_OPT */
+            false,       /* EXTERNAL_QDSP */
+            false,       /* EXTERNAL_SPEAKER */
+            false,       /* EXTERNAL_SPEAKER_TFA */
+            false,       /* HWDEP_CAL */
             false,       /* DSM_FEEDBACK */
             true,        /* USB_OFFLOAD */
             false,       /* USB_OFFLOAD_BURST_MODE */
@@ -102,6 +108,12 @@ void AHalConfigHelper::initDefaultConfig(bool isVendorEnhancedFwk)
             false,       /* FLUENCE */
             false,       /* CUSTOM_STEREO */
             false,       /* ANC_HEADSET */
+            true,        /* SPKR_PROT */
+            false,       /* FM_POWER_OPT */
+            true,        /* EXTERNAL_QDSP */
+            true,        /* EXTERNAL_SPEAKER */
+            false,       /* EXTERNAL_SPEAKER_TFA */
+            true,        /* HWDEP_CAL */
             false,       /* DSM_FEEDBACK */
             true,        /* USB_OFFLOAD */
             false,       /* USB_OFFLOAD_BURST_MODE */

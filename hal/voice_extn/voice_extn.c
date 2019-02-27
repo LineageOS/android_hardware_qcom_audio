@@ -86,6 +86,7 @@ struct pcm_config pcm_config_incall_music = {
 
 static bool voice_extn_compress_voip_enabled = false;
 static bool voice_extn_dynamic_ecns_feature_enabled = false;
+static int voice_extn_is_running_vendor_enhanced_fwk = 1;
 
 int voice_extn_is_call_state_active(struct audio_device *adev, bool *is_call_active);
 
@@ -402,8 +403,9 @@ bool voice_extn_is_dynamic_ecns_enabled()
     return voice_extn_dynamic_ecns_feature_enabled;
 }
 
-void voice_extn_feature_init()
+void voice_extn_feature_init(int is_running_with_enhanced_fwk)
 {
+    voice_extn_is_running_vendor_enhanced_fwk = is_running_with_enhanced_fwk;
     for(int index = VOICE_START; index < MAX_SUPPORTED_FEATURE; index++)
     {
         bool enable = audio_feature_manager_is_feature_enabled(index);

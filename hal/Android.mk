@@ -358,7 +358,6 @@ LOCAL_SHARED_LIBRARIES := \
     libdl \
     libaudioutils \
     libexpat \
-    libqti_vndfwk_detect \
     libhwbinder \
     libhidlbase \
     libhidltransport \

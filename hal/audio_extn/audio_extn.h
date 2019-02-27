@@ -228,7 +228,7 @@ typedef struct spkr_prot_init_config spkr_prot_init_config_t;
 
 // call at adev init
 void audio_extn_init(struct audio_device *adev);
-void audio_extn_feature_init();
+void audio_extn_feature_init(int is_running_with_enhanced_fwk);
 //START: SND_MONITOR_FEATURE ===========================================
 void snd_mon_feature_init (bool is_feature_enabled);
 typedef void (* snd_mon_cb)(void * stream, struct str_parms * parms);
