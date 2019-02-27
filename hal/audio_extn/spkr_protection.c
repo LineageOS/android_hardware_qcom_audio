@@ -898,6 +898,10 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
         total_time = (handle.v_vali_wait_time + handle.v_vali_vali_time);
         ts.tv_sec += (total_time/1000);
         ts.tv_nsec += ((total_time%1000) * 1000000);
+        if (ts.tv_nsec >= 1000000000) {
+            ts.tv_nsec -= 1000000000;
+            ts.tv_sec += 1;
+        }
     }
     pthread_mutex_lock(&handle.mutex_spkr_prot);
     pthread_mutex_unlock(&adev->lock);
@@ -1681,6 +1685,7 @@ static int get_spkr_prot_v_vali_param(int cal_fd __unused, int *status __unused,
 static void* spkr_v_vali_thread()
 {
     int ret = 0;
+    struct audio_device *adev = handle.adev_handle;
     handle.v_vali_threadid = pthread_self();
 
     if (!handle.v_vali_wait_time)
@@ -1688,12 +1693,14 @@ static void* spkr_v_vali_thread()
     if (!handle.v_vali_vali_time)
         handle.v_vali_vali_time = SPKR_V_VALI_DEFAULT_VALI_TIME;/*set default if not setparam */
     set_spkr_prot_v_vali_cfg(handle.v_vali_wait_time, handle.v_vali_vali_time);
+    pthread_mutex_lock(&adev->lock);
     ret = spkr_calibrate(SPKR_V_VALI_TEMP_MASK,
                          SPKR_V_VALI_TEMP_MASK);/*use 0xfffe as temp to initiate v_vali*/
+    pthread_mutex_unlock(&adev->lock);
     if (ret)
         ALOGE("%s: failed, retry again\n", __func__);
-    pthread_exit(0);
     handle.trigger_v_vali = false;
+    pthread_exit(0);
     return NULL;
 }
 
