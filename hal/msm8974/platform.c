@@ -1250,10 +1250,12 @@ void platform_set_gsm_mode(void *platform, bool enable)
 }
 
 void platform_set_echo_reference(struct audio_device *adev, bool enable,
-                                 audio_devices_t out_device __unused)
+                                 audio_devices_t out_device)
 {
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     char ec_ref_mixer_path[MIXER_PATH_MAX_LENGTH] = "echo-reference";
+
+    audio_extn_sound_trigger_update_ec_ref_status(enable);
 
     if (strcmp(my_data->ec_ref_mixer_path, "")) {
         ALOGV("%s: disabling %s", __func__, my_data->ec_ref_mixer_path);
@@ -1266,9 +1268,11 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
         if (adev->mode == AUDIO_MODE_IN_COMMUNICATION)
             strlcat(ec_ref_mixer_path, "-voip", MIXER_PATH_MAX_LENGTH);
 #endif
+        strlcpy(my_data->ec_ref_mixer_path, ec_ref_mixer_path,
+                    MIXER_PATH_MAX_LENGTH);
         /*
          * If native audio device reference count > 0, then apply codec EC otherwise
-         * fallback to Speakers with VBat if enabled or default
+         * apply EC based on output device.
          */
         if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_HEADPHONES_44_1] > 0)
             strlcat(ec_ref_mixer_path, " headphones-44.1",
@@ -1279,12 +1283,24 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
         else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_DISPLAY_PORT] > 0)
             strlcat(ec_ref_mixer_path, " display-port",
                     MIXER_PATH_MAX_LENGTH);
+        else if (out_device & AUDIO_DEVICE_OUT_EARPIECE)
+            strlcat(ec_ref_mixer_path, " handset",
+                    MIXER_PATH_MAX_LENGTH);
+        else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
+            strlcat(ec_ref_mixer_path, " headphones",
+                    MIXER_PATH_MAX_LENGTH);
+        else if (out_device & AUDIO_DEVICE_OUT_USB_HEADSET)
+            strlcat(ec_ref_mixer_path, " usb-headphones",
+                    MIXER_PATH_MAX_LENGTH);
 
-        strlcpy(my_data->ec_ref_mixer_path, ec_ref_mixer_path,
-                MIXER_PATH_MAX_LENGTH);
+        if (audio_route_apply_and_update_path(adev->audio_route,
+                                              ec_ref_mixer_path) == 0)
+            strlcpy(my_data->ec_ref_mixer_path, ec_ref_mixer_path,
+                    MIXER_PATH_MAX_LENGTH);
+        else
+            audio_route_apply_and_update_path(adev->audio_route, my_data->ec_ref_mixer_path);
 
         ALOGD("%s: enabling %s", __func__, my_data->ec_ref_mixer_path);
-        audio_route_apply_and_update_path(adev->audio_route, my_data->ec_ref_mixer_path);
     }
 }
 
@@ -1918,6 +1934,10 @@ static int platform_acdb_init(void *platform)
     }
 
     snd_card_name = mixer_get_name(my_data->adev->mixer);
+    if (!snd_card_name) {
+        ALOGE("Failed to get snd_card_name");
+        goto cleanup;
+    }
     snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
 
     my_data->acdb_init_data.cvd_version = cvd_version;
@@ -1941,6 +1961,7 @@ static int platform_acdb_init(void *platform)
     strlcpy(my_data->snd_card_name, snd_card_name,
                                                MAX_SND_CARD_STRING_SIZE);
 
+cleanup:
     if (cvd_version)
         free(cvd_version);
     if (!result) {

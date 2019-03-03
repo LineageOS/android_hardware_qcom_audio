@@ -905,7 +905,6 @@ void audio_extn_ffv_set_parameters(struct audio_device *adev __unused,
             str_parms_del(parms, AUDIO_PARAMETER_FFV_EC_REF_DEVICE);
         } else if (str_parms_get_int(parms, AUDIO_PARAMETER_DEVICE_CONNECT, &val) >= 0) {
             ret = 1;
-            str_parms_del(parms, AUDIO_PARAMETER_DEVICE_CONNECT);
         }
         if (ret == 1) {
             if (val & AUDIO_DEVICE_OUT_SPEAKER) {
@@ -921,7 +920,6 @@ void audio_extn_ffv_set_parameters(struct audio_device *adev __unused,
 
         ret = str_parms_get_int(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, &val);
         if (ret >= 0) {
-            str_parms_del(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT);
             if (val & AUDIO_DEVICE_OUT_LINE) {
                 ALOGD("%s: capture ec ref from speaker", __func__);
                 ffvmod.ec_ref_dev = AUDIO_DEVICE_OUT_SPEAKER;

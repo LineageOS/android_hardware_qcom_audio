@@ -3848,9 +3848,17 @@ static void out_snd_mon_cb(void * stream, struct str_parms * parms)
           use_case_table[out->usecase],
           status == CARD_STATUS_OFFLINE ? "offline" : "online");
 
-    if (status == CARD_STATUS_OFFLINE)
+    if (status == CARD_STATUS_OFFLINE) {
         out_on_error(stream);
-
+        if (voice_is_call_state_active(adev) &&
+            out == adev->primary_output) {
+            ALOGD("%s: SSR/PDR occurred, end all calls", __func__);
+            pthread_mutex_lock(&adev->lock);
+            voice_stop_call(adev);
+            adev->mode = AUDIO_MODE_NORMAL;
+            pthread_mutex_unlock(&adev->lock);
+        }
+    }
     return;
 }
 
@@ -7506,14 +7514,20 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
 
     ALOGD("%s: enter:stream_handle(%p)",__func__, in);
 
-    // must deregister from sndmonitor first to prevent races
-    // between the callback and close_stream
+    /* must deregister from sndmonitor first to prevent races
+     * between the callback and close_stream
+     */
     audio_extn_snd_mon_unregister_listener(stream);
 
-    // Disable echo reference if there are no active input and hfp call
-    // while closing input stream
-    if (!adev->active_input && !audio_extn_hfp_is_active(adev))
+    /* Disable echo reference if there are no active input, hfp call
+     * and sound trigger while closing input stream
+     */
+    if (!adev->active_input &&
+        !audio_extn_hfp_is_active(adev) &&
+        !audio_extn_sound_trigger_check_ec_ref_enable())
         platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
+    else
+        audio_extn_sound_trigger_update_ec_ref_status(false);
 
     if (in == NULL) {
         ALOGE("%s: audio_stream_in ptr is NULL", __func__);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -395,6 +395,8 @@ void audio_extn_listen_set_parameters(struct audio_device *adev,
 #define audio_extn_sound_trigger_check_and_get_session(in)             (0)
 #define audio_extn_sound_trigger_stop_lab(in)                          (0)
 #define audio_extn_sound_trigger_read(in, buffer, bytes)               (0)
+#define audio_extn_sound_trigger_check_ec_ref_enable()                 (0)
+#define audio_extn_sound_trigger_update_ec_ref_status(on)              (0)
 #else
 
 enum st_event_type {
@@ -420,6 +422,8 @@ int audio_extn_sound_trigger_read(struct stream_in *in, void *buffer,
                                   size_t bytes);
 void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev,
                      struct str_parms *query, struct str_parms *reply);
+bool audio_extn_sound_trigger_check_ec_ref_enable();
+void audio_extn_sound_trigger_update_ec_ref_status(bool on);
 #endif
 
 #ifndef AUXPCM_BT_ENABLED
@@ -971,16 +975,10 @@ void audio_extn_fm_get_parameters(struct str_parms *query, struct str_parms *rep
 #endif
 
 #ifndef APTX_DECODER_ENABLED
-#define audio_extn_aptx_dec_set_license(adev); (0)
-#define audio_extn_set_aptx_dec_bt_addr(adev, parms); (0)
-#define audio_extn_send_aptx_dec_bt_addr_to_dsp(out); (0)
-#define audio_extn_parse_aptx_dec_bt_addr(value); (0)
-#define audio_extn_set_aptx_dec_params(payload); (0)
+#define audio_extn_send_aptx_dec_bt_addr_to_dsp(out) (0)
+#define audio_extn_set_aptx_dec_params(payload) (0)
 #else
-static void audio_extn_aptx_dec_set_license(struct audio_device *adev);
-static void audio_extn_set_aptx_dec_bt_addr(struct audio_device *adev, struct str_parms *parms);
 void audio_extn_send_aptx_dec_bt_addr_to_dsp(struct stream_out *out);
-static void audio_extn_parse_aptx_dec_bt_addr(char *value);
 int audio_extn_set_aptx_dec_params(struct aptx_dec_param *payload);
 #endif
 int audio_extn_out_set_param_data(struct stream_out *out,
