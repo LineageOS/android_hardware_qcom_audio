@@ -1137,6 +1137,8 @@ void audio_extn_usb_add_device(audio_devices_t device, int card)
             usb_card_info->usb_card = card;
             usb_card_info->usb_device_type = device;
             usb_get_sidetone_mixer(usb_card_info);
+            if (!usb_get_device_cap_config(usb_card_info, card))
+                usbmod->is_capture_supported = true;
             list_add_tail(&usbmod->usb_card_conf_list, &usb_card_info->list);
             goto exit;
         }
