@@ -88,7 +88,7 @@ bool voice_extn_compress_voip_is_active(const struct audio_device *adev);
 bool voice_extn_compress_voip_is_format_supported(audio_format_t format);
 bool voice_extn_compress_voip_is_config_supported(struct audio_config *config);
 bool voice_extn_compress_voip_is_started(struct audio_device *adev);
-void voice_extn_feature_init();
+void voice_extn_feature_init(int is_running_with_enhanced_fwk);
 void compr_voip_feature_init(bool is_feature_enabled);
 bool voice_extn_is_compress_voip_supported();
 void dynamic_ecns_feature_init(bool is_feature_enabled);
