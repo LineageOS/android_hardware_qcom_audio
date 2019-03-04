@@ -7370,7 +7370,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
      * Handset and speaker may have diffrent backend. Check if the device is speaker or handset,
      * and these devices are restricited to 48kHz.
      */
-    if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device)) {
+    if (!codec_device_supports_native_playback(usecase->devices) &&
+        (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device) ||
+         platform_check_backends_match(SND_DEVICE_OUT_HANDSET, snd_device))) {
         int bw = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
         if ((-ENOSYS != bw) && (bit_width > (uint32_t)bw)) {
             bit_width = (uint32_t)bw;
