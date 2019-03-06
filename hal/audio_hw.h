@@ -228,6 +228,8 @@ enum {
     USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
     USECASE_AUDIO_PLAYBACK_PHONE,
 
+    /*Audio FM Tuner usecase*/
+    USECASE_AUDIO_FM_TUNER_EXT,
     AUDIO_USECASE_MAX
 };
 
@@ -494,6 +496,7 @@ typedef enum {
     PCM_HFP_CALL,
     TRANSCODE_LOOPBACK_RX,
     TRANSCODE_LOOPBACK_TX,
+    PCM_PASSTHROUGH,
     USECASE_TYPE_MAX
 } usecase_type_t;
 
@@ -673,6 +676,16 @@ struct audio_device {
     bool use_old_pspd_mix_ctrl;
     int camera_orientation; /* CAMERA_BACK_LANDSCAPE ... CAMERA_FRONT_PORTRAIT */
     bool adm_routing_changed;
+    struct listnode audio_patch_record_list;
+    unsigned int audio_patch_index;
+};
+
+struct audio_patch_record {
+    struct listnode list;
+    audio_patch_handle_t handle;
+    audio_usecase_t usecase;
+    audio_io_handle_t input_io_handle;
+    audio_io_handle_t output_io_handle;
 };
 
 int select_devices(struct audio_device *adev,

@@ -354,6 +354,10 @@ endif
 LOCAL_SHARED_LIBRARIES += libbase libhidlbase libhwbinder libutils android.hardware.power@1.2 liblog
 LOCAL_SRC_FILES += audio_perf.cpp
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM_TUNER_EXT)),true)
+    LOCAL_CFLAGS += -DFM_TUNER_EXT_ENABLED
+endif
+
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_RELATIVE_PATH := hw

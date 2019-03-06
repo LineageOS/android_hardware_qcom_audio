@@ -480,7 +480,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                              NAV_GUIDANCE_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_PHONE] = {PHONE_PCM_DEVICE,
                                       PHONE_PCM_DEVICE},
-
+    [USECASE_AUDIO_FM_TUNER_EXT] = {-1, -1},
 };
 
 /* Array to store sound devices */
