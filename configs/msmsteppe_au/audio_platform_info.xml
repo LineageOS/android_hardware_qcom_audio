@@ -30,6 +30,10 @@
         <device name="SND_DEVICE_OUT_HANDSET" acdb_id="78"/>
         <device name="SND_DEVICE_OUT_SPEAKER" acdb_id="78"/>
         <device name="SND_DEVICE_OUT_HEADPHONES" acdb_id="78"/>
+        <device name="SND_DEVICE_OUT_BUS_MEDIA" acdb_id="78"/>
+        <device name="SND_DEVICE_OUT_BUS_SYS" acdb_id="78"/>
+        <device name="SND_DEVICE_OUT_BUS_NAV" acdb_id="14"/>
+        <device name="SND_DEVICE_OUT_BUS_PHN" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_BT_SCO" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_BT_SCO_WB" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_BT_A2DP" acdb_id="78"/>
@@ -37,6 +41,7 @@
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER" acdb_id="94"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_SPEAKER_MIC" acdb_id="11"/>
+        <device name="SND_DEVICE_IN_BUS" acdb_id="11"/>
         <device name="SND_DEVICE_IN_HEADSET_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" acdb_id="95"/>
         <device name="SND_DEVICE_IN_VOICE_HEADSET_MIC" acdb_id="95"/>

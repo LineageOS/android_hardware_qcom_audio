@@ -1135,6 +1135,27 @@
         <path name="compress-offload-playback9" />
     </path>
 
+    <!-- The following use cases are used for car streams  -->
+    <path name="media-playback">
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
+    </path>
+
+    <path name="sys-notification-playback">
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia5" value="1" />
+    </path>
+
+    <path name="nav-guidance-playback">
+        <ctl name="TERT_TDM_RX_1 Channels" value="One" />
+        <ctl name="TERT_TDM_RX_1 Audio Mixer MultiMedia2" value="1" />
+    </path>
+
+    <path name="phone-playback">
+        <ctl name="TERT_TDM_RX_2 Channels" value="One" />
+        <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia10" value="1" />
+    </path>
+
     <path name="audio-record">
         <ctl name="TERT_TDM_TX_0 Channels" value="One" />
         <ctl name="MultiMedia1 Mixer TERT_TDM_TX_0" value="1" />
@@ -1622,9 +1643,15 @@
     </path>
 
     <path name="speaker-adp">
+        <!--ctl name="TERT_TDM_RX_0 Channels" value="Six" /-->
     </path>
 
     <path name="speaker-custom">
+        <!--ctl name="TERT_TDM_RX_0 Channels" value="Six" /-->
+    </path>
+
+    <path name="bus-speaker">
+        <!--ctl name="TERT_TDM_RX_0 Channels" value="Six" /-->
     </path>
 
    <path name="sidetone-iir">
