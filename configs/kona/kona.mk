@@ -13,7 +13,10 @@ TARGET_USES_AOSP_FOR_AUDIO := false
 
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 USE_CUSTOM_AUDIO_POLICY := 0
+AUDIO_FEATURE_QSSI_COMPLIANCE := true
 AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := false
+AUDIO_FEATURE_ENABLED_COMPRESS_INPUT := true
+AUDIO_FEATURE_ENABLED_CONCURRENT_CAPTURE := true
 AUDIO_FEATURE_ENABLED_COMPRESS_VOIP := false
 AUDIO_FEATURE_ENABLED_DYNAMIC_ECNS := true
 AUDIO_FEATURE_ENABLED_EXTN_FORMATS := true
@@ -73,6 +76,7 @@ AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
 BOARD_SUPPORTS_QAHW := false
 AUDIO_FEATURE_ENABLED_RAS := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
+AUDIO_FEATURE_ENABLED_USB_BURST_MODE := true
 AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := true
 ##AUDIO_FEATURE_FLAGS
@@ -122,7 +126,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
 persist.vendor.audio.fluence.voicerec=false\
-persist.vendor.audio.fluence.speaker=true
+persist.vendor.audio.fluence.speaker=true\
+persist.vendor.audio.fluence.tmic.enabled=false
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -191,7 +196,7 @@ vendor.audio.flac.sw.decoder.24bit=true
 
 #split a2dp DSP supported encoder list
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac
+persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac-ldac
 
 # A2DP offload support
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -249,6 +254,22 @@ persist.audio.fluence.voicecomm=true
 endif
 
 USE_XML_AUDIO_POLICY_CONF := 1
+
+#enable keytone FR
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.hal.output.suspend.supported=true
+
+#enable mirror-link feature
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.enable.mirrorlink=false
+
+#enable voicecall speaker stereo
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.voicecall.speaker.stereo=true
+
+#enable AAC frame ctl for A2DP sinks
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.aac_frm_ctl.enabled=true
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \
