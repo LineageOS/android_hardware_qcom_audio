@@ -195,6 +195,14 @@ vendor.audio.safx.pbe.enabled=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.parser.ip.buffer.size=262144
 
+#Enable 16 bit PCM offload by default
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.pcm.16bit.enable=true
+
+#Enable 24 bit PCM offload by default
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.pcm.24bit.enable=true
+
 #flac sw decoder 24 bit decode capability
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.flac.sw.decoder.24bit=true
