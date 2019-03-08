@@ -33,7 +33,6 @@
 #include <log/log.h>
 #include <dlfcn.h>
 #include <pthread.h>
-#include <vndfwk-detect.h>
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
@@ -142,6 +141,19 @@
 #define CH_MONO                         1
 #define SOURCE 0
 #define SINK   1
+#define UNINITIALIZED -1
+
+#ifdef __LP64__
+#define VNDK_FWK_LIB_PATH "/vendor/lib64/libqti_vndfwk_detect.so"
+#else
+#define VNDK_FWK_LIB_PATH "/vendor/lib/libqti_vndfwk_detect.so"
+#endif
+
+static void *vndk_fwk_lib_handle = NULL;
+static int is_running_with_enhanced_fwk = UNINITIALIZED;
+
+typedef int (*vndk_fwk_isVendorEnhancedFwk_t)();
+static vndk_fwk_isVendorEnhancedFwk_t vndk_fwk_isVendorEnhancedFwk;
 
 /*
  * Below enum values are extended from audio_base.h to
@@ -810,6 +822,26 @@ fail:
     return -ENOSYS;
 }
 
+static int check_if_enhanced_fwk() {
+
+    int is_enhanced_fwk = 1;
+    //dlopen lib
+    vndk_fwk_lib_handle = dlopen(VNDK_FWK_LIB_PATH, RTLD_NOW);
+    if (vndk_fwk_lib_handle != NULL) {
+        vndk_fwk_isVendorEnhancedFwk = (vndk_fwk_isVendorEnhancedFwk_t)
+                    dlsym(vndk_fwk_lib_handle, "isRunningWithVendorEnhancedFramework");
+        if (vndk_fwk_isVendorEnhancedFwk == NULL) {
+            ALOGW("%s: VNDK_FWK_LIB not found, defaulting to enhanced_fwk configuration",
+                                                                            __func__);
+            is_enhanced_fwk = 1;
+        } else {
+            is_enhanced_fwk = vndk_fwk_isVendorEnhancedFwk();
+        }
+    }
+    ALOGV("%s: vndk_fwk_isVendorEnhancedFwk=%d", __func__, is_enhanced_fwk);
+    return is_enhanced_fwk;
+}
+
 /* API to open BT IPC library to start IPC communication for BT Source*/
 static void open_a2dp_source()
 {
@@ -817,7 +849,9 @@ static void open_a2dp_source()
 
     ALOGD(" Open A2DP source start ");
     if (a2dp.bt_lib_source_handle == NULL) {
-        if(!isRunningWithVendorEnhancedFramework()) {
+        if (is_running_with_enhanced_fwk == UNINITIALIZED)
+            is_running_with_enhanced_fwk = check_if_enhanced_fwk();
+        if (!is_running_with_enhanced_fwk) {
             ALOGD(" Requesting for BT lib handle");
             a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME, RTLD_NOW);
             if (a2dp.bt_lib_source_handle == NULL) {
@@ -865,7 +899,7 @@ static void open_a2dp_source()
         if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED) {
             ALOGD("calling BT stream open");
             ret = a2dp.audio_source_open();
-            if(ret != 0) {
+            if (ret != 0) {
                 ALOGE("Failed to open source stream for a2dp: status %d", ret);
                 goto init_fail;
             }
@@ -880,9 +914,13 @@ static void open_a2dp_source()
     }
 
 init_fail:
-    if(ret != 0 && (a2dp.bt_lib_source_handle != NULL)) {
+    if (ret != 0 && (a2dp.bt_lib_source_handle != NULL)) {
         dlclose(a2dp.bt_lib_source_handle);
         a2dp.bt_lib_source_handle = NULL;
+    }
+    if (vndk_fwk_lib_handle != NULL) {
+        dlclose(vndk_fwk_lib_handle);
+        vndk_fwk_lib_handle = NULL;
     }
 }
 
@@ -922,7 +960,7 @@ static int close_a2dp_output()
 
     if (a2dp.bt_state_source != A2DP_STATE_DISCONNECTED) {
         ALOGD("calling BT source stream close");
-        if(a2dp.audio_source_close() == false)
+        if (a2dp.audio_source_close() == false)
             ALOGE("failed close a2dp source control path from BT library");
     }
     a2dp.a2dp_source_started = false;
@@ -954,7 +992,7 @@ static int close_a2dp_input()
 
     if (a2dp.bt_state_sink != A2DP_STATE_DISCONNECTED) {
         ALOGD("calling BT sink stream close");
-        if(a2dp.audio_source_close() == false)
+        if (a2dp.audio_source_close() == false)
             ALOGE("failed close a2dp sink control path from BT library");
     }
     a2dp.a2dp_sink_started = false;
@@ -1140,7 +1178,7 @@ bool configure_aac_dec_format(audio_aac_dec_config_t *aac_bt_cfg)
     bool is_configured = false;
     int ret = 0;
 
-    if(aac_bt_cfg == NULL)
+    if (aac_bt_cfg == NULL)
         return false;
 
     ctl_dec_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_SINK_DEC_CONFIG_BLOCK);
@@ -1342,7 +1380,7 @@ bool configure_sbc_dec_format(audio_sbc_dec_config_t *sbc_bt_cfg)
     bool is_configured = false;
     int ret = 0;
 
-    if(sbc_bt_cfg == NULL)
+    if (sbc_bt_cfg == NULL)
         goto fail;
 
     ctl_dec_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_SINK_DEC_CONFIG_BLOCK);
@@ -1437,7 +1475,7 @@ bool configure_sbc_enc_format(audio_sbc_encoder_config *sbc_bt_cfg)
     bool is_configured = false;
     int ret = 0;
 
-    if(sbc_bt_cfg == NULL)
+    if (sbc_bt_cfg == NULL)
         return false;
 
    ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
@@ -1504,7 +1542,7 @@ static int update_aptx_ad_dsp_config(struct aptx_ad_enc_cfg_t *aptx_dsp_cfg,
 {
     int ret = 0;
 
-    if(aptx_dsp_cfg == NULL || aptx_bt_cfg == NULL) {
+    if (aptx_dsp_cfg == NULL || aptx_bt_cfg == NULL) {
         ALOGE("Invalid param, aptx_dsp_cfg %p aptx_bt_cfg %p",
               aptx_dsp_cfg, aptx_bt_cfg);
         return -EINVAL;
@@ -1592,7 +1630,7 @@ static int update_aptx_dsp_config_v2(struct aptx_enc_cfg_t *aptx_dsp_cfg,
 {
     int ret = 0;
 
-    if(aptx_dsp_cfg == NULL || aptx_bt_cfg == NULL) {
+    if (aptx_dsp_cfg == NULL || aptx_bt_cfg == NULL) {
         ALOGE("Invalid param, aptx_dsp_cfg %p aptx_bt_cfg %p",
               aptx_dsp_cfg, aptx_bt_cfg);
         return -EINVAL;
@@ -1648,7 +1686,7 @@ static int update_aptx_dsp_config_v1(struct custom_enc_cfg_t *aptx_dsp_cfg,
 {
     int ret = 0;
 
-    if(aptx_dsp_cfg == NULL || aptx_bt_cfg == NULL) {
+    if (aptx_dsp_cfg == NULL || aptx_bt_cfg == NULL) {
         ALOGE("Invalid param, aptx_dsp_cfg %p aptx_bt_cfg %p",
               aptx_dsp_cfg, aptx_bt_cfg);
         return -EINVAL;
@@ -1685,7 +1723,7 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     int ret = 0;
     int sample_rate_backup;
 
-    if(aptx_bt_cfg == NULL)
+    if (aptx_bt_cfg == NULL)
         return false;
 
     ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
@@ -1697,7 +1735,7 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 #ifndef LINUX_ENABLED
     struct aptx_enc_cfg_t aptx_dsp_cfg;
     struct aptx_ad_enc_cfg_t aptx_ad_dsp_cfg;
-    if(a2dp.is_aptx_adaptive) {
+    if (a2dp.is_aptx_adaptive) {
         mixer_size = sizeof(struct aptx_ad_enc_cfg_t);
         ret = update_aptx_ad_dsp_config(&aptx_ad_dsp_cfg, aptx_bt_cfg);
         sample_rate_backup = aptx_ad_dsp_cfg.custom_cfg.sample_rate;
@@ -1711,7 +1749,7 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         goto fail;
     }
 
-    if(a2dp.is_aptx_adaptive) {
+    if (a2dp.is_aptx_adaptive) {
         ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_ad_dsp_cfg,
                               mixer_size);
     } else {
@@ -1736,9 +1774,9 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         goto fail;
     }
 #ifndef LINUX_ENABLED //Temporarily disabled for LE, need to take care while doing VT FR
-    if(a2dp.is_aptx_adaptive)
+    if (a2dp.is_aptx_adaptive)
         ret = a2dp_set_bit_format(aptx_bt_cfg->ad_cfg->bits_per_sample);
-    else if(a2dp.is_aptx_dual_mono_supported)
+    else if (a2dp.is_aptx_dual_mono_supported)
         ret = a2dp_set_bit_format(aptx_bt_cfg->dual_mono_cfg->bits_per_sample);
     else
         ret = a2dp_set_bit_format(aptx_bt_cfg->default_cfg->bits_per_sample);
@@ -1754,7 +1792,7 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
         a2dp.bt_encoder_format = CODEC_TYPE_APTX;
 fail:
     /*restore sample rate */
-    if(!is_configured)
+    if (!is_configured)
         a2dp.enc_sampling_rate = sample_rate_backup;
     return is_configured;
 }
@@ -1772,7 +1810,7 @@ bool configure_aptx_hd_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     bool is_configured = false;
     int ret = 0;
 
-    if(aptx_bt_cfg == NULL)
+    if (aptx_bt_cfg == NULL)
         return false;
 
     ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
@@ -1941,7 +1979,7 @@ bool configure_celt_enc_format(audio_celt_encoder_config *celt_bt_cfg)
     struct celt_enc_cfg_t celt_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
-    if(celt_bt_cfg == NULL)
+    if (celt_bt_cfg == NULL)
         return false;
 
     ctl_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
@@ -2002,7 +2040,7 @@ bool configure_ldac_enc_format(audio_ldac_encoder_config *ldac_bt_cfg)
     struct ldac_enc_cfg_t ldac_dsp_cfg;
     bool is_configured = false;
     int ret = 0;
-    if(ldac_bt_cfg == NULL)
+    if (ldac_bt_cfg == NULL)
         return false;
 
     ldac_enc_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_ENC_CONFIG_BLOCK);
@@ -2176,13 +2214,13 @@ int a2dp_start_playback()
 
     ALOGD("a2dp_start_playback start");
 
-    if(!(a2dp.bt_lib_source_handle && a2dp.audio_source_start
+    if (!(a2dp.bt_lib_source_handle && a2dp.audio_source_start
        && a2dp.audio_get_enc_config)) {
         ALOGE("a2dp handle is not identified, Ignoring start playback request");
         return -ENOSYS;
     }
 
-    if(a2dp.a2dp_source_suspended == true) {
+    if (a2dp.a2dp_source_suspended == true) {
         //session will be restarted after suspend completion
         ALOGD("a2dp start requested during suspend state");
         return -ENOSYS;
@@ -2197,7 +2235,7 @@ int a2dp_start_playback()
            ALOGE("BT controller start failed");
            a2dp.a2dp_source_started = false;
         } else {
-           if(configure_a2dp_encoder_format() == true) {
+           if (configure_a2dp_encoder_format() == true) {
                 a2dp.a2dp_source_started = true;
                 ret = 0;
                 ALOGD("Start playback successful to BT library");
@@ -2271,7 +2309,7 @@ int a2dp_start_capture()
 
     ALOGD("a2dp_start_capture start");
 
-    if(!(a2dp.bt_lib_sink_handle && a2dp.audio_sink_start
+    if (!(a2dp.bt_lib_sink_handle && a2dp.audio_sink_start
        && a2dp.audio_get_dec_config)) {
         ALOGE("a2dp handle is not identified, Ignoring start capture request");
         return -ENOSYS;
@@ -2287,12 +2325,12 @@ int a2dp_start_capture()
            a2dp.a2dp_sink_started = false;
         } else {
 
-           if(!a2dp_sink_is_ready()) {
+           if (!a2dp_sink_is_ready()) {
                 ALOGD("Wait for capture ready not successful");
                 ret = -ETIMEDOUT;
            }
 
-           if(configure_a2dp_sink_decoder_format() == true) {
+           if (configure_a2dp_sink_decoder_format() == true) {
                 a2dp.a2dp_sink_started = true;
                 ret = 0;
                 ALOGD("Start capture successful to BT library");
@@ -2311,7 +2349,7 @@ int a2dp_start_capture()
 
     if (a2dp.a2dp_sink_started) {
         if (a2dp_set_backend_cfg(SINK) == true) {
-        	a2dp.a2dp_sink_total_active_session_requests++;
+            a2dp.a2dp_sink_total_active_session_requests++;
         }
     }
 
@@ -2412,7 +2450,7 @@ int a2dp_stop_playback()
     int ret =0;
 
     ALOGV("a2dp_stop_playback start");
-    if(!(a2dp.bt_lib_source_handle && a2dp.audio_source_stop)) {
+    if (!(a2dp.bt_lib_source_handle && a2dp.audio_source_stop)) {
         ALOGE("a2dp handle is not identified, Ignoring stop request");
         return -ENOSYS;
     }
@@ -2438,7 +2476,7 @@ int a2dp_stop_playback()
         a2dp.a2dp_source_started = false;
         a2dp_reset_backend_cfg(SOURCE);
     }
-    if(!a2dp.a2dp_source_total_active_session_requests)
+    if (!a2dp.a2dp_source_total_active_session_requests)
        a2dp.a2dp_source_started = false;
     ALOGD("Stop A2DP playback, total active sessions :%d",
           a2dp.a2dp_source_total_active_session_requests);
@@ -2450,7 +2488,7 @@ int a2dp_stop_capture()
     int ret =0;
 
     ALOGV("a2dp_stop_capture start");
-    if(!(a2dp.bt_lib_sink_handle && a2dp.audio_sink_stop)) {
+    if (!(a2dp.bt_lib_sink_handle && a2dp.audio_sink_stop)) {
         ALOGE("a2dp handle is not identified, Ignoring stop request");
         return -ENOSYS;
     }
@@ -2468,7 +2506,7 @@ int a2dp_stop_capture()
         reset_a2dp_sink_dec_config_params();
         a2dp_reset_backend_cfg(SINK);
     }
-    if(!a2dp.a2dp_sink_total_active_session_requests)
+    if (!a2dp.a2dp_sink_total_active_session_requests)
        a2dp.a2dp_source_started = false;
     ALOGD("Stop A2DP capture, total active sessions :%d",
           a2dp.a2dp_sink_total_active_session_requests);
@@ -2482,7 +2520,7 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
      struct audio_usecase *uc_info;
      struct listnode *node;
 
-     if(a2dp.is_a2dp_offload_supported == false) {
+     if (a2dp.is_a2dp_offload_supported == false) {
         ALOGV("no supported encoders identified,ignoring a2dp setparam");
         status = -EINVAL;
         goto param_handled;
@@ -2522,9 +2560,9 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
      ret = str_parms_get_str(parms, "TwsChannelConfig", value, sizeof(value));
      if (ret>=0) {
          ALOGD("Setting tws channel mode to %s",value);
-         if(!(strncmp(value,"mono",strlen(value))))
+         if (!(strncmp(value,"mono",strlen(value))))
             a2dp.is_tws_mono_mode_on = true;
-         else if(!(strncmp(value,"dual-mono",strlen(value))))
+         else if (!(strncmp(value,"dual-mono",strlen(value))))
             a2dp.is_tws_mono_mode_on = false;
          audio_a2dp_update_tws_channel_mode();
      goto param_handled;
@@ -2553,13 +2591,13 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                 }
                 reset_a2dp_enc_config_params();
                 reset_a2dp_source_dec_config_params();
-                if(a2dp.audio_source_suspend)
+                if (a2dp.audio_source_suspend)
                    a2dp.audio_source_suspend();
             } else if (a2dp.a2dp_source_suspended == true) {
                 ALOGD("Resetting a2dp suspend state");
                 struct audio_usecase *uc_info;
                 struct listnode *node;
-                if(a2dp.clear_source_a2dpsuspend_flag)
+                if (a2dp.clear_source_a2dpsuspend_flag)
                     a2dp.clear_source_a2dpsuspend_flag();
                 a2dp.a2dp_source_suspended = false;
                 /*
@@ -2575,7 +2613,7 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                  */
                 if (a2dp.a2dp_source_total_active_session_requests > 0) {
                     ALOGD(" Calling IPC lib start post suspend state");
-                    if(a2dp.audio_source_start) {
+                    if (a2dp.audio_source_start) {
                         ret =  a2dp.audio_source_start();
                         if (ret != 0) {
                             ALOGE("BT controller start failed");
@@ -2687,7 +2725,10 @@ void a2dp_init(void *adev,
   a2dp.a2dp_sink_started = false;
   a2dp.bt_state_sink = A2DP_STATE_DISCONNECTED;
   a2dp.a2dp_sink_total_active_session_requests = 0;
-  if (isRunningWithVendorEnhancedFramework())
+
+  if (is_running_with_enhanced_fwk == UNINITIALIZED)
+      is_running_with_enhanced_fwk = check_if_enhanced_fwk();
+  if (is_running_with_enhanced_fwk)
       open_a2dp_sink();
 
   a2dp.is_a2dp_offload_supported = false;

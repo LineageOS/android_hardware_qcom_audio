@@ -87,7 +87,7 @@
 #if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || \
     defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || \
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
-    defined (PLATFORM_QCS405)
+    defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET)
 #include <sound/devdep_params.h>
 #endif
 
@@ -173,6 +173,7 @@
 #define EVENT_EXTERNAL_MIC   "qc_ext_mic"
 #define MAX_CAL_NAME 20
 #define MAX_MIME_TYPE_LENGTH 30
+#define MAX_SND_CARD_NAME_LENGTH 100
 
 #define GET_IN_DEVICE_INDEX(SND_DEVICE) ((SND_DEVICE) - (SND_DEVICE_IN_BEGIN))
 
@@ -1346,7 +1347,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
          !strncmp(snd_card_name, "kona-mtp-snd-card",
                    sizeof("kona-mtp-snd-card")) ||
          !strncmp(snd_card_name, "kona-qrd-snd-card",
-                   sizeof("kona-qrd-snd-card"))) {
+                   sizeof("kona-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "trinket-idp-snd-card",
+                   sizeof("trinket-idp-snd-card"))) {
          ALOGI("%s: snd_card_name: %s", __func__, snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -2159,22 +2162,30 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     plat_data->hw_dep_fd = fd;
 }
 
-const char * platform_get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
+const char * platform_get_snd_card_name_for_acdb_loader(const char *snd_card_name)
+{
+    const char *acdb_card_name = NULL;
+    char *substring = NULL;
+    char string[MAX_SND_CARD_NAME_LENGTH] = {0};
+    int length = 0;
 
-    if(snd_card_name == NULL)
+    if (snd_card_name == NULL)
         return NULL;
 
-    if(!strncmp(snd_card_name, "sdm660-tashalite-snd-card",
-             sizeof("sdm660-tashalite-snd-card"))) {
-        ALOGD("using tasha ACDB files for tasha-lite");
-        return "sdm660-tasha-snd-card";
+    /* Both tasha & tasha-lite uses tasha ACDB files
+       simulate sound card name for tasha lite, so that
+       ACDB module loads tasha ACDB files for tasha lite */
+    if ((substring = strstr(snd_card_name, "tashalite")) ||
+        (substring = strstr(snd_card_name, "tasha9326"))) {
+        ALOGD("%s: using tasha ACDB files for tasha-lite", __func__);
+        length = substring - snd_card_name + 1;
+        snprintf(string, length, "%s", snd_card_name);
+        strlcat(string, "tasha-snd-card", sizeof(string));
+        acdb_card_name = strdup(string);
+        return acdb_card_name;
     }
-    if(!strncmp(snd_card_name, "sdm670-tashalite-snd-card",
-             sizeof("sdm670-tashalite-snd-card"))) {
-        ALOGD("using tasha ACDB files for tasha-lite");
-        return "sdm670-tasha-snd-card";
-    }
-    return snd_card_name;
+    acdb_card_name = strdup(snd_card_name);
+    return acdb_card_name;
 }
 
 static int platform_acdb_init(void *platform)
@@ -2196,6 +2207,10 @@ static int platform_acdb_init(void *platform)
     }
 
     snd_card_name = mixer_get_name(my_data->adev->mixer);
+    if (!snd_card_name) {
+        ALOGE("Failed to get snd_card_name");
+        goto cleanup;
+    }
     snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
 
     my_data->acdb_init_data.cvd_version = cvd_version;
@@ -2219,6 +2234,7 @@ static int platform_acdb_init(void *platform)
     strlcpy(my_data->snd_card_name, snd_card_name,
                                                MAX_SND_CARD_STRING_SIZE);
 
+cleanup:
     if (cvd_version)
         free(cvd_version);
     if (!result) {
@@ -2892,7 +2908,8 @@ acdb_init_fail:
     if (!my_data->is_slimbus_interface) {
         //TODO:: make generic interfaceface to check Slimbus/I2S/CDC_DMA
         if (!strncmp(snd_card_name, "sm6150", strlen("sm6150")) ||
-            !strncmp(snd_card_name, "kona", strlen("kona"))) {
+            !strncmp(snd_card_name, "kona", strlen("kona")) ||
+            !strncmp(snd_card_name, "trinket", strlen("trinket"))) {
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
@@ -7353,7 +7370,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
      * Handset and speaker may have diffrent backend. Check if the device is speaker or handset,
      * and these devices are restricited to 48kHz.
      */
-    if (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device)) {
+    if (!codec_device_supports_native_playback(usecase->devices) &&
+        (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device) ||
+         platform_check_backends_match(SND_DEVICE_OUT_HANDSET, snd_device))) {
         int bw = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
         if ((-ENOSYS != bw) && (bit_width > (uint32_t)bw)) {
             bit_width = (uint32_t)bw;
@@ -9307,8 +9326,7 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
 #if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || \
     defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || \
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
-    defined (PLATFORM_QCS405)
-
+    defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {

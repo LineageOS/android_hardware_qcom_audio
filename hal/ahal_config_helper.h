@@ -46,6 +46,12 @@ struct AHalValues_t {
     bool fluence_enabled;
     bool custom_stereo_enabled;
     bool anc_headset_enabled;
+    bool spkr_prot_enabled;
+    bool fm_power_opt_enabled;
+    bool ext_qdsp_enabled;
+    bool ext_spkr_enabled;
+    bool ext_spkr_tfa_enabled;
+    bool hwdep_cal_enabled;
     bool dsm_feedback_enabled;
     bool usb_offload_enabled;
     bool usb_offload_burst_mode;

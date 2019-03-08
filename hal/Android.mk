@@ -72,9 +72,13 @@ ifneq ($(filter msmnile,$(TARGET_BOARD_PLATFORM)),)
 endif
 ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_KONA
+  LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
 endif
 ifneq ($(filter $(MSMSTEPPE) ,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSMSTEPPE
+endif
+ifneq ($(filter $(TRINKET) ,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_TRINKET
 endif
 endif
 
@@ -355,7 +359,6 @@ LOCAL_SHARED_LIBRARIES := \
     libdl \
     libaudioutils \
     libexpat \
-    libqti_vndfwk_detect \
     libhwbinder \
     libhidlbase \
     libhidltransport \

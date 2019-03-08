@@ -33,10 +33,10 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <dlfcn.h>
 #include <cutils/properties.h>
 #include <log/log.h>
 #include <unistd.h>
-#include <vndfwk-detect.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "voice_extn.h"
@@ -44,14 +44,48 @@
 
 extern AHalValues* confValues;
 
+#ifdef __LP64__
+#define VNDK_FWK_LIB_PATH "/vendor/lib64/libqti_vndfwk_detect.so"
+#else
+#define VNDK_FWK_LIB_PATH "/vendor/lib/libqti_vndfwk_detect.so"
+#endif
+
+static void *vndk_fwk_lib_handle = NULL;
+
+typedef int (*vndk_fwk_isVendorEnhancedFwk_t)();
+static vndk_fwk_isVendorEnhancedFwk_t vndk_fwk_isVendorEnhancedFwk;
+
+
+
 void audio_feature_manager_init()
 {
-    ALOGV("%s: Enter", __func__);
-    audio_extn_ahal_config_helper_init(
-                isRunningWithVendorEnhancedFramework());
+    ALOGD("%s: Enter", __func__);
+    int is_running_with_enhanced_fwk = 0;
+
+    //dlopen lib
+    vndk_fwk_lib_handle = dlopen(VNDK_FWK_LIB_PATH, RTLD_NOW);
+    if (vndk_fwk_lib_handle != NULL) {
+        vndk_fwk_isVendorEnhancedFwk = (vndk_fwk_isVendorEnhancedFwk_t)
+                    dlsym(vndk_fwk_lib_handle, "isRunningWithVendorEnhancedFramework");
+        if (vndk_fwk_isVendorEnhancedFwk == NULL) {
+            ALOGW("%s: VNDK_FWK_LIB not found, defaulting to enhanced_fwk configuration",
+                                                                            __func__);
+            is_running_with_enhanced_fwk = 1;
+        } else {
+            is_running_with_enhanced_fwk = vndk_fwk_isVendorEnhancedFwk();
+        }
+    }
+
+    ALOGD("%s: vndk_fwk_isVendorEnhancedFwk=%d", __func__, is_running_with_enhanced_fwk);
+    audio_extn_ahal_config_helper_init(is_running_with_enhanced_fwk);
     confValues = audio_extn_get_feature_values();
-    audio_extn_feature_init();
-    voice_extn_feature_init();
+    audio_extn_feature_init(is_running_with_enhanced_fwk);
+    voice_extn_feature_init(is_running_with_enhanced_fwk);
+
+    if (vndk_fwk_lib_handle != NULL) {
+        dlclose(vndk_fwk_lib_handle);
+        vndk_fwk_lib_handle = NULL;
+    }
 }
 
 bool audio_feature_manager_is_feature_enabled(audio_ext_feature feature)
@@ -99,6 +133,18 @@ bool audio_feature_manager_is_feature_enabled(audio_ext_feature feature)
             return confValues->custom_stereo_enabled;
         case ANC_HEADSET:
             return confValues->anc_headset_enabled;
+        case SPKR_PROT:
+             return confValues->spkr_prot_enabled;
+        case FM_POWER_OPT_FEATURE:
+             return confValues->fm_power_opt_enabled;
+        case EXTERNAL_QDSP:
+             return confValues->ext_qdsp_enabled;
+        case EXTERNAL_SPEAKER:
+             return confValues->ext_spkr_enabled;
+        case EXTERNAL_SPEAKER_TFA:
+             return confValues->ext_spkr_tfa_enabled;
+        case HWDEP_CAL:
+             return confValues->hwdep_cal_enabled;
         case DSM_FEEDBACK:
             return confValues->dsm_feedback_enabled;
         case USB_OFFLOAD:

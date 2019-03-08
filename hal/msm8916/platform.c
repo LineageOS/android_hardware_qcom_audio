@@ -170,6 +170,7 @@
 #define EVENT_EXTERNAL_MIC   "qc_ext_mic"
 #define MAX_CAL_NAME 20
 #define MAX_MIME_TYPE_LENGTH 30
+#define MAX_SND_CARD_NAME_LENGTH 100
 
 #define GET_IN_DEVICE_INDEX(SND_DEVICE) ((SND_DEVICE) - (SND_DEVICE_IN_BEGIN))
 
@@ -1954,55 +1955,31 @@ static void audio_hwdep_send_cal(struct platform_data *plat_data)
     plat_data->hw_dep_fd = fd;
 }
 
-const char * platform_get_snd_card_name_for_acdb_loader(const char *snd_card_name) {
+const char * platform_get_snd_card_name_for_acdb_loader(const char *snd_card_name)
+{
+    const char *acdb_card_name = NULL;
+    char *substring = NULL;
+    char string[MAX_SND_CARD_NAME_LENGTH] = {0};
+    int length = 0;
 
-    if(snd_card_name == NULL)
+    if (snd_card_name == NULL)
         return NULL;
 
-    // Both tasha & tasha-lite uses tasha ACDB files
-    // simulate sound card name for tasha lite, so that
-    // ACDB module loads tasha ACDB files for tasha lite
-    if(!strncmp(snd_card_name, "msm8976-tashalite-snd-card",
-             sizeof("msm8976-tashalite-snd-card"))) {
-        ALOGD("using tasha ACDB files for tasha-lite");
-        return "msm8976-tasha-snd-card";
+    /* Both tasha & tasha-lite uses tasha ACDB files
+       simulate sound card name for tasha lite, so that
+       ACDB module loads tasha ACDB files for tasha lite */
+    if ((substring = strstr(snd_card_name, "tashalite")) ||
+        (substring = strstr(snd_card_name, "tasha9326"))) {
+        ALOGD("%s: using tasha ACDB files for tasha-lite", __func__);
+        length = substring - snd_card_name + 1;
+        snprintf(string, length, "%s", snd_card_name);
+        strlcat(string, "tasha-snd-card", sizeof(string));
+        acdb_card_name = strdup(string);
+        return acdb_card_name;
     }
-
-    if(!strncmp(snd_card_name, "msm8952-tashalite-snd-card",
-             sizeof("msm8952-tashalite-snd-card"))) {
-        ALOGD("using tasha ACDB files for tasha-lite");
-        return "msm8952-tasha-snd-card";
-    }
-
-    if(!strncmp(snd_card_name, "msm8937-tashalite-snd-card",
-             sizeof("msm8937-tashalite-snd-card"))) {
-        ALOGD("using tasha ACDB files for tasha-lite");
-        return "msm8937-tasha-snd-card";
-    }
-
-    if(!strncmp(snd_card_name, "msm8953-tashalite-snd-card",
-             sizeof("msm8953-tashalite-snd-card"))) {
-        ALOGD("using tasha ACDB files for tasha-lite");
-        return "msm8953-tasha-snd-card";
-    }
-
-    if(!strncmp(snd_card_name, "sdm660-tashalite-snd-card",
-             sizeof("sdm660-tashalite-snd-card"))) {
-        ALOGD("using tasha ACDB files for tasha-lite");
-        return "sdm660-tasha-snd-card";
-    }
-
-    // Both tasha & tasha-lite uses tasha ACDB files
-    // simulate sound card name for tasha lite, so that
-    // ACDB module loads tasha ACDB files for tasha lite
-    if(!strncmp(snd_card_name, "msm8x09-tasha9326-snd-card",
-             sizeof("msm8x09-tasha9326-snd-card"))) {
-       ALOGD("using tasha ACDB files for tasha-lite");
-       return "msm8x09-tasha-snd-card";
-   }
-   return snd_card_name;
+    acdb_card_name = strdup(snd_card_name);
+    return acdb_card_name;
 }
-
 
 int platform_acdb_init(void *platform)
 {
@@ -6419,7 +6396,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
      * Handset and speaker may have diffrent backend. Check if the device is speaker or handset,
      * and these devices are restricited to 48kHz.
      */
-    if ((platform_get_backend_index(snd_device) == DEFAULT_CODEC_BACKEND) &&
+    if (!codec_device_supports_native_playback(usecase->devices) &&
         (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device) ||
          platform_check_backends_match(SND_DEVICE_OUT_HANDSET, snd_device))) {
         sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
