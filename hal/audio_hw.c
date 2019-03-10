@@ -649,6 +649,7 @@ int enable_audio_route(struct audio_device *adev,
     else
         snd_device = usecase->out_snd_device;
     audio_extn_utils_send_app_type_cfg(adev, usecase);
+    audio_extn_ma_set_device(usecase);
     audio_extn_utils_send_audio_calibration(adev, usecase);
 
     // we shouldn't truncate mixer_path
@@ -1713,8 +1714,6 @@ int select_devices(struct audio_device *adev,
     audio_extn_tfa_98xx_set_mode();
 
     enable_audio_route(adev, usecase);
-
-    audio_extn_ma_set_device(usecase);
 
     /* If input stream is already running the effect needs to be
        applied on the new input device that's being enabled here.  */
