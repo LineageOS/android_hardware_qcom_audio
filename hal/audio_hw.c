@@ -8747,6 +8747,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->perf_lock_opts[1] = 0x20E;
     adev->perf_lock_opts_size = 2;
     adev->dsp_bit_width_enforce_mode = 0;
+    adev->enable_hfp = false;
 
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
