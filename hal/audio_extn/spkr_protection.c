@@ -1745,6 +1745,7 @@ static int get_spkr_prot_v_vali_param(int cal_fd __unused, int *status __unused,
 static void* spkr_v_vali_thread()
 {
     int ret = 0;
+    struct audio_device *adev = handle.adev_handle;
     handle.v_vali_threadid = pthread_self();
 
     if (!handle.v_vali_wait_time)
