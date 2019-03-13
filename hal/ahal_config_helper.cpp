@@ -88,7 +88,7 @@ void AHalConfigHelper::initDefaultConfig(bool isVendorEnhancedFwk)
             true,        /* VBAT */
             true,        /* COMPRESS_METADATA_NEEDED */
             false,       /* COMPRESS_VOIP */
-            false,       /* DYNAMIC_ECNS */
+            true,        /* DYNAMIC_ECNS */
         };
     } else {
         mConfigs = {
