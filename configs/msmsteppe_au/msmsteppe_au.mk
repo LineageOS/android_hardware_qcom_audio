@@ -75,6 +75,9 @@ ifneq ($(strip $(TARGET_USES_RRO)), true)
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 endif
 
+#Automotive audio specific device overlays
+DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/msmsteppe_au/overlay
+
 PRODUCT_COPY_FILES += \
     hardware/qcom/audio/configs/msmsteppe_au/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
     hardware/qcom/audio/configs/msmsteppe_au/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
