@@ -282,7 +282,8 @@ bool audio_extn_is_hifi_audio_supported(void);
 
 //START: AFE_PROXY_FEATURE
 int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev,
-                                               int channel_count);
+                                                    int channel_count,
+                                                    snd_device_t snd_device);
 int32_t audio_extn_read_afe_proxy_channel_masks(struct stream_out *out);
 int32_t audio_extn_get_afe_proxy_channel_count();
 //END: AFE_PROXY_FEATURE
