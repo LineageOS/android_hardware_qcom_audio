@@ -1203,7 +1203,8 @@ int disable_snd_device(struct audio_device *adev,
             disable_asrc_mode(adev);
             audio_route_apply_and_update_path(adev->audio_route, "hph-lowpower-mode");
         }
-        if ((snd_device == SND_DEVICE_IN_HANDSET_6MIC) &&
+        if (((snd_device == SND_DEVICE_IN_HANDSET_6MIC) ||
+            (snd_device == SND_DEVICE_IN_HANDSET_QMIC)) &&
             (audio_extn_ffv_get_stream() == adev->active_input)) {
             ALOGD("%s: deinit ec ref loopback", __func__);
             audio_extn_ffv_deinit_ec_ref_loopback(adev, snd_device);
@@ -3724,6 +3725,12 @@ static int out_on_error(struct audio_stream *stream)
     if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         send_offload_cmd_l(out, OFFLOAD_CMD_ERROR);
     }
+
+    if (is_offload_usecase(out->usecase) && out->card_status == CARD_STATUS_OFFLINE) {
+        ALOGD("Setting previous card status if offline");
+        out->prev_card_status_offline = true;
+    }
+
     pthread_mutex_unlock(&out->lock);
 
     return status;
@@ -4947,6 +4954,9 @@ static int out_get_render_position(const struct audio_stream_out *stream,
              */
             ALOGE(" ERROR: sound card not active, return error");
             ret = -EINVAL;
+        } else if (out->prev_card_status_offline) {
+            ALOGE("ERROR: previously sound card was offline,return error");
+            ret = -EINVAL;
         } else {
             ret = 0;
             adjust_frames_for_device_delay(out, dsp_frames);
@@ -5049,7 +5059,10 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
         } else if (out->card_status == CARD_STATUS_OFFLINE) {
             *frames = out->written;
             clock_gettime(CLOCK_MONOTONIC, timestamp);
-            ret = 0;
+            if (is_offload_usecase(out->usecase))
+                ret = -EINVAL;
+            else
+                ret = 0;
         }
     }
     pthread_mutex_unlock(&out->lock);
@@ -6092,6 +6105,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->hal_output_suspend_supported = 0;
     out->dynamic_pm_qos_config_supported = 0;
     out->set_dual_mono = false;
+    out->prev_card_status_offline = false;
 
     if ((flags & AUDIO_OUTPUT_FLAG_BD) &&
         (property_get_bool("vendor.audio.matrix.limiter.enable", false)))
