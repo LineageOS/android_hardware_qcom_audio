@@ -1183,6 +1183,14 @@ int enable_snd_device(struct audio_device *adev,
             goto err;
         }
 
+        if (((SND_DEVICE_OUT_BT_SCO_SWB == snd_device) ||
+             (SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC == snd_device) ||
+             (SND_DEVICE_IN_BT_SCO_MIC_SWB == snd_device)) &&
+            (audio_extn_sco_start_configuration() < 0)) {
+            ALOGE(" fail to configure sco control path ");
+            goto err;
+        }
+
         /* due to the possibility of calibration overwrite between listen
             and audio, notify listen hal before audio calibration is sent */
         audio_extn_sound_trigger_update_device_status(snd_device,
@@ -1275,7 +1283,14 @@ int disable_snd_device(struct audio_device *adev,
             audio_extn_a2dp_stop_playback();
         else if (snd_device == SND_DEVICE_IN_BT_A2DP)
             audio_extn_a2dp_stop_capture();
-        else if ((snd_device == SND_DEVICE_OUT_HDMI) ||
+        else if ((snd_device == SND_DEVICE_OUT_BT_SCO_SWB) ||
+                 (snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC) ||
+                 (snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB)) {
+            if ((adev->snd_dev_ref_cnt[SND_DEVICE_OUT_BT_SCO_SWB] == 0) &&
+                (adev->snd_dev_ref_cnt[SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC] == 0) &&
+                (adev->snd_dev_ref_cnt[SND_DEVICE_IN_BT_SCO_MIC_SWB] == 0))
+                audio_extn_sco_reset_configuration();
+       } else if ((snd_device == SND_DEVICE_OUT_HDMI) ||
                 (snd_device == SND_DEVICE_OUT_DISPLAY_PORT))
             adev->is_channel_status_set = false;
         else if ((snd_device == SND_DEVICE_OUT_HEADPHONES) &&
@@ -7573,6 +7588,12 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->bt_wb_speech_enabled = false;
     }
 
+    ret = str_parms_get_str(parms, "bt_swb", value, sizeof(value));
+    if (ret >= 0) {
+        val = atoi(value);
+        adev->swb_speech_mode = val;
+    }
+
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
@@ -9013,6 +9034,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     adev->enable_voicerx = false;
     adev->bt_wb_speech_enabled = false;
+    adev->swb_speech_mode = SPEECH_MODE_INVALID;
     //initialize this to false for now,
     //this will be set to true through set param
     adev->vr_audio_mode_enabled = false;

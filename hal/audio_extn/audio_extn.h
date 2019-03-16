@@ -313,6 +313,9 @@ bool audio_extn_a2dp_source_is_ready();
 bool audio_extn_a2dp_source_is_suspended();
 int audio_extn_a2dp_start_capture();
 int audio_extn_a2dp_stop_capture();
+int audio_extn_sco_start_configuration();
+void audio_extn_sco_reset_configuration();
+
 
 // --- Function pointers from audio_extn needed by A2DP_OFFLOAD
 typedef int (*fp_check_a2dp_restore_t)(struct audio_device *,
