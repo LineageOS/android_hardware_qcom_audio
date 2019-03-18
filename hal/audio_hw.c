@@ -1492,8 +1492,9 @@ struct stream_in *get_voice_communication_input(const struct audio_device *adev)
     return NULL;
 }
 
-int select_devices(struct audio_device *adev,
-                   audio_usecase_t uc_id)
+int select_devices_with_force_switch(struct audio_device *adev,
+                                     audio_usecase_t uc_id,
+                                     bool force_switch)
 {
     snd_device_t out_snd_device = SND_DEVICE_NONE;
     snd_device_t in_snd_device = SND_DEVICE_NONE;
@@ -1598,7 +1599,7 @@ int select_devices(struct audio_device *adev,
 
     if (out_snd_device == usecase->out_snd_device &&
         in_snd_device == usecase->in_snd_device) {
-        if (!force_device_switch(usecase))
+        if (!force_device_switch(usecase) && !force_switch)
             return 0;
     }
 
@@ -1740,6 +1741,12 @@ int select_devices(struct audio_device *adev,
                                             &voip_out->app_type_cfg.gain[0]);
     }
     return status;
+}
+
+int select_devices(struct audio_device *adev,
+                   audio_usecase_t uc_id)
+{
+    return select_devices_with_force_switch(adev, uc_id, false);
 }
 
 static int stop_input_stream(struct stream_in *in)
@@ -5478,6 +5485,19 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
                 voice_is_in_call(adev)) {
             voice_stop_call(adev);
             adev->current_call_output = NULL;
+
+            /*
+             * After stopping the call, it must check if any active capture
+             * activity device needs to be re-selected.
+             */
+            struct audio_usecase *usecase;
+            struct listnode *node;
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                if (usecase->type == PCM_CAPTURE && usecase->stream.in != NULL) {
+                    select_devices_with_force_switch(adev, usecase->id, true);
+                }
+            }
         }
     }
     pthread_mutex_unlock(&adev->lock);
