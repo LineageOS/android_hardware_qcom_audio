@@ -2909,6 +2909,8 @@ int start_input_stream(struct stream_in *in)
     if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
         ALOGE("%s: failed to start ext hw plugin", __func__);
 
+    android_atomic_acquire_cas(true, false, &(in->capture_stopped));
+
     if (audio_extn_cin_attached_usecase(in->usecase)) {
        ret = audio_extn_cin_open_input_stream(in);
        if (ret)
@@ -6530,6 +6532,13 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             goto exit;
         }
         in->standby = 0;
+    }
+
+    /* Avoid read if capture_stopped is set */
+    if (android_atomic_acquire_load(&(in->capture_stopped)) > 0) {
+        ALOGD("%s: force stopped catpure session, ignoring read request", __func__);
+        ret = -EINVAL;
+        goto exit;
     }
 
     // what's the duration requested by the client?

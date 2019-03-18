@@ -472,6 +472,8 @@ struct stream_in {
     float zoom;
     audio_microphone_direction_t direction;
 
+    volatile int32_t capture_stopped;
+
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
     audio_format_t supported_formats[MAX_SUPPORTED_FORMATS + 1];
