@@ -79,7 +79,7 @@
 // System properties used for A2DP Offload
 #define SYSPROP_A2DP_OFFLOAD_SUPPORTED "ro.bluetooth.a2dp_offload.supported"
 #define SYSPROP_A2DP_OFFLOAD_DISABLED  "persist.bluetooth.a2dp_offload.disabled"
-#define SYSPROP_BLUETOOTH_AUDIO_HAL_DISABLED  "persist.vendor.bluetooth.bluetooth_audio_hal.disabled"
+#define SYSPROP_BLUETOOTH_AUDIO_HAL_DISABLED  "persist.bluetooth.bluetooth_audio_hal.disabled"
 #define SYSPROP_A2DP_CODEC_LATENCIES   "vendor.audio.a2dp.codec.latency"
 
 // Default encoder bit width
