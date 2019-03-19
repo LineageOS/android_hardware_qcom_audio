@@ -8318,6 +8318,7 @@ static int adev_verify_devices(struct audio_device *adev)
             if (retval >= 0) {
                 *pparams = pcm_params_get(card_id, device_id, flags_dir);
 #if LOG_NDEBUG == 0
+                char info[512]; /* for possible debug info */
                 if (*pparams) {
                     ALOGV("%s: (%s) card %d  device %d", __func__,
                             dir ? "input" : "output", card_id, device_id);
