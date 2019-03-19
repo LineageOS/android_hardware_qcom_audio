@@ -3000,9 +3000,9 @@ acdb_init_fail:
         //for headset-mic. This is to capture separate data from headset-mic and handset-mic.
 #ifdef CONCURRENT_CAPTURE_ENABLED
         my_data->current_backend_cfg[HEADSET_TX_BACKEND].bitwidth_mixer_ctl =
-            strdup("SLIM_1_RX Format");
+            strdup("SLIM_1_TX Format");
         my_data->current_backend_cfg[HEADSET_TX_BACKEND].samplerate_mixer_ctl =
-            strdup("SLIM_1_RX SampleRate");
+            strdup("SLIM_1_TX SampleRate");
 #endif
     }
 
