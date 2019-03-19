@@ -1146,6 +1146,18 @@ void audio_extn_ffv_append_ec_ref_dev_name(char *device_name);
 
 int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct audio_license_params *lic_params);
 
+#ifndef AUDIO_EXTN_AUTO_HAL_ENABLED
+#define audio_extn_auto_hal_init(adev)                (0)
+#define audio_extn_auto_hal_deinit()                  (0)
+#define audio_extn_auto_hal_enable_hostless()         (0)
+#define audio_extn_auto_hal_disable_hostless()        (0)
+#else
+int32_t audio_extn_auto_hal_init(struct audio_device *adev);
+void audio_extn_auto_hal_deinit(void);
+int32_t audio_extn_auto_hal_enable_hostless(void);
+void audio_extn_auto_hal_disable_hostless(void);
+#endif
+
 #ifndef EXT_HW_PLUGIN_ENABLED
 #define audio_extn_ext_hw_plugin_init(adev)                (0)
 #define audio_extn_ext_hw_plugin_deinit(plugin)              (0)
