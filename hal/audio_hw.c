@@ -173,6 +173,28 @@ struct pcm_config pcm_config_low_latency = {
     .avail_min = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
 };
 
+struct pcm_config pcm_config_haptics_audio = {
+    .channels = 1,
+    .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
+    .period_size = LOW_LATENCY_OUTPUT_PERIOD_SIZE,
+    .period_count = LOW_LATENCY_OUTPUT_PERIOD_COUNT,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
+    .stop_threshold = INT_MAX,
+    .avail_min = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
+};
+
+struct pcm_config pcm_config_haptics = {
+    .channels = 1,
+    .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
+    .period_size = LOW_LATENCY_OUTPUT_PERIOD_SIZE,
+    .period_count = LOW_LATENCY_OUTPUT_PERIOD_COUNT,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = LOW_LATENCY_OUTPUT_PERIOD_SIZE,
+    .stop_threshold = INT_MAX,
+    .avail_min = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
+};
+
 static int af_period_multiplier = 4;
 struct pcm_config pcm_config_rt = {
     .channels = 2,
@@ -300,6 +322,7 @@ const uint32_t format_to_bitwidth_table[AUDIO_MAX_PCM_FORMATS] = {
 const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = "deep-buffer-playback",
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
+    [USECASE_AUDIO_PLAYBACK_WITH_HAPTICS] = "audio-with-haptics-playback",
     [USECASE_AUDIO_PLAYBACK_ULL]         = "audio-ull-playback",
     [USECASE_AUDIO_PLAYBACK_MULTI_CH]    = "multi-channel-playback",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
@@ -3114,6 +3137,41 @@ static int stop_output_stream(struct stream_out *out)
     return ret;
 }
 
+struct pcm* pcm_open_prepare_helper(unsigned int snd_card, unsigned int pcm_device_id,
+                                   unsigned int flags, unsigned int pcm_open_retry_count,
+                                   struct pcm_config *config)
+{
+    struct pcm* pcm = NULL;
+
+    while (1) {
+        pcm = pcm_open(snd_card, pcm_device_id, flags, config);
+        if (pcm == NULL || !pcm_is_ready(pcm)) {
+            ALOGE("%s: %s", __func__, pcm_get_error(pcm));
+            if (pcm != NULL) {
+                pcm_close(pcm);
+                pcm = NULL;
+            }
+            if (pcm_open_retry_count-- == 0)
+                return NULL;
+
+            usleep(PROXY_OPEN_WAIT_TIME * 1000);
+            continue;
+        }
+        break;
+    }
+
+    if (pcm_is_ready(pcm)) {
+        int ret = pcm_prepare(pcm);
+        if (ret < 0) {
+            ALOGE("%s: pcm_prepare returned %d", __func__, ret);
+            pcm_close(pcm);
+            pcm = NULL;
+        }
+    }
+
+    return pcm;
+}
+
 int start_output_stream(struct stream_out *out)
 {
     int ret = 0;
@@ -3123,6 +3181,7 @@ int start_output_stream(struct stream_out *out)
     struct mixer_ctl *ctl = NULL;
     char* perf_mode[] = {"ULL", "ULL_PP", "LL"};
     bool a2dp_combo = false;
+    bool is_haptic_usecase = (out->usecase == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) ? true: false;
 
     ATRACE_BEGIN("start_output_stream");
     if ((out->usecase < 0) || (out->usecase >= AUDIO_USECASE_MAX)) {
@@ -3130,9 +3189,9 @@ int start_output_stream(struct stream_out *out)
         goto error_config;
     }
 
-    ALOGD("%s: enter: stream(%p)usecase(%d: %s) devices(%#x)",
+    ALOGD("%s: enter: stream(%p)usecase(%d: %s) devices(%#x) is_haptic_usecase(%d)",
           __func__, &out->stream, out->usecase, use_case_table[out->usecase],
-          out->devices);
+          out->devices, is_haptic_usecase);
 
     if (CARD_STATUS_OFFLINE == out->card_status ||
         CARD_STATUS_OFFLINE == adev->card_status) {
@@ -3175,6 +3234,16 @@ int start_output_stream(struct stream_out *out)
               __func__, out->pcm_device_id, out->usecase);
         ret = -EINVAL;
         goto error_open;
+    }
+
+    if (is_haptic_usecase) {
+        adev->haptic_pcm_device_id = platform_get_haptics_pcm_device_id();
+        if (adev->haptic_pcm_device_id < 0) {
+            ALOGE("%s: Invalid Haptics pcm device id(%d) for the usecase(%d)",
+                  __func__, adev->haptic_pcm_device_id, out->usecase);
+            ret = -EINVAL;
+            goto error_config;
+        }
     }
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
@@ -3285,50 +3354,27 @@ int start_output_stream(struct stream_out *out)
             platform_set_stream_channel_map(adev->platform, out->channel_mask,
                    out->pcm_device_id, &out->channel_map_param.channel_map[0]);
 
-        while (1) {
-            ATRACE_BEGIN("pcm_open");
-            out->pcm = pcm_open(adev->snd_card, out->pcm_device_id,
-                               flags, &out->config);
-            ATRACE_END();
-            if (errno == ENETRESET && !pcm_is_ready(out->pcm)) {
-                ALOGE("%s: pcm_open failed errno:%d\n", __func__, errno);
-                out->card_status = CARD_STATUS_OFFLINE;
-                adev->card_status = CARD_STATUS_OFFLINE;
-                ret = -EIO;
-                goto error_open;
-            }
-
-            if (out->pcm == NULL || !pcm_is_ready(out->pcm)) {
-                ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
-                if (out->pcm != NULL) {
-                    pcm_close(out->pcm);
-                    out->pcm = NULL;
-                }
-                if (pcm_open_retry_count-- == 0) {
-                    ret = -EIO;
-                    goto error_open;
-                }
-                usleep(PROXY_OPEN_WAIT_TIME * 1000);
-                continue;
-            }
-            break;
+        out->pcm = pcm_open_prepare_helper(adev->snd_card, out->pcm_device_id,
+                                       flags, pcm_open_retry_count,
+                                       &(out->config));
+        if (out->pcm == NULL) {
+           ret = -EIO;
+           goto error_open;
         }
+
+        if (is_haptic_usecase) {
+            adev->haptic_pcm = pcm_open_prepare_helper(adev->snd_card,
+                                   adev->haptic_pcm_device_id,
+                                   flags, pcm_open_retry_count,
+                                   &(adev->haptics_config));
+            // failure to open haptics pcm shouldnt stop audio,
+            // so do not close audio pcm in case of error
+        }
+
         if (!out->realtime)
             platform_set_stream_channel_map(adev->platform, out->channel_mask,
                    out->pcm_device_id, &out->channel_map_param.channel_map[0]);
 
-        ALOGV("%s: pcm_prepare", __func__);
-        if (pcm_is_ready(out->pcm)) {
-            ATRACE_BEGIN("pcm_prepare");
-            ret = pcm_prepare(out->pcm);
-            ATRACE_END();
-            if (ret < 0) {
-                ALOGE("%s: pcm_prepare returned %d", __func__, ret);
-                pcm_close(out->pcm);
-                out->pcm = NULL;
-                goto error_open;
-            }
-        }
         // apply volume for voip playback after path is set up
         if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP)
             out_set_voip_volume(&out->stream, out->volume_l, out->volume_r);
@@ -3435,6 +3481,10 @@ int start_output_stream(struct stream_out *out)
     enable_gcov();
     return ret;
 error_open:
+    if (adev->haptic_pcm) {
+        pcm_close(adev->haptic_pcm);
+        adev->haptic_pcm = NULL;
+    }
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     stop_output_stream(out);
 error_config:
@@ -3869,6 +3919,19 @@ int out_standby_l(struct audio_stream *stream)
             if (out->pcm) {
                 pcm_close(out->pcm);
                 out->pcm = NULL;
+            }
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+                if (adev->haptic_pcm) {
+                    pcm_close(adev->haptic_pcm);
+                    adev->haptic_pcm = NULL;
+                }
+
+                if (adev->haptic_buffer != NULL) {
+                    free(adev->haptic_buffer);
+                    adev->haptic_buffer = NULL;
+                    adev->haptic_buffer_size = 0;
+                }
+                adev->haptic_pcm_device_id = 0;
             }
         } else {
             ALOGD("copl(%p):standby", out);
@@ -4706,6 +4769,79 @@ static void update_frames_written(struct stream_out *out, size_t bytes)
     pthread_mutex_unlock(&out->position_query_lock);
 }
 
+int split_and_write_audio_haptic_data(struct stream_out *out,
+                 const void *buffer, size_t bytes_to_write)
+{
+    struct audio_device *adev = out->dev;
+
+    int ret = 0;
+    size_t channel_count = audio_channel_count_from_out_mask(out->channel_mask);
+    size_t bytes_per_sample = audio_bytes_per_sample(out->format);
+    size_t frame_size = channel_count * bytes_per_sample;
+    size_t frame_count = bytes_to_write / frame_size;
+
+    bool force_haptic_path =
+         property_get_bool("vendor.audio.test_haptic", false);
+
+    // extract Haptics data from Audio buffer
+    bool   alloc_haptic_buffer = false;
+    int    haptic_channel_count = adev->haptics_config.channels;
+    size_t haptic_frame_size = bytes_per_sample * haptic_channel_count;
+    size_t audio_frame_size = frame_size - haptic_frame_size;
+    size_t total_haptic_buffer_size = frame_count * haptic_frame_size;
+
+    if (adev->haptic_buffer == NULL) {
+        alloc_haptic_buffer = true;
+    } else if (adev->haptic_buffer_size < total_haptic_buffer_size) {
+        free(adev->haptic_buffer);
+        adev->haptic_buffer_size = 0;
+        alloc_haptic_buffer = true;
+    }
+
+    if (alloc_haptic_buffer) {
+        adev->haptic_buffer = (uint8_t *)calloc(1, total_haptic_buffer_size);
+        adev->haptic_buffer_size = total_haptic_buffer_size;
+    }
+
+    size_t src_index = 0, aud_index = 0, hap_index = 0;
+    uint8_t *audio_buffer = (uint8_t *)buffer;
+    uint8_t *haptic_buffer  = adev->haptic_buffer;
+
+    // This is required for testing only. This works for stereo data only.
+    // One channel is fed to audio stream and other to haptic stream for testing.
+    if (force_haptic_path)
+       audio_frame_size = haptic_frame_size = bytes_per_sample;
+
+    for (size_t i = 0; i < frame_count; i++) {
+        memcpy(audio_buffer + aud_index, audio_buffer + src_index,
+               audio_frame_size);
+        aud_index += audio_frame_size;
+        src_index += audio_frame_size;
+
+        if (adev->haptic_pcm)
+            memcpy(haptic_buffer + hap_index, audio_buffer + src_index,
+                   haptic_frame_size);
+        hap_index += haptic_frame_size;
+        src_index += haptic_frame_size;
+
+        // This is required for testing only.
+        // Discard haptic channel data.
+        if (force_haptic_path)
+            src_index += haptic_frame_size;
+    }
+
+    // write to audio pipeline
+    ret = pcm_write(out->pcm, (void *)audio_buffer,
+                    frame_count * audio_frame_size);
+
+    // write to haptics pipeline
+    if (adev->haptic_pcm)
+        ret = pcm_write(adev->haptic_pcm, (void *)adev->haptic_buffer,
+                        frame_count * haptic_frame_size);
+
+    return ret;
+}
+
 #ifdef NO_AUDIO_OUT
 static ssize_t out_write_for_no_output(struct audio_stream_out *stream,
                                        const void *buffer __unused, size_t bytes)
@@ -5030,8 +5166,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                            1000000 / audio_stream_out_frame_size(stream) /
                            out_get_sample_rate(&out->stream.common));
                     ret = 0;
-                } else
-                    ret = pcm_write(out->pcm, (void *)buffer, bytes_to_write);
+                } else {
+                    if (out->usecase == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS)
+                        ret = split_and_write_audio_haptic_data(out, buffer, bytes);
+                    else
+                        ret = pcm_write(out->pcm, (void *)buffer, bytes_to_write);
+                }
             }
 
             release_out_focus(out);
@@ -6322,6 +6462,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     bool direct_dev = is_hdmi || is_usb_dev;
     bool use_db_as_primary =
            audio_feature_manager_is_feature_enabled(USE_DEEP_BUFFER_AS_PRIMARY_OUTPUT);
+    bool force_haptic_path =
+            property_get_bool("vendor.audio.test_haptic", false);
 
     if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
@@ -6913,6 +7055,22 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         } else if (flags & AUDIO_OUTPUT_FLAG_TTS) {
             out->usecase = USECASE_AUDIO_PLAYBACK_TTS;
             out->config = pcm_config_deep_buffer;
+        } else if (config->channel_mask & AUDIO_CHANNEL_HAPTIC_ALL) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_WITH_HAPTICS;
+            out->config = pcm_config_haptics_audio;
+            if (force_haptic_path)
+                adev->haptics_config = pcm_config_haptics_audio;
+            else
+                adev->haptics_config = pcm_config_haptics;
+
+            out->config.channels =
+                audio_channel_count_from_out_mask(out->channel_mask & ~AUDIO_CHANNEL_HAPTIC_ALL);
+
+            if (force_haptic_path) {
+                out->config.channels = 1;
+                adev->haptics_config.channels = 1;
+            } else
+                adev->haptics_config.channels = audio_channel_count_from_out_mask(out->channel_mask & AUDIO_CHANNEL_HAPTIC_ALL);
         } else {
             /* primary path is the default path selected if no other outputs are available/suitable */
             out->usecase = GET_USECASE_AUDIO_PLAYBACK_PRIMARY(use_db_as_primary);
