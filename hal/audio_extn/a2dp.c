@@ -50,8 +50,7 @@
 #endif
 
 #define AUDIO_PARAMETER_A2DP_STARTED "A2dpStarted"
-#define BT_IPC_SOURCE_LIB_NAME  "libbthost_if.so"
-#define BT_IPC_SOURCE_LIB_NAME_QTI "libbthost_if_qti.so"
+#define BT_IPC_SOURCE_LIB_NAME "btaudio_offload_if.so"
 #define BT_IPC_SINK_LIB_NAME    "libbthost_if_sink.so"
 #define MEDIA_FMT_NONE                                     0
 #define MEDIA_FMT_AAC                                      0x00010DA6
@@ -200,6 +199,7 @@ typedef enum {
     APTX_AD_44_1 = 0x2, // 44.1kHz
 } enc_aptx_ad_s_rate;
 
+typedef void (*bt_audio_pre_init_t)(void);
 typedef int (*audio_source_open_t)(void);
 typedef int (*audio_source_close_t)(void);
 typedef int (*audio_source_start_t)(void);
@@ -278,6 +278,7 @@ static uint32_t instance_id = MAX_INSTANCE_ID;
 struct a2dp_data {
     struct audio_device *adev;
     void *bt_lib_source_handle;
+    bt_audio_pre_init_t bt_audio_pre_init;
     audio_source_open_t audio_source_open;
     audio_source_close_t audio_source_close;
     audio_source_start_t audio_source_start;
@@ -842,34 +843,42 @@ static int check_if_enhanced_fwk() {
     return is_enhanced_fwk;
 }
 
-/* API to open BT IPC library to start IPC communication for BT Source*/
-static void open_a2dp_source()
-{
+static void open_a2dp_source() {
     int ret = 0;
 
     ALOGD(" Open A2DP source start ");
-    if (a2dp.bt_lib_source_handle == NULL) {
-        if (is_running_with_enhanced_fwk == UNINITIALIZED)
-            is_running_with_enhanced_fwk = check_if_enhanced_fwk();
-        if (!is_running_with_enhanced_fwk) {
-            ALOGD(" Requesting for BT lib handle");
-            a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME, RTLD_NOW);
-            if (a2dp.bt_lib_source_handle == NULL) {
-                ALOGE("%s: DLOPEN failed for %s", __func__, BT_IPC_SOURCE_LIB_NAME);
-                ret = -ENOSYS;
-                goto init_fail;
+
+    if (a2dp.bt_lib_source_handle && a2dp.audio_source_open) {
+        if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED) {
+            ALOGD("calling BT stream open");
+            ret = a2dp.audio_source_open();
+            if(ret != 0) {
+                ALOGE("Failed to open source stream for a2dp: status %d", ret);
             }
+            a2dp.bt_state_source = A2DP_STATE_CONNECTED;
         } else {
-            ALOGD(" Requesting for BT QTI lib handle");
-            a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME_QTI, RTLD_NOW);
-            if (a2dp.bt_lib_source_handle == NULL) {
-                ALOGE("%s: DLOPEN failed for %s", __func__, BT_IPC_SOURCE_LIB_NAME_QTI);
-                ret = -ENOSYS;
-                goto init_fail;
-            }
+            ALOGD("Called a2dp open with improper state %d", a2dp.bt_state_source);
+        }
+    } else {
+        ALOGE("a2dp handle is not identified, Ignoring open request");
+        a2dp.bt_state_source = A2DP_STATE_DISCONNECTED;
+    }
+}
+/* API to open BT IPC library to start IPC communication for BT Source*/
+static void a2dp_source_init()
+{
+    ALOGD("a2dp_source_init START");
+    if (a2dp.bt_lib_source_handle == NULL) {
+        ALOGD("Requesting for BT lib handle");
+        a2dp.bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME, RTLD_NOW);
+        if (a2dp.bt_lib_source_handle == NULL) {
+            ALOGE("%s: dlopen failed for %s", __func__, BT_IPC_SOURCE_LIB_NAME);
+            return;
         }
     }
 
+    a2dp.bt_audio_pre_init = (bt_audio_pre_init_t)
+                  dlsym(a2dp.bt_lib_source_handle, "bt_audio_pre_init");
     a2dp.audio_source_open = (audio_source_open_t)
                   dlsym(a2dp.bt_lib_source_handle, "audio_stream_open");
     a2dp.audio_source_start = (audio_source_start_t)
@@ -895,32 +904,12 @@ static void open_a2dp_source()
     a2dp.audio_is_tws_mono_mode_enable = (audio_is_tws_mono_mode_enable_t)
                    dlsym(a2dp.bt_lib_source_handle,"isTwsMonomodeEnable");
 
-    if (a2dp.bt_lib_source_handle && a2dp.audio_source_open) {
-        if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED) {
-            ALOGD("calling BT stream open");
-            ret = a2dp.audio_source_open();
-            if (ret != 0) {
-                ALOGE("Failed to open source stream for a2dp: status %d", ret);
-                goto init_fail;
-            }
-            a2dp.bt_state_source = A2DP_STATE_CONNECTED;
-        } else {
-            ALOGD("Called a2dp open with improper state, Ignoring request state %d", a2dp.bt_state_source);
-        }
-    } else {
-        ALOGE("a2dp handle is not identified, Ignoring open request");
-        a2dp.bt_state_source = A2DP_STATE_DISCONNECTED;
-        goto init_fail;
-    }
-
-init_fail:
-    if (ret != 0 && (a2dp.bt_lib_source_handle != NULL)) {
-        dlclose(a2dp.bt_lib_source_handle);
-        a2dp.bt_lib_source_handle = NULL;
-    }
-    if (vndk_fwk_lib_handle != NULL) {
-        dlclose(vndk_fwk_lib_handle);
-        vndk_fwk_lib_handle = NULL;
+    if (is_running_with_enhanced_fwk == UNINITIALIZED)
+        is_running_with_enhanced_fwk = check_if_enhanced_fwk();
+    if (a2dp.bt_lib_source_handle && is_running_with_enhanced_fwk
+        && a2dp.bt_audio_pre_init) {
+            ALOGD("calling BT module preinit");
+            a2dp.bt_audio_pre_init();
     }
 }
 
@@ -2711,7 +2700,7 @@ void a2dp_init(void *adev,
   a2dp.abr_config.imc_instance = 0;
   a2dp.abr_config.abr_tx_handle = NULL;
   a2dp.is_tws_mono_mode_on = false;
-
+  a2dp_source_init();
   // init function pointers
   fp_platform_get_pcm_device_id =
               init_config.fp_platform_get_pcm_device_id;
