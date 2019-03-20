@@ -101,7 +101,7 @@ enum sp_version {
 #ifdef LINUX_ENABLED
 #define CALIB_FILE "/data/audio/audio.cal"
 #else
-#define CALIB_FILE "/data/vendor/misc/audio/audio.cal"
+#define CALIB_FILE "/data/vendor/audio/audio.cal"
 #endif
 
 /*Time between retries for calibartion or intial wait time
