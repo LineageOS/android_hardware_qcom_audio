@@ -107,7 +107,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
         true,        /* COMPRESS_METADATA_NEEDED */
         false,       /* INCALL_MUSIC */
         false,       /* COMPRESS_VOIP */
-        true,        /* DYNAMIC_ECNS */
+        true         /* DYNAMIC_ECNS */
     };
 #else
     if (isVendorEnhancedFwk) {
@@ -192,7 +192,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
             false,       /* COMPRESS_METADATA_NEEDED */
             true,        /* INCALL_MUSIC */
             false,       /* COMPRESS_VOIP */
-            false,       /* DYNAMIC_ECNS */
+            false        /* DYNAMIC_ECNS */
         };
     }
 #endif

@@ -67,15 +67,8 @@ enum {
  * All these devices are handled by the internal HW codec. We can
  * enable any one of these devices at any time
  */
-#ifdef CONCURRENT_CAPTURE_ENABLED
-#define AUDIO_DEVICE_IN_ALL_CODEC_BACKEND \
-    (AUDIO_DEVICE_IN_BUILTIN_MIC | AUDIO_DEVICE_IN_BACK_MIC | \
-     AUDIO_DEVICE_IN_VOICE_CALL) & ~AUDIO_DEVICE_BIT_IN
-#else
-#define AUDIO_DEVICE_IN_ALL_CODEC_BACKEND \
-    (AUDIO_DEVICE_IN_BUILTIN_MIC | AUDIO_DEVICE_IN_BACK_MIC | \
-     AUDIO_DEVICE_IN_WIRED_HEADSET | AUDIO_DEVICE_IN_VOICE_CALL) & ~AUDIO_DEVICE_BIT_IN
-#endif
+int AUDIO_DEVICE_IN_ALL_CODEC_BACKEND;
+
 /* Sound devices specific to the platform
  * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound
  * devices to enable corresponding mixer paths
