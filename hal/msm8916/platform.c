@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -283,9 +283,8 @@ struct platform_data {
     acdb_set_codec_data_t      acdb_set_codec_data;
     acdb_reload_t              acdb_reload;
     acdb_reload_v2_t           acdb_reload_v2;
-#ifdef RECORD_PLAY_CONCURRENCY
+
     bool rec_play_conc_set;
-#endif
     void *hw_info;
     acdb_send_gain_dep_cal_t   acdb_send_gain_dep_cal;
     struct csd_data *csd;
@@ -491,11 +490,9 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_AND_BT_SCO_WB] = "speaker-and-bt-sco-wb",
     [SND_DEVICE_OUT_SPEAKER_WSA_AND_BT_SCO] = "wsa-speaker-and-bt-sco",
     [SND_DEVICE_OUT_SPEAKER_WSA_AND_BT_SCO_WB] = "wsa-speaker-and-bt-sco-wb",
-#ifdef RECORD_PLAY_CONCURRENCY
     [SND_DEVICE_OUT_VOIP_HANDSET] = "voip-handset",
     [SND_DEVICE_OUT_VOIP_SPEAKER] = "voip-speaker",
     [SND_DEVICE_OUT_VOIP_HEADPHONES] = "voip-headphones",
-#endif
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -671,11 +668,9 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_SPEAKER_STEREO_PROTECTED] = 124,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS] = 134,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS] = 134,
-#ifdef RECORD_PLAY_CONCURRENCY
     [SND_DEVICE_OUT_VOIP_HANDSET] = 133,
     [SND_DEVICE_OUT_VOIP_SPEAKER] = 132,
     [SND_DEVICE_OUT_VOIP_HEADPHONES] = 134,
-#endif
 
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_HANDSET_MIC_EXTERNAL] = 4,
@@ -831,11 +826,9 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES)},
-#ifdef RECORD_PLAY_CONCURRENCY
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_SPEAKER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOIP_HEADPHONES)},
-#endif
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_EXTERNAL)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_AEC)},
@@ -1687,11 +1680,9 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_SPEAKER_WSA] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_WSA] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA] = strdup("SLIMBUS_0_RX");
-#ifdef RECORD_PLAY_CONCURRENCY
     hw_interface_table[SND_DEVICE_OUT_VOIP_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOIP_SPEAKER] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOIP_HEADPHONES] = strdup("SLIMBUS_6_RX");
-#endif
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC_EXTERNAL] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC_AEC] = strdup("SLIMBUS_0_TX");
@@ -4056,7 +4047,6 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     audio_devices_t devices = out->devices;
     unsigned int sample_rate = out->sample_rate;
     int na_mode = platform_get_native_support();
-#ifdef RECORD_PLAY_CONCURRENCY
     bool use_voip_out_devices = false;
     bool prop_rec_play_enabled = false;
     char recConcPropValue[PROPERTY_VALUE_MAX];
@@ -4067,7 +4057,6 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     use_voip_out_devices =  prop_rec_play_enabled &&
                         (my_data->rec_play_conc_set || adev->mode == AUDIO_MODE_IN_COMMUNICATION);
     ALOGV("platform_get_output_snd_device use_voip_out_devices : %d",use_voip_out_devices);
-#endif
 
     audio_channel_mask_t channel_mask = (adev->active_input == NULL) ?
                                 AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
@@ -4268,12 +4257,10 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
 
         } else if (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET
             && audio_extn_get_anc_enabled()) {
-#ifdef RECORD_PLAY_CONCURRENCY
             if (use_voip_out_devices) {
                 // ANC should be disabled for voip concurrency
                 snd_device = SND_DEVICE_OUT_VOIP_HEADPHONES;
             } else
-#endif
             {
                 if (audio_extn_should_use_fb_anc())
                     snd_device = SND_DEVICE_OUT_ANC_FB_HEADSET;
@@ -4292,21 +4279,17 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (devices & AUDIO_DEVICE_OUT_LINE) {
                 snd_device = SND_DEVICE_OUT_LINE;
         }  else {
-#ifdef RECORD_PLAY_CONCURRENCY
             if (use_voip_out_devices)
                 snd_device = SND_DEVICE_OUT_VOIP_HEADPHONES;
             else
-#endif
                 snd_device = SND_DEVICE_OUT_HEADPHONES;
         }
     } else if (devices & AUDIO_DEVICE_OUT_LINE) {
         snd_device = SND_DEVICE_OUT_LINE;
     } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
-#ifdef RECORD_PLAY_CONCURRENCY
         if (use_voip_out_devices) {
             snd_device = SND_DEVICE_OUT_VOIP_SPEAKER;
         } else
-#endif
         {
             if (adev->speaker_lr_swap)
                 snd_device = SND_DEVICE_OUT_SPEAKER_REVERSE;
@@ -4354,11 +4337,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
         snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
-#ifdef RECORD_PLAY_CONCURRENCY
         if (use_voip_out_devices)
             snd_device = SND_DEVICE_OUT_VOIP_HANDSET;
         else
-#endif
             snd_device = SND_DEVICE_OUT_HANDSET;
     } else if (devices & AUDIO_DEVICE_OUT_PROXY) {
         channel_count = audio_extn_get_afe_proxy_channel_count();
@@ -5310,7 +5291,6 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         }
     }
 
-#ifdef RECORD_PLAY_CONCURRENCY
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_REC_PLAY_CONC, value, sizeof(value));
     if (err >= 0) {
         if (!strncmp("true", value, sizeof("true"))) {
@@ -5321,7 +5301,6 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
             my_data->rec_play_conc_set = false;
         }
     }
-#endif
 
    err = str_parms_get_str(parms, PLATFORM_MAX_MIC_COUNT,
                             value, sizeof(value));
