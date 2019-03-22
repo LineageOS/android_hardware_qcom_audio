@@ -290,3 +290,10 @@ PRODUCT_PACKAGES += \
     vendor.qti.hardware.audiohalext@1.0 \
     vendor.qti.hardware.audiohalext@1.0-impl \
     vendor.qti.hardware.audiohalext-utils
+
+PRODUCT_PACKAGES_ENG += \
+    VoicePrintTest \
+    VoicePrintDemo
+
+PRODUCT_PACKAGES_DEBUG += \
+    AudioSettings
