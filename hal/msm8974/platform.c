@@ -2017,13 +2017,29 @@ static bool platform_is_i2s_ext_modem(const char *snd_card_name,
         !strncmp(snd_card_name, "sdx-tavil-i2s-snd-card",
                  sizeof("sdx-tavil-i2s-snd-card")) ||
         !strncmp(snd_card_name, "sda845-tavil-i2s-snd-card",
-                 sizeof("sda845-tavil-i2s-snd-card"))) {
+                 sizeof("sda845-tavil-i2s-snd-card")) ||
+        !strncmp(snd_card_name, "sa6155-adp-star-snd-card",
+                 sizeof("sa6155-adp-star-snd-card"))) {
         plat_data->is_i2s_ext_modem = true;
     }
     ALOGV("%s, is_i2s_ext_modem:%d soundcard name is %s",__func__,
            plat_data->is_i2s_ext_modem, snd_card_name);
 
     return plat_data->is_i2s_ext_modem;
+}
+
+static bool is_auto_snd_card(const char *snd_card_name)
+{
+    bool is_auto_snd_card = false;
+
+    if (!strncmp(snd_card_name, "sa6155-adp-star-snd-card",
+                 sizeof("sa6155-adp-star-snd-card"))) {
+        is_auto_snd_card = true;
+        ALOGV("%s : Auto snd card detected: soundcard name is %s",__func__,
+               snd_card_name);
+    }
+
+    return is_auto_snd_card;
 }
 
 static void set_platform_defaults(struct platform_data * my_data)
@@ -2923,7 +2939,8 @@ void *platform_init(struct audio_device *adev)
         return NULL;
     }
 
-    if (platform_is_i2s_ext_modem(snd_card_name, my_data)) {
+    if (platform_is_i2s_ext_modem(snd_card_name, my_data) &&
+        !is_auto_snd_card(snd_card_name)) {
         ALOGD("%s: Call MIXER_XML_PATH_I2S", __func__);
 
         adev->audio_route = audio_route_init(adev->snd_card,
@@ -3161,7 +3178,7 @@ void *platform_init(struct audio_device *adev)
 
 
     /* Initialize ACDB ID's */
-    if (my_data->is_i2s_ext_modem)
+    if (my_data->is_i2s_ext_modem && !is_auto_snd_card(snd_card_name))
         platform_info_init(PLATFORM_INFO_XML_PATH_I2S, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "sdm660-snd-card-skush",
                sizeof("sdm660-snd-card-skush")))
@@ -3360,6 +3377,7 @@ acdb_init_fail:
     property_get("ro.baseband", baseband, "");
     if ((!strncmp("apq8084", platform, sizeof("apq8084")) ||
         !strncmp("msm8996", platform, sizeof("msm8996")) ||
+        !strncmp("sm6150", platform, sizeof("sm6150")) ||
         !strncmp("sdx", platform, sizeof("sdx")) ||
         !strncmp("sdm845", platform, sizeof("sdm845"))) &&
         ( !strncmp("mdm", baseband, (sizeof("mdm")-1)) ||
