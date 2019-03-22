@@ -46,7 +46,7 @@
 #include <cutils/properties.h>
 #include <cutils/log.h>
 #include <unistd.h>
-
+#include <sched.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "audio_defs.h"
@@ -604,6 +604,25 @@ void audio_extn_check_and_set_dts_hpx_state(const struct audio_device *adev)
         adev->offload_effects_set_hpx_state(aextnmod.hpx_enabled);
 }
 #endif
+
+/* Affine AHAL thread to CPU core */
+void audio_extn_set_cpu_affinity()
+{
+    cpu_set_t cpuset;
+    struct sched_param sched_param;
+    int policy = SCHED_FIFO, rc = 0;
+
+    ALOGV("%s: Set CPU affinity for read thread", __func__);
+    CPU_ZERO(&cpuset);
+    if (sched_setaffinity(0, sizeof(cpuset), &cpuset) != 0)
+        ALOGE("%s: CPU Affinity allocation failed for Capture thread",
+               __func__);
+
+    sched_param.sched_priority = sched_get_priority_min(policy);
+    rc = sched_setscheduler(0, policy, &sched_param);
+    if (rc != 0)
+         ALOGE("%s: Failed to set realtime priority", __func__);
+}
 
 #ifdef HIFI_AUDIO_ENABLED
 bool audio_extn_is_hifi_audio_enabled(void)

@@ -228,5 +228,5 @@ audio_primary_default_la_CFLAGS += -Dstrlcat=g_strlcat
 audio_primary_default_la_CFLAGS += -DINT_MAX=0x7fffffff
 audio_primary_default_la_CFLAGS += -D__unused=__attribute__\(\(__unused__\)\)
 audio_primary_default_la_CFLAGS += -DLINUX_ENABLED $(TARGET_CFLAGS) -DAUDIO_EXTN_FORMATS_ENABLED
-audio_primary_default_la_CFLAGS += -DNDEBUG
+audio_primary_default_la_CFLAGS += -DNDEBUG -D_GNU_SOURCE
 audio_primary_default_la_LDFLAGS = -module -shared -avoid-version

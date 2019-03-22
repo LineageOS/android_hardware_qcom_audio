@@ -1142,4 +1142,5 @@ void audio_extn_send_dual_mono_mixing_coefficients(struct stream_out *out);
 void audio_extn_set_custom_mtmx_params(struct audio_device *adev,
                                         struct audio_usecase *usecase,
                                         bool enable);
+void audio_extn_set_cpu_affinity();
 #endif /* AUDIO_EXTN_H */
