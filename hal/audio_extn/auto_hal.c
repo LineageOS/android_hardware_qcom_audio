@@ -158,6 +158,158 @@ void audio_extn_auto_hal_disable_hostless(void)
     }
 }
 
+#define MAX_SOURCE_PORTS_PER_PATCH 1
+#define MAX_SINK_PORTS_PER_PATCH 1
+
+int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
+                                unsigned int num_sources,
+                                const struct audio_port_config *sources,
+                                unsigned int num_sinks,
+                                const struct audio_port_config *sinks,
+                                audio_patch_handle_t *handle)
+{
+    struct audio_device *adev = (struct audio_device *)dev;
+    int ret = 0;
+    char *str = NULL;
+    struct str_parms *parms = NULL;
+    char *address = NULL;
+
+    ALOGV("%s: enter", __func__);
+
+    if (!dev || !sources || !sinks || !handle ) {
+        ALOGE("%s: null audio patch parameters", __func__);
+        return -EINVAL;
+    }
+
+    /* Port configuration check & validation */
+    if (num_sources > MAX_SOURCE_PORTS_PER_PATCH ||
+         num_sinks > MAX_SINK_PORTS_PER_PATCH) {
+         ALOGE("%s: invalid audio patch parameters, sources %d sinks %d ",
+                 __func__, num_sources, num_sources);
+         return -EINVAL;
+    }
+
+    /* Release patch if valid handle */
+    if (*handle != AUDIO_PATCH_HANDLE_NONE) {
+        ret = audio_extn_auto_hal_release_audio_patch(dev,
+                        *handle);
+        if (ret) {
+            ALOGE("%s: failed to release audio patch 0x%x", __func__, *handle);
+            return ret;
+        }
+        *handle = AUDIO_PATCH_HANDLE_NONE;
+    }
+
+    /* No validation on num of sources and sinks to allow patch with
+     * multiple sinks being created, but only the first source and
+     * sink are used to create patch.
+     *
+     * Stream set_parameters for AUDIO_PARAMETER_STREAM_ROUTING and
+     * AUDIO_PARAMETER_STREAM_INPUT_SOURCE is replaced with audio_patch
+     * callback in audioflinger for AUDIO_DEVICE_API_VERSION_3_0 and above.
+     * Need to handle device routing notification in audio HAL for
+     *   Capture:  DEVICE -> MIX
+     *   Playback: MIX -> DEVICE
+     * For DEVICE -> DEVICE patch type, it refers to routing from/to external
+     * codec/amplifier and allow Android streams to be mixed at the H/W level.
+     */
+    if ((sources->type == AUDIO_PORT_TYPE_DEVICE) &&
+        (sinks->type == AUDIO_PORT_TYPE_MIX)) {
+        pthread_mutex_lock(&adev->lock);
+        streams_input_ctxt_t *in_ctxt = in_get_stream(adev,
+                        sinks->ext.mix.handle);
+        if (!in_ctxt) {
+            ALOGE("%s, failed to find input stream", __func__);
+            ret = -EINVAL;
+        }
+        pthread_mutex_unlock(&adev->lock);
+        if(ret)
+            return ret;
+
+        if (strcmp(sources->ext.device.address, "") != 0) {
+            address = audio_device_address_to_parameter(
+                                                sources->ext.device.type,
+                                                sources->ext.device.address);
+        } else {
+            address = (char *)calloc(1, 1);
+        }
+        parms = str_parms_create_str(address);
+        if (!parms) {
+            ALOGE("%s: failed to allocate mem for parms", __func__);
+            ret = -ENOMEM;
+            goto error;
+        }
+        str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_ROUTING,
+                        (int)sources->ext.device.type);
+        str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_INPUT_SOURCE,
+                        (int)sinks->ext.mix.usecase.source);
+        str = str_parms_to_str(parms);
+        in_ctxt->input->stream.common.set_parameters(
+                        (struct audio_stream *)in_ctxt->input, str);
+    } else if ((sources->type == AUDIO_PORT_TYPE_MIX) &&
+            (sinks->type == AUDIO_PORT_TYPE_DEVICE)) {
+        pthread_mutex_lock(&adev->lock);
+        streams_output_ctxt_t *out_ctxt = out_get_stream(adev,
+            sources->ext.mix.handle);
+        if (!out_ctxt) {
+            ALOGE("%s, failed to find output stream", __func__);
+            ret = -EINVAL;
+        }
+        pthread_mutex_unlock(&adev->lock);
+        if(ret)
+            return ret;
+
+        if (strcmp(sinks->ext.device.address, "") != 0) {
+            address = audio_device_address_to_parameter(
+                                                sinks->ext.device.type,
+                                                sinks->ext.device.address);
+        } else {
+            address = (char *)calloc(1, 1);
+        }
+        parms = str_parms_create_str(address);
+        if (!parms) {
+            ALOGE("%s: failed to allocate mem for parms", __func__);
+            ret = -ENOMEM;
+            goto error;
+        }
+        str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_ROUTING,
+                        (int)sinks->ext.device.type);
+        str = str_parms_to_str(parms);
+        out_ctxt->output->stream.common.set_parameters(
+                        (struct audio_stream *)out_ctxt->output, str);
+    } else {
+        ALOGW("%s: create device -> device audio patch", __func__);
+    }
+
+error:
+    if (parms)
+        str_parms_destroy(parms);
+    if (address)
+        free(address);
+    ALOGV("%s: exit: handle 0x%x", __func__, *handle);
+    return ret;
+}
+
+int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
+                                audio_patch_handle_t handle)
+{
+    int ret = 0;
+
+    ALOGV("%s: enter: handle 0x%x", __func__, handle);
+
+    if (!dev) {
+        ALOGE("%s: null audio patch parameters", __func__);
+        return -EINVAL;
+    }
+
+    if (handle != AUDIO_PATCH_HANDLE_NONE) {
+        ALOGW("%s: release device -> device audio patch", __func__);
+    }
+
+    ALOGV("%s: exit", __func__);
+    return ret;
+}
+
 int32_t audio_extn_auto_hal_init(struct audio_device *adev)
 {
     int32_t ret = 0;

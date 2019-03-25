@@ -473,6 +473,16 @@ struct streams_io_cfg {
     struct stream_app_type_cfg app_type_cfg;
 };
 
+typedef struct streams_input_ctxt {
+    struct listnode list;
+    struct stream_in *input;
+} streams_input_ctxt_t;
+
+typedef struct streams_output_ctxt {
+    struct listnode list;
+    struct stream_out *output;
+} streams_output_ctxt_t;
+
 typedef void* (*adm_init_t)();
 typedef void (*adm_deinit_t)(void *);
 typedef void (*adm_register_output_stream_t)(void *, audio_io_handle_t, audio_output_flags_t);
@@ -589,6 +599,9 @@ struct audio_device {
      * or other capabilities are present for the device corresponding to that usecase.
      */
     struct pcm_params *use_case_table[AUDIO_USECASE_MAX];
+
+    struct listnode active_inputs_list;
+    struct listnode active_outputs_list;
 };
 
 int select_devices(struct audio_device *adev,
@@ -634,6 +647,11 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
                               struct audio_stream_out *stream);
 
 bool is_interactive_usecase(audio_usecase_t uc_id);
+
+streams_input_ctxt_t *in_get_stream(struct audio_device *dev,
+                                  audio_io_handle_t input);
+streams_output_ctxt_t *out_get_stream(struct audio_device *dev,
+                                  audio_io_handle_t output);
 
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
