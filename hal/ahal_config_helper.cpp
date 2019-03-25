@@ -30,34 +30,88 @@
 //#define LOG_NDEBUG 0
 #define LOG_TAG "ahal_config_helper"
 
-#include "ahal_config_helper.h"
 #include <cutils/properties.h>
+#include <dlfcn.h>
 #include <log/log.h>
+#include "ahal_config_helper.h"
 
 struct AHalConfigHelper {
     static AHalConfigHelper* mConfigHelper;
+    AHalConfigHelper() {};
 
-    AHalConfigHelper() : isRemote(false) { };
     static AHalConfigHelper* getAHalConfInstance() {
         if (!mConfigHelper)
             mConfigHelper = new AHalConfigHelper();
         return mConfigHelper;
     }
-    void initDefaultConfig(bool isVendorEnhancedFwk);
-    AHalValues* getAHalValues();
-    inline void retrieveConfigs();
-
-    AHalValues mConfigs;
-    bool isRemote; // configs specified from remote
+    void initConfigHelper(bool isVendorEnhancedFwk);
+    void getAHalValues(AHalValues* *confValues);
+    AHalValues defaultConfigs;
 };
 
 AHalConfigHelper* AHalConfigHelper::mConfigHelper;
+static AHalValues* (*getAHalConfigs)() = nullptr;
 
-void AHalConfigHelper::initDefaultConfig(bool isVendorEnhancedFwk)
+void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
 {
     ALOGV("%s: enter", __FUNCTION__);
+
+    void *handle = dlopen(AUDIO_CONFIGSTORE_LIB_PATH, RTLD_NOW);
+    if (handle != nullptr) {
+        getAHalConfigs = (AHalValues*(*)())
+                     dlsym(handle, "getAudioHalExtConfigs");
+        if (!getAHalConfigs) {
+            ALOGE("%s: Could not find symbol: %s", __FUNCTION__, dlerror());
+            handle = nullptr;
+            dlclose(handle);
+        }
+    }
+
+#ifdef LINUX_ENABLED
+    defaultConfigs = {
+        true,        /* SND_MONITOR */
+        false,       /* COMPRESS_CAPTURE */
+        true,        /* SOURCE_TRACK */
+        true,        /* SSREC */
+        true,        /* AUDIOSPHERE */
+        true,        /* AFE_PROXY */
+        false,       /* USE_DEEP_AS_PRIMARY_OUTPUT */
+        true,        /* HDMI_EDID */
+        false,       /* KEEP_ALIVE */
+        false,       /* HIFI_AUDIO */
+        true,        /* RECEIVER_AIDED_STEREO */
+        true,        /* KPI_OPTIMIZE */
+        true,        /* DISPLAY_PORT */
+        true,        /* FLUENCE */
+        false,       /* CUSTOM_STEREO */
+        true,        /* ANC_HEADSET */
+        true,        /* SPKR_PROT */
+        true,        /* FM_POWER_OPT */
+        false,       /* EXTERNAL_QDSP */
+        false,       /* EXTERNAL_SPEAKER */
+        false,       /* EXTERNAL_SPEAKER_TFA */
+        false,       /* HWDEP_CAL */
+        false,       /* DSM_FEEDBACK */
+        true,        /* USB_OFFLOAD */
+        false,       /* USB_OFFLOAD_BURST_MODE */
+        false,       /* USB_OFFLOAD_SIDETONE_VOLM */
+        true,        /* A2DP_OFFLOAD */
+        true,        /* HFP */
+        true,        /* VBAT */
+        true,        /* EXT_HW_PLUGIN */
+        false,       /* RECORD_PLAY_CONCURRENCY */
+        true,        /* HDMI_PASSTHROUGH */
+        false,       /* CONCURRENT_CAPTURE */
+        false,       /* COMPRESS_IN */
+        false,       /* BATTERY_LISTENER */
+        true,        /* COMPRESS_METADATA_NEEDED */
+        false,       /* INCALL_MUSIC */
+        false,       /* COMPRESS_VOIP */
+        true,        /* DYNAMIC_ECNS */
+    };
+#else
     if (isVendorEnhancedFwk) {
-        mConfigs = {
+        defaultConfigs = {
             true,        /* SND_MONITOR */
             false,       /* COMPRESS_CAPTURE */
             true,        /* SOURCE_TRACK */
@@ -85,13 +139,21 @@ void AHalConfigHelper::initDefaultConfig(bool isVendorEnhancedFwk)
             false,       /* USB_OFFLOAD_BURST_MODE */
             false,       /* USB_OFFLOAD_SIDETONE_VOLM */
             true,        /* A2DP_OFFLOAD */
+            true,        /* HFP */
             true,        /* VBAT */
+            true,        /* EXT_HW_PLUGIN */
+            false,       /* RECORD_PLAY_CONCURRENCY */
+            true,        /* HDMI_PASSTHROUGH */
+            true,        /* CONCURRENT_CAPTURE */
+            true,        /* COMPRESS_IN */
+            true,        /* BATTERY_LISTENER */
             true,        /* COMPRESS_METADATA_NEEDED */
+            true,        /* INCALL_MUSIC */
             false,       /* COMPRESS_VOIP */
-            false,       /* DYNAMIC_ECNS */
+            true,        /* DYNAMIC_ECNS */
         };
     } else {
-        mConfigs = {
+        defaultConfigs = {
             true,        /* SND_MONITOR */
             false,       /* COMPRESS_CAPTURE */
             false,       /* SOURCE_TRACK */
@@ -119,54 +181,49 @@ void AHalConfigHelper::initDefaultConfig(bool isVendorEnhancedFwk)
             false,       /* USB_OFFLOAD_BURST_MODE */
             false,       /* USB_OFFLOAD_SIDETONE_VOLM */
             true,        /* A2DP_OFFLOAD */
+            true,        /* HFP */
             false,       /* VBAT */
+            false,       /* EXT_HW_PLUGIN */
+            false,       /* RECORD_PLAY_CONCURRENCY */
+            false,       /* HDMI_PASSTHROUGH */
+            true,        /* CONCURRENT_CAPTURE */
+            false,       /* COMPRESS_IN */
+            false,       /* BATTERY_LISTENER */
             false,       /* COMPRESS_METADATA_NEEDED */
+            true,        /* INCALL_MUSIC */
             false,       /* COMPRESS_VOIP */
             false,       /* DYNAMIC_ECNS */
         };
     }
+#endif
 }
 
-AHalValues* AHalConfigHelper::getAHalValues()
+void AHalConfigHelper::getAHalValues(AHalValues* *confValues)
 {
-    ALOGV("%s: enter", __FUNCTION__);
-    retrieveConfigs();
-    return &mConfigs;
-}
+    if (getAHalConfigs != nullptr)
+        *confValues = getAHalConfigs();
 
-void AHalConfigHelper::retrieveConfigs()
-{
-    ALOGV("%s: enter", __FUNCTION__);
-    // ToDo: Add logic to query AHalValues from config store
-    // once support is added to it
-    return;
+    if (*confValues == nullptr) {
+        ALOGI("%s: Could not retrieve flags from configstore, setting defaults",
+                   __FUNCTION__);
+        *confValues = &defaultConfigs;
+    }
 }
 
 extern "C" {
 
-AHalValues* confValues = nullptr;
-
 void audio_extn_ahal_config_helper_init(bool is_vendor_enhanced_fwk)
 {
     AHalConfigHelper* confInstance = AHalConfigHelper::getAHalConfInstance();
-    if (confInstance)
-        confInstance->initDefaultConfig(is_vendor_enhanced_fwk);
+    if (confInstance != nullptr)
+        confInstance->initConfigHelper(is_vendor_enhanced_fwk);
 }
 
-AHalValues* audio_extn_get_feature_values()
+void audio_extn_get_feature_values(AHalValues* *confValues)
 {
     AHalConfigHelper* confInstance = AHalConfigHelper::getAHalConfInstance();
-    if (confInstance)
-        confValues = confInstance->getAHalValues();
-    return confValues;
-}
-
-bool audio_extn_is_config_from_remote()
-{
-    AHalConfigHelper* confInstance = AHalConfigHelper::getAHalConfInstance();
-    if (confInstance)
-        return confInstance->isRemote;
-    return false;
+    if (confInstance != nullptr)
+        confInstance->getAHalValues(confValues);
 }
 
 } // extern C
