@@ -5708,6 +5708,17 @@ static void adjust_mmap_period_count(struct pcm_config *config, int32_t min_size
     ALOGV("%s requested config.period_count = %d", __func__, config->period_count);
 }
 
+// Read offset for the positional timestamp from a persistent vendor property.
+// This is to workaround apparent inaccuracies in the timing information that
+// is used by the AAudio timing model. The inaccuracies can cause glitches.
+static int64_t get_mmap_out_time_offset() {
+    const int32_t kDefaultOffsetMicros = 0;
+    int32_t mmap_time_offset_micros = property_get_int32(
+        "persist.audio.out_mmap_delay_micros", kDefaultOffsetMicros);
+    ALOGI("mmap_time_offset_micros = %d for output", mmap_time_offset_micros);
+    return mmap_time_offset_micros * (int64_t)1000;
+}
+
 static int out_create_mmap_buffer(const struct audio_stream_out *stream,
                                   int32_t min_size_frames,
                                   struct audio_mmap_buffer_info *info)
@@ -5800,6 +5811,8 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
         goto exit;
     }
 
+    out->mmap_time_offset_nanos = get_mmap_out_time_offset();
+
     out->standby = false;
     ret = 0;
 
@@ -5843,7 +5856,8 @@ static int out_get_mmap_position(const struct audio_stream_out *stream,
         ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
         return ret;
     }
-    position->time_nanoseconds = ts.tv_sec*1000000000LL + ts.tv_nsec;
+    position->time_nanoseconds = ts.tv_sec*1000000000LL + ts.tv_nsec
+            + out->mmap_time_offset_nanos;
     return 0;
 }
 
