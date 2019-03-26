@@ -21,23 +21,23 @@ LOCAL_CFLAGS += \
     -Wno-unused-variable \
 
 LOCAL_SHARED_LIBRARIES := \
-	libaudioutils \
-	libcutils \
-	liblog \
-	libtinyalsa \
-	libtinycompress \
-	libaudioroute \
-	libdl \
-	libexpat
+    libaudioutils \
+    libcutils \
+    liblog \
+    libtinyalsa \
+    libtinycompress \
+    libaudioroute \
+    libdl \
+    libexpat
 
 LOCAL_C_INCLUDES := \
-	external/tinyalsa/include \
-	external/tinycompress/include \
-	system/media/audio_utils/include \
-	external/expat/lib \
-	$(call include-path-for, audio-route) \
-	vendor/qcom/opensource/audio-hal/primary-hal/hal \
-	$(call include-path-for, audio-effects)
+    external/tinyalsa/include \
+    external/tinycompress/include \
+    system/media/audio_utils/include \
+    external/expat/lib \
+    $(call include-path-for, audio-route) \
+    vendor/qcom/opensource/audio-hal/primary-hal/hal \
+    $(call include-path-for, audio-effects)
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
@@ -46,7 +46,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
-  LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
@@ -80,24 +79,24 @@ LOCAL_CFLAGS += \
     -Wno-unused-variable \
 
 LOCAL_SHARED_LIBRARIES := \
-	libaudioutils \
-	libcutils \
-	liblog \
-	libtinyalsa \
-	libtinycompress \
-	libaudioroute \
-	libdl \
-	libexpat
+    libaudioutils \
+    libcutils \
+    liblog \
+    libtinyalsa \
+    libtinycompress \
+    libaudioroute \
+    libdl \
+    libexpat
 
 LOCAL_C_INCLUDES := \
-	external/tinyalsa/include \
-	external/tinycompress/include \
-	system/media/audio_utils/include \
-	external/expat/lib \
-	$(call include-path-for, audio-route) \
-	vendor/qcom/opensource/audio-hal/primary-hal/hal \
+    external/tinyalsa/include \
+    external/tinycompress/include \
+    system/media/audio_utils/include \
+    external/expat/lib \
+    $(call include-path-for, audio-route) \
+    vendor/qcom/opensource/audio-hal/primary-hal/hal \
     vendor/qcom/opensource/audio-hal/primary-hal/hal/$(AUDIO_PLATFORM) \
-	$(call include-path-for, audio-effects)
+    $(call include-path-for, audio-effects)
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
@@ -106,7 +105,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
-  LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
@@ -166,7 +164,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
-  LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
@@ -200,24 +197,24 @@ LOCAL_CFLAGS += \
     -Wno-unused-variable \
 
 LOCAL_SHARED_LIBRARIES := \
-	libaudioutils \
-	libcutils \
-	liblog \
-	libtinyalsa \
-	libtinycompress \
-	libaudioroute \
-	libdl \
-	libexpat
+    libaudioutils \
+    libcutils \
+    liblog \
+    libtinyalsa \
+    libtinycompress \
+    libaudioroute \
+    libdl \
+    libexpat
 
 LOCAL_C_INCLUDES := \
-	external/tinyalsa/include \
-	external/tinycompress/include \
-	system/media/audio_utils/include \
-	external/expat/lib \
-	$(call include-path-for, audio-route) \
-	$(PRIMARY_HAL_PATH) \
-	$(PRIMARY_HAL_PATH)/$(AUDIO_PLATFORM) \
-	$(call include-path-for, audio-effects)
+    external/tinyalsa/include \
+    external/tinycompress/include \
+    system/media/audio_utils/include \
+    external/expat/lib \
+    $(call include-path-for, audio-route) \
+    $(PRIMARY_HAL_PATH) \
+    $(PRIMARY_HAL_PATH)/$(AUDIO_PLATFORM) \
+    $(call include-path-for, audio-effects)
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
@@ -226,7 +223,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
-  LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
@@ -391,7 +387,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
-  LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
