@@ -298,6 +298,8 @@ struct stream_in {
     audio_format_t format;
     card_status_t card_status;
     int capture_started;
+    float zoom;
+    audio_microphone_direction_t direction;
 
     struct stream_app_type_cfg app_type_cfg;
 
