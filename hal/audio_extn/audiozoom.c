@@ -31,7 +31,6 @@
 #include <resolv.h>
 
 #define AUDIOZOOM_PRESET_FILE "/vendor/etc/audiozoom.xml"
-#define MIN_BUFSIZE 8
 
 typedef struct qdsp_audiozoom_cfg {
     uint32_t             topo_id;
@@ -190,8 +189,9 @@ static int audio_extn_audiozoom_set_microphone_field_dimension_zoom(
 {
     struct audio_device *adev = in->dev;
     struct str_parms *parms = str_parms_create();
-    uint8_t value[MIN_BUFSIZE] = {0};
-    char data[MIN_BUFSIZE * 2] = {0};
+    /* The encoding process in b64_ntop represents 24-bit groups of input bits
+       as output strings of 4 encoded characters. */
+    char data[((sizeof(zoom) + 2) / 3) * 4 + 1] = {0};
     int32_t ret;
 
     if (zoom > 1.0 || zoom < 0)
@@ -208,10 +208,7 @@ static int audio_extn_audiozoom_set_microphone_field_dimension_zoom(
     str_parms_add_int(parms, "cal_instanceid", qdsp_audiozoom.instance_id);
     str_parms_add_int(parms, "cal_paramid", qdsp_audiozoom.zoom_param_id);
 
-    zoom *= 255;
-    value[0] = (uint8_t) zoom; /* Valid value is 0 to 255 */
-
-    ret = b64_ntop(value, sizeof(value), data, sizeof(data));
+    ret = b64_ntop((uint8_t*)&zoom, sizeof(zoom), data, sizeof(data));
     if (ret > 0) {
         str_parms_add_str(parms, "cal_data", data);
 
