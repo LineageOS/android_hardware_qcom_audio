@@ -75,7 +75,9 @@ DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/
 endif
 
 #Automotive audio specific device overlays
+ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/msmsteppe_au/overlay
+endif
 
 PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe_au/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
