@@ -1274,8 +1274,6 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #ifndef AUDIO_EXTN_AUTO_HAL_ENABLED
 #define audio_extn_auto_hal_init(adev)                (0)
 #define audio_extn_auto_hal_deinit()                  (0)
-#define audio_extn_auto_hal_enable_hostless()         (0)
-#define audio_extn_auto_hal_disable_hostless()        (0)
 #define audio_extn_auto_hal_create_audio_patch(dev, num_sources,\
     sources, num_sinks, sinks, handle) (0)
 #define audio_extn_auto_hal_release_audio_patch(dev, handle) (0)
@@ -1289,8 +1287,6 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #else
 int32_t audio_extn_auto_hal_init(struct audio_device *adev);
 void audio_extn_auto_hal_deinit(void);
-int32_t audio_extn_auto_hal_enable_hostless(void);
-void audio_extn_auto_hal_disable_hostless(void);
 int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
                                 unsigned int num_sources,
                                 const struct audio_port_config *sources,

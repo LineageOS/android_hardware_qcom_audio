@@ -47,15 +47,9 @@
 
 #ifdef AUDIO_EXTN_AUTO_HAL_ENABLED
 
-struct hostless_config {
-    struct pcm *pcm_tx;
-    struct pcm *pcm_rx;
-};
-
 typedef struct auto_hal_module {
     struct audio_device *adev;
     card_status_t card_status;
-    struct hostless_config hostless;
 } auto_hal_module_t;
 
 /* Auto hal module struct */
@@ -70,104 +64,6 @@ static const audio_usecase_t bus_device_usecases[] = {
     USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
     USECASE_AUDIO_PLAYBACK_PHONE,
 };
-
-/* Note: Due to ADP H/W design, SoC TERT/SEC TDM CLK and FSYNC lines are
- * both connected with CODEC and a single master is needed to provide
- * consistent CLK and FSYNC to slaves, hence configuring SoC TERT TDM as
- * single master and bring up a dummy hostless from TERT to SEC to ensure
- * both slave SoC SEC TDM and CODEC are driven upon system boot. */
-int32_t audio_extn_auto_hal_enable_hostless(void)
-{
-    int32_t ret = 0;
-    char mixer_path[MIXER_PATH_MAX_LENGTH];
-
-    ALOGD("%s: Enable TERT -> SEC Hostless", __func__);
-
-    if (auto_hal == NULL) {
-        ALOGE("%s: Invalid device", __func__);
-        return -EINVAL;
-    }
-
-    strlcpy(mixer_path, "dummy-hostless", MIXER_PATH_MAX_LENGTH);
-    ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
-    if (audio_route_apply_and_update_path(auto_hal->adev->audio_route,
-            mixer_path)) {
-        ALOGD("%s: %s not supported, continue", __func__, mixer_path);
-        return ret;
-    }
-
-    /* TERT TDM TX 7 HOSTLESS to SEC TDM RX 7 HOSTLESS */
-    int pcm_dev_rx = 48, pcm_dev_tx = 49;
-    struct pcm_config pcm_config_lb = {
-        .channels = 1,
-        .rate = 48000,
-        .period_size = 240,
-        .period_count = 2,
-        .format = PCM_FORMAT_S16_LE,
-        .start_threshold = 0,
-        .stop_threshold = INT_MAX,
-        .avail_min = 0,
-    };
-
-    auto_hal->hostless.pcm_tx = pcm_open(auto_hal->adev->snd_card,
-                                   pcm_dev_tx,
-                                   PCM_IN, &pcm_config_lb);
-    if (auto_hal->hostless.pcm_tx &&
-        !pcm_is_ready(auto_hal->hostless.pcm_tx)) {
-        ALOGE("%s: %s", __func__,
-            pcm_get_error(auto_hal->hostless.pcm_tx));
-        ret = -EIO;
-        goto error;
-    }
-    auto_hal->hostless.pcm_rx = pcm_open(auto_hal->adev->snd_card,
-                                   pcm_dev_rx,
-                                   PCM_OUT, &pcm_config_lb);
-    if (auto_hal->hostless.pcm_rx &&
-        !pcm_is_ready(auto_hal->hostless.pcm_rx)) {
-        ALOGE("%s: %s", __func__,
-            pcm_get_error(auto_hal->hostless.pcm_rx));
-        ret = -EIO;
-        goto error;
-    }
-
-    if (pcm_start(auto_hal->hostless.pcm_tx) < 0) {
-        ALOGE("%s: pcm start for pcm tx failed", __func__);
-        ret = -EIO;
-        goto error;
-    }
-    if (pcm_start(auto_hal->hostless.pcm_rx) < 0) {
-        ALOGE("%s: pcm start for pcm rx failed", __func__);
-        ret = -EIO;
-        goto error;
-    }
-    return ret;
-
-error:
-    if (auto_hal->hostless.pcm_rx)
-        pcm_close(auto_hal->hostless.pcm_rx);
-    if (auto_hal->hostless.pcm_tx)
-        pcm_close(auto_hal->hostless.pcm_tx);
-    return ret;
-}
-
-void audio_extn_auto_hal_disable_hostless(void)
-{
-    ALOGD("%s: Disable TERT -> SEC Hostless", __func__);
-
-    if (auto_hal == NULL) {
-        ALOGE("%s: Invalid device", __func__);
-        return;
-    }
-
-    if (auto_hal->hostless.pcm_tx) {
-        pcm_close(auto_hal->hostless.pcm_tx);
-        auto_hal->hostless.pcm_tx = NULL;
-    }
-    if (auto_hal->hostless.pcm_rx) {
-        pcm_close(auto_hal->hostless.pcm_rx);
-        auto_hal->hostless.pcm_rx = NULL;
-    }
-}
 
 #define MAX_SOURCE_PORTS_PER_PATCH 1
 #define MAX_SINK_PORTS_PER_PATCH 1
@@ -575,11 +471,9 @@ void audio_extn_auto_hal_set_parameters(struct audio_device *adev __unused,
         ALOGV("%s: snd card status %s", __func__, snd_card_status);
         if (strstr(snd_card_status, "OFFLINE")) {
             auto_hal->card_status = CARD_STATUS_OFFLINE;
-            audio_extn_auto_hal_disable_hostless();
         }
         else if (strstr(snd_card_status, "ONLINE")) {
             auto_hal->card_status = CARD_STATUS_ONLINE;
-            audio_extn_auto_hal_enable_hostless();
         }
     }
 
