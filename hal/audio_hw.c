@@ -60,6 +60,7 @@
 #include "sound/compress_params.h"
 #include "audio_extn/tfa_98xx.h"
 #include "audio_extn/maxxaudio.h"
+#include "audio_extn/audiozoom.h"
 
 /* COMPRESS_OFFLOAD_FRAGMENT_SIZE must be more than 8KB and a multiple of 32KB if more than 32KB.
  * COMPRESS_OFFLOAD_FRAGMENT_SIZE * COMPRESS_OFFLOAD_NUM_FRAGMENTS must be less than 8MB. */
@@ -352,6 +353,11 @@ static int last_known_cal_step = -1 ;
 
 static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool restore);
 static int set_compr_volume(struct audio_stream_out *stream, float left, float right);
+
+static int in_set_microphone_direction(const struct audio_stream_in *stream,
+                                           audio_microphone_direction_t dir);
+static int in_set_microphone_field_dimension(const struct audio_stream_in *stream, float zoom);
+
 
 static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
                                int flags __unused)
@@ -1893,6 +1899,8 @@ int start_input_stream(struct stream_in *in)
     }
     register_in_stream(in);
     check_and_enable_effect(adev);
+    audio_extn_audiozoom_set_microphone_direction(in, in->zoom);
+    audio_extn_audiozoom_set_microphone_field_dimension(in, in->direction);
     audio_streaming_hint_end();
     audio_extn_perf_lock_release();
     ALOGV("%s: exit", __func__);
@@ -3781,6 +3789,17 @@ static void adjust_mmap_period_count(struct pcm_config *config, int32_t min_size
     ALOGV("%s requested config.period_count = %d", __func__, config->period_count);
 }
 
+// Read offset for the positional timestamp from a persistent vendor property.
+// This is to workaround apparent inaccuracies in the timing information that
+// is used by the AAudio timing model. The inaccuracies can cause glitches.
+static int64_t get_mmap_out_time_offset() {
+    const int32_t kDefaultOffsetMicros = 0;
+    int32_t mmap_time_offset_micros = property_get_int32(
+        "persist.audio.out_mmap_delay_micros", kDefaultOffsetMicros);
+    ALOGI("mmap_time_offset_micros = %d for output", mmap_time_offset_micros);
+    return mmap_time_offset_micros * (int64_t)1000;
+}
+
 static int out_create_mmap_buffer(const struct audio_stream_out *stream,
                                   int32_t min_size_frames,
                                   struct audio_mmap_buffer_info *info)
@@ -3858,6 +3877,8 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
         goto exit;
     }
 
+    out->mmap_time_offset_nanos = get_mmap_out_time_offset();
+
     out->standby = false;
     ret = 0;
 
@@ -3901,7 +3922,9 @@ static int out_get_mmap_position(const struct audio_stream_out *stream,
         ALOGE("%s: %s", __func__, pcm_get_error(out->pcm));
         goto exit;
     }
-    position->time_nanoseconds = audio_utils_ns_from_timespec(&ts);
+    position->time_nanoseconds = audio_utils_ns_from_timespec(&ts)
+            + out->mmap_time_offset_nanos;
+
 exit:
     pthread_mutex_unlock(&out->lock);
     return ret;
@@ -4433,17 +4456,13 @@ static int in_start(const struct audio_stream_in* stream)
     return ret;
 }
 
-// Read offset for the input positional timestamp from a property.
-// This is to workaround apparent inaccuracies in the timing info that
-// are causing glitches.
+// Read offset for the positional timestamp from a persistent vendor property.
+// This is to workaround apparent inaccuracies in the timing information that
+// is used by the AAudio timing model. The inaccuracies can cause glitches.
 static int64_t in_get_mmap_time_offset() {
-    // Roughly 100 usec is needed on some devices to cover inaccuracy in DSP.
-    // This should be set in a property. But I cannot read the property!
-    // So I am setting the offset here to 101 as a test.
-    const int32_t kDefaultOffsetMicros = 101; // should be zero if no bug
-    // FIXME - why is the property not being read?! The default is used.
+    const int32_t kDefaultOffsetMicros = 0;
     int32_t mmap_time_offset_micros = property_get_int32(
-        "persist.audio.in_mmap_delay_micros", kDefaultOffsetMicros);
+            "persist.audio.in_mmap_delay_micros", kDefaultOffsetMicros);
     ALOGI("in_get_mmap_time_offset set to %d micros", mmap_time_offset_micros);
     return mmap_time_offset_micros * (int64_t)1000;
 }
@@ -4572,8 +4591,8 @@ static int in_get_mmap_position(const struct audio_stream_in *stream,
         ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
         goto exit;
     }
-    position->time_nanoseconds = audio_utils_ns_from_timespec(&ts);
-    position->time_nanoseconds += in->mmap_time_offset_nanos;
+    position->time_nanoseconds = audio_utils_ns_from_timespec(&ts)
+            + in->mmap_time_offset_nanos;
 
 exit:
     pthread_mutex_unlock(&in->lock);
@@ -4613,17 +4632,32 @@ static int adev_get_microphones(const struct audio_hw_device *dev,
 
 static int in_set_microphone_direction(const struct audio_stream_in *stream,
                                            audio_microphone_direction_t dir) {
-    (void)stream;
-    (void)dir;
-    ALOGVV("%s", __func__);
-    return -ENOSYS;
+    struct stream_in *in = (struct stream_in *)stream;
+
+    ALOGVV("%s: standby %d source %d dir %d", __func__, in->standby, in->source, dir);
+
+    in->direction = dir;
+
+    if (in->standby)
+        return 0;
+
+    return audio_extn_audiozoom_set_microphone_direction(in, dir);
 }
 
 static int in_set_microphone_field_dimension(const struct audio_stream_in *stream, float zoom) {
-    (void)stream;
-    (void)zoom;
-    ALOGVV("%s", __func__);
-    return -ENOSYS;
+    struct stream_in *in = (struct stream_in *)stream;
+
+    ALOGVV("%s: standby %d source %d zoom %f", __func__, in->standby, in->source, zoom);
+
+    if (zoom > 1.0 || zoom < -1.0)
+        return -EINVAL;
+
+    in->zoom = zoom;
+
+    if (in->standby)
+        return 0;
+
+    return audio_extn_audiozoom_set_microphone_field_dimension(in, zoom);
 }
 
 static void in_update_sink_metadata(struct audio_stream_in *stream,
@@ -5662,6 +5696,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->standby = 1;
     in->capture_handle = handle;
     in->flags = flags;
+    in->direction = MIC_DIRECTION_UNSPECIFIED;
+    in->zoom = 0;
 
     ALOGV("%s: source %d, config->channel_mask %#x", __func__, source, config->channel_mask);
     if (source == AUDIO_SOURCE_VOICE_UPLINK ||
@@ -6344,6 +6380,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     audio_extn_tfa_98xx_init(adev);
     audio_extn_ma_init(adev->platform);
+    audio_extn_audiozoom_init();
 
     pthread_mutex_unlock(&adev_init_lock);
 

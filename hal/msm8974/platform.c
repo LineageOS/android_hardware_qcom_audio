@@ -961,6 +961,15 @@ static int parse_audiocal_cfg(struct str_parms *parms, acdb_audio_cal_cfg_t *cal
         cal->param_id = (uint32_t)strtoul(value, NULL, 0);
         ret = ret | 0x100;
     }
+#ifdef PLATFORM_SM8150
+    err = str_parms_get_str(parms, "cal_instanceid", value, sizeof(value));
+    if (err >= 0) {
+        str_parms_del(parms, "cal_instanceid");
+        cal->instance_id = (uint32_t)strtoul(value, NULL, 0);
+        ret = ret | 0x200;
+    }
+#endif
+
     return ret;
 }
 
