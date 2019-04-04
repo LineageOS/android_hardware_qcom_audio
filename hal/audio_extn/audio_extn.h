@@ -120,6 +120,7 @@ struct snd_card_split {
     char device[HW_INFO_ARRAY_MAX_SIZE];
     char snd_card[HW_INFO_ARRAY_MAX_SIZE];
     char form_factor[HW_INFO_ARRAY_MAX_SIZE];
+    char variant[HW_INFO_ARRAY_MAX_SIZE];
 };
 
 struct snd_card_split *audio_extn_get_snd_card_split();
@@ -238,9 +239,16 @@ void ras_feature_init(bool is_feature_enabled);
 bool audio_extn_is_ras_enabled(void);
 bool audio_extn_can_use_ras(void);
 
-
+//START: HIFI_AUDIO
+void hifi_audio_feature_init(bool is_feature_enabled);
 bool audio_extn_is_hifi_audio_enabled(void);
 bool audio_extn_is_hifi_audio_supported(void);
+//END: HIFI_AUDIO
+
+//START: WSA
+void wsa_feature_init(bool is_featuer_enabled);
+bool audio_extn_is_wsa_enabled();
+//END: WSA
 
 //START: AFE_PROXY_FEATURE
 int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev,

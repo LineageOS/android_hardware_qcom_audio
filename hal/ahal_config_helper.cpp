@@ -98,6 +98,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
         true,        /* A2DP_OFFLOAD */
         true,        /* HFP */
         true,        /* VBAT */
+        false,       /* WSA*/
         true,        /* EXT_HW_PLUGIN */
         false,       /* RECORD_PLAY_CONCURRENCY */
         true,        /* HDMI_PASSTHROUGH */
@@ -141,6 +142,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
             true,        /* A2DP_OFFLOAD */
             true,        /* HFP */
             true,        /* VBAT */
+            false,       /* WSA*/
             true,        /* EXT_HW_PLUGIN */
             false,       /* RECORD_PLAY_CONCURRENCY */
             true,        /* HDMI_PASSTHROUGH */
@@ -183,6 +185,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
             true,        /* A2DP_OFFLOAD */
             true,        /* HFP */
             false,       /* VBAT */
+            false,       /* WSA*/
             false,       /* EXT_HW_PLUGIN */
             false,       /* RECORD_PLAY_CONCURRENCY */
             false,       /* HDMI_PASSTHROUGH */

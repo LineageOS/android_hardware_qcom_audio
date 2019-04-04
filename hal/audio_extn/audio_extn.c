@@ -75,6 +75,7 @@ struct snd_card_split cur_snd_card_split = {
     .device = {0},
     .snd_card = {0},
     .form_factor = {0},
+    .variant = {0},
 };
 
 struct snd_card_split *audio_extn_get_snd_card_split()
@@ -115,6 +116,7 @@ void audio_extn_set_snd_card_split(const char* in_snd_card_name)
     char *device = NULL;
     char *snd_card = NULL;
     char *form_factor = NULL;
+    char *variant = NULL;
 
     if (in_snd_card_name == NULL) {
         ALOGE("%s: snd_card_name passed is NULL", __func__);
@@ -141,6 +143,11 @@ void audio_extn_set_snd_card_split(const char* in_snd_card_name)
         goto on_error;
     }
     strlcpy(cur_snd_card_split.form_factor, form_factor, HW_INFO_ARRAY_MAX_SIZE);
+
+    variant = strtok_r(NULL, "-", &tmp);
+    if (variant != NULL) {
+        strlcpy(cur_snd_card_split.variant, variant, HW_INFO_ARRAY_MAX_SIZE);
+    }
 
     ALOGI("%s: snd_card_name(%s) device(%s) snd_card(%s) form_factor(%s)",
                __func__, in_snd_card_name, device, snd_card, form_factor);
@@ -175,6 +182,7 @@ static bool audio_extn_fluence_feature_enabled = false;
 static bool audio_extn_custom_stereo_feature_enabled = false;
 static bool audio_extn_anc_headset_feature_enabled = false;
 static bool audio_extn_vbat_enabled = false;
+static bool audio_extn_wsa_enabled = false;
 static bool audio_extn_record_play_concurrency_enabled = false;
 static bool audio_extn_hdmi_passthru_enabled = false;
 static bool audio_extn_concurrent_capture_enabled = false;
@@ -3388,6 +3396,17 @@ done:
     return ret;
 }
 //END: FLUENCE ===============================================================================
+//START: WSA =============================================================================
+void wsa_feature_init(bool is_feature_enabled)
+{
+    audio_extn_wsa_enabled = is_feature_enabled;
+}
+
+bool audio_extn_is_wsa_enabled()
+{
+    return audio_extn_wsa_enabled;
+}
+//END: WSA ===============================================================================
 //START: CUSTOM_STEREO =============================================================================
 void custom_stereo_feature_init(bool is_feature_enabled)
 {
@@ -4546,6 +4565,9 @@ void audio_extn_feature_init(int is_running_with_enhanced_fwk)
             case A2DP_OFFLOAD:
                 a2dp_offload_feature_init(enable);
                 break;
+            case WSA:
+                 wsa_feature_init(enable);
+                 break;
             case COMPRESS_METADATA_NEEDED:
                 compress_meta_data_feature_init(enable);
                 break;
