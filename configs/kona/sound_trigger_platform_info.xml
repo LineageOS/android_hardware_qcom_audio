@@ -54,12 +54,13 @@
         <param DEVICE_HANDSET_MIC_APE="100" />
         <param DEVICE_HANDSET_MIC_PP_APE="135" />
         <param DEVICE_HANDSET_DMIC_APE="149" />
-        <param DEVICE_HANDSET_DMIC_LPI_APE="149" />
+        <param DEVICE_HANDSET_DMIC_LPI_APE="179" />
         <param DEVICE_HANDSET_TMIC_APE="157" />
-        <param DEVICE_HANDSET_TMIC_LPI_APE="157" />
+        <param DEVICE_HANDSET_TMIC_LPI_APE="180" />
         <param DEVICE_HANDSET_QMIC_APE="137" />
-        <param DEVICE_HANDSET_QMIC_LPI_APE="137" />
+        <param DEVICE_HANDSET_QMIC_LPI_APE="181" />
         <param DEVICE_HEADSET_MIC_APE="141" />
+        <param DEVICE_HEADSET_MIC_APE_LPI="182" />
     </acdb_ids>
 
     <!-- Multiple sound_model_config tags can be listed, each with unique   -->
