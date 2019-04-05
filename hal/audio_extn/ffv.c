@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -45,6 +45,8 @@
 #include <cutils/log.h>
 #include <pthread.h>
 #include <sys/resource.h>
+#include <unistd.h>
+#include <system/thread_defs.h>
 
 #include "audio_hw.h"
 #include "audio_extn.h"
@@ -599,6 +601,7 @@ int audio_extn_ffv_init_ec_ref_loopback(struct audio_device *adev,
     int param_size = 0;
     FfvStatusType status_type;
     int ret = 0;
+    ffv_quadrx_use_dwnmix_param_t quad_downmix;
 
     ALOGV("%s: entry", __func__);
     /* notify library to reset AEC during each start */
@@ -618,6 +621,20 @@ int audio_extn_ffv_init_ec_ref_loopback(struct audio_device *adev,
     uc_info_tx = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     if (!uc_info_tx) {
         return -ENOMEM;
+    }
+
+    if (in_snd_device == SND_DEVICE_IN_EC_REF_LOOPBACK_QUAD) {
+        quad_downmix.quadrx_dwnmix_enable = true;
+        ALOGD("%s: set param for 4 ch ec, handle %p", __func__, ffvmod.handle);
+        status_type = ffv_set_param_fn(ffvmod.handle,
+            (char *)&quad_downmix,
+            FFV_QUADRX_USE_DWNMIX_PARAM,
+            sizeof(ffv_quadrx_use_dwnmix_param_t));
+        if (status_type) {
+            ALOGE("%s: ERROR. ffv_set_param_fn for quad channel ec ref %d",
+                __func__, status_type);
+            return -EINVAL;
+        }
     }
 
     pthread_mutex_lock(&ffvmod.init_lock);
@@ -775,6 +792,8 @@ int32_t audio_extn_ffv_read(struct audio_stream_in *stream __unused,
                 return status;
             }
         }
+        audio_extn_set_cpu_affinity();
+        setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_AUDIO);
         ffvmod.capture_started = true;
     }
 
