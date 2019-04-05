@@ -261,7 +261,7 @@ vendor.audio.hal.output.suspend.supported=true
 
 #enable mirror-link feature
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.enable.mirrorlink=true
+vendor.audio.enable.mirrorlink=false
 
 #enable voicecall speaker stereo
 PRODUCT_PROPERTY_OVERRIDES += \
