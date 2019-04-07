@@ -431,7 +431,7 @@ enum {
     defined (PLATFORM_QCS605) ||defined (PLATFORM_SDX24) || \
     defined (PLATFORM_MSMNILE) || defined (PLATFORM_KONA) || \
     defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || \
-    defined (PLATFORM_TRINKET)
+    defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO)
 #define PLAYBACK_OFFLOAD_DEVICE2 17
 #endif
 
@@ -440,7 +440,8 @@ enum {
     defined (PLATFORM_SDM710) || defined(PLATFORM_QCS605) || \
     defined (PLATFORM_SDX24) || defined (PLATFORM_MSMNILE) || \
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
-    defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET)
+    defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
+    defined (PLATFORM_LITO)
 #define PLAYBACK_OFFLOAD_DEVICE3 18
 #define PLAYBACK_OFFLOAD_DEVICE4 34
 #define PLAYBACK_OFFLOAD_DEVICE5 35
@@ -462,6 +463,10 @@ enum {
 #define COMPRESS_VOIP_CALL_PCM_DEVICE 3
 #define AUDIO_PLAYBACK_VOIP_PCM_DEVICE 16
 #define AUDIO_RECORD_VOIP_PCM_DEVICE 16
+
+// Update based on haptic device id
+#define AUDIO_HAPTICS_PCM_DEVICE 43
+#define HAPTICS_PCM_DEVICE 44
 
 #ifdef PLATFORM_MSM8610
 #define LOWLATENCY_PCM_DEVICE 12
@@ -570,7 +575,7 @@ enum {
 #define FM_RX_VOLUME "Quat MI2S FM RX Volume"
 #elif PLATFORM_MSM8994
 #define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
-#elif defined (PLATFORM_MSM8996) || defined (PLATFORM_KONA)
+#elif defined (PLATFORM_MSM8996) || defined (PLATFORM_KONA) || defined (PLATFORM_LITO)
 #define FM_RX_VOLUME "Tert MI2S LOOPBACK Volume"
 #elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET)
 #define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
