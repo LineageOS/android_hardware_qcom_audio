@@ -5295,6 +5295,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 } else {
                     snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC;
                 }
+            } else {
+                snd_device = SND_DEVICE_IN_HANDSET_MIC;
             }
         }
     } else if (my_data->use_generic_handset == true &&  //     system prop is enabled
