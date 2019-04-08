@@ -4679,9 +4679,11 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device &
                     (AUDIO_DEVICE_OUT_USB_DEVICE |
                      AUDIO_DEVICE_OUT_USB_HEADSET)) {
-          if (audio_extn_usb_is_capture_supported()) {
-              snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
-          }
+            if (audio_extn_usb_is_capture_supported()) {
+                snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
+            } else {
+                snd_device = SND_DEVICE_IN_HANDSET_MIC;
+            }
         }
     } else if (my_data->use_generic_handset == true &&  //     system prop is enabled
                (my_data->source_mic_type & SOURCE_QUAD_MIC) &&  // AND 4mic is available
