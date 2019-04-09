@@ -5094,8 +5094,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                      __func__, frames, frame_size, bytes_to_write);
 
             if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
-                (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP
-                    && !voice_extn_is_compress_voip_supported()) ||
                 out->usecase == USECASE_INCALL_MUSIC_UPLINK2) {
                 size_t channel_count = audio_channel_count_from_out_mask(out->channel_mask);
                 int16_t *src = (int16_t *)buffer;
@@ -7779,8 +7777,7 @@ static int adev_update_voice_comm_input_stream(struct stream_in *in,
     bool valid_ch = audio_channel_count_from_in_mask(in->channel_mask) == 1;
 
     if(!voice_extn_is_compress_voip_supported()) {
-        if (valid_rate && valid_ch &&
-        in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+        if (valid_rate && valid_ch) {
         in->usecase = USECASE_AUDIO_RECORD_VOIP;
         in->config = default_pcm_config_voip_copp;
         in->config.period_size = VOIP_IO_BUF_SIZE(in->sample_rate,
@@ -8090,22 +8087,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         pthread_mutex_lock(&adev->lock);
         ret_val = audio_extn_check_and_set_multichannel_usecase(adev,
                in, config, &channel_mask_updated);
-#ifdef CONCURRENT_CAPTURE_ENABLED
-        /* Acquire lock to avoid two concurrent use cases initialized to
-            same pcm record use case*/
-
-        if(in->usecase == USECASE_AUDIO_RECORD) {
-            if (!(adev->pcm_record_uc_state)) {
-                ALOGV("%s: using USECASE_AUDIO_RECORD",__func__);
-                adev->pcm_record_uc_state = 1;
-            } else {
-                /* Assign compress record use case for second record */
-                in->usecase = USECASE_AUDIO_RECORD_COMPRESS2;
-                in->flags |= AUDIO_INPUT_FLAG_COMPRESS;
-                ALOGV("%s: overriding usecase with USECASE_AUDIO_RECORD_COMPRESS2 and appending compress flag", __func__);
-            }
-        }
-#endif
         pthread_mutex_unlock(&adev->lock);
 
         if (!ret_val) {
@@ -8157,6 +8138,24 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                 goto err_open;
             }
         }
+#ifdef CONCURRENT_CAPTURE_ENABLED
+        /* Acquire lock to avoid two concurrent use cases initialized to
+           same pcm record use case */
+
+        pthread_mutex_lock(&adev->lock);
+        if (in->usecase == USECASE_AUDIO_RECORD) {
+           if (!(adev->pcm_record_uc_state)) {
+               ALOGV("%s: using USECASE_AUDIO_RECORD",__func__);
+               adev->pcm_record_uc_state = 1;
+           } else {
+               /* Assign compress record use case for second record */
+               in->usecase = USECASE_AUDIO_RECORD_COMPRESS2;
+               in->flags |= AUDIO_INPUT_FLAG_COMPRESS;
+               ALOGV("%s: overriding usecase with USECASE_AUDIO_RECORD_COMPRESS2 and appending compress flag", __func__);
+          }
+        }
+        pthread_mutex_unlock(&adev->lock);
+#endif
     }
     audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
                                                 &adev->streams_input_cfg_list,
