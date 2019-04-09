@@ -779,9 +779,6 @@ static int vol_prc_lib_release(effect_handle_t handle)
     int status = -EINVAL;
     bool recompute_flag = false;
     int active_stream_count = 0;
-    uint32_t session_id;
-    uint32_t stream_type;
-    effect_uuid_t uuid;
 
     ALOGV("%s context %p", __func__, handle);
 
@@ -789,18 +786,12 @@ static int vol_prc_lib_release(effect_handle_t handle)
         return status;
     }
     pthread_mutex_lock(&vol_listner_init_lock);
-    session_id = recv_contex->session_id;
-    stream_type = recv_contex->stream_type;
-    uuid = recv_contex->desc->uuid;
 
     // check if the handle/context provided is valid
     list_for_each(node, &vol_effect_list) {
         context = node_to_item(node, struct vol_listener_context_s, effect_list_node);
-        if ((memcmp(&(context->desc->uuid), &uuid, sizeof(effect_uuid_t)) == 0)
-            && (context->session_id == session_id)
-            && (context->stream_type == stream_type)) {
+        if (context == recv_contex) {
             ALOGV("--- Found something to remove ---");
-            list_remove(node);
             PRINT_STREAM_TYPE(context->stream_type);
             if (verify_context(context)) {
                 recompute_flag = true;
