@@ -1411,6 +1411,10 @@
         <ctl name="MultiMedia8 Mixer SLIM_0_TX" value="1" />
     </path>
 
+    <path name="audio-record-compress headset-mic">
+        <ctl name="MultiMedia8 Mixer SLIM_1_TX" value="1" />
+    </path>
+
     <path name="audio-record-compress bt-sco">
         <ctl name="MultiMedia8 Mixer SLIM_7_TX" value="1" />
     </path>
@@ -1445,26 +1449,12 @@
         <path name="audio-record-compress2 bt-sco" />
     </path>
 
-    <path name="audio-record-compress2">
-        <ctl name="MultiMedia17 Mixer SLIM_0_TX" value="1" />
-    </path>
-
-    <path name="audio-record-compress2 usb-headset-mic">
-        <ctl name="MultiMedia17 Mixer USB_AUDIO_TX" value="1" />
-    </path>
-
-    <path name="audio-record-compress2 bt-sco">
-        <ctl name="MultiMedia17 Mixer SLIM_7_TX" value="1" />
-    </path>
-
-    <path name="audio-record-compress2 bt-sco-wb">
-        <ctl name="BT SampleRate" value="KHZ_16" />
-        <path name="audio-record-compress2 bt-sco" />
-    </path>
-
-
     <path name="low-latency-record">
       <ctl name="MultiMedia8 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="low-latency-record headset-mic">
+      <ctl name="MultiMedia8 Mixer SLIM_1_TX" value="1" />
     </path>
 
     <path name="low-latency-record bt-sco">
@@ -1813,6 +1803,10 @@
     <!-- VoIP Tx settings -->
     <path name="audio-record-voip">
         <ctl name="MultiMedia10 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="audio-record-voip headset-mic">
+        <ctl name="MultiMedia10 Mixer SLIM_1_TX" value="1" />
     </path>
 
     <path name="audio-record-voip usb-headset-mic">
@@ -3015,6 +3009,10 @@
       <ctl name="MultiMedia16 Mixer SLIM_0_TX" value="1" />
     </path>
 
+    <path name="mmap-record headset-mic">
+      <ctl name="MultiMedia16 Mixer SLIM_1_TX" value="1" />
+    </path>
+
     <path name="mmap-record bt-sco">
       <ctl name="MultiMedia16 Mixer SLIM_7_TX" value="1" />
     </path>
@@ -3050,6 +3048,10 @@
 
     <path name="hifi-record">
         <ctl name="MultiMedia2 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="hifi-record headset-mic">
+        <ctl name="MultiMedia2 Mixer SLIM_1_TX" value="1" />
     </path>
 
     <path name="hifi-record usb-headset-mic">
