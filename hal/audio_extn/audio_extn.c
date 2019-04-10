@@ -3132,6 +3132,13 @@ int audio_extn_out_get_param_data(struct stream_out *out,
                     ALOGE("%s:: avdrift query failed error %d", __func__, ret);
             }
             break;
+        case AUDIO_EXTN_PARAM_OUT_PRESENTATION_POSITION:
+            ret = audio_ext_get_presentation_position(out,
+                      (struct audio_out_presentation_position_param *)payload);
+                if (ret < 0)
+                    ALOGE("%s:: presentation position query failed error %d",
+                           __func__, ret);
+            break;
         default:
             ALOGE("%s:: unsupported param_id %d", __func__, param_id);
             break;
@@ -5163,4 +5170,30 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
     free(kv_pairs);
+}
+
+int audio_ext_get_presentation_position(struct stream_out *out,
+                           struct audio_out_presentation_position_param *pos_param)
+{
+    int ret = -ENODATA;
+
+    if (!out) {
+        ALOGE("%s:: Invalid stream",__func__);
+        return ret;
+    }
+
+    if (is_offload_usecase(out->usecase)) {
+        if (out->compr != NULL)
+            ret = audio_extn_utils_compress_get_dsp_presentation_pos(out,
+                                  &pos_param->frames, &pos_param->timestamp, pos_param->clock_id);
+    } else {
+        if (out->pcm)
+            ret = audio_extn_utils_pcm_get_dsp_presentation_pos(out,
+                                  &pos_param->frames, &pos_param->timestamp, pos_param->clock_id);
+    }
+
+    ALOGV("%s frames %lld timestamp %lld", __func__, (long long int)pos_param->frames,
+           pos_param->timestamp.tv_sec*1000000000LL + pos_param->timestamp.tv_nsec);
+
+    return ret;
 }
