@@ -269,7 +269,7 @@ PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
 
 #enable mirror-link feature
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.enable.mirrorlink=true
+vendor.audio.enable.mirrorlink=false
 
 #enable voicecall speaker stereo
 PRODUCT_PROPERTY_OVERRIDES += \
