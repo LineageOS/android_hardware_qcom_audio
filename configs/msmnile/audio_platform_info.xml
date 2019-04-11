@@ -151,6 +151,9 @@
         <device name="SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC" backend="headset-mic" interface="SLIMBUS_1_TX"/>
         <device name="SND_DEVICE_IN_VOICE_TTY_HCO_HEADSET_MIC" backend="headset-mic" interface="SLIMBUS_1_TX"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC" backend="headset-mic" interface="SLIMBUS_1_TX"/>
+        <device name="SND_DEVICE_IN_VOICE_REC_HEADSET_MIC" backend="headset-mic" interface="SLIMBUS_1_TX"/>
+        <device name="SND_DEVICE_IN_HEADSET_MIC_AEC" backend="headset-mic" interface="SLIMBUS_1_TX"/>
+        <device name="SND_DEVICE_IN_HEADSET_MIC_FLUENCE" backend="headset-mic" interface="SLIMBUS_1_TX"/>
     </backend_names>
     <!-- below values are for ref purpose to OEM, doesn't contain actual hardware info on MTP -->
     <microphone_characteristics>
