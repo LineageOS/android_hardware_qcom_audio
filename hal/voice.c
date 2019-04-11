@@ -409,8 +409,8 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
         session_id = voice_get_active_session_id(adev);
         ret = platform_set_incall_recording_session_id(adev->platform,
                                                        session_id, rec_mode);
-        ret = platform_set_incall_recording_session_channels(adev->platform,
-                                                        in->config.channels);
+        platform_set_incall_recording_session_channels(adev->platform,
+                                                       in->config.channels);
         ALOGV("%s: Update usecase to %d",__func__, in->usecase);
     } else {
         /*
