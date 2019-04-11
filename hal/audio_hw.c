@@ -6710,6 +6710,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
            audio_feature_manager_is_feature_enabled(USE_DEEP_BUFFER_AS_PRIMARY_OUTPUT);
     bool force_haptic_path =
             property_get_bool("vendor.audio.test_haptic", false);
+    bool is_voip_rx = flags & AUDIO_OUTPUT_FLAG_VOIP_RX;
 
     if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
@@ -6848,7 +6849,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     }
 
     /* Check for VOIP usecase */
-    if(out->flags == (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_VOIP_RX)) {
+    if (is_voip_rx) {
         if (!voice_extn_is_compress_voip_supported()) {
             if (out->sample_rate == 8000 || out->sample_rate == 16000 ||
              out->sample_rate == 32000 || out->sample_rate == 48000) {
@@ -8241,18 +8242,14 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->usecase = USECASE_AUDIO_RECORD_MMAP;
         in->config = pcm_config_mmap_capture;
         in->config.format = pcm_format_from_audio_format(config->format);
-        in->config.channels = channel_count;
         in->stream.start = in_start;
         in->stream.stop = in_stop;
         in->stream.create_mmap_buffer = in_create_mmap_buffer;
         in->stream.get_mmap_position = in_get_mmap_position;
-        in->sample_rate = in->config.rate;
         ALOGV("%s: USECASE_AUDIO_RECORD_MMAP", __func__);
     } else if (in->realtime) {
         in->config = pcm_config_audio_capture_rt;
         in->config.format = pcm_format_from_audio_format(config->format);
-        in->config.channels = channel_count;
-        in->sample_rate = in->config.rate;
         in->af_period_multiplier = af_period_multiplier;
     } else if (is_usb_dev && may_use_hifi_record) {
         in->usecase = USECASE_AUDIO_RECORD_HIFI;
@@ -8276,8 +8273,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         default:
             in->bit_width = 16;
         }
-        in->config.channels = channel_count;
-        in->sample_rate = in->config.rate;
     } else if ((in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) ||
              (in->device == AUDIO_DEVICE_IN_PROXY)) {
         if (config->sample_rate == 0)
@@ -8298,9 +8293,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
         in->usecase = USECASE_AUDIO_RECORD_AFE_PROXY;
         in->config = pcm_config_afe_proxy_record;
-        in->config.channels = channel_count;
         in->config.rate = config->sample_rate;
-        in->sample_rate = config->sample_rate;
         in->af_period_multiplier = 1;
     } else if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
                in->flags & AUDIO_INPUT_FLAG_VOIP_TX &&
@@ -8340,7 +8333,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                    (in->dev->mode != AUDIO_MODE_IN_COMMUNICATION)) {
             audio_extn_compr_cap_init(in);
         } else if (audio_extn_cin_applicable_stream(in)) {
-            in->sample_rate = config->sample_rate;
             ret = audio_extn_cin_configure_input_stream(in);
             if (ret)
                 goto err_open;
@@ -8348,8 +8340,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             in->config = pcm_config_audio_capture;
             in->config.rate = config->sample_rate;
             in->config.format = pcm_format_from_audio_format(config->format);
-            in->config.channels = channel_count;
-            in->sample_rate = config->sample_rate;
             in->format = config->format;
             frame_size = audio_stream_in_frame_size(&in->stream);
             buffer_size = get_input_buffer_size(config->sample_rate,
@@ -8395,6 +8385,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         pthread_mutex_unlock(&adev->lock);
 #endif
     }
+
+    in->config.channels = channel_count;
+    in->sample_rate  = in->config.rate;
+
     audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
                                                 &adev->streams_input_cfg_list,
                                                 devices, flags, in->format,
