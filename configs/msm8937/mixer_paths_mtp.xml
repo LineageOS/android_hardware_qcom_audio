@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!--
-    Copyright (c) 2015-2016, 2018, The Linux Foundation. All rights reserved.
+    Copyright (c) 2015-2016, 2018, 2019, The Linux Foundation. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are
@@ -82,6 +82,7 @@
     <ctl name="HPHR" value="ZERO" />
     <ctl name="SPK" value="ZERO" />
     <ctl name="WSA Spk Switch" value="ZERO" />
+    <ctl name="LINE_OUT" value="ZERO" />
     <ctl name="SpkrMono WSA_RDAC" value="ZERO" />
     <ctl name="SpkrMono BOOST Switch" value="1" />
     <ctl name="EAR PA Gain" value="POS_6_DB" />
@@ -340,12 +341,12 @@
     </path>
 
     <path name="low-latency-playback speaker-and-bt-sco">
-        <path name="low-latency-playback bt-sco"  />
+        <path name="low-latency-playback bt-sco" />
         <path name="low-latency-playback" />
     </path>
 
     <path name="low-latency-playback speaker-and-bt-sco-wb">
-        <path name="low-latency-playback bt-sco-wb"  />
+        <path name="low-latency-playback bt-sco-wb" />
         <path name="low-latency-playback" />
     </path>
 
@@ -419,7 +420,7 @@
     </path>
 
     <path name="audio-ull-playback wsa-speaker-and-bt-sco-wb">
-        <path name="audio-ull-playback speaker-and-bt-sco-wb" />
+        <path name="low-latency-playback speaker-and-bt-sco-wb" />
     </path>
 
     <path name="audio-ull-playback afe-proxy">
@@ -471,7 +472,7 @@
     </path>
 
     <path name="compress-offload-playback wsa-speaker-and-bt-sco">
-       <path name="compress-offload-playback speaker-and-bt-sco" />
+        <path name="compress-offload-playback speaker-and-bt-sco" />
     </path>
 
     <path name="compress-offload-playback wsa-speaker-and-bt-sco-wb">
@@ -524,7 +525,7 @@
     </path>
 
     <path name="compress-offload-playback2 wsa-speaker-and-bt-sco">
-       <path name="compress-offload-playback2 speaker-and-bt-sco" />
+        <path name="compress-offload-playback2 speaker-and-bt-sco" />
     </path>
 
     <path name="compress-offload-playback2 wsa-speaker-and-bt-sco-wb">
@@ -572,7 +573,7 @@
     </path>
 
     <path name="compress-offload-playback3 wsa-speaker-and-bt-sco">
-       <path name="compress-offload-playback3 speaker-and-bt-sco" />
+        <path name="compress-offload-playback3 speaker-and-bt-sco" />
     </path>
 
     <path name="compress-offload-playback3 wsa-speaker-and-bt-sco-wb">
@@ -601,14 +602,6 @@
         <path name="compress-offload-playback4 bt-sco" />
     </path>
 
-    <path name="compress-offload-playback4 wsa-speaker-and-bt-sco">
-       <path name="compress-offload-playback4 speaker-and-bt-sco" />
-    </path>
-
-    <path name="compress-offload-playback4 wsa-speaker-and-bt-sco-wb">
-        <path name="compress-offload-playback4 speaker-and-bt-sco-wb" />
-    </path>
-
     <path name="compress-offload-playback4 speaker-and-bt-sco">
         <path name="compress-offload-playback4 bt-sco" />
         <path name="compress-offload-playback4" />
@@ -617,6 +610,14 @@
     <path name="compress-offload-playback4 speaker-and-bt-sco-wb">
         <path name="compress-offload-playback4 bt-sco-wb" />
         <path name="compress-offload-playback4" />
+    </path>
+
+    <path name="compress-offload-playback4 wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback4 speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback4 wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback4 speaker-and-bt-sco-wb" />
     </path>
 
     <path name="compress-offload-playback4 hdmi">
@@ -641,14 +642,6 @@
         <path name="compress-offload-playback5 bt-sco" />
     </path>
 
-    <path name="compress-offload-playback5 wsa-speaker-and-bt-sco">
-       <path name="compress-offload-playback5 speaker-and-bt-sco" />
-    </path>
-
-    <path name="compress-offload-playback5 wsa-speaker-and-bt-sco-wb">
-        <path name="compress-offload-playback5 speaker-and-bt-sco-wb" />
-    </path>
-
     <path name="compress-offload-playback5 speaker-and-bt-sco">
         <path name="compress-offload-playback5 bt-sco" />
         <path name="compress-offload-playback5" />
@@ -657,6 +650,14 @@
     <path name="compress-offload-playback5 speaker-and-bt-sco-wb">
         <path name="compress-offload-playback5 bt-sco-wb" />
         <path name="compress-offload-playback5" />
+    </path>
+
+    <path name="compress-offload-playback5 wsa-speaker-and-bt-sco">
+        <path name="compress-offload-playback5 speaker-and-bt-sco" />
+    </path>
+
+    <path name="compress-offload-playback5 wsa-speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback5 speaker-and-bt-sco-wb" />
     </path>
 
     <path name="compress-offload-playback5 hdmi">
@@ -692,7 +693,7 @@
     </path>
 
     <path name="compress-offload-playback6 wsa-speaker-and-bt-sco">
-       <path name="compress-offload-playback6 speaker-and-bt-sco" />
+        <path name="compress-offload-playback6 speaker-and-bt-sco" />
     </path>
 
     <path name="compress-offload-playback6 wsa-speaker-and-bt-sco-wb">
@@ -732,7 +733,7 @@
     </path>
 
     <path name="compress-offload-playback7 wsa-speaker-and-bt-sco">
-       <path name="compress-offload-playback7 speaker-and-bt-sco" />
+        <path name="compress-offload-playback7 speaker-and-bt-sco" />
     </path>
 
     <path name="compress-offload-playback7 wsa-speaker-and-bt-sco-wb">
@@ -1202,10 +1203,9 @@
     </path>
 
     <path name="wsa-speaker">
-        <ctl name="RX1 MIX1 INP1" value="RX1" />
-        <ctl name="RDAC2 MUX" value="RX1" />
-        <ctl name="RX1 Digital Volume" value="84" />
-        <ctl name="WSA Spk Switch" value="WSA" />
+        <ctl name="RX3 MIX1 INP1" value="RX1" />
+        <ctl name="RX3 Digital Volume" value="84" />
+        <ctl name="LINE_OUT" value="Switch" />
         <ctl name="SpkrMono WSA_RDAC" value="Switch" />
    </path>
 
@@ -1255,10 +1255,15 @@
         <ctl name="HPHR" value="Switch" />
     </path>
 
-    <path name="headset-mic">
+    <path name="headset-mic-default">
         <path name="adc2" />
         <ctl name="ADC2 MUX" value="INP2" />
         <ctl name="IIR1 INP1 MUX" value="DEC1" />
+    </path>
+
+    <path name="headset-mic">
+        <path name="headset-mic-default" />
+        <ctl name="DEC1 Volume" value="74" />
     </path>
 
     <path name="sidetone-iir">
@@ -1304,7 +1309,7 @@
     </path>
 
     <path name="voice-headset-mic">
-        <path name="headset-mic" />
+        <path name="headset-mic-default" />
     </path>
 
     <path name="speaker-and-headphones">
@@ -1453,6 +1458,18 @@
 
     <path name="unprocessed-mic">
         <path name="unprocessed-handset-mic" />
+    </path>
+
+    <path name="unprocessed-stereo-mic">
+        <path name="voice-rec-dmic-ef" />
+    </path>
+
+    <path name="unprocessed-quad-mic">
+        <path name="quad-mic" />
+    </path>
+
+    <path name="unprocessed-headset-mic">
+        <path name="headset-mic" />
     </path>
 
     <path name="ADSP testfwk">

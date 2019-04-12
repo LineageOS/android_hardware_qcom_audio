@@ -154,6 +154,8 @@ bool audio_feature_manager_is_feature_enabled(audio_ext_feature feature)
             return confValues->hfp_enabled;
         case VBAT:
             return confValues->vbat_enabled;
+        case WSA:
+            return confValues->wsa_enabled;
         case EXT_HW_PLUGIN:
             return confValues->ext_hw_plugin_enabled;
         case RECORD_PLAY_CONCURRENCY:

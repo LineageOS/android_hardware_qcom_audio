@@ -64,6 +64,7 @@ typedef struct {
     bool a2dp_offload_enabled;
     bool hfp_enabled;
     bool vbat_enabled;
+    bool wsa_enabled;
     bool ext_hw_plugin_enabled;
     bool record_play_concurrency;
     bool hdmi_passthrough_enabled;
@@ -84,3 +85,4 @@ void audio_extn_get_feature_values(AHalValues* *confValues);
 #ifdef __cplusplus
 }
 #endif
+
