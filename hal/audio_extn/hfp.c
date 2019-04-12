@@ -46,7 +46,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include <log_utils.h>
 #endif
 
-#ifdef HFP_ENABLED
 #define AUDIO_PARAMETER_HFP_ENABLE      "hfp_enable"
 #define AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE "hfp_set_sampling_rate"
 #define AUDIO_PARAMETER_KEY_HFP_VOLUME "hfp_volume"
@@ -115,6 +114,18 @@ static struct pcm_config pcm_config_hfp = {
     .avail_min = 0,
 };
 
+//external feature dependency
+static fp_platform_set_mic_mute_t                   fp_platform_set_mic_mute;
+static fp_platform_get_pcm_device_id_t              fp_platform_get_pcm_device_id;
+static fp_platform_set_echo_reference_t             fp_platform_set_echo_reference;
+static fp_select_devices_t                          fp_select_devices;
+static fp_audio_extn_ext_hw_plugin_usecase_start_t  fp_audio_extn_ext_hw_plugin_usecase_start;
+static fp_audio_extn_ext_hw_plugin_usecase_stop_t   fp_audio_extn_ext_hw_plugin_usecase_stop;
+static fp_get_usecase_from_list_t                   fp_get_usecase_from_list;
+static fp_disable_audio_route_t                     fp_disable_audio_route;
+static fp_disable_snd_device_t                      fp_disable_snd_device;
+static fp_voice_get_mic_mute_t                      fp_voice_get_mic_mute;
+
 static int32_t hfp_set_volume(struct audio_device *adev, float value)
 {
     int32_t vol, ret = 0;
@@ -167,6 +178,8 @@ static int hfp_set_mic_volume(struct audio_device *adev, float value)
     struct mixer_ctl *ctl;
     int pcm_device_id = HFP_ASM_RX_TX;
 
+    ALOGD("%s: enter, value=%f", __func__, value);
+
     if (!hfpmod.is_hfp_running) {
         ALOGE("%s: HFP not active, ignoring set_hfp_mic_volume call", __func__);
         return -EIO;
@@ -209,6 +222,8 @@ static float hfp_get_mic_volume(struct audio_device *adev)
     int pcm_device_id = HFP_ASM_RX_TX;
     float value = 0.0;
 
+    ALOGD("%s: enter", __func__);
+
     if (!hfpmod.is_hfp_running) {
         ALOGE("%s: HFP not active, ignoring set_hfp_mic_volume call", __func__);
         return -EIO;
@@ -247,7 +262,7 @@ static float hfp_get_mic_volume(struct audio_device *adev)
 *
 * This interface is used for mic mute state control
 */
-int audio_extn_hfp_set_mic_mute(struct audio_device *adev, bool state)
+int hfp_set_mic_mute(struct audio_device *adev, bool state)
 {
     int rc = 0;
 
@@ -278,7 +293,7 @@ static int32_t start_hfp(struct audio_device *adev,
         return 0;
     }
     adev->enable_hfp = true;
-    platform_set_mic_mute(adev->platform, false);
+    fp_platform_set_mic_mute(adev->platform, false);
 
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
 
@@ -294,16 +309,16 @@ static int32_t start_hfp(struct audio_device *adev,
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
-    select_devices(adev, hfpmod.ucid);
+    fp_select_devices(adev, hfpmod.ucid);
 
     if ((uc_info->out_snd_device != SND_DEVICE_NONE) ||
         (uc_info->in_snd_device != SND_DEVICE_NONE)) {
-        if (audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
+        if (fp_audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info))
             ALOGE("%s: failed to start ext hw plugin", __func__);
     }
 
-    pcm_dev_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
-    pcm_dev_tx_id = platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
+    pcm_dev_rx_id = fp_platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
+    pcm_dev_tx_id = fp_platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
     pcm_dev_asm_rx_id = hfpmod.hfp_pcm_dev_id;
     pcm_dev_asm_tx_id = hfpmod.hfp_pcm_dev_id;
     if (pcm_dev_rx_id < 0 || pcm_dev_tx_id < 0 ||
@@ -380,7 +395,7 @@ static int32_t start_hfp(struct audio_device *adev,
 
     /* Set mic volume by mute status, we don't provide set mic volume in phone app, only
     provide mute and unmute. */
-    audio_extn_hfp_set_mic_mute(adev, adev->mic_muted);
+    hfp_set_mic_mute(adev, adev->mic_muted);
 
     ALOGD("%s: exit: status(%d)", __func__, ret);
     return 0;
@@ -417,7 +432,7 @@ static int32_t stop_hfp(struct audio_device *adev)
         hfpmod.hfp_pcm_tx = NULL;
     }
 
-    uc_info = get_usecase_from_list(adev, hfpmod.ucid);
+    uc_info = fp_get_usecase_from_list(adev, hfpmod.ucid);
     if (uc_info == NULL) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
               __func__, hfpmod.ucid);
@@ -426,23 +441,23 @@ static int32_t stop_hfp(struct audio_device *adev)
 
     if ((uc_info->out_snd_device != SND_DEVICE_NONE) ||
         (uc_info->in_snd_device != SND_DEVICE_NONE)) {
-        if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
+        if (fp_audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
             ALOGE("%s: failed to stop ext hw plugin", __func__);
     }
 
     /* 2. Disable echo reference while stopping hfp */
-    platform_set_echo_reference(adev, false, uc_info->devices);
+    fp_platform_set_echo_reference(adev, false, uc_info->devices);
 
     /* 3. Get and set stream specific mixer controls */
-    disable_audio_route(adev, uc_info);
+    fp_disable_audio_route(adev, uc_info);
 
     /* 4. Disable the rx and tx devices */
-    disable_snd_device(adev, uc_info->out_snd_device);
-    disable_snd_device(adev, uc_info->in_snd_device);
+    fp_disable_snd_device(adev, uc_info->out_snd_device);
+    fp_disable_snd_device(adev, uc_info->in_snd_device);
 
     /* Set the unmute Tx mixer control */
-    if (voice_get_mic_mute(adev)) {
-        platform_set_mic_mute(adev->platform, false);
+    if (fp_voice_get_mic_mute(adev)) {
+        fp_platform_set_mic_mute(adev->platform, false);
         ALOGD("%s: unMute HFP Tx", __func__);
     }
     adev->enable_hfp = false;
@@ -454,10 +469,26 @@ static int32_t stop_hfp(struct audio_device *adev)
     return ret;
 }
 
-bool audio_extn_hfp_is_active(struct audio_device *adev)
+void hfp_init(hfp_init_config_t init_config)
+{
+    fp_platform_set_mic_mute = init_config.fp_platform_set_mic_mute;
+    fp_platform_get_pcm_device_id = init_config.fp_platform_get_pcm_device_id;
+    fp_platform_set_echo_reference = init_config.fp_platform_set_echo_reference;
+    fp_select_devices = init_config.fp_select_devices;
+    fp_audio_extn_ext_hw_plugin_usecase_start =
+                                init_config.fp_audio_extn_ext_hw_plugin_usecase_start;
+    fp_audio_extn_ext_hw_plugin_usecase_stop =
+                                init_config.fp_audio_extn_ext_hw_plugin_usecase_stop;
+    fp_get_usecase_from_list = init_config.fp_get_usecase_from_list;
+    fp_disable_audio_route = init_config.fp_disable_audio_route;
+    fp_disable_snd_device = init_config.fp_disable_snd_device;
+    fp_voice_get_mic_mute = init_config.fp_voice_get_mic_mute;
+}
+
+bool hfp_is_active(struct audio_device *adev)
 {
     struct audio_usecase *hfp_usecase = NULL;
-    hfp_usecase = get_usecase_from_list(adev, hfpmod.ucid);
+    hfp_usecase = fp_get_usecase_from_list(adev, hfpmod.ucid);
 
     if (hfp_usecase != NULL)
         return true;
@@ -465,13 +496,13 @@ bool audio_extn_hfp_is_active(struct audio_device *adev)
         return false;
 }
 
-int hfp_set_mic_mute(struct audio_device *adev, bool state)
+int hfp_set_mic_mute2(struct audio_device *adev, bool state)
 {
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "HFP TX Mute";
     long set_values[ ] = {0};
 
-    ALOGI("%s: enter, state=%d", __func__, state);
+    ALOGD("%s: enter, state=%d", __func__, state);
 
     set_values[0] = state;
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
@@ -485,18 +516,20 @@ int hfp_set_mic_mute(struct audio_device *adev, bool state)
     return 0;
 }
 
-audio_usecase_t audio_extn_hfp_get_usecase()
+audio_usecase_t hfp_get_usecase()
 {
     return hfpmod.ucid;
 }
 
-void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *parms)
+void hfp_set_parameters(struct audio_device *adev, struct str_parms *parms)
 {
     int ret;
     int rate;
     int val;
     float vol;
     char value[32]={0};
+
+    ALOGD("%s: enter", __func__);
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
                             sizeof(value));
@@ -530,7 +563,7 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
         if (ret >= 0) {
             val = atoi(value);
             if (val > 0)
-                select_devices(adev, hfpmod.ucid);
+                fp_select_devices(adev, hfpmod.ucid);
         }
     }
 
@@ -571,4 +604,3 @@ void audio_extn_hfp_set_parameters(struct audio_device *adev, struct str_parms *
 exit:
     ALOGV("%s Exit",__func__);
 }
-#endif /*HFP_ENABLED*/

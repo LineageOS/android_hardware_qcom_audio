@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -228,19 +228,19 @@ bool batteryPropertiesListenerIsCharging()
 } // namespace android
 
 extern "C" {
-void audio_extn_battery_properties_listener_init(battery_status_change_fn_t fn)
+void battery_properties_listener_init(battery_status_change_fn_t fn)
 {
     android::batteryPropertiesListenerInit([=](bool charging) {
                                                fn(charging);
                                           });
 }
 
-void audio_extn_battery_properties_listener_deinit()
+void battery_properties_listener_deinit()
 {
     android::batteryPropertiesListenerDeinit();
 }
 
-bool audio_extn_battery_properties_is_charging()
+bool battery_properties_is_charging()
 {
     return android::batteryPropertiesListenerIsCharging();
 }

@@ -41,17 +41,6 @@ void voice_extn_in_get_parameters(struct stream_in *in,
 void voice_extn_out_get_parameters(struct stream_out *out,
                                    struct str_parms *query,
                                    struct str_parms *reply);
-#ifdef INCALL_MUSIC_ENABLED
-int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
-                                                  struct stream_out *out);
-#else
-static int __unused voice_extn_check_and_set_incall_music_usecase(
-                                          struct audio_device *adev __unused,
-                                          struct stream_out *out __unused)
-{
-    return -ENOSYS;
-}
-#endif
 
 int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
                                                   struct stream_out *out);

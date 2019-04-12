@@ -2427,6 +2427,14 @@ void *platform_init(struct audio_device *adev)
     list_init(&operator_info_list);
     list_init(&app_type_entry_list);
 
+    if(audio_extn_is_concurrent_capture_enabled())
+        AUDIO_DEVICE_IN_ALL_CODEC_BACKEND = (AUDIO_DEVICE_IN_BUILTIN_MIC | \
+            AUDIO_DEVICE_IN_BACK_MIC | AUDIO_DEVICE_IN_VOICE_CALL) & ~AUDIO_DEVICE_BIT_IN;
+    else
+        AUDIO_DEVICE_IN_ALL_CODEC_BACKEND = (AUDIO_DEVICE_IN_BUILTIN_MIC | \
+            AUDIO_DEVICE_IN_BACK_MIC | AUDIO_DEVICE_IN_WIRED_HEADSET | \
+            AUDIO_DEVICE_IN_VOICE_CALL) & ~AUDIO_DEVICE_BIT_IN;
+
     adev->snd_card = audio_extn_utils_open_snd_mixer(&adev->mixer);
     if (adev->snd_card < 0) {
         ALOGE("%s: Unable to find correct sound card", __func__);
@@ -2998,12 +3006,12 @@ acdb_init_fail:
             strdup("SLIM_6_RX SampleRate");
         //TODO: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend is defined
         //for headset-mic. This is to capture separate data from headset-mic and handset-mic.
-#ifdef CONCURRENT_CAPTURE_ENABLED
-        my_data->current_backend_cfg[HEADSET_TX_BACKEND].bitwidth_mixer_ctl =
-            strdup("SLIM_1_TX Format");
-        my_data->current_backend_cfg[HEADSET_TX_BACKEND].samplerate_mixer_ctl =
-            strdup("SLIM_1_TX SampleRate");
-#endif
+        if(audio_extn_is_concurrent_capture_enabled())
+            my_data->current_backend_cfg[HEADSET_TX_BACKEND].bitwidth_mixer_ctl =
+                                                            strdup("SLIM_1_TX Format");
+        else
+            my_data->current_backend_cfg[HEADSET_TX_BACKEND].samplerate_mixer_ctl =
+                                                            strdup("SLIM_1_TX SampleRate");
     }
 
     my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].bitwidth_mixer_ctl =

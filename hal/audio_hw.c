@@ -151,6 +151,7 @@ static unsigned int configured_low_latency_capture_period_size =
  * TODO The flag is off until more testing is done.
  */
 static const bool k_enable_extended_precision = false;
+extern int AUDIO_DEVICE_IN_ALL_CODEC_BACKEND;
 
 struct pcm_config pcm_config_deep_buffer = {
     .channels = 2,
