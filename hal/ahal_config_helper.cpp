@@ -105,6 +105,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
         false,       /* CONCURRENT_CAPTURE */
         false,       /* COMPRESS_IN */
         false,       /* BATTERY_LISTENER */
+        false,       /* MAXX_AUDIO */
         true,        /* COMPRESS_METADATA_NEEDED */
         false,       /* INCALL_MUSIC */
         false,       /* COMPRESS_VOIP */
@@ -149,6 +150,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
             true,        /* CONCURRENT_CAPTURE */
             true,        /* COMPRESS_IN */
             true,        /* BATTERY_LISTENER */
+            false,       /* MAXX_AUDIO */
             true,        /* COMPRESS_METADATA_NEEDED */
             true,        /* INCALL_MUSIC */
             false,       /* COMPRESS_VOIP */
@@ -192,6 +194,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
             true,        /* CONCURRENT_CAPTURE */
             false,       /* COMPRESS_IN */
             false,       /* BATTERY_LISTENER */
+            true,        /* MAXX_AUDIO */
             false,       /* COMPRESS_METADATA_NEEDED */
             true,        /* INCALL_MUSIC */
             false,       /* COMPRESS_VOIP */

@@ -7537,33 +7537,34 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->screen_off = true;
     }
 
-#ifndef MAXXAUDIO_QDSP_ENABLED
-    ret = str_parms_get_int(parms, "rotation", &val);
-    if (ret >= 0) {
-        bool reverse_speakers = false;
-        switch(val) {
-        // FIXME: note that the code below assumes that the speakers are in the correct placement
-        //   relative to the user when the device is rotated 90deg from its default rotation. This
-        //   assumption is device-specific, not platform-specific like this code.
-        case 270:
-            reverse_speakers = true;
-            break;
-        case 0:
-        case 90:
-        case 180:
-            break;
-        default:
-            ALOGE("%s: unexpected rotation of %d", __func__, val);
-            status = -EINVAL;
+   if(!audio_extn_is_maxx_audio_enabled()) {
+        ret = str_parms_get_int(parms, "rotation", &val);
+        if (ret >= 0) {
+            bool reverse_speakers = false;
+            switch(val) {
+            // FIXME: note that the code below assumes that the speakers are
+            // in the correct placement relative to the user when the device
+            // is rotated 90deg from its default rotation. This assumption
+            // is device-specific, not platform-specific like this code.
+            case 270:
+                reverse_speakers = true;
+                break;
+            case 0:
+            case 90:
+            case 180:
+                break;
+            default:
+                ALOGE("%s: unexpected rotation of %d", __func__, val);
+                status = -EINVAL;
+            }
+            if (status == 0) {
+                // check and set swap
+                //   - check if orientation changed and speaker active
+                //   - set rotation and cache the rotation value
+                platform_check_and_set_swap_lr_channels(adev, reverse_speakers);
+            }
         }
-        if (status == 0) {
-            // check and set swap
-            //   - check if orientation changed and speaker active
-            //   - set rotation and cache the rotation value
-            platform_check_and_set_swap_lr_channels(adev, reverse_speakers);
-        }
-    }
-#endif
+   }
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
     if (ret >= 0) {

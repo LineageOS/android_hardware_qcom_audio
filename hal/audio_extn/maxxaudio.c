@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2018-2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,12 +156,15 @@ ma_audio_cal_handle_t g_ma_audio_cal_handle = NULL;
 static uint16_t g_supported_dev = 0;
 static struct ma_state ma_cur_state_table[STREAM_MAX_TYPES];
 static struct ma_platform_data *my_data = NULL;
+// --- external function dependency ---
+fp_platform_set_parameters_t fp_platform_set_parameters;
+fp_audio_extn_get_snd_card_split_t fp_audio_extn_get_snd_card_split;
 
 static int set_audio_cal(const char *audio_cal)
 {
     ALOGV("set_audio_cal: %s", audio_cal);
 
-    return platform_set_parameters(my_data->platform,
+    return fp_platform_set_parameters(my_data->platform,
                                    str_parms_create_str(audio_cal));
 }
 
@@ -200,7 +203,7 @@ static inline bool valid_usecase(struct audio_usecase *usecase)
         ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
          (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
          (audio_is_usb_out_device(usecase->devices) &&
-          audio_extn_ma_supported_usb())))
+          ma_supported_usb())))
         /* TODO: enable A2DP when it is ready */
 
         return true;
@@ -390,7 +393,7 @@ done:
 }
 
 // adev_init lock held
-void audio_extn_ma_init(void *platform)
+void ma_init(void *platform, maxx_audio_init_config_t init_config)
 {
     ma_stream_type_t i = 0;
     int ret = 0;
@@ -398,7 +401,11 @@ void audio_extn_ma_init(void *platform)
     char mps_path[128] = {0};
     char cnf_path[128] = {0};
     struct snd_card_split *snd_split_handle = NULL;
-    snd_split_handle = audio_extn_get_snd_card_split();
+
+    fp_platform_set_parameters = init_config.fp_platform_set_parameters;
+    fp_audio_extn_get_snd_card_split = init_config.fp_audio_extn_get_snd_card_split;
+
+    snd_split_handle = fp_audio_extn_get_snd_card_split();
 
     if (platform == NULL) {
         ALOGE("%s: platform is NULL", __func__);
@@ -549,7 +556,7 @@ error:
 }
 
 //adev_init lock held
-void audio_extn_ma_deinit()
+void ma_deinit()
 {
     if (my_data) {
         /* deinit ma parameter */
@@ -566,7 +573,7 @@ void audio_extn_ma_deinit()
 }
 
 // adev_init and adev lock held
-bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
+bool ma_set_state(struct audio_device *adev, int stream_type,
                              float vol, bool active)
 {
     bool ret = false;
@@ -613,7 +620,7 @@ bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
     return ret;
 }
 
-void audio_extn_ma_set_device(struct audio_usecase *usecase)
+void ma_set_device(struct audio_usecase *usecase)
 {
     int i = 0;
     struct ma_audio_cal_settings ma_cal;
@@ -663,7 +670,7 @@ void audio_extn_ma_set_device(struct audio_usecase *usecase)
     pthread_mutex_unlock(&my_data->lock);
 }
 
-void audio_extn_ma_set_parameters(struct audio_device *adev,
+void ma_set_parameters(struct audio_device *adev,
                                   struct str_parms *parms)
 {
     int ret;
@@ -720,7 +727,7 @@ void audio_extn_ma_set_parameters(struct audio_device *adev,
     }
 }
 
-bool audio_extn_ma_supported_usb()
+bool ma_supported_usb()
 {
     ALOGV("%s: current support 0x%x", __func__, g_supported_dev);
     return (g_supported_dev & SUPPORTED_USB) ? true : false;
