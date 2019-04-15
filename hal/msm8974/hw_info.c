@@ -52,10 +52,20 @@ struct hardware_info {
     uint32_t num_snd_devices;
     char dev_extn[HW_INFO_ARRAY_MAX_SIZE];
     snd_device_t  *snd_devices;
+    bool is_wsa_combo_suppported;
     bool is_stereo_spkr;
 };
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+#define WSA_MIXER_PATH_EXTENSION "wsa-"
+
+static const snd_device_t wsa_combo_devices[] = {
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
+    SND_DEVICE_OUT_SPEAKER_AND_LINE,
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1,
+    SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2,
+    SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET
+};
 
 static const snd_device_t taiko_fluid_variant_devices[] = {
     SND_DEVICE_OUT_SPEAKER,
@@ -637,6 +647,13 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
     if (!strncmp(snd_card_name, "sdm660-snd-card",
                  sizeof("sdm660-snd-card"))) {
         strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm660-snd-card-mtp")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm660-tasha-skus-snd-card")) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm660-snd-card-skush")) {
+        strlcpy(hw_info->name, "sdm660", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "qcs405-sku1-snd-card",
                  sizeof("qcs405-sku1-snd-card"))) {
         strlcpy(hw_info->name, "qcs405", sizeof(hw_info->name));
@@ -697,6 +714,18 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
     }
 }
 
+static void update_hardware_info_sdm439(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "sdm439-sku1-snd-card")) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "sdm439-snd-card-mtp")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else {
+        ALOGW("%s: Not an SDM439 device", __func__);
+    }
+}
+
 void *hw_info_init(const char *snd_card_name)
 {
     struct hardware_info *hw_info;
@@ -710,6 +739,7 @@ void *hw_info_init(const char *snd_card_name)
     hw_info->snd_devices = NULL;
     hw_info->num_snd_devices = 0;
     hw_info->is_stereo_spkr = true;
+    hw_info->is_wsa_combo_suppported = false;
     strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     strlcpy(hw_info->type, "", sizeof(hw_info->type));
     strlcpy(hw_info->name, "", sizeof(hw_info->name));
@@ -761,6 +791,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "kona")) {
         ALOGV("KONA - variant soundcard");
         update_hardware_info_kona(hw_info, snd_card_name);
+    } else if(strstr(snd_card_name, "sdm439")) {
+        ALOGV("SDM439 - variant soundcard");
+        update_hardware_info_sdm439(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
@@ -778,6 +811,17 @@ void hw_info_deinit(void *hw_info)
         free(my_data);
 }
 
+void hw_info_enable_wsa_combo_usecase_support(void *hw_info)
+{
+    struct hardware_info *my_data = (struct hardware_info*) hw_info;
+    if(!my_data) {
+        ALOGE(" ERROR wsa combo update is called with invalid hw_info");
+        return;
+    }
+    my_data->is_wsa_combo_suppported = true;
+
+}
+
 void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
                             char *device_name)
 {
@@ -786,6 +830,23 @@ void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
 
     snd_device_t *snd_devices =
             (snd_device_t *) my_data->snd_devices;
+
+
+    if(my_data->is_wsa_combo_suppported) {
+        for (i = 0; i < ARRAY_SIZE(wsa_combo_devices) ; i++) {
+            if (snd_device == (snd_device_t)wsa_combo_devices[i]) {
+                char mixer_device_name[DEVICE_NAME_MAX_SIZE] = {0};
+                ALOGD("appending wsa extension to device %s",
+                        device_name);
+               strlcpy(mixer_device_name, WSA_MIXER_PATH_EXTENSION,
+                        sizeof(WSA_MIXER_PATH_EXTENSION)) ;
+                strlcat(mixer_device_name, device_name, DEVICE_NAME_MAX_SIZE);
+                strlcpy(device_name, mixer_device_name, DEVICE_NAME_MAX_SIZE-1);
+                break;
+            }
+        }
+    }
+
 
     if(snd_devices != NULL) {
         for (i = 0; i <  my_data->num_snd_devices; i++) {

@@ -62,6 +62,7 @@ enum audio_ext_feature_t {
     EXTERNAL_SPEAKER,
     EXTERNAL_SPEAKER_TFA,
     HWDEP_CAL,
+    WSA,
     EXT_HW_PLUGIN,
     RECORD_PLAY_CONCURRENCY,
     HDMI_PASSTHROUGH,

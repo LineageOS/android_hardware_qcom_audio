@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -34,6 +34,7 @@
 #include <cutils/str_parms.h>
 #include <cutils/log.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "platform_api.h"
@@ -82,6 +83,18 @@ static const audio_format_t audio_passthru_formats[] = {
     AUDIO_FORMAT_IEC61937
 };
 
+//external function depedency
+static fp_platform_is_edid_supported_format_t fp_platform_is_edid_supported_format;
+static fp_platform_set_device_params_t fp_platform_set_device_params;
+static fp_platform_edid_get_max_channels_t fp_platform_edid_get_max_channels;
+static fp_platform_get_output_snd_device_t fp_platform_get_output_snd_device;
+static fp_platform_get_codec_backend_cfg_t fp_platform_get_codec_backend_cfg;
+static fp_platform_get_snd_device_name_t fp_platform_get_snd_device_name;
+static fp_platform_is_edid_supported_sample_rate_t fp_platform_is_edid_supported_sample_rate;
+static fp_audio_extn_keep_alive_start_t fp_audio_extn_keep_alive_start;
+static fp_audio_extn_keep_alive_stop_t fp_audio_extn_keep_alive_stop;
+static fp_audio_extn_utils_is_dolby_format_t fp_audio_extn_utils_is_dolby_format;
+
 /*
  * This atomic var is incremented/decremented by the offload stream to notify
  * other pcm playback streams that a pass thru session is about to start or has
@@ -92,8 +105,7 @@ static const audio_format_t audio_passthru_formats[] = {
  */
 static volatile int32_t compress_passthru_active;
 
-#ifdef DTSHD_PARSER_ENABLED
-int audio_extn_passthru_update_dts_stream_configuration(struct stream_out *out,
+int passthru_update_dts_stream_configuration(struct stream_out *out,
         const void *buffer, size_t bytes)
 {
     struct audio_parser_codec_info codec_info;
@@ -115,8 +127,8 @@ int audio_extn_passthru_update_dts_stream_configuration(struct stream_out *out,
     }
 
     if (!buffer || bytes <= 0) {
-        ALOGD("Invalid buffer %p size %d skipping dts stream conf update",
-                buffer, bytes);
+        ALOGD("Invalid buffer %p size %lu skipping dts stream conf update",
+                buffer, (unsigned long)bytes);
         out->sample_rate = 48000;
         out->compr_config.codec->sample_rate = out->sample_rate;
         out->compr_config.codec->ch_in = 2;
@@ -137,7 +149,7 @@ int audio_extn_passthru_update_dts_stream_configuration(struct stream_out *out,
         ALOGD("dts new sample rate %d and channels %d\n",
                dtshd_tr_info.sample_rate,
                dtshd_tr_info.num_channels);
-        for (i = 0; i < sizeof(dts_transmission_sample_rates); i++) {
+        for (i = 0; i < (sizeof(dts_transmission_sample_rates)/sizeof(int)); i++) {
             if (dts_transmission_sample_rates[i] ==
                     dtshd_tr_info.sample_rate) {
                 out->sample_rate = dtshd_tr_info.sample_rate;
@@ -160,7 +172,7 @@ int audio_extn_passthru_update_dts_stream_configuration(struct stream_out *out,
 
     if (!is_valid_transmission_rate) {
         ALOGE("%s:: Invalid dts transmission rate %d\n using default sample rate 48000",
-               dtshd_tr_info.sample_rate);
+                                                    __func__, dtshd_tr_info.sample_rate);
         out->sample_rate = 48000;
         out->compr_config.codec->sample_rate = out->sample_rate;
     }
@@ -173,17 +185,24 @@ int audio_extn_passthru_update_dts_stream_configuration(struct stream_out *out,
     }
     return 0;
 }
-#else
-int audio_extn_passthru_update_dts_stream_configuration(
-                        struct stream_out *out __unused,
-                        const void *buffer __unused,
-                        size_t bytes __unused)
-{
-    return -ENOSYS;
-}
-#endif
 
-int audio_extn_passthru_get_channel_count(struct stream_out *out)
+bool passthru_is_supported_format(audio_format_t format)
+{
+    int32_t num_passthru_formats = sizeof(audio_passthru_formats) /
+                                    sizeof(audio_passthru_formats[0]);
+    int32_t i;
+
+    for (i = 0; i < num_passthru_formats; i++) {
+        if (format == audio_passthru_formats[i]) {
+            ALOGD("%s : pass through format is true", __func__);
+            return true;
+        }
+    }
+    ALOGD("%s : pass through format is false", __func__);
+    return false;
+}
+
+int passthru_get_channel_count(struct stream_out *out)
 {
     int channel_count = DEFAULT_HDMI_OUT_CHANNELS;
 
@@ -192,7 +211,7 @@ int audio_extn_passthru_get_channel_count(struct stream_out *out)
         return -EINVAL;
     }
 
-    if (!audio_extn_passthru_is_supported_format(out->format)) {
+    if (!passthru_is_supported_format(out->format)) {
         ALOGE("%s:: not a passthrough format %d", __func__, out->format);
         return -EINVAL;
     }
@@ -218,28 +237,12 @@ int audio_extn_passthru_get_channel_count(struct stream_out *out)
    return channel_count;
 }
 
-bool audio_extn_passthru_is_supported_format(audio_format_t format)
-{
-    int32_t num_passthru_formats = sizeof(audio_passthru_formats) /
-                                    sizeof(audio_passthru_formats[0]);
-    int32_t i;
-
-    for (i = 0; i < num_passthru_formats; i++) {
-        if (format == audio_passthru_formats[i]) {
-            ALOGD("%s : pass through format is true", __func__);
-            return true;
-        }
-    }
-    ALOGD("%s : pass through format is false", __func__);
-    return false;
-}
-
 /*
  * must be called with stream lock held
  * This function decides based on some rules whether the data
  * coming on stream out must be rendered or dropped.
  */
-bool audio_extn_passthru_should_drop_data(struct stream_out * out)
+bool passthru_should_drop_data(struct stream_out * out)
 {
     /*Drop data only
      *stream is routed to HDMI and
@@ -259,7 +262,7 @@ bool audio_extn_passthru_should_drop_data(struct stream_out * out)
 }
 
 /* called with adev lock held */
-void audio_extn_passthru_on_start(struct stream_out * out)
+void passthru_on_start(struct stream_out * out)
 {
 
     uint64_t max_period_us = 0;
@@ -301,7 +304,7 @@ void audio_extn_passthru_on_start(struct stream_out * out)
 }
 
 /* called with adev lock held */
-void audio_extn_passthru_on_stop(struct stream_out * out)
+void passthru_on_stop(struct stream_out * out)
 {
     if (android_atomic_acquire_load(&compress_passthru_active) > 0) {
         /*
@@ -313,17 +316,22 @@ void audio_extn_passthru_on_stop(struct stream_out * out)
 
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
         ALOGD("%s: passthru on aux digital, start keep alive", __func__);
-        audio_extn_keep_alive_start(KEEP_ALIVE_OUT_HDMI);
+        fp_audio_extn_keep_alive_start(KEEP_ALIVE_OUT_HDMI);
     }
 }
 
-void audio_extn_passthru_on_pause(struct stream_out * out __unused)
+void passthru_on_pause(struct stream_out * out __unused)
 {
     if (android_atomic_acquire_load(&compress_passthru_active) == 0)
         return;
 }
 
-int audio_extn_passthru_set_parameters(struct audio_device *adev __unused,
+bool passthru_is_active()
+{
+    return android_atomic_acquire_load(&compress_passthru_active) > 0;
+}
+
+int passthru_set_parameters(struct audio_device *adev __unused,
                                        struct str_parms *parms)
 {
     char value[32];
@@ -332,9 +340,9 @@ int audio_extn_passthru_set_parameters(struct audio_device *adev __unused,
     if (ret >= 0) {
         int val = atoi(value);
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            if (!audio_extn_passthru_is_active()) {
+            if (!passthru_is_active()) {
                 ALOGV("%s: start keep alive on aux digital", __func__);
-                audio_extn_keep_alive_start(KEEP_ALIVE_OUT_HDMI);
+                fp_audio_extn_keep_alive_start(KEEP_ALIVE_OUT_HDMI);
             }
         }
     }
@@ -345,29 +353,38 @@ int audio_extn_passthru_set_parameters(struct audio_device *adev __unused,
         int val = atoi(value);
         if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             ALOGV("%s: stop keep_alive on aux digital on device", __func__);
-            audio_extn_keep_alive_stop(KEEP_ALIVE_OUT_HDMI);
+            fp_audio_extn_keep_alive_stop(KEEP_ALIVE_OUT_HDMI);
         }
     }
     return 0;
 }
 
-bool audio_extn_passthru_is_active()
+bool passthru_is_enabled() { return true; }
+
+void passthru_init(passthru_init_config_t init_config)
 {
-    return android_atomic_acquire_load(&compress_passthru_active) > 0;
+      fp_platform_is_edid_supported_format =
+                                    init_config.fp_platform_is_edid_supported_format;
+      fp_platform_set_device_params = init_config.fp_platform_set_device_params;
+      fp_platform_edid_get_max_channels =
+                                   init_config.fp_platform_edid_get_max_channels;
+      fp_platform_get_output_snd_device = init_config.fp_platform_get_output_snd_device;
+      fp_platform_get_codec_backend_cfg =
+                                         init_config.fp_platform_get_codec_backend_cfg;
+      fp_platform_get_snd_device_name = init_config.fp_platform_get_snd_device_name;
+      fp_platform_is_edid_supported_sample_rate =
+                                    init_config.fp_platform_is_edid_supported_sample_rate;
+      fp_audio_extn_keep_alive_start = init_config.fp_audio_extn_keep_alive_start;
+      fp_audio_extn_keep_alive_stop = init_config.fp_audio_extn_keep_alive_stop;
+      fp_audio_extn_utils_is_dolby_format = init_config.fp_audio_extn_utils_is_dolby_format;
 }
 
-bool audio_extn_passthru_is_enabled() { return true; }
-
-void audio_extn_passthru_init(struct audio_device *adev __unused)
-{
-}
-
-bool audio_extn_passthru_should_standby(struct stream_out * out __unused)
+bool passthru_should_standby(struct stream_out * out __unused)
 {
     return true;
 }
 
-bool audio_extn_passthru_is_convert_supported(struct audio_device *adev,
+bool passthru_is_convert_supported(struct audio_device *adev,
                                                  struct stream_out *out)
 {
 
@@ -375,9 +392,9 @@ bool audio_extn_passthru_is_convert_supported(struct audio_device *adev,
     switch (out->format) {
     case AUDIO_FORMAT_E_AC3:
     case AUDIO_FORMAT_E_AC3_JOC:
-        if (!platform_is_edid_supported_format(adev->platform,
+        if (!fp_platform_is_edid_supported_format(adev->platform,
                                                out->format)) {
-            if (platform_is_edid_supported_format(adev->platform,
+            if (fp_platform_is_edid_supported_format(adev->platform,
                                                   AUDIO_FORMAT_AC3)) {
                 ALOGD("%s:PASSTHROUGH_CONVERT supported", __func__);
                 convert = true;
@@ -393,7 +410,7 @@ bool audio_extn_passthru_is_convert_supported(struct audio_device *adev,
     return convert;
 }
 
-bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
+bool passthru_is_passt_supported(struct audio_device *adev,
                                          struct stream_out *out)
 {
     bool passt = false;
@@ -401,15 +418,15 @@ bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
     case AUDIO_FORMAT_E_AC3:
     case AUDIO_FORMAT_DTS_HD:
     case AUDIO_FORMAT_DOLBY_TRUEHD:
-        if (platform_is_edid_supported_format(adev->platform, out->format)) {
+        if (fp_platform_is_edid_supported_format(adev->platform, out->format)) {
             ALOGV("%s:PASSTHROUGH supported for format %x",
                    __func__, out->format);
             passt = true;
         }
         break;
     case AUDIO_FORMAT_AC3:
-        if (platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_AC3)
-            || platform_is_edid_supported_format(adev->platform,
+        if (fp_platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_AC3)
+            || fp_platform_is_edid_supported_format(adev->platform,
             AUDIO_FORMAT_E_AC3)) {
             ALOGV("%s:PASSTHROUGH supported for format %x",
                    __func__, out->format);
@@ -418,7 +435,7 @@ bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
         break;
     case AUDIO_FORMAT_E_AC3_JOC:
          /* Check for DDP capability in edid for JOC contents.*/
-         if (platform_is_edid_supported_format(adev->platform,
+         if (fp_platform_is_edid_supported_format(adev->platform,
              AUDIO_FORMAT_E_AC3)) {
              ALOGV("%s:PASSTHROUGH supported for format %x",
                    __func__, out->format);
@@ -426,8 +443,8 @@ bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
          }
          break;
     case AUDIO_FORMAT_DTS:
-        if (platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_DTS)
-            || platform_is_edid_supported_format(adev->platform,
+        if (fp_platform_is_edid_supported_format(adev->platform, AUDIO_FORMAT_DTS)
+            || fp_platform_is_edid_supported_format(adev->platform,
             AUDIO_FORMAT_DTS_HD)) {
             ALOGV("%s:PASSTHROUGH supported for format %x",
                    __func__, out->format);
@@ -440,15 +457,15 @@ bool audio_extn_passthru_is_passt_supported(struct audio_device *adev,
     return passt;
 }
 
-void audio_extn_passthru_update_stream_configuration(
+void passthru_update_stream_configuration(
         struct audio_device *adev, struct stream_out *out,
         const void *buffer __unused, size_t bytes __unused)
 {
     if(out->compr_config.codec != NULL) {
-        if (audio_extn_passthru_is_passt_supported(adev, out)) {
+        if (passthru_is_passt_supported(adev, out)) {
             ALOGV("%s:PASSTHROUGH", __func__);
             out->compr_config.codec->compr_passthr = PASSTHROUGH;
-        } else if (audio_extn_passthru_is_convert_supported(adev, out)) {
+        } else if (passthru_is_convert_supported(adev, out)) {
             ALOGV("%s:PASSTHROUGH CONVERT", __func__);
             out->compr_config.codec->compr_passthr = PASSTHROUGH_CONVERT;
         } else if (out->format == AUDIO_FORMAT_IEC61937) {
@@ -461,7 +478,7 @@ void audio_extn_passthru_update_stream_configuration(
     }
 }
 
-bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out)
+bool passthru_is_passthrough_stream(struct stream_out *out)
 {
     //check passthrough system property
     if (!property_get_bool("vendor.audio.offload.passthrough", false)) {
@@ -475,13 +492,13 @@ bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out)
             return true;
         //direct flag, check supported formats.
         if (out->flags & AUDIO_OUTPUT_FLAG_DIRECT) {
-            if (audio_extn_passthru_is_supported_format(out->format)) {
-                if (platform_is_edid_supported_format(out->dev->platform,
+            if (passthru_is_supported_format(out->format)) {
+                if (fp_platform_is_edid_supported_format(out->dev->platform,
                         out->format)) {
                     ALOGV("%s : return true",__func__);
                     return true;
-                } else if (audio_extn_utils_is_dolby_format(out->format) &&
-                            platform_is_edid_supported_format(out->dev->platform,
+                } else if (fp_audio_extn_utils_is_dolby_format(out->format) &&
+                            fp_platform_is_edid_supported_format(out->dev->platform,
                                 AUDIO_FORMAT_AC3)){
                     //return true for EAC3/EAC3_JOC formats
                     //if sink supports only AC3
@@ -495,16 +512,16 @@ bool audio_extn_passthru_is_passthrough_stream(struct stream_out *out)
     return false;
 }
 
-bool audio_extn_passthru_is_direct_passthrough(struct stream_out *out)
+bool passthru_is_direct_passthrough(struct stream_out *out)
 {
-    if (((out != NULL) && audio_extn_passthru_is_passthrough_stream(out)) &&
-          !audio_extn_passthru_is_convert_supported(out->dev, out))
+    if (((out != NULL) && passthru_is_passthrough_stream(out)) &&
+          !passthru_is_convert_supported(out->dev, out))
         return true;
     else
         return false;
 }
 
-int audio_extn_passthru_get_buffer_size(audio_offload_info_t* info)
+int passthru_get_buffer_size(audio_offload_info_t* info)
 {
     uint32_t fragment_size = MIN_COMPRESS_PASSTHROUGH_FRAGMENT_SIZE;
     char value[PROPERTY_VALUE_MAX] = {0};
@@ -532,17 +549,17 @@ done:
 
 }
 
-int audio_extn_passthru_set_volume(struct stream_out *out,  int mute)
+int passthru_set_volume(struct stream_out *out,  int mute)
 {
-    return platform_set_device_params(out, DEVICE_PARAM_MUTE_ID, mute);
+    return fp_platform_set_device_params(out, DEVICE_PARAM_MUTE_ID, mute);
 }
 
-int audio_extn_passthru_set_latency(struct stream_out *out, int latency)
+int passthru_set_latency(struct stream_out *out, int latency)
 {
-    return platform_set_device_params(out, DEVICE_PARAM_LATENCY_ID, latency);
+    return fp_platform_set_device_params(out, DEVICE_PARAM_LATENCY_ID, latency);
 }
 
-bool audio_extn_passthru_is_supported_backend_edid_cfg(struct audio_device *adev,
+bool passthru_is_supported_backend_edid_cfg(struct audio_device *adev,
                                                    struct stream_out *out)
 {
     struct audio_backend_cfg backend_cfg;
@@ -553,11 +570,11 @@ bool audio_extn_passthru_is_supported_backend_edid_cfg(struct audio_device *adev
     backend_cfg.passthrough_enabled = false;
 
     snd_device_t out_snd_device = SND_DEVICE_NONE;
-    int max_edid_channels = platform_edid_get_max_channels(out->dev->platform);
+    int max_edid_channels = fp_platform_edid_get_max_channels(out->dev->platform);
 
-    out_snd_device = platform_get_output_snd_device(adev->platform, out);
+    out_snd_device = fp_platform_get_output_snd_device(adev->platform, out);
 
-    if (platform_get_codec_backend_cfg(adev, out_snd_device, &backend_cfg)) {
+    if (fp_platform_get_codec_backend_cfg(adev, out_snd_device, &backend_cfg)) {
         ALOGE("%s: ERROR: Unable to get current backend config!!!", __func__);
         return false;
     }
@@ -565,7 +582,7 @@ bool audio_extn_passthru_is_supported_backend_edid_cfg(struct audio_device *adev
     ALOGV("%s:becf: afe: bitwidth %d, samplerate %d channels %d format %d"
           ", device (%s)", __func__,  backend_cfg.bit_width,
           backend_cfg.sample_rate, backend_cfg.channels, backend_cfg.format,
-          platform_get_snd_device_name(out_snd_device));
+          fp_platform_get_snd_device_name(out_snd_device));
 
     /* Check if the channels are supported */
     if (max_edid_channels < (int)backend_cfg.channels) {
@@ -577,7 +594,7 @@ bool audio_extn_passthru_is_supported_backend_edid_cfg(struct audio_device *adev
     }
 
     /* Check if the sample rate supported */
-    if (!platform_is_edid_supported_sample_rate(adev->platform,
+    if (!fp_platform_is_edid_supported_sample_rate(adev->platform,
                                        backend_cfg.sample_rate)) {
 
         ALOGE("%s: ERROR: Unsupported sample rate in passthru mode!!!"

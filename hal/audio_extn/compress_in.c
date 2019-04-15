@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -31,11 +31,11 @@
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
 
-#ifdef COMPRESS_INPUT_ENABLED
 #include <cutils/log.h>
 #include <cutils/properties.h>
 #include <cutils/str_parms.h>
 #include <cutils/log.h>
+#include <pthread.h>
 
 #include "audio_hw.h"
 #include "platform.h"
@@ -89,7 +89,7 @@ static const audio_usecase_t cin_usecases[] = {
 
 static pthread_mutex_t cin_lock = PTHREAD_MUTEX_INITIALIZER;
 
-bool audio_extn_cin_applicable_stream(struct stream_in *in)
+bool cin_applicable_stream(struct stream_in *in)
 {
     if (in->flags & (AUDIO_INPUT_FLAG_COMPRESS | AUDIO_INPUT_FLAG_TIMESTAMP))
         return true;
@@ -97,14 +97,14 @@ bool audio_extn_cin_applicable_stream(struct stream_in *in)
     return false;
 }
 
-/* all audio_extn_cin_xxx calls must be made on an input
- * only after validating that input against audio_extn_cin_attached_usecase
+/* all cin_xxx calls must be made on an input
+ * only after validating that input against cin_attached_usecase
  * except below calls
- * 1. audio_extn_cin_applicable_stream(in)
- * 2. audio_extn_cin_configure_input_stream(in)
+ * 1. cin_applicable_stream(in)
+ * 2. cin_configure_input_stream(in)
  */
 
-bool audio_extn_cin_attached_usecase(audio_usecase_t uc_id)
+bool cin_attached_usecase(audio_usecase_t uc_id)
 {
     unsigned int i;
 
@@ -157,7 +157,7 @@ static void free_cin_usecase(audio_usecase_t uc_id)
     pthread_mutex_unlock(&cin_lock);
 }
 
-bool audio_extn_cin_format_supported(audio_format_t format)
+bool cin_format_supported(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_IEC61937)
         return true;
@@ -165,7 +165,7 @@ bool audio_extn_cin_format_supported(audio_format_t format)
         return false;
 }
 
-size_t audio_extn_cin_get_buffer_size(struct stream_in *in)
+size_t cin_get_buffer_size(struct stream_in *in)
 {
     size_t sz = 0;
     cin_private_data_t *cin_data = (cin_private_data_t *) in->cin_extn;
@@ -180,7 +180,7 @@ size_t audio_extn_cin_get_buffer_size(struct stream_in *in)
     return sz;
 }
 
-int audio_extn_cin_start_input_stream(struct stream_in *in)
+int cin_start_input_stream(struct stream_in *in)
 {
     int ret = -EINVAL;
     struct audio_device *adev = in->dev;
@@ -203,7 +203,7 @@ int audio_extn_cin_start_input_stream(struct stream_in *in)
     return ret;
 }
 
-void audio_extn_cin_stop_input_stream(struct stream_in *in)
+void cin_stop_input_stream(struct stream_in *in)
 {
     cin_private_data_t *cin_data = (cin_private_data_t *) in->cin_extn;
 
@@ -214,7 +214,7 @@ void audio_extn_cin_stop_input_stream(struct stream_in *in)
     }
 }
 
-void audio_extn_cin_close_input_stream(struct stream_in *in)
+void cin_close_input_stream(struct stream_in *in)
 {
     cin_private_data_t *cin_data = (cin_private_data_t *) in->cin_extn;
 
@@ -226,7 +226,7 @@ void audio_extn_cin_close_input_stream(struct stream_in *in)
     free_cin_usecase(in->usecase);
 }
 
-int audio_extn_cin_read(struct stream_in *in, void *buffer,
+int cin_read(struct stream_in *in, void *buffer,
                         size_t bytes, size_t *bytes_read)
 {
     int ret = -EINVAL;
@@ -266,7 +266,7 @@ int audio_extn_cin_read(struct stream_in *in, void *buffer,
     return ret;
 }
 
-int audio_extn_cin_configure_input_stream(struct stream_in *in)
+int cin_configure_input_stream(struct stream_in *in)
 {
     struct audio_device *adev = in->dev;
     struct audio_config config = {.format = 0};
@@ -333,7 +333,6 @@ int audio_extn_cin_configure_input_stream(struct stream_in *in)
     return ret;
 
 err_config:
-    audio_extn_cin_close_input_stream(in);
+    cin_close_input_stream(in);
     return ret;
 }
-#endif /* COMPRESS_INPUT_ENABLED end */
