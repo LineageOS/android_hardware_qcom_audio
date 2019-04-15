@@ -271,3 +271,10 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@4.0-impl \
     android.hardware.audio.effect@4.0 \
     android.hardware.audio.effect@4.0-impl
+
+PRODUCT_PACKAGES_ENG += \
+    VoicePrintTest \
+    VoicePrintDemo
+
+PRODUCT_PACKAGES_DEBUG += \
+    AudioSettings

@@ -1209,4 +1209,6 @@ int audio_extn_get_fluence_parameters(const struct audio_device *adev,
 
 bool audio_extn_is_custom_stereo_enabled();
 void audio_extn_send_dual_mono_mixing_coefficients(struct stream_out *out);
+
+void audio_extn_set_cpu_affinity();
 #endif /* AUDIO_EXTN_H */
