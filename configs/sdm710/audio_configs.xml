@@ -98,7 +98,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="spkr_prot_enabled" value="true" />
         <flag name="ssrec_enabled" value="true" />
         <flag name="usb_offload_burst_mode" value="false" />
-        <flag name="usb_offload_enabled" value="false" />
+        <flag name="usb_offload_enabled" value="true" />
         <flag name="usb_offload_sidetone_vol_enabled" value="false" />
         <flag name="use_deep_buffer_as_primary_output" value="false" />
         <flag name="vbat_enabled" value="true" />
