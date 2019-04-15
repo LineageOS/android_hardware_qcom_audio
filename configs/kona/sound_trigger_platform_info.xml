@@ -112,6 +112,7 @@
             <param execution_mode="ADSP" />
             <param app_type="2" /> <!-- app type used in ACDB -->
             <param in_channels="5"/> <!-- Module input channels -->
+            <param in_channels_lpi="3"/>
             <param load_sound_model_ids="0x00012C1C, 0x0, 0x00012C14" />
             <param unload_sound_model_ids="0x00012C1C, 0x0, 0x00012C15" />
             <param confidence_levels_ids="0x00012C1C, 0x0, 0x00012C07" />
