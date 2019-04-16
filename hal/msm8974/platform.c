@@ -350,6 +350,7 @@ struct platform_data {
     struct  spkr_device_chmap *spkr_ch_map;
     bool use_sprk_default_sample_rate;
     struct listnode custom_mtmx_params_list;
+    struct listnode custom_mtmx_in_params_list;
 };
 
 struct  spkr_device_chmap {
@@ -711,6 +712,11 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOIP_HEADPHONES] = "voip-headphones",
     [SND_DEVICE_IN_VOICE_HEARING_AID] = "hearing-aid-mic",
     [SND_DEVICE_IN_BUS] = "bus-mic",
+    [SND_DEVICE_IN_EC_REF_LOOPBACK] = "ec-ref-loopback",
+    [SND_DEVICE_IN_HANDSET_DMIC_AND_EC_REF_LOOPBACK] = "handset-dmic-and-ec-ref-loopback",
+    [SND_DEVICE_IN_HANDSET_QMIC_AND_EC_REF_LOOPBACK] = "handset-qmic-and-ec-ref-loopback",
+    [SND_DEVICE_IN_HANDSET_6MIC_AND_EC_REF_LOOPBACK] = "handset-6mic-and-ec-ref-loopback",
+    [SND_DEVICE_IN_HANDSET_8MIC_AND_EC_REF_LOOPBACK] = "handset-8mic-and-ec-ref-loopback",
 };
 
 // Platform specific backend bit width table
@@ -1195,6 +1201,11 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     /* For legacy xml file parsing */
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_BUS)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_EC_REF_LOOPBACK)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_DMIC_AND_EC_REF_LOOPBACK)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_QMIC_AND_EC_REF_LOOPBACK)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_6MIC_AND_EC_REF_LOOPBACK)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_8MIC_AND_EC_REF_LOOPBACK)},
 };
 
 static char * backend_tag_table[SND_DEVICE_MAX] = {0};
@@ -3129,6 +3140,7 @@ void *platform_init(struct audio_device *adev)
 
     list_init(&my_data->acdb_meta_key_list);
     list_init(&my_data->custom_mtmx_params_list);
+    list_init(&my_data->custom_mtmx_in_params_list);
 
     ret = audio_extn_is_hifi_audio_supported();
     if (ret || !my_data->is_internal_codec)
@@ -3723,6 +3735,66 @@ static void platform_release_custom_mtmx_params(void *platform)
     }
 }
 
+struct audio_custom_mtmx_in_params *platform_get_custom_mtmx_in_params(void *platform,
+                                    struct audio_custom_mtmx_in_params_info *info)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct listnode *node = NULL;
+    struct audio_custom_mtmx_in_params *params = NULL;
+
+    list_for_each(node, &my_data->custom_mtmx_in_params_list) {
+        params = node_to_item(node, struct audio_custom_mtmx_in_params, list);
+        if (params &&
+            params->in_info.op_channels == info->op_channels &&
+            params->in_info.usecase_id == info->usecase_id) {
+            ALOGV("%s: found params with op_ch %d uc_id %d",
+                  __func__, info->op_channels, info->usecase_id);
+            return params;
+        }
+    }
+
+    ALOGI("%s: no matching param with op_ch %d uc_id %d",
+           __func__, info->op_channels, info->usecase_id);
+    return NULL;
+}
+
+int platform_add_custom_mtmx_in_params(void *platform,
+                                    struct audio_custom_mtmx_in_params_info *info)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_custom_mtmx_in_params *params = NULL;
+    uint32_t size = sizeof(*params);
+
+    if (info->op_channels > AUDIO_CHANNEL_COUNT_MAX) {
+        ALOGE("%s: unusupported channels in %d", __func__, info->op_channels);
+        return -EINVAL;
+    }
+
+    params = (struct audio_custom_mtmx_in_params *)calloc(1, size);
+    if (!params) {
+        ALOGE("%s: failed to add custom mtmx in params", __func__);
+        return -ENOMEM;
+    }
+
+    ALOGI("%s: adding mtmx in params with op_ch %d uc_id %d",
+          __func__, info->op_channels, info->usecase_id);
+
+    params->in_info = *info;
+    list_add_tail(&my_data->custom_mtmx_in_params_list, &params->list);
+    return 0;
+}
+
+static void platform_release_custom_mtmx_in_params(void *platform)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct listnode *node = NULL, *tempnode = NULL;
+
+    list_for_each_safe(node, tempnode, &my_data->custom_mtmx_in_params_list) {
+        list_remove(node);
+        free(node_to_item(node, struct audio_custom_mtmx_in_params, list));
+    }
+}
+
 void platform_release_acdb_metainfo_key(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -3872,6 +3944,7 @@ void platform_deinit(void *platform)
     /* free acdb_meta_key_list */
     platform_release_acdb_metainfo_key(platform);
     platform_release_custom_mtmx_params(platform);
+    platform_release_custom_mtmx_in_params(platform);
 
     if (my_data->acdb_deallocate)
         my_data->acdb_deallocate();
@@ -5409,7 +5482,28 @@ else if (SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device) {
         new_snd_devices[0] = SND_DEVICE_IN_INCALL_REC_RX;
         new_snd_devices[1] = SND_DEVICE_IN_INCALL_REC_TX;
         ret = 0;
+    } else if (SND_DEVICE_IN_HANDSET_DMIC_AND_EC_REF_LOOPBACK == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_IN_HANDSET_DMIC;
+        new_snd_devices[1] = SND_DEVICE_IN_EC_REF_LOOPBACK;
+        ret = 0;
+    } else if (SND_DEVICE_IN_HANDSET_QMIC_AND_EC_REF_LOOPBACK == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_IN_UNPROCESSED_QUAD_MIC;
+        new_snd_devices[1] = SND_DEVICE_IN_EC_REF_LOOPBACK;
+        ret = 0;
+    } else if (SND_DEVICE_IN_HANDSET_6MIC_AND_EC_REF_LOOPBACK == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_IN_HANDSET_6MIC;
+        new_snd_devices[1] = SND_DEVICE_IN_EC_REF_LOOPBACK;
+        ret = 0;
+    } else if (SND_DEVICE_IN_HANDSET_8MIC_AND_EC_REF_LOOPBACK == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_IN_HANDSET_8MIC;
+        new_snd_devices[1] = SND_DEVICE_IN_EC_REF_LOOPBACK;
+        ret = 0;
     }
+
 
     ALOGD("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
         snd_device, *num_devices, *new_snd_devices);
@@ -6088,6 +6182,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
     int channel_count = audio_channel_count_from_in_mask(channel_mask);
     int str_bitwidth = (in == NULL) ? CODEC_BACKEND_DEFAULT_BIT_WIDTH : in->bit_width;
     int sample_rate = (in == NULL) ? 8000 : in->sample_rate;
+    struct audio_usecase *usecase = NULL;
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
@@ -6490,6 +6585,20 @@ snd_device_t platform_get_input_snd_device(void *platform,
                     snd_device = SND_DEVICE_IN_HANDSET_DMIC;
                     platform_set_echo_reference(adev, true, out_device);
                 }
+            }
+        } else if (in_device & AUDIO_DEVICE_IN_LOOPBACK) {
+            if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+                usecase = get_usecase_from_list(adev, USECASE_AUDIO_RECORD);
+                if (usecase == NULL) {
+                    ALOGE("%s: Could not find the record usecase", __func__);
+                    snd_device = SND_DEVICE_NONE;
+                    goto exit;
+                }
+
+                int ch_count = audio_channel_count_from_in_mask(channel_mask);
+                snd_device = audio_extn_get_loopback_snd_device(adev, usecase,
+                                  ch_count);
+                ALOGD("%s: snd device %d", __func__, snd_device);
             }
         }
     } else if (source == AUDIO_SOURCE_FM_TUNER) {
@@ -8762,6 +8871,14 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
         backend_cfg.bit_width= usecase->stream.in->bit_width;
         backend_cfg.format= usecase->stream.in->format;
         backend_cfg.channels = audio_channel_count_from_in_mask(usecase->stream.in->channel_mask);
+        if (is_loopback_input_device(usecase->stream.in->device)) {
+            int bw = platform_get_snd_device_bit_width(snd_device);
+            if ((-ENOSYS != bw) && (backend_cfg.bit_width > (uint32_t)bw)) {
+                backend_cfg.bit_width = bw;
+                ALOGD("%s:txbecf: set bitwidth to %d from platform info",
+                       __func__, bw);
+            }
+        }
     } else {
         backend_cfg.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         backend_cfg.sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;

@@ -2845,6 +2845,20 @@ static void platform_release_custom_mtmx_params(void *platform)
     }
 }
 
+struct audio_custom_mtmx_in_params *platform_get_custom_mtmx_in_params(void *platform,
+                                   struct audio_custom_mtmx_in_params_info *info)
+{
+    ALOGW("%s: not implemented!", __func__);
+    return -ENOSYS;
+}
+
+int platform_add_custom_mtmx_in_params(void *platform,
+                                    struct audio_custom_mtmx_in_params_info *info)
+{
+    ALOGW("%s: not implemented!", __func__);
+    return -ENOSYS;
+}
+
 void platform_release_acdb_metainfo_key(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;

@@ -729,6 +729,14 @@ size_t get_output_period_size(uint32_t sample_rate,
             __FILE__ ":" LITERAL_TO_STRING(__LINE__)\
             " ASSERT_FATAL(" #condition ") failed.")
 
+static inline bool is_loopback_input_device(audio_devices_t device) {
+    if (!audio_is_output_device(device) &&
+         ((device & AUDIO_DEVICE_IN_LOOPBACK) == AUDIO_DEVICE_IN_LOOPBACK))
+        return true;
+    else
+        return false;
+}
+
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the
  * stream_in or stream_out mutex first, followed by the audio_device mutex.
