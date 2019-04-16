@@ -4193,11 +4193,15 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     int snd_device = SND_DEVICE_OUT_SPEAKER;
     int new_snd_device[SND_DEVICE_OUT_END] = {0};
     int i, num_devices = 1;
+    bool is_incall_rec_usecase = false;
+    snd_device_t incall_rec_device;
+
+    if (voice_is_in_call(my_data->adev))
+        is_incall_rec_usecase = voice_is_in_call_rec_stream(usecase->stream.in);
 
     if (usecase->type == PCM_PLAYBACK)
         snd_device = usecase->out_snd_device;
-    else if ((usecase->type == PCM_CAPTURE) &&
-                   voice_is_in_call_rec_stream(usecase->stream.in))
+    else if ((usecase->type == PCM_CAPTURE) && is_incall_rec_usecase)
         snd_device = voice_get_incall_rec_snd_device(usecase->in_snd_device);
     else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
         snd_device = usecase->in_snd_device;
@@ -4211,13 +4215,25 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         return -EINVAL;
     }
 
-    if (platform_split_snd_device(my_data, snd_device,
-                                  &num_devices, new_snd_device) < 0) {
-        new_snd_device[0] = snd_device;
+    if (!is_incall_rec_usecase) {
+        if (platform_split_snd_device(my_data, snd_device,
+                                      &num_devices, new_snd_device) < 0) {
+            new_snd_device[0] = snd_device;
+        }
+    } else {
+        incall_rec_device = voice_get_incall_rec_backend_device(usecase->stream.in);
+        if (platform_split_snd_device(my_data, incall_rec_device,
+                                      &num_devices, new_snd_device) < 0) {
+            new_snd_device[0] = snd_device;
+        }
     }
 
     for (i = 0; i < num_devices; i++) {
-        acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(new_snd_device[i])];
+        if (!is_incall_rec_usecase)
+            acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(new_snd_device[i])];
+        else
+            // Use in_call_rec snd_device to extract the ACDB device ID instead of split snd devices
+            acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(snd_device)];
 
         // Do not use Rx path default app type for TX path
         if ((usecase->type == PCM_CAPTURE) && (app_type == DEFAULT_APP_TYPE_RX_PATH)) {
