@@ -414,7 +414,7 @@ static struct session_s *get_session(int32_t id, int32_t  sessionId, int32_t  io
 
     list_for_each(node, &session_list) {
         session = node_to_item(node, struct session_s, node);
-        if (session->io == ioId) {
+        if (session->id == sessionId) {
             if (session->created_msk & (1 << id)) {
                 ALOGV("get_session() effect %d already created", id);
                 return NULL;
