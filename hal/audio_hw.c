@@ -2208,8 +2208,6 @@ static int stop_output_stream(struct stream_out *out)
     int i, ret = 0;
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
-    bool has_voip_usecase =
-        get_usecase_from_list(adev, USECASE_AUDIO_PLAYBACK_VOIP) != NULL;
 
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
           out->usecase, use_case_table[out->usecase]);
@@ -2259,8 +2257,8 @@ static int stop_output_stream(struct stream_out *out)
           speaker when voip stops.
        2) trigger voip input to reroute when voip output changes to
           hearing aid. */
-    if (has_voip_usecase ||
-            out->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP ||
+        out->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
         struct listnode *node;
         struct audio_usecase *usecase;
         list_for_each(node, &adev->usecase_list) {
