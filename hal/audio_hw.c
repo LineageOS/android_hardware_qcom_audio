@@ -8044,6 +8044,16 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->format = config->format;
 
     in->usecase = USECASE_AUDIO_RECORD;
+
+    if (in->source == AUDIO_SOURCE_FM_TUNER) {
+        if(!get_usecase_from_list(adev, USECASE_AUDIO_RECORD_FM_VIRTUAL))
+            in->usecase = USECASE_AUDIO_RECORD_FM_VIRTUAL;
+        else {
+            ret = -EINVAL;
+            goto err_open;
+        }
+    }
+
     if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
             (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
         is_low_latency = true;
