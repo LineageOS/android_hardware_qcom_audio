@@ -466,6 +466,7 @@ bool on_sndcard_state_update(sndcard_t *s)
     char val[32] = {0};
     bool is_cpe = ((s->card >= CPE_MAGIC_NUM) && (s->card < SLPI_MAGIC_NUM));
     bool is_slpi = (s->card == SLPI_MAGIC_NUM);
+    char *key = NULL;
     /*
      * cpe actual card num is (card - CPE_MAGIC_NUM), so subtract accordingly.
      * SLPI actual fd num is (card - SLPI_MAGIC_NUM), so subtract accordingly.
@@ -473,9 +474,10 @@ bool on_sndcard_state_update(sndcard_t *s)
     snprintf(val, sizeof(val), "%d,%s",
         s->card - (is_cpe ? CPE_MAGIC_NUM : (is_slpi ? SLPI_MAGIC_NUM : 0)),
                 status == CARD_STATUS_ONLINE ? "ONLINE" : "OFFLINE");
-    if (str_parms_add_str(params,
-            is_cpe ? "CPE_STATUS" : (is_slpi ? "SLPI_STATUS" : "SND_CARD_STATUS"),
-                            val) < 0)
+    key = (is_cpe ?  "CPE_STATUS" :
+          (is_slpi ? "SLPI_STATUS" :
+                     "SND_CARD_STATUS"));
+    if (str_parms_add_str(params, key, val) < 0)
         return -1;
 
     int ret = notify(params);
