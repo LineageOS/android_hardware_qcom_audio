@@ -32,7 +32,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include <errno.h>
 #include <pthread.h>
 #include <dlfcn.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <audio_hw.h>
 #include "audio_extn.h"
 #include "platform_api.h"
