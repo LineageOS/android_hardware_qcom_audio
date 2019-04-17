@@ -9,7 +9,7 @@ LOCAL_ARM_MODE := arm
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter msm8974 msm8226 msm8084 msm8610 apq8084 msm8994 msm8992 msm8996 msm8998 apq8098_latv sdm845 sdm710 qcs605 msmnile kona $(MSMSTEPPE) $(TRINKET) lito,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8974 msm8226 msm8084 msm8610 apq8084 msm8994 msm8992 msm8996 msm8998 apq8098_latv sdm845 sdm710 qcs605 msmnile kona sdm660 msm8937 $(MSMSTEPPE) $(TRINKET) lito,$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM = msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -86,19 +86,13 @@ endif
 ifneq ($(filter lito,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_LITO
 endif
-endif
-
-ifneq ($(filter msm8916 msm8909 msm8952 msm8937 thorium msm8953 msmgold sdm660,$(TARGET_BOARD_PLATFORM)),)
-  AUDIO_PLATFORM = msm8916
-  MULTIPLE_HW_VARIANTS_ENABLED := true
-  LOCAL_CFLAGS := -DPLATFORM_MSM8916
-  LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="2"
-  LOCAL_CFLAGS += -DKPI_OPTIMIZE_ENABLED
-ifneq ($(filter msm8909,$(TARGET_BOARD_PLATFORM)),)
-  LOCAL_CFLAGS := -DPLATFORM_MSM8909
-endif
 ifneq ($(filter sdm660,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSMFALCON
+  LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="8"
+endif
+ifneq ($(filter msm8937,$(TARGET_BOARD_PLATFORM)),)
+  LOCAL_CFLAGS := -DPLATFORM_MSM8937
+  LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="8"
 endif
 endif
 
@@ -253,6 +247,8 @@ endif
 #  NonLA feature
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_HDMI)),true)
     LOCAL_CFLAGS += -DAUDIO_EXTERNAL_HDMI_ENABLED
+    LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-parsers
+    LOCAL_SHARED_LIBRARIES += libaudioparsers
 endif
 
 # Hardware specific feature
