@@ -560,7 +560,7 @@ LOCAL_C_INCLUDES := \
     external/tinycompress/include \
     external/expat/lib \
     system/media/audio_utils/include \
-    vendor/qcom/proprietary/mm-audio/audio-parsers/inc \
+    $(TARGET_OUT_HEADERS)/mm-audio/audio-parsers \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
@@ -631,7 +631,6 @@ LOCAL_C_INCLUDES := \
     external/tinycompress/include \
     external/expat/lib \
     system/media/audio_utils/include \
-    vendor/qcom/proprietary/mm-audio/audio-parsers/inc \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
