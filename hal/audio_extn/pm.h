@@ -39,7 +39,7 @@
 #include "audio_hw.h"
 #include <platform.h>
 #include <cutils/properties.h>
-#include <cutils/log.h>
+#include <log/log.h>
 
 
 /* Client name to be registered with PM */

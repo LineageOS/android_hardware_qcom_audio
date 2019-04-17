@@ -46,7 +46,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <dlfcn.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <sound/asound.h>
 #include <cutils/properties.h>
 

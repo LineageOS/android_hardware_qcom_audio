@@ -42,7 +42,7 @@
 #include <stdlib.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/sched_policy.h>
 #include <system/thread_defs.h>
 #include <sound/asound.h>
