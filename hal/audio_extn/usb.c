@@ -1168,14 +1168,6 @@ void usb_add_device(audio_devices_t device, int card)
             usb_card_info->usb_card = card;
             usb_card_info->usb_device_type = device;
             usb_get_sidetone_mixer(usb_card_info);
-            struct usb_card_config *usb_card_info_temp = NULL;
-            usb_card_info_temp = calloc(1, sizeof(struct usb_card_config));
-            if (usb_card_info_temp != NULL) {
-                list_init(&usb_card_info_temp->usb_device_conf_list);
-                if (!usb_get_capability(USB_CAPTURE, usb_card_info_temp, card))
-                    usbmod->is_capture_supported = true;
-                free(usb_card_info_temp);
-            }
             list_add_tail(&usbmod->usb_card_conf_list, &usb_card_info->list);
             goto exit;
         }
