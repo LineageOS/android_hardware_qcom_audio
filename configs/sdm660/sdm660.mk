@@ -34,6 +34,7 @@ AUDIO_FEATURE_ENABLED_3D_AUDIO := false
 AUDIO_FEATURE_ENABLED_VOICE_PRINT := false
 USE_LEGACY_AUDIO_DAEMON := false
 USE_LEGACY_AUDIO_MEASUREMENT := false
+AUDIO_FEATURE_ENABLED_AHAL_EXT := false
 DOLBY_ENABLE := false
 endif
 
@@ -82,26 +83,30 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_mtp.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_wcd9335.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9335.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9340.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_wcd9326.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9326.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_skus.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skus.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_skush.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_skush.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_i2s.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_i2s.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_tasha.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tasha.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_mtp.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_tashalite.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tashalite.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tavil.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths_tasha_skus.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tasha_skus.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_tuning_mixer_tavil.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tavil.txt \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_tuning_mixer_tasha.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer_tasha.txt \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_platform_info_extcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_extcodec.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_platform_info_tasha.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_tasha.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_platform_info_tashalite.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_tashalite.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_platform_info_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_tavil.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_platform_info_tasha_skus.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_tasha_skus.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_platform_info_intcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_intcodec.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_platform_info_skush.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_skush.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/sound_trigger_mixer_paths_wcd9330.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9330.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/sound_trigger_mixer_paths_wcd9335.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9335.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/sound_trigger_mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/sdm660/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)

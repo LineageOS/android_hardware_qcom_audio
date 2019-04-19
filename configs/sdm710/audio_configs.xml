@@ -31,7 +31,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <!-- APM Configs -->
         <property name="audio.deep_buffer.media" value="true"/>
         <property name="audio.offload.disable" value="false"/>
-        <property name="audio.offload.min.duration.secs" value="60"/>
+        <property name="audio.offload.min.duration.secs" value="30"/>
         <property name="audio.offload.video" value="true"/>
         <property name="persist.vendor.audio.sva.conc.enabled" value="false"/>
         <property name="persist.vendor.audio.va_concurrency_enabled" value="false"/>
@@ -40,7 +40,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <property name="vendor.audio.offload.multiple.enabled" value="false"/>
         <property name="vendor.audio.rec.playback.conc.disabled" value="false"/>
         <property name="vendor.voice.conc.fallbackpath" value=""/>
-        <property name="vendor.voice.dsd.playback.conc.disabled" value="true"/>
+        <property name="vendor.voice.dsd.playback.conc.disabled" value="false"/>
         <property name="vendor.voice.path.for.pcm.voip" value="true"/>
         <property name="vendor.voice.playback.conc.disabled" value="false"/>
         <property name="vendor.voice.record.conc.disabled" value="false"/>
@@ -70,16 +70,16 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="a2dp_offload_enabled" value="true" />
         <flag name="anc_headset_enabled" value="true" />
         <flag name="audiosphere_enabled" value="true" />
-        <flag name="battery_listener_enabled" value="true" />
+        <flag name="battery_listener_enabled" value="false" />
         <flag name="compress_capture_enabled" value="false" />
-        <flag name="compress_in_enabled" value="true" />
+        <flag name="compress_in_enabled" value="false" />
         <flag name="compress_metadata_needed" value="true" />
-        <flag name="concurrent_capture_enabled" value="true" />
+        <flag name="concurrent_capture_enabled" value="false" />
         <flag name="custom_stereo_enabled" value="true" />
         <flag name="display_port_enabled" value="true" />
         <flag name="dsm_feedback_enabled" value="false" />
-        <flag name="dynamic_ecns_enabled" value="true" />
-        <flag name="ext_hw_plugin_enabled" value="true" />
+        <flag name="dynamic_ecns_enabled" value="false" />
+        <flag name="ext_hw_plugin_enabled" value="false" />
         <flag name="ext_qdsp_enabled" value="false" />
         <flag name="ext_spkr_enabled" value="false" />
         <flag name="ext_spkr_tfa_enabled" value="false" />
@@ -87,18 +87,18 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="hdmi_edid_enabled" value="true" />
         <flag name="hdmi_passthrough_enabled" value="true" />
         <flag name="hfp_enabled" value="true" />
-        <flag name="hifi_audio_enabled" value="false" />
+        <flag name="hifi_audio_enabled" value="true" />
         <flag name="hwdep_cal_enabled" value="false" />
-        <flag name="incall_music_enabled" value="true" />
-        <flag name="keep_alive_enabled" value="true" />
+        <flag name="incall_music_enabled" value="false" />
+        <flag name="keep_alive_enabled" value="false" />
         <flag name="kpi_optimize_enabled" value="true" />
         <flag name="receiver_aided_stereo" value="true" />
         <flag name="snd_monitor_enabled" value="true" />
         <flag name="source_track_enabled" value="true" />
         <flag name="spkr_prot_enabled" value="true" />
         <flag name="ssrec_enabled" value="true" />
-        <flag name="usb_offload_burst_mode" value="true" />
-        <flag name="usb_offload_enabled" value="true" />
+        <flag name="usb_offload_burst_mode" value="false" />
+        <flag name="usb_offload_enabled" value="false" />
         <flag name="usb_offload_sidetone_vol_enabled" value="false" />
         <flag name="use_deep_buffer_as_primary_output" value="false" />
         <flag name="vbat_enabled" value="true" />

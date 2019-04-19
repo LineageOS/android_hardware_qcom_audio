@@ -450,6 +450,11 @@ snd_device_t voice_get_incall_rec_backend_device(struct stream_in *in)
 {
    snd_device_t incall_record_device = {0};
 
+    if (!in) {
+       ALOGE("%s: input stream is NULL", __func__);
+       return 0;
+    }
+
    switch(in->source) {
     case AUDIO_SOURCE_VOICE_UPLINK:
         incall_record_device = SND_DEVICE_IN_INCALL_REC_TX;
@@ -509,7 +514,7 @@ int voice_set_mic_mute(struct audio_device *adev, bool state)
     adev->voice.mic_mute = state;
 
     if (audio_extn_hfp_is_active(adev)) {
-        err = hfp_set_mic_mute(adev, state);
+        err = audio_extn_hfp_set_mic_mute2(adev, state);
     } else if (adev->mode == AUDIO_MODE_IN_CALL) {
        /* Use device mute if incall music delivery usecase is in progress */
         if (adev->voice.use_device_mute)

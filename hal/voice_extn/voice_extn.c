@@ -87,6 +87,7 @@ struct pcm_config pcm_config_incall_music = {
 static bool voice_extn_compress_voip_enabled = false;
 static bool voice_extn_dynamic_ecns_feature_enabled = false;
 static int voice_extn_is_running_vendor_enhanced_fwk = 1;
+static bool voice_extn_incall_music_enabled = false;
 
 int voice_extn_is_call_state_active(struct audio_device *adev, bool *is_call_active);
 
@@ -398,6 +399,15 @@ void dynamic_ecns_feature_init(bool is_feature_enabled)
                             is_feature_enabled? "ENABLED": " NOT ENABLED");
 }
 
+// START: INCALL_MUSIC ===================================================================
+void incall_music_feature_init(bool is_feature_enabled)
+{
+   voice_extn_incall_music_enabled = is_feature_enabled;
+    ALOGD("%s: ---- Feature INCALL_MUSIC is %s----", __func__,
+                                is_feature_enabled? "ENABLED": "NOT ENABLED");
+}
+// END: INCALL_MUSIC ===================================================================
+
 bool voice_extn_is_dynamic_ecns_enabled()
 {
     return voice_extn_dynamic_ecns_feature_enabled;
@@ -415,6 +425,9 @@ void voice_extn_feature_init(int is_running_with_enhanced_fwk)
                 break;
             case DYNAMIC_ECNS:
                 dynamic_ecns_feature_init(enable);
+                break;
+            case INCALL_MUSIC:
+                incall_music_feature_init(enable);
                 break;
             default:
                 break;
@@ -680,21 +693,23 @@ void voice_extn_in_get_parameters(struct stream_in *in,
     
 }
 
-#ifdef INCALL_MUSIC_ENABLED
+
 int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
                                                   struct stream_out *out)
 {
-    out->usecase = USECASE_INCALL_MUSIC_UPLINK;
-    out->config = pcm_config_incall_music;
-    //FIXME: add support for MONO stream configuration when audioflinger mixer supports it
-    out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
-    out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
-    out->config.rate = out->sample_rate;
+    if(voice_extn_incall_music_enabled) {
+        out->usecase = USECASE_INCALL_MUSIC_UPLINK;
+        out->config = pcm_config_incall_music;
+        //FIXME: add support for MONO stream configuration when audioflinger mixer supports it
+        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
+        out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+        out->config.rate = out->sample_rate;
 
-    ALOGV("%s: mode=%d, usecase id=%d", __func__, adev->mode, out->usecase);
+        ALOGV("%s: mode=%d, usecase id=%d", __func__, adev->mode, out->usecase);
+    }
     return 0;
 }
-#endif
+
 
 int voice_extn_compress_voip_set_parameters(struct audio_device *adev,
                                              struct str_parms *parms) 

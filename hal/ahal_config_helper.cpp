@@ -98,6 +98,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
         true,        /* A2DP_OFFLOAD */
         true,        /* HFP */
         true,        /* VBAT */
+        false,       /* WSA*/
         true,        /* EXT_HW_PLUGIN */
         false,       /* RECORD_PLAY_CONCURRENCY */
         true,        /* HDMI_PASSTHROUGH */
@@ -107,7 +108,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
         true,        /* COMPRESS_METADATA_NEEDED */
         false,       /* INCALL_MUSIC */
         false,       /* COMPRESS_VOIP */
-        true,        /* DYNAMIC_ECNS */
+        true         /* DYNAMIC_ECNS */
     };
 #else
     if (isVendorEnhancedFwk) {
@@ -141,6 +142,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
             true,        /* A2DP_OFFLOAD */
             true,        /* HFP */
             true,        /* VBAT */
+            false,       /* WSA*/
             true,        /* EXT_HW_PLUGIN */
             false,       /* RECORD_PLAY_CONCURRENCY */
             true,        /* HDMI_PASSTHROUGH */
@@ -183,6 +185,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
             true,        /* A2DP_OFFLOAD */
             true,        /* HFP */
             false,       /* VBAT */
+            false,       /* WSA*/
             false,       /* EXT_HW_PLUGIN */
             false,       /* RECORD_PLAY_CONCURRENCY */
             false,       /* HDMI_PASSTHROUGH */
@@ -192,7 +195,7 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
             false,       /* COMPRESS_METADATA_NEEDED */
             true,        /* INCALL_MUSIC */
             false,       /* COMPRESS_VOIP */
-            false,       /* DYNAMIC_ECNS */
+            false        /* DYNAMIC_ECNS */
         };
     }
 #endif

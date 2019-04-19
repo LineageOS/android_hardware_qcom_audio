@@ -102,6 +102,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="usb_offload_sidetone_vol_enabled" value="false" />
         <flag name="use_deep_buffer_as_primary_output" value="false" />
         <flag name="vbat_enabled" value="true" />
+        <flag name="wsa_enabled" value="false" />
 
         <!-- Common configs between APM and AHAL -->
         <flag name="afe_proxy_enabled" value="true" />

@@ -48,9 +48,7 @@
 #endif
 
 #ifdef AUDIO_EXTERNAL_HDMI_ENABLED
-#ifdef HDMI_PASSTHROUGH_ENABLED
 #include "audio_parsers.h"
-#endif
 #endif
 
 #ifdef LINUX_ENABLED
@@ -129,9 +127,7 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_NON_BLOCKING),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_HW_AV_SYNC),
-#ifdef INCALL_MUSIC_ENABLED
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_INCALL_MUSIC),
-#endif
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_TIMESTAMP),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_VOIP_RX),
@@ -1786,7 +1782,6 @@ void get_default_compressed_channel_status(
      channel_status[3] |= SR_48000;
 }
 
-#ifdef HDMI_PASSTHROUGH_ENABLED
 int32_t get_compressed_channel_status(void *audio_stream_data,
                                                    uint32_t audio_frame_size,
                                                    unsigned char *channel_status,
@@ -1814,8 +1809,6 @@ int32_t get_compressed_channel_status(void *audio_stream_data,
      return ret;
 
 }
-
-#endif
 
 void get_lpcm_channel_status(uint32_t sampleRate,
                                                   unsigned char *channel_status)
@@ -1873,15 +1866,14 @@ void audio_utils_set_hdmi_channel_status(struct stream_out *out, char * buffer, 
     const char *mixer_ctl_name = "IEC958 Playback PCM Stream";
     struct mixer_ctl *ctl;
     ALOGV("%s: buffer %s bytes %zd", __func__, buffer, bytes);
-#ifdef HDMI_PASSTHROUGH_ENABLED
+
     if (audio_extn_utils_is_dolby_format(out->format) &&
         /*TODO:Extend code to support DTS passthrough*/
         /*set compressed channel status bits*/
-        audio_extn_passthru_is_passthrough_stream(out)){
+        audio_extn_passthru_is_passthrough_stream(out) &&
+        audio_extn_is_hdmi_passthru_enabled()) {
         get_compressed_channel_status(buffer, bytes, channel_status, AUDIO_PARSER_CODEC_AC3);
-    } else
-#endif
-    {
+    } else {
         /*set channel status bit for LPCM*/
         get_lpcm_channel_status(out->sample_rate, channel_status);
     }

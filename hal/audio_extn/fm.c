@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -31,6 +31,7 @@
 #include "platform_api.h"
 #include <stdlib.h>
 #include <cutils/str_parms.h>
+#include <audio_extn.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -368,21 +369,21 @@ void fm_set_parameters(struct audio_device *adev,
         ALOGV("%s: set_fm_volume from param restore volume", __func__);
     }
 
-#ifdef RECORD_PLAY_CONCURRENCY
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_REC_PLAY_CONC,
+    if(audio_extn_is_record_play_concurrency_enabled()) {
+        ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_REC_PLAY_CONC,
                                value, sizeof(value));
-    if ((ret >= 0)
-          && (fmmod.is_fm_running == true)) {
+        if ((ret >= 0)
+              && (fmmod.is_fm_running == true)) {
 
-        if (!strncmp("true", value, sizeof("true")))
-            ALOGD("Record play concurrency ON Forcing FM device reroute");
-        else
-            ALOGD("Record play concurrency OFF Forcing FM device reroute");
+            if (!strncmp("true", value, sizeof("true")))
+                ALOGD("Record play concurrency ON Forcing FM device reroute");
+            else
+                ALOGD("Record play concurrency OFF Forcing FM device reroute");
 
-        select_devices(adev, USECASE_AUDIO_PLAYBACK_FM);
-        fm_set_volume(adev, fmmod.fm_volume, false);
+            select_devices(adev, USECASE_AUDIO_PLAYBACK_FM);
+            fm_set_volume(adev, fmmod.fm_volume, false);
+        }
     }
-#endif
 exit:
     ALOGV("%s: exit", __func__);
 }
