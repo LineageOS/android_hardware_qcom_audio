@@ -62,8 +62,8 @@
 #define ADSP_DEC_SERVICE_ID 1
 #define ADSP_EVENT_ID_RTIC            0x00013239
 #define ADSP_EVENT_ID_RTIC_FAIL       0x0001323A
-#define TRUMPET_TOPOLOGY 0x11000099
-#define TRUMPET_MODULE 0x0001099A
+#define TRUMPET_TOPOLOGY              0x11000099
+#define TRUMPET_MODULE                0x0001099A
 
 struct lib_fd_info {
     int32_t fd;
@@ -212,10 +212,12 @@ int audio_extn_ip_hdlr_copp_update_cal_info(void *cfg, void *data)
     return ret;
 
 }
+
 bool audio_extn_ip_hdlr_intf_supported_for_copp(void *platform)
 {
     return adm_event_enable;
 }
+
 bool audio_extn_ip_hdlr_intf_supported(audio_format_t format,
                     bool is_direct_passthrough,
                     bool is_transcode_loopback)
@@ -224,28 +226,30 @@ bool audio_extn_ip_hdlr_intf_supported(audio_format_t format,
     if ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_DOLBY_TRUEHD) {
         asm_event_enable = true;
         return true;
+    } else if ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_MAT) {
+        asm_event_enable = true;
+        return true;
     } else if (!is_direct_passthrough && !audio_extn_qaf_is_enabled() &&
             (((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_E_AC3) ||
              ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AC3))) {
         asm_event_enable = true;
         return true;
-    } else if (is_transcode_loopback &&
+   } else if (is_transcode_loopback &&
             (((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_E_AC3) ||
              ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AC3))) {
-        asm_event_enable = true;
-        return true;
-    } else {
-        asm_event_enable = false;
-        return false;
-    }
+       asm_event_enable = true;
+       return true;
+   } else {
+       asm_event_enable = false;
+       return false;
 }
 
 int audio_extn_ip_hdlr_intf_event_adm(void *stream_handle __unused,
                                void *payload, void *ip_hdlr_handle )
 {
-    ALOGVV("%s:[%d] handle = %p\n",__func__, ip_hdlr->ref_cnt, ip_hdlr_handle);
+        ALOGVV("%s:[%d] handle = %p\n",__func__, ip_hdlr->ref_cnt, ip_hdlr_handle);
 
-    return ip_hdlr->event_adm(ip_hdlr_handle, payload);
+        return ip_hdlr->event_adm(ip_hdlr_handle, payload);
 }
 
 int audio_extn_ip_hdlr_intf_event(void *stream_handle __unused, void *payload, void *ip_hdlr_handle )
@@ -887,9 +891,6 @@ int audio_extn_ip_hdlr_intf_deinit(void *handle)
         return -EINVAL;
     }
     ALOGD("%s:[%d] handle = %p",__func__, ip_hdlr->ref_cnt, handle);
-    ret = ip_hdlr->deinit(handle);
-    if (ret < 0)
-        ALOGE("%s:[%d] deinit failed ret = %d", __func__, ip_hdlr->ref_cnt, ret);
 
     if (--ip_hdlr->ref_cnt == 0) {
         ip_hdlr->get_lib_fd(handle, &lib_fd.fd);
@@ -917,8 +918,11 @@ int audio_extn_ip_hdlr_intf_deinit(void *handle)
             goto dlclose;
         }
 
-        ret = ip_hdlr->deinit_lib(ip_hdlr->ip_lib_handle);
+        ret = ip_hdlr->deinit_lib(handle);
         ip_hdlr->lib_fd_created = false;
+        ret = ip_hdlr->deinit(handle);
+        if (ret < 0)
+            ALOGE("%s:[%d] deinit failed ret = %d", __func__, ip_hdlr->ref_cnt, ret);
         if (ip_hdlr->lib_hdl)
             dlclose(ip_hdlr->lib_hdl);
 dlclose:
