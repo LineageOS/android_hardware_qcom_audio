@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <cutils/log.h>
 #include <dlfcn.h>
+#include <pthread.h>
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
