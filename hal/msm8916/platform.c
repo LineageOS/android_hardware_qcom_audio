@@ -2760,7 +2760,7 @@ acdb_init_fail:
             ALOGD("%s:DSD playback is supported", __func__);
             my_data->is_dsd_supported = true;
             my_data->is_asrc_supported = true;
-            platform_set_native_support(NATIVE_AUDIO_MODE_MULTIPLE_44_1);
+            platform_set_native_support(NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC);
         }
     }
 
@@ -3382,12 +3382,14 @@ int platform_get_snd_device_bit_width(snd_device_t snd_device)
 int platform_set_native_support(int na_mode)
 {
     if (NATIVE_AUDIO_MODE_SRC == na_mode || NATIVE_AUDIO_MODE_TRUE_44_1 == na_mode
-        || NATIVE_AUDIO_MODE_MULTIPLE_44_1 == na_mode) {
+        || NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC == na_mode
+        || NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_DSP == na_mode) {
         na_props.platform_na_prop_enabled = na_props.ui_na_prop_enabled = true;
         na_props.na_mode = na_mode;
         ALOGD("%s:napb: native audio playback enabled in (%s) mode", __func__,
               ((na_mode == NATIVE_AUDIO_MODE_SRC)?"SRC":
-               (na_mode == NATIVE_AUDIO_MODE_TRUE_44_1)?"True":"Multiple"));
+               (na_mode == NATIVE_AUDIO_MODE_TRUE_44_1)?"True":
+               (na_mode == NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC)?"Multiple_Mix_Codec":"Multiple_Mix_DSP"));
     } else {
         na_props.platform_na_prop_enabled = false;
         na_props.na_mode = NATIVE_AUDIO_MODE_INVALID;
@@ -3459,8 +3461,10 @@ int native_audio_set_params(struct platform_data *platform,
             mode = NATIVE_AUDIO_MODE_SRC;
         else if (value && !strncmp(value, "true", sizeof("true")))
             mode = NATIVE_AUDIO_MODE_TRUE_44_1;
-        else if (value && !strncmp(value, "multiple", sizeof("multiple")))
-            mode = NATIVE_AUDIO_MODE_MULTIPLE_44_1;
+        else if (value && !strncmp(value, "multiple_mix_codec", sizeof("multiple")))
+            mode = NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC;
+        else if (value && !strncmp(value, "multiple_mix_dsp", sizeof("multiple")))
+            mode = NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_DSP;
         else {
             mode = NATIVE_AUDIO_MODE_INVALID;
             ALOGE("%s:napb:native_audio_mode in platform info xml,invalid mode string",
@@ -4359,7 +4363,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (NATIVE_AUDIO_MODE_SRC == na_mode &&
                    OUTPUT_SAMPLING_RATE_44100 == sample_rate) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
-        } else if (NATIVE_AUDIO_MODE_MULTIPLE_44_1 == na_mode &&
+        } else if (NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC == na_mode &&
                    (sample_rate % OUTPUT_SAMPLING_RATE_44100 == 0) &&
                    (out->format != AUDIO_FORMAT_DSD)) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
@@ -6429,7 +6433,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                  ALOGD("%s:becf: afe: true napb active set rate to 44.1 khz",
                        __func__);
             }
-        } else if (na_mode != NATIVE_AUDIO_MODE_MULTIPLE_44_1) {
+        } else if (na_mode != NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC) {
             /*
              * Map native sampling rates to upper limit range
              * if multiple of native sampling rates are not supported.
