@@ -207,12 +207,13 @@ int audio_extn_get_fluence_parameters(const struct audio_device *adev,
 #endif
 
 #ifndef AFE_PROXY_ENABLED
-#define audio_extn_set_afe_proxy_channel_mixer(adev,channel_count)     (0)
+#define audio_extn_set_afe_proxy_channel_mixer(adev,channel_count, snd_device)     (0)
 #define audio_extn_read_afe_proxy_channel_masks(out)                   (0)
 #define audio_extn_get_afe_proxy_channel_count()                       (0)
 #else
 int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev,
-                                                    int channel_count);
+                                                    int channel_count,
+                                                    snd_device_t snd_device);
 int32_t audio_extn_read_afe_proxy_channel_masks(struct stream_out *out);
 int32_t audio_extn_get_afe_proxy_channel_count();
 
@@ -1142,4 +1143,5 @@ void audio_extn_send_dual_mono_mixing_coefficients(struct stream_out *out);
 void audio_extn_set_custom_mtmx_params(struct audio_device *adev,
                                         struct audio_usecase *usecase,
                                         bool enable);
+void audio_extn_set_cpu_affinity();
 #endif /* AUDIO_EXTN_H */

@@ -4320,8 +4320,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
                devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
         ALOGD("%s: setting USB hadset channel capability(2) for Proxy", __func__);
-        audio_extn_set_afe_proxy_channel_mixer(adev, 2);
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
+        audio_extn_set_afe_proxy_channel_mixer(adev, 2, snd_device);
     } else if (devices &
                 (AUDIO_DEVICE_OUT_USB_DEVICE |
                  AUDIO_DEVICE_OUT_USB_HEADSET)) {
@@ -4336,8 +4336,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     } else if (devices & AUDIO_DEVICE_OUT_PROXY) {
         channel_count = audio_extn_get_afe_proxy_channel_count();
         ALOGD("%s: setting sink capability(%d) for Proxy", __func__, channel_count);
-        audio_extn_set_afe_proxy_channel_mixer(adev, channel_count);
         snd_device = SND_DEVICE_OUT_AFE_PROXY;
+        audio_extn_set_afe_proxy_channel_mixer(adev, channel_count, snd_device);
     } else {
         ALOGE("%s: Unknown device(s) %#x", __func__, devices);
     }
@@ -4679,9 +4679,11 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         } else if (out_device &
                     (AUDIO_DEVICE_OUT_USB_DEVICE |
                      AUDIO_DEVICE_OUT_USB_HEADSET)) {
-          if (audio_extn_usb_is_capture_supported()) {
-              snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
-          }
+            if (audio_extn_usb_is_capture_supported()) {
+                snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
+            } else {
+                snd_device = SND_DEVICE_IN_HANDSET_MIC;
+            }
         }
     } else if (my_data->use_generic_handset == true &&  //     system prop is enabled
                (my_data->source_mic_type & SOURCE_QUAD_MIC) &&  // AND 4mic is available
@@ -6197,7 +6199,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
 
         if ((backend_idx == HDMI_RX_BACKEND) ||
                 (backend_idx == DISP_PORT_RX_BACKEND))
-            platform_set_edid_channels_configuration(adev->platform, channels, backend_idx);
+            platform_set_edid_channels_configuration(adev->platform, channels, backend_idx, snd_device);
 
         ALOGD("%s:becf: afe: %s set to %s ", __func__,
                my_data->current_backend_cfg[backend_idx].channels_mixer_ctl,
@@ -6596,6 +6598,8 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
 
         if (channels != my_data->current_backend_cfg[backend_idx].channels)
             channels_updated = true;
+
+        platform_set_edid_channels_configuration(adev->platform, channels, backend_idx, snd_device);
     }
 
     ALOGI("%s:becf: afe: Codec selected backend: %d updated bit width: %d and sample rate: %d",
@@ -7241,7 +7245,7 @@ int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel
                 return -1;
         }
     }
-    ret = platform_set_channel_map(platform, channels, channel_map, snd_id);
+    ret = platform_set_channel_map(platform, channels, channel_map, snd_id, -1);
     return ret;
 }
 
@@ -7355,13 +7359,15 @@ int platform_set_channel_allocation(void *platform, int channel_alloc)
     return ret;
 }
 
-int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd_id)
+int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd_id, int be_idx)
 {
-    struct mixer_ctl *ctl;
+    struct mixer_ctl *ctl, *be_ctl = NULL;
     char mixer_ctl_name[44] = {0}; // max length of name is 44 as defined
+    char be_mixer_ctl_name[] = "Backend Device Channel Map";
     int ret;
     unsigned int i;
     long set_values[FCC_8] = {0};
+    long be_set_values[FCC_8 + 1] = {0};
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     ALOGV("%s channel_count:%d",__func__, ch_count);
@@ -7377,7 +7383,19 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     if (snd_id >= 0) {
         snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "Playback Channel Map%d", snd_id);
     } else {
-        strlcpy(mixer_ctl_name, "Playback Device Channel Map", sizeof(mixer_ctl_name));
+        if (be_idx >=0) {
+            be_ctl = mixer_get_ctl_by_name(adev->mixer, be_mixer_ctl_name);
+            if (!be_ctl) {
+                ALOGD("%s: Could not get ctl for mixer cmd - %s, using default control",
+                       __func__, be_mixer_ctl_name);
+                strlcpy(mixer_ctl_name, "Playback Device Channel Map", sizeof(mixer_ctl_name));
+                be_idx = -1;
+            } else {
+                strlcpy(mixer_ctl_name, "Backend Device Channel Map", sizeof(mixer_ctl_name));
+            }
+        } else {
+            strlcpy(mixer_ctl_name, "Playback Device Channel Map", sizeof(mixer_ctl_name));
+        }
     }
 
     ALOGD("%s mixer_ctl_name:%s", __func__, mixer_ctl_name);
@@ -7396,7 +7414,13 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
         set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
         set_values[5], set_values[6], set_values[7], ch_count);
 
-    ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+    if (be_idx >= 0) {
+        be_set_values[0] = be_idx;
+        memcpy(&be_set_values[1], set_values, sizeof(long) * ch_count);
+        ret = mixer_ctl_set_array(ctl, be_set_values, ARRAY_SIZE(be_set_values));
+    } else {
+        ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+    }
     if (ret < 0) {
         ALOGE("%s: Could not set ctl, error:%d ch_count:%d",
               __func__, ret, ch_count);
@@ -7561,7 +7585,7 @@ int platform_edid_get_highest_supported_sr(void *platform)
     return 0;
 }
 
-int platform_set_edid_channels_configuration(void *platform, int channels, int backend_idx) {
+int platform_set_edid_channels_configuration(void *platform, int channels, int backend_idx, snd_device_t snd_device) {
 
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
@@ -7570,6 +7594,7 @@ int platform_set_edid_channels_configuration(void *platform, int channels, int b
     int i, ret;
     char default_channelMap[MAX_CHANNELS_SUPPORTED] = {0};
     struct audio_device_config_param *adev_device_cfg_ptr = adev->device_cfg_params;
+    int be_idx = -1;
 
     if ((backend_idx != HDMI_RX_BACKEND) &&
             (backend_idx != DISP_PORT_RX_BACKEND)) {
@@ -7577,6 +7602,7 @@ int platform_set_edid_channels_configuration(void *platform, int channels, int b
         return -EINVAL;
     }
 
+    be_idx = platform_get_snd_device_backend_index(snd_device);
     ret = platform_get_edid_info(platform);
     info = (edid_audio_info *)my_data->edid_info;
     adev_device_cfg_ptr += backend_idx;
@@ -7599,9 +7625,9 @@ int platform_set_edid_channels_configuration(void *platform, int channels, int b
              */
             if (adev_device_cfg_ptr->use_client_dev_cfg) {
                 platform_set_channel_map(platform, adev_device_cfg_ptr->dev_cfg_params.channels,
-                                   (char *)adev_device_cfg_ptr->dev_cfg_params.channel_map, -1);
+                                   (char *)adev_device_cfg_ptr->dev_cfg_params.channel_map, -1, be_idx);
             } else {
-                platform_set_channel_map(platform, channel_count, info->channel_map, -1);
+                platform_set_channel_map(platform, channel_count, info->channel_map, -1, be_idx);
             }
 
             if (adev_device_cfg_ptr->use_client_dev_cfg) {
@@ -7620,7 +7646,7 @@ int platform_set_edid_channels_configuration(void *platform, int channels, int b
                 default_channelMap[0] = PCM_CHANNEL_FL;
                 default_channelMap[1] = PCM_CHANNEL_FR;
             }
-            platform_set_channel_map(platform,2,default_channelMap,-1);
+            platform_set_channel_map(platform, 2, default_channelMap, -1, be_idx);
             platform_set_channel_allocation(platform,0);
         }
     }

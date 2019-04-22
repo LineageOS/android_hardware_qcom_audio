@@ -1059,34 +1059,37 @@ int enable_snd_device(struct audio_device *adev,
         return -EINVAL;
     }
 
-    adev->snd_dev_ref_cnt[snd_device]++;
-
-    if(platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0 ) {
+    if (platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0 ) {
         ALOGE("%s: Invalid sound device returned", __func__);
         return -EINVAL;
     }
-    if (adev->snd_dev_ref_cnt[snd_device] > 1) {
+
+    adev->snd_dev_ref_cnt[snd_device]++;
+
+    if ((adev->snd_dev_ref_cnt[snd_device] > 1) &&
+            (platform_split_snd_device(adev->platform,
+                snd_device,
+                &num_devices,
+                new_snd_devices) != 0)) {
         ALOGV("%s: snd_device(%d: %s) is already active",
               __func__, snd_device, device_name);
         return 0;
     }
-
 
     if (audio_extn_spkr_prot_is_enabled())
          audio_extn_spkr_prot_calib_cancel(adev);
 
     if (platform_can_enable_spkr_prot_on_device(snd_device) &&
          audio_extn_spkr_prot_is_enabled()) {
-       if (platform_get_spkr_prot_acdb_id(snd_device) < 0) {
-           adev->snd_dev_ref_cnt[snd_device]--;
-           return -EINVAL;
-       }
-       audio_extn_dev_arbi_acquire(snd_device);
-       if (audio_extn_spkr_prot_start_processing(snd_device)) {
+        if (platform_get_spkr_prot_acdb_id(snd_device) < 0) {
+            goto err;
+        }
+        audio_extn_dev_arbi_acquire(snd_device);
+        if (audio_extn_spkr_prot_start_processing(snd_device)) {
             ALOGE("%s: spkr_start_processing failed", __func__);
             audio_extn_dev_arbi_release(snd_device);
-            return -EINVAL;
-        }
+            goto err;
+         }
     } else if (platform_split_snd_device(adev->platform,
                                          snd_device,
                                          &num_devices,
@@ -1098,11 +1101,11 @@ int enable_snd_device(struct audio_device *adev,
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
 
 
-       if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
-           (audio_extn_a2dp_start_playback() < 0)) {
-           ALOGE(" fail to configure A2dp control path ");
-           return -EINVAL;
-       }
+        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
+            (audio_extn_a2dp_start_playback() < 0)) {
+            ALOGE(" fail to configure A2dp control path ");
+            goto err;
+        }
 
         /* due to the possibility of calibration overwrite between listen
             and audio, notify listen hal before audio calibration is sent */
@@ -1111,12 +1114,11 @@ int enable_snd_device(struct audio_device *adev,
         audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_BUSY);
         if (platform_get_snd_device_acdb_id(snd_device) < 0) {
-            adev->snd_dev_ref_cnt[snd_device]--;
             audio_extn_sound_trigger_update_device_status(snd_device,
                                             ST_EVENT_SND_DEVICE_FREE);
             audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_FREE);
-            return -EINVAL;
+            goto err;
         }
         audio_extn_dev_arbi_acquire(snd_device);
         audio_route_apply_and_update_path(adev->audio_route, device_name);
@@ -1138,6 +1140,9 @@ int enable_snd_device(struct audio_device *adev,
         }
     }
     return 0;
+err:
+    adev->snd_dev_ref_cnt[snd_device]--;
+    return -EINVAL;
 }
 
 int disable_snd_device(struct audio_device *adev,
@@ -1152,17 +1157,18 @@ int disable_snd_device(struct audio_device *adev,
         ALOGE("%s: Invalid sound device %d", __func__, snd_device);
         return -EINVAL;
     }
+
+    if (platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0) {
+        ALOGE("%s: Invalid sound device returned", __func__);
+        return -EINVAL;
+    }
+
     if (adev->snd_dev_ref_cnt[snd_device] <= 0) {
         ALOGE("%s: device ref cnt is already 0", __func__);
         return -EINVAL;
     }
 
     adev->snd_dev_ref_cnt[snd_device]--;
-
-    if(platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0) {
-        ALOGE("%s: Invalid sound device returned", __func__);
-        return -EINVAL;
-    }
 
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
@@ -1187,29 +1193,38 @@ int disable_snd_device(struct audio_device *adev,
 
         if (SND_DEVICE_OUT_BT_A2DP == snd_device)
             audio_extn_a2dp_stop_playback();
-
-        if (snd_device == SND_DEVICE_OUT_HDMI || snd_device == SND_DEVICE_OUT_DISPLAY_PORT)
+        else if (snd_device == SND_DEVICE_OUT_HDMI ||
+                snd_device == SND_DEVICE_OUT_DISPLAY_PORT)
             adev->is_channel_status_set = false;
         else if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
-                 adev->native_playback_enabled) {
+                adev->native_playback_enabled) {
             ALOGD("%s: %d: napb: disabling native mode in hardware",
                   __func__, __LINE__);
             audio_route_reset_and_update_path(adev->audio_route,
                                               "true-native-mode");
             adev->native_playback_enabled = false;
         } else if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
-                 adev->asrc_mode_enabled) {
+                adev->asrc_mode_enabled) {
             ALOGD("%s: %d: disabling asrc mode in hardware", __func__, __LINE__);
             disable_asrc_mode(adev);
             audio_route_apply_and_update_path(adev->audio_route, "hph-lowpower-mode");
-        }
-        if (((snd_device == SND_DEVICE_IN_HANDSET_6MIC) ||
-            (snd_device == SND_DEVICE_IN_HANDSET_QMIC)) &&
-            (audio_extn_ffv_get_stream() == adev->active_input)) {
+        } else if (((snd_device == SND_DEVICE_IN_HANDSET_6MIC) ||
+                    (snd_device == SND_DEVICE_IN_HANDSET_QMIC)) &&
+                (audio_extn_ffv_get_stream() == adev->active_input)) {
             ALOGD("%s: deinit ec ref loopback", __func__);
             audio_extn_ffv_deinit_ec_ref_loopback(adev, snd_device);
         }
+
         audio_extn_utils_release_snd_device(snd_device);
+    } else {
+        if (platform_split_snd_device(adev->platform,
+                                         snd_device,
+                                         &num_devices,
+                                         new_snd_devices) == 0) {
+            for (i = 0; i < num_devices; i++) {
+                adev->snd_dev_ref_cnt[new_snd_devices[i]]--;
+            }
+        }
     }
 
     return 0;
@@ -1441,14 +1456,10 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                 if (platform_split_snd_device(adev->platform, usecase->out_snd_device,
                                                &num_devices, split_snd_devices) == 0) {
                     adev->snd_dev_ref_cnt[usecase->out_snd_device]--;
-                    if (adev->snd_dev_ref_cnt[usecase->out_snd_device] == 0) {
-                        ALOGD("%s: disabling snd_device(%d)", __func__, usecase->out_snd_device);
-                        for (i = 0; i < num_devices; i++) {
-                            /* Disable devices that do not match with derived sound device */
-                            if (split_snd_devices[i] != derive_snd_device[usecase->id])
-                                disable_snd_device(adev, split_snd_devices[i]);
-                        }
-                        audio_extn_utils_release_snd_device(usecase->out_snd_device);
+                    for (i = 0; i < num_devices; i++) {
+                        /* Disable devices that do not match with derived sound device */
+                        if (split_snd_devices[i] != derive_snd_device[usecase->id])
+                            disable_snd_device(adev, split_snd_devices[i]);
                     }
                 } else {
                     disable_snd_device(adev, usecase->out_snd_device);
@@ -7074,6 +7085,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     struct listnode *node;
     struct audio_usecase *usecase = NULL;
     int ret = 0;
+
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
         ALOGD("%s: mode %d\n", __func__, mode);
@@ -7100,6 +7112,11 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
             voice_stop_call(adev);
             platform_set_gsm_mode(adev->platform, false);
             adev->current_call_output = NULL;
+            // restore device for other active usecases after stop call
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                select_devices(adev, usecase->id);
+            }
         }
     }
     pthread_mutex_unlock(&adev->lock);
