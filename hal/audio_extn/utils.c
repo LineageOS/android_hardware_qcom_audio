@@ -2274,7 +2274,7 @@ bool audio_extn_utils_resolve_config_file(char file_name[MIXER_PATH_MAX_LENGTH])
                  kConfigLocationList[i],
                  file_name);
         if (F_OK == access(full_config_path, 0)) {
-            strcpy(file_name, full_config_path);
+            strlcpy(file_name, full_config_path, MIXER_PATH_MAX_LENGTH);
             return true;
         }
     }

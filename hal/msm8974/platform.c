@@ -3945,6 +3945,10 @@ void platform_add_operator_specific_device(snd_device_t snd_device,
     }
 
     device = (struct operator_specific_device *)calloc(1, sizeof(struct operator_specific_device));
+    if (device == NULL) {
+        ALOGE("%s: memory allocation failed", __func__);
+        return;
+    }
 
     device->operator = strdup(operator);
     device->mixer_path = strdup(mixer_path);
@@ -6760,12 +6764,18 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
                             value, len);
     if (err >= 0) {
         struct operator_info *info;
-        char *str = value;
+        char *str = value, *context = NULL;
         char *name;
 
         str_parms_del(parms, PLATFORM_CONFIG_KEY_OPERATOR_INFO);
         info = (struct operator_info *)calloc(1, sizeof(struct operator_info));
-        name = strtok(str, ";");
+        name = strtok_r(str, ";", &context);
+        if ((info == NULL) || (name == NULL)) {
+            ret = -EINVAL;
+            ALOGE("%s invalid info or name", __func__);
+            goto done;
+        }
+
         info->name = strdup(name);
         info->mccmnc = strdup(str + strlen(name) + 1);
 

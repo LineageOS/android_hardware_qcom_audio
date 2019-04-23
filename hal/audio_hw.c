@@ -8338,13 +8338,13 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     else
         audio_extn_sound_trigger_update_ec_ref_status(false);
 
-    error_log_destroy(in->error_log);
-    in->error_log = NULL;
-
     if (in == NULL) {
         ALOGE("%s: audio_stream_in ptr is NULL", __func__);
         return;
     }
+    error_log_destroy(in->error_log);
+    in->error_log = NULL;
+
 
     if (in->usecase == USECASE_COMPRESS_VOIP_CALL) {
         pthread_mutex_lock(&adev->lock);

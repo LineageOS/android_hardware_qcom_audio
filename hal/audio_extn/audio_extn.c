@@ -111,7 +111,7 @@ void audio_extn_set_snd_card_split(const char* in_snd_card_name)
        <target name>-<sound card name>-<form factor>-snd-card
        parse target name, sound card name and form factor
     */
-    char *snd_card_name = strdup(in_snd_card_name);
+    char *snd_card_name = NULL;
     char *tmp = NULL;
     char *device = NULL;
     char *snd_card = NULL;
@@ -122,6 +122,7 @@ void audio_extn_set_snd_card_split(const char* in_snd_card_name)
         ALOGE("%s: snd_card_name passed is NULL", __func__);
         goto on_error;
     }
+    snd_card_name = strdup(in_snd_card_name);
 
     device = strtok_r(snd_card_name, "-", &tmp);
     if (device == NULL) {
