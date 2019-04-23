@@ -240,7 +240,7 @@
         <ctl name="VA DEC2 MUX" value="MSM_DMIC" />
         <ctl name="VA DMIC MUX0" value="DMIC0" />
         <ctl name="VA DMIC MUX1" value="DMIC1" />
-        <ctl name="VA DMIC MUX2" value="DMIC5" />
+        <ctl name="VA DMIC MUX2" value="DMIC4" />
     </path>
 
     <path name="listen-ape-handset-qmic">
@@ -256,7 +256,7 @@
         <ctl name="VA DMIC MUX0" value="DMIC0" />
         <ctl name="VA DMIC MUX1" value="DMIC1" />
         <ctl name="VA DMIC MUX2" value="DMIC2" />
-        <ctl name="VA DMIC MUX3" value="DMIC5" />
+        <ctl name="VA DMIC MUX3" value="DMIC4" />
     </path>
 
     <path name="listen-ape-headset-mic">
