@@ -2544,6 +2544,8 @@ acdb_init_fail:
         strdup("SLIM_0_RX Format");
     my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
         strdup("SLIM_0_RX SampleRate");
+    my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
+        strdup("SLIM_0_RX Channels");
 
     my_data->current_backend_cfg[DSD_NATIVE_BACKEND].bitwidth_mixer_ctl =
         strdup("SLIM_2_RX Format");

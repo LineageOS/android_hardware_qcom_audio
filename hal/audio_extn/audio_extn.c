@@ -393,27 +393,56 @@ static int update_custom_mtmx_coefficients(struct audio_device *adev,
     char mixer_ctl_name[128] = {0};
     struct audio_custom_mtmx_params_info *pinfo = &params->info;
     int i = 0, err = 0;
+    int cust_ch_mixer_cfg[128], len = 0;
 
     ALOGI("%s: ip_channels %d, op_channels %d, pcm_device_id %d",
           __func__, pinfo->ip_channels, pinfo->op_channels, pcm_device_id);
 
-    for (i = 0; i < (int)pinfo->op_channels; i++) {
-         snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "%s %d %s %d",
-                  mixer_name_prefix, pcm_device_id, mixer_name_suffix, i+1);
-         ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-         if (!ctl) {
-             ALOGE("%s: ERROR. Could not get ctl for mixer cmd - %s",
-                   __func__, mixer_ctl_name);
-             return -EINVAL;
-         }
+    if (adev->use_old_pspd_mix_ctrl) {
+        /*
+         * Below code is to ensure backward compatibilty with older
+         * kernel version. Use old mixer control to set mixer coefficients
+         */
+        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+         "Audio Stream %d Channel Mix Cfg", pcm_device_id);
 
-         err = mixer_ctl_set_array(ctl,
-                                   &params->coeffs[pinfo->ip_channels * i],
-                                   pinfo->ip_channels);
-         if (err) {
-             ALOGE("%s: ERROR. Mixer ctl set failed", __func__);
-             return -EINVAL;
-         }
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: ERROR. Could not get ctl for mixer cmd - %s",
+                  __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+        cust_ch_mixer_cfg[len++] = pinfo->ip_channels;
+        cust_ch_mixer_cfg[len++] = pinfo->op_channels;
+        for (i = 0; i < (int) (pinfo->op_channels * pinfo->ip_channels); i++) {
+            ALOGV("%s: coeff[%d] %d", __func__, i, params->coeffs[i]);
+            cust_ch_mixer_cfg[len++] = params->coeffs[i];
+        }
+        err = mixer_ctl_set_array(ctl, cust_ch_mixer_cfg, len);
+        if (err) {
+            ALOGE("%s: ERROR. Mixer ctl set failed", __func__);
+            return -EINVAL;
+        }
+        ALOGD("%s: Mixer ctl set for %s success", __func__, mixer_ctl_name);
+    } else {
+        for (i = 0; i < (int)pinfo->op_channels; i++) {
+            snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "%s %d %s %d",
+                    mixer_name_prefix, pcm_device_id, mixer_name_suffix, i+1);
+
+            ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+            if (!ctl) {
+                ALOGE("%s: ERROR. Could not get ctl for mixer cmd - %s",
+                      __func__, mixer_ctl_name);
+                 return -EINVAL;
+            }
+            err = mixer_ctl_set_array(ctl,
+                                      &params->coeffs[pinfo->ip_channels * i],
+                                      pinfo->ip_channels);
+            if (err) {
+                ALOGE("%s: ERROR. Mixer ctl set failed", __func__);
+                return -EINVAL;
+            }
+        }
     }
     return 0;
 }

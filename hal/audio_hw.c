@@ -1042,6 +1042,8 @@ int disable_audio_route(struct audio_device *adev,
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_FREE);
     audio_extn_set_custom_mtmx_params(adev, usecase, false);
+    if (usecase->stream.out != NULL)
+        usecase->stream.out->pspd_coeff_sent = false;
     ALOGV("%s: exit", __func__);
     return 0;
 }
@@ -4592,6 +4594,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     int channels = 0;
     const size_t frame_size = audio_stream_out_frame_size(stream);
     const size_t frames = (frame_size != 0) ? bytes / frame_size : bytes;
+    struct audio_usecase *usecase = NULL;
 
     ATRACE_BEGIN("out_write");
     lock_output_stream(out);
@@ -4711,6 +4714,20 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     if (adev->is_channel_status_set == false && (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)){
         audio_utils_set_hdmi_channel_status(out, (void *)buffer, bytes);
         adev->is_channel_status_set = true;
+    }
+
+    if ((adev->use_old_pspd_mix_ctrl == true) &&
+        (out->pspd_coeff_sent == false)) {
+        /*
+         * Need to resend pspd coefficients after stream started for
+         * older kernel version as it does not save the coefficients
+         * and also stream has to be started for coeff to apply.
+         */
+        usecase = get_usecase_from_list(adev, out->usecase);
+        if (usecase != NULL) {
+            audio_extn_set_custom_mtmx_params(adev, usecase, true);
+            out->pspd_coeff_sent = true;
+        }
     }
 
     if (is_offload_usecase(out->usecase)) {
@@ -6117,6 +6134,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->dynamic_pm_qos_config_supported = 0;
     out->set_dual_mono = false;
     out->prev_card_status_offline = false;
+    out->pspd_coeff_sent = false;
 
     if ((flags & AUDIO_OUTPUT_FLAG_BD) &&
         (property_get_bool("vendor.audio.matrix.limiter.enable", false)))
@@ -7824,6 +7842,8 @@ static int adev_open(const hw_module_t *module, const char *name,
                      hw_device_t **device)
 {
     int ret;
+    char mixer_ctl_name[128] = {0};
+    struct mixer_ctl *ctl = NULL;
 
     ALOGD("%s: enter", __func__);
     if (strcmp(name, AUDIO_HARDWARE_INTERFACE) != 0) return -EINVAL;
@@ -7899,6 +7919,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->perf_lock_opts[1] = 0x20E;
     adev->perf_lock_opts_size = 2;
     adev->dsp_bit_width_enforce_mode = 0;
+    adev->use_old_pspd_mix_ctrl = false;
 
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
@@ -8085,6 +8106,22 @@ static int adev_open(const hw_module_t *module, const char *name,
                                   sizeof(struct audio_device_config_param));
     if (adev->device_cfg_params == NULL)
         ALOGE("%s: Memory allocation failed for Device config params", __func__);
+
+    /*
+     * Check if new PSPD matrix mixer control is supported. If not
+     * supported, then set flag so that old mixer ctrl is sent while
+     * sending pspd coefficients on older kernel version. Query mixer
+     * control for default pcm id and channel value one.
+     */
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+            "AudStr %d ChMixer Weight Ch %d", 0, 1);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: ERROR. Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        adev->use_old_pspd_mix_ctrl = true;
+    }
 
     ALOGV("%s: exit", __func__);
     return 0;
