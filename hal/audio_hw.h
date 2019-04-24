@@ -375,6 +375,7 @@ struct stream_out {
     bool prev_card_status_offline;
 
     error_log_t *error_log;
+    bool pspd_coeff_sent;
 };
 
 struct stream_in {
@@ -599,9 +600,9 @@ struct audio_device {
      * or other capabilities are present for the device corresponding to that usecase.
      */
     struct pcm_params *use_case_table[AUDIO_USECASE_MAX];
-
     struct listnode active_inputs_list;
     struct listnode active_outputs_list;
+    bool use_old_pspd_mix_ctrl;
 };
 
 int select_devices(struct audio_device *adev,
