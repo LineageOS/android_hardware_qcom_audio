@@ -8376,24 +8376,31 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                 goto err_open;
             }
         }
-#ifdef CONCURRENT_CAPTURE_ENABLED
-        /* Acquire lock to avoid two concurrent use cases initialized to
-           same pcm record use case */
+        if (audio_extn_is_concurrent_capture_enabled()) {
+            /* Acquire lock to avoid two concurrent use cases initialized to
+               same pcm record use case */
 
-        pthread_mutex_lock(&adev->lock);
-        if (in->usecase == USECASE_AUDIO_RECORD) {
-           if (!(adev->pcm_record_uc_state)) {
-               ALOGV("%s: using USECASE_AUDIO_RECORD",__func__);
-               adev->pcm_record_uc_state = 1;
-           } else {
-               /* Assign compress record use case for second record */
-               in->usecase = USECASE_AUDIO_RECORD_COMPRESS2;
-               in->flags |= AUDIO_INPUT_FLAG_COMPRESS;
-               ALOGV("%s: overriding usecase with USECASE_AUDIO_RECORD_COMPRESS2 and appending compress flag", __func__);
-          }
+            if (in->usecase == USECASE_AUDIO_RECORD) {
+                pthread_mutex_lock(&adev->lock);
+                if (!(adev->pcm_record_uc_state)) {
+                    ALOGV("%s: using USECASE_AUDIO_RECORD",__func__);
+                    adev->pcm_record_uc_state = 1;
+                    pthread_mutex_unlock(&adev->lock);
+                } else {
+                    pthread_mutex_unlock(&adev->lock);
+                    /* Assign compress record use case for second record */
+                    in->usecase = USECASE_AUDIO_RECORD_COMPRESS2;
+                    in->flags |= AUDIO_INPUT_FLAG_COMPRESS;
+                    ALOGV("%s: overriding usecase with USECASE_AUDIO_RECORD_COMPRESS2 and appending compress flag", __func__);
+                    if (audio_extn_cin_applicable_stream(in)) {
+                        in->sample_rate = config->sample_rate;
+                        ret = audio_extn_cin_configure_input_stream(in);
+                        if (ret)
+                            goto err_open;
+                    }
+                }
+            }
         }
-        pthread_mutex_unlock(&adev->lock);
-#endif
     }
     audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
                                                 &adev->streams_input_cfg_list,
@@ -8440,6 +8447,11 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     return ret;
 
 err_open:
+    if (in->usecase == USECASE_AUDIO_RECORD) {
+        pthread_mutex_lock(&adev->lock);
+        adev->pcm_record_uc_state = 0;
+        pthread_mutex_unlock(&adev->lock);
+    }
     free(in);
     *stream_in = NULL;
     return ret;
