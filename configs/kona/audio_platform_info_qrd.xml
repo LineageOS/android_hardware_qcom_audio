@@ -64,6 +64,7 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_MMAP" type="out" id="29" />
         <usecase name="USECASE_AUDIO_RECORD_MMAP" type="in" id="29" />
         <usecase name="USECASE_AUDIO_A2DP_ABR_FEEDBACK" type="in" id="36" />
+        <usecase name="USECASE_AUDIO_A2DP_ABR_FEEDBACK" type="out" id="36" />
         <usecase name="USECASE_INCALL_MUSIC_UPLINK" type="out" id="23" />
     </pcm_ids>
     <config_params>
