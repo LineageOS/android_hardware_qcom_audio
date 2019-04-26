@@ -1684,7 +1684,8 @@ bool platform_send_gain_dep_cal(void *platform, int level) {
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
 
-            if (usecase != NULL && usecase->type == PCM_PLAYBACK) {
+            if (usecase != NULL && usecase->stream.out &&
+                                   usecase->type == PCM_PLAYBACK) {
                 int new_snd_device[2] = {0};
                 int i, num_devices = 1;
 
@@ -3832,8 +3833,6 @@ void platform_deinit(void *platform)
     /* deinit usb */
     audio_extn_usb_deinit();
     audio_extn_dap_hal_deinit();
-    if (audio_extn_spkr_prot_is_enabled())
-        audio_extn_spkr_prot_deinit();
 #ifdef DYNAMIC_LOG_ENABLED
     log_utils_deinit();
 #endif
@@ -4426,7 +4425,7 @@ int native_audio_set_params(struct platform_data *platform,
             list_for_each(node, &(platform->adev)->usecase_list) {
                  usecase = node_to_item(node, struct audio_usecase, list);
 
-                 if (is_offload_usecase(usecase->id) &&
+                 if (usecase->stream.out && is_offload_usecase(usecase->id) &&
                     (usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                     usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) &&
                     OUTPUT_SAMPLING_RATE_44100 == usecase->stream.out->sample_rate) {
@@ -10046,7 +10045,7 @@ int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == PCM_PLAYBACK &&
+        if (usecase->stream.out && usecase->type == PCM_PLAYBACK &&
                 usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
             /*
              * If acdb tuning is different for SPEAKER_REVERSE, it is must

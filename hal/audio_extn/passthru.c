@@ -284,7 +284,7 @@ void passthru_on_start(struct stream_out * out)
         /* find max period time among active playback use cases */
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_PLAYBACK &&
+            if (usecase->stream.out && usecase->type == PCM_PLAYBACK &&
                 usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
                 o = usecase->stream.out;
                 temp = o->config.period_size * 1000000LL / o->sample_rate;

@@ -112,7 +112,7 @@ static int do_DTS_Eagle_params(const struct audio_device *adev, struct dts_eagle
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             /* set/get eagle params for offload usecases only */
-            if ((usecase->type == PCM_PLAYBACK) && is_offload_usecase(usecase->id)) {
+            if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) && is_offload_usecase(usecase->id)) {
                 tret = do_DTS_Eagle_params_stream(usecase->stream.out, t, get);
                 if (tret < 0)
                     ret = tret;
