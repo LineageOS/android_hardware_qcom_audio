@@ -75,6 +75,7 @@
 #include "voice_extn.h"
 #include "ip_hdlr_intf.h"
 #include "audio_feature_manager.h"
+#include "audio_extn/audiozoom.h"
 
 #include "sound/compress_params.h"
 #include "sound/asound.h"
@@ -505,6 +506,11 @@ static void enable_gcov()
 {
 }
 #endif
+
+static int in_set_microphone_direction(const struct audio_stream_in *stream,
+                                           audio_microphone_direction_t dir);
+static int in_set_microphone_field_dimension(const struct audio_stream_in *stream, float zoom);
+
 
 static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
                                int flags __unused)
@@ -2761,6 +2767,8 @@ int start_input_stream(struct stream_in *in)
     }
 
     check_and_enable_effect(adev);
+    audio_extn_audiozoom_set_microphone_direction(in, in->zoom);
+    audio_extn_audiozoom_set_microphone_field_dimension(in, in->direction);
 
 done_open:
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
@@ -4375,17 +4383,32 @@ error:
 
 static int in_set_microphone_direction(const struct audio_stream_in *stream,
                                            audio_microphone_direction_t dir) {
-    (void)stream;
-    (void)dir;
-    ALOGVV("%s", __func__);
-    return -ENOSYS;
+    struct stream_in *in = (struct stream_in *)stream;
+
+    ALOGVV("%s: standby %d source %d dir %d", __func__, in->standby, in->source, dir);
+
+    in->direction = dir;
+
+    if (in->standby)
+        return 0;
+
+    return audio_extn_audiozoom_set_microphone_direction(in, dir);
 }
 
 static int in_set_microphone_field_dimension(const struct audio_stream_in *stream, float zoom) {
-    (void)stream;
-    (void)zoom;
-    ALOGVV("%s", __func__);
-    return -ENOSYS;
+    struct stream_in *in = (struct stream_in *)stream;
+
+    ALOGVV("%s: standby %d source %d zoom %f", __func__, in->standby, in->source, zoom);
+
+    if (zoom > 1.0 || zoom < -1.0)
+        return -EINVAL;
+
+    in->zoom = zoom;
+
+    if (in->standby)
+        return 0;
+
+    return audio_extn_audiozoom_set_microphone_field_dimension(in, zoom);
 }
 
 
@@ -8095,6 +8118,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->flags = flags;
     in->bit_width = 16;
     in->af_period_multiplier = 1;
+    in->direction = MIC_DIRECTION_UNSPECIFIED;
+    in->zoom = 0;
 
     ALOGV("%s: source = %d, config->channel_mask = %d", __func__, source, config->channel_mask);
     if (source == AUDIO_SOURCE_VOICE_UPLINK ||
@@ -9155,6 +9180,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->is_charging = audio_extn_battery_properties_is_charging();
     audio_extn_sound_trigger_init(adev); /* dependent on snd_mon_init() */
     audio_extn_sound_trigger_update_battery_status(adev->is_charging);
+    audio_extn_audiozoom_init();
     pthread_mutex_unlock(&adev->lock);
     /* Allocate memory for Device config params */
     adev->device_cfg_params = (struct audio_device_config_param*)
