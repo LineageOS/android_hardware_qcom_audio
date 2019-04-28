@@ -684,6 +684,10 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
                  sizeof("sm6150-qrd-snd-card"))) {
         hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
+                 sizeof("sm6150-wcd9375qrd-snd-card"))) {
+        strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else if (!strncmp(snd_card_name, "sm6150-tavil-snd-card",
                  sizeof("sm6150-tavil-snd-card"))) {
         strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
