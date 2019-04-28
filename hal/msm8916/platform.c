@@ -3538,7 +3538,7 @@ int platform_get_backend_index(snd_device_t snd_device)
 }
 
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
-                                    int app_type, int sample_rate)
+                                    int app_type)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
@@ -3547,6 +3547,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     int i, num_devices = 1;
     bool is_incall_rec_usecase = false;
     snd_device_t incall_rec_device;
+    int sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
 
     if (voice_is_in_call(my_data->adev))
         is_incall_rec_usecase = voice_is_in_call_rec_stream(usecase->stream.in);
@@ -3576,11 +3577,16 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     }
 
     for (i = 0; i < num_devices; i++) {
-        if (!is_incall_rec_usecase)
+        if (!is_incall_rec_usecase) {
             acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(new_snd_device[i])];
-        else
+            sample_rate = audio_extn_utils_get_app_sample_rate_for_device(my_data->adev, usecase,
+                                                          new_snd_device[i]);
+        } else {
             // Use in_call_rec snd_device to extract the ACDB device ID instead of split snd devices
             acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(snd_device)];
+            sample_rate = audio_extn_utils_get_app_sample_rate_for_device(my_data->adev, usecase,
+                                                          snd_device);
+        }
 
         // Do not use Rx path default app type for TX path
         if ((usecase->type == PCM_CAPTURE) && (app_type == DEFAULT_APP_TYPE_RX_PATH)) {

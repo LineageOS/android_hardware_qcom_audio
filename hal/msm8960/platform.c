@@ -510,7 +510,7 @@ int platform_get_default_app_type(void *platform __unused)
 }
 
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
-                                    int app_type __unused, int sample_rate __unused)
+                                    int app_type __unused)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
