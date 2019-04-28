@@ -363,6 +363,185 @@ static void audio_extn_ext_disp_set_parameters(const struct audio_device *adev,
     }
 }
 
+static int update_custom_mtmx_coefficients(struct audio_device *adev,
+                                           struct audio_custom_mtmx_params *params,
+                                           int pcm_device_id)
+{
+    struct mixer_ctl *ctl = NULL;
+    char *mixer_name_prefix = "AudStr";
+    char *mixer_name_suffix = "ChMixer Weight Ch";
+    char mixer_ctl_name[128] = {0};
+    struct audio_custom_mtmx_params_info *pinfo = &params->info;
+    int i = 0, err = 0;
+    int cust_ch_mixer_cfg[128], len = 0;
+
+    ALOGI("%s: ip_channels %d, op_channels %d, pcm_device_id %d",
+          __func__, pinfo->ip_channels, pinfo->op_channels, pcm_device_id);
+
+    if (adev->use_old_pspd_mix_ctrl) {
+        /*
+         * Below code is to ensure backward compatibilty with older
+         * kernel version. Use old mixer control to set mixer coefficients
+         */
+        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+         "Audio Stream %d Channel Mix Cfg", pcm_device_id);
+
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: ERROR. Could not get ctl for mixer cmd - %s",
+                  __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+        cust_ch_mixer_cfg[len++] = pinfo->ip_channels;
+        cust_ch_mixer_cfg[len++] = pinfo->op_channels;
+        for (i = 0; i < (int) (pinfo->op_channels * pinfo->ip_channels); i++) {
+            ALOGV("%s: coeff[%d] %d", __func__, i, params->coeffs[i]);
+            cust_ch_mixer_cfg[len++] = params->coeffs[i];
+        }
+        err = mixer_ctl_set_array(ctl, cust_ch_mixer_cfg, len);
+        if (err) {
+            ALOGE("%s: ERROR. Mixer ctl set failed", __func__);
+            return -EINVAL;
+        }
+        ALOGD("%s: Mixer ctl set for %s success", __func__, mixer_ctl_name);
+    } else {
+        for (i = 0; i < (int)pinfo->op_channels; i++) {
+            snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "%s %d %s %d",
+                    mixer_name_prefix, pcm_device_id, mixer_name_suffix, i+1);
+
+            ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+            if (!ctl) {
+                ALOGE("%s: ERROR. Could not get ctl for mixer cmd - %s",
+                      __func__, mixer_ctl_name);
+                 return -EINVAL;
+            }
+            err = mixer_ctl_set_array(ctl,
+                                      &params->coeffs[pinfo->ip_channels * i],
+                                      pinfo->ip_channels);
+            if (err) {
+                ALOGE("%s: ERROR. Mixer ctl set failed", __func__);
+                return -EINVAL;
+            }
+        }
+    }
+    return 0;
+}
+
+static void set_custom_mtmx_params(struct audio_device *adev,
+                                   struct audio_custom_mtmx_params_info *pinfo,
+                                   int pcm_device_id, bool enable)
+{
+    struct mixer_ctl *ctl = NULL;
+    char *mixer_name_prefix = "AudStr";
+    char *mixer_name_suffix = "ChMixer Cfg";
+    char mixer_ctl_name[128] = {0};
+    int chmixer_cfg[5] = {0}, len = 0;
+    int be_id = -1, err = 0;
+
+    be_id = platform_get_snd_device_backend_index(pinfo->snd_device);
+
+    ALOGI("%s: ip_channels %d,op_channels %d,pcm_device_id %d,be_id %d",
+          __func__, pinfo->ip_channels, pinfo->op_channels, pcm_device_id, be_id);
+
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "%s %d %s", mixer_name_prefix, pcm_device_id, mixer_name_suffix);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: ERROR. Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        return;
+    }
+    chmixer_cfg[len++] = enable ? 1 : 0;
+    chmixer_cfg[len++] = 0; /* rule index */
+    chmixer_cfg[len++] = pinfo->ip_channels;
+    chmixer_cfg[len++] = pinfo->op_channels;
+    chmixer_cfg[len++] = be_id + 1;
+
+    err = mixer_ctl_set_array(ctl, chmixer_cfg, len);
+    if (err)
+        ALOGE("%s: ERROR. Mixer ctl set failed", __func__);
+}
+
+void audio_extn_set_custom_mtmx_params(struct audio_device *adev,
+                                        struct audio_usecase *usecase,
+                                        bool enable)
+{
+    struct audio_custom_mtmx_params_info info = {0};
+    struct audio_custom_mtmx_params *params = NULL;
+    int num_devices = 0, pcm_device_id = -1, i = 0, ret = 0;
+    snd_device_t new_snd_devices[SND_DEVICE_OUT_END] = {0};
+    struct audio_backend_cfg backend_cfg = {0};
+    uint32_t feature_id = 0;
+
+    switch(usecase->type) {
+    case PCM_PLAYBACK:
+        if (usecase->stream.out) {
+            pcm_device_id =
+                platform_get_pcm_device_id(usecase->id, PCM_PLAYBACK);
+            if (platform_split_snd_device(adev->platform,
+                                          usecase->out_snd_device,
+                                          &num_devices, new_snd_devices)) {
+                new_snd_devices[0] = usecase->out_snd_device;
+                num_devices = 1;
+            }
+        } else {
+            ALOGE("%s: invalid output stream for playback usecase id:%d",
+                  __func__, usecase->id);
+            return;
+        }
+        break;
+    case PCM_CAPTURE:
+        if (usecase->stream.in) {
+            pcm_device_id =
+                platform_get_pcm_device_id(usecase->id, PCM_CAPTURE);
+            if (platform_split_snd_device(adev->platform,
+                                          usecase->in_snd_device,
+                                          &num_devices, new_snd_devices)) {
+                new_snd_devices[0] = usecase->in_snd_device;
+                num_devices = 1;
+            }
+        } else {
+            ALOGE("%s: invalid input stream for capture usecase id:%d",
+                  __func__, usecase->id);
+            return;
+        }
+        break;
+    default:
+        ALOGV("%s: unsupported usecase id:%d", __func__, usecase->id);
+        return;
+    }
+
+    /*
+     * check and update feature_id before this assignment,
+     * if features like dual_mono is enabled and overrides the default(i.e. 0).
+     */
+    info.id = feature_id;
+    info.usecase_id = usecase->id;
+    for (i = 0, ret = 0; i < num_devices; i++) {
+        info.snd_device = new_snd_devices[i];
+        platform_get_codec_backend_cfg(adev, info.snd_device, &backend_cfg);
+        if (usecase->type == PCM_PLAYBACK) {
+            info.ip_channels = audio_channel_count_from_out_mask(
+                                   usecase->stream.out->channel_mask);
+            info.op_channels = backend_cfg.channels;
+        } else {
+            info.ip_channels = backend_cfg.channels;
+            info.op_channels = audio_channel_count_from_in_mask(
+                                   usecase->stream.in->channel_mask);
+        }
+        params = platform_get_custom_mtmx_params(adev->platform, &info);
+        if (params) {
+            if (enable)
+                ret = update_custom_mtmx_coefficients(adev, params,
+                                                      pcm_device_id);
+            if (ret < 0)
+                ALOGE("%s: error updating mtmx coeffs err:%d", __func__, ret);
+            else
+                set_custom_mtmx_params(adev, &info, pcm_device_id, enable);
+        }
+    }
+}
+
 #ifndef DTS_EAGLE
 #define audio_extn_hpx_set_parameters(adev, parms)         (0)
 #define audio_extn_hpx_get_parameters(query, reply)  (0)
@@ -665,12 +844,17 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
 // END: ANC_HEADSET -------------------------------------------------------
 
 static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
-                                                     int channel_count)
+                                                     int channel_count,
+                                                     snd_device_t snd_device)
 {
-    struct mixer_ctl *ctl;
+    struct mixer_ctl *ctl = NULL, *be_ctl = NULL;
     const char *mixer_ctl_name = "Playback Device Channel Map";
-    long set_values[8] = {0};
-    int ret;
+    const char *be_mixer_ctl_name = "Backend Device Channel Map";
+    long set_values[FCC_8] = {0};
+    long be_set_values[FCC_8 + 1] = {0};
+    int ret = -1;
+    int be_idx = -1;
+
     ALOGV("%s channel_count:%d",__func__, channel_count);
 
     switch (channel_count) {
@@ -702,21 +886,42 @@ static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
         return -EINVAL;
     }
 
-    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    be_idx = platform_get_snd_device_backend_index(snd_device);
+
+    if (be_idx >= 0) {
+        be_ctl = mixer_get_ctl_by_name(adev->mixer, be_mixer_ctl_name);
+        if (!be_ctl) {
+            ALOGD("%s: Could not get ctl for mixer cmd - %s, using default control",
+                  __func__, be_mixer_ctl_name);
+            ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        } else
+            ctl = be_ctl;
+    } else
+         ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
               __func__, mixer_ctl_name);
         return -EINVAL;
     }
+
     ALOGV("AFE: set mapping(%ld %ld %ld %ld %ld %ld %ld %ld) for channel:%d",
         set_values[0], set_values[1], set_values[2], set_values[3], set_values[4],
         set_values[5], set_values[6], set_values[7], channel_count);
-    ret = mixer_ctl_set_array(ctl, set_values, channel_count);
+
+    if (!be_ctl)
+        ret = mixer_ctl_set_array(ctl, set_values, channel_count);
+    else {
+       be_set_values[0] = be_idx;
+       memcpy(&be_set_values[1], set_values, sizeof(long) * channel_count);
+       ret = mixer_ctl_set_array(ctl, be_set_values, ARRAY_SIZE(be_set_values));
+    }
+
     return ret;
 }
 
 int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev,
-                                    int channel_count)
+                                    int channel_count, snd_device_t snd_device)
 {
     int32_t ret = 0;
     const char *channel_cnt_str = NULL;
@@ -754,7 +959,7 @@ int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev,
     mixer_ctl_set_enum_by_string(ctl, channel_cnt_str);
 
     if (channel_count == 6 || channel_count == 8 || channel_count == 2) {
-        ret = afe_proxy_set_channel_mapping(adev, channel_count);
+        ret = afe_proxy_set_channel_mapping(adev, channel_count, snd_device);
     } else {
         ALOGE("%s: set unsupported channel count(%d)",  __func__, channel_count);
         ret = -EINVAL;

@@ -98,7 +98,8 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml \
+    frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
@@ -128,6 +129,11 @@ persist.vendor.audio.fluence.voicecall=true\
 persist.vendor.audio.fluence.voicerec=false\
 persist.vendor.audio.fluence.speaker=true\
 persist.vendor.audio.fluence.tmic.enabled=false
+
+##speaker protection v3 switch and ADSP AFE API version
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.spv3.enable=true\
+persist.vendor.audio.avs.afe_api_version=2
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -269,7 +275,7 @@ PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
 
 #enable mirror-link feature
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.enable.mirrorlink=true
+vendor.audio.enable.mirrorlink=false
 
 #enable voicecall speaker stereo
 PRODUCT_PROPERTY_OVERRIDES += \
