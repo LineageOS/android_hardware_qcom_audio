@@ -1993,6 +1993,10 @@ int platform_acdb_init(void *platform)
 
     snd_card_name = mixer_get_name(my_data->adev->mixer);
     snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
+    if (!snd_card_name) {
+        ALOGE("Failed to get snd_card_name");
+        goto cleanup;
+    }
 
     my_data->acdb_init_data.cvd_version = cvd_version;
     my_data->acdb_init_data.snd_card_name = strdup(snd_card_name);
@@ -2014,6 +2018,7 @@ int platform_acdb_init(void *platform)
     strlcpy(my_data->snd_card_name, snd_card_name,
                                                MAX_SND_CARD_STRING_SIZE);
 
+cleanup:
     if (cvd_version)
         free(cvd_version);
     if (!result) {
