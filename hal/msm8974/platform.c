@@ -8400,7 +8400,7 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
     } else if (my_data->is_internal_codec && !audio_is_usb_in_device(snd_device)) {
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
-        if (adev->active_input->bit_width == 24)
+        if (adev->active_input && adev->active_input->bit_width == 24)
             bit_width = platform_get_snd_device_bit_width(snd_device);
     } else {
         struct listnode *node;
