@@ -7462,7 +7462,6 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
     int ret = -EINVAL;
     int backend_idx = platform_get_backend_index(snd_device);
     struct platform_data *my_data = (struct platform_data *)adev->platform;
-    backend_idx = platform_get_backend_index(snd_device);
     unsigned int bit_width = backend_cfg.bit_width;
     unsigned int sample_rate = backend_cfg.sample_rate;
     unsigned int channels = backend_cfg.channels;
@@ -7684,7 +7683,6 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         ALOGV("%s: Format doesnt have to be set", __func__);
     }
 
-    format = format & AUDIO_FORMAT_MAIN_MASK;
     /* Set data format only if there is a change from PCM to compressed
        and vice versa */
     if (set_mi2s_tx_data_format && (format ^ my_data->current_backend_cfg[backend_idx].format)) {
@@ -7694,7 +7692,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
                   __func__, ext_disp_format);
             return -EINVAL;
         }
-        if (format == AUDIO_FORMAT_PCM) {
+        if ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM) {
             ALOGE("%s:Set %s to LPCM", __func__, ext_disp_format);
             mixer_ctl_set_enum_by_string(ctl, "LPCM");
         } else {
@@ -8267,18 +8265,25 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
               __func__, bit_width, sample_rate, channels);
     }
 
-    ALOGI("%s:txbecf: afe: Codec selected backend: %d updated bit width: %d and "
-          "sample rate: %d", __func__, backend_idx, bit_width, sample_rate);
+    ALOGI("%s:txbecf: afe: current backend bit_width %d sample_rate %d channels %d, format %x",
+                            __func__,
+                            my_data->current_backend_cfg[backend_idx].bit_width,
+                            my_data->current_backend_cfg[backend_idx].sample_rate,
+                            my_data->current_backend_cfg[backend_idx].channels,
+                            my_data->current_backend_cfg[backend_idx].format);
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
+    // Note that below if block would be entered even if main format is same
+    // but subformat is different for e.g. current backend is configured for 16 bit PCM
+    // as compared to 24 bit PCM backend requested
     if ((bit_width != my_data->current_backend_cfg[backend_idx].bit_width) ||
         (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate) ||
         (channels != my_data->current_backend_cfg[backend_idx].channels) ||
-        ((format & AUDIO_FORMAT_MAIN_MASK) != my_data->current_backend_cfg[backend_idx].format)) {
+        (format != my_data->current_backend_cfg[backend_idx].format)) {
         backend_cfg->bit_width = bit_width;
         backend_cfg->sample_rate= sample_rate;
         backend_cfg->channels = channels;
-        backend_cfg->format = format & AUDIO_FORMAT_MAIN_MASK;
+        backend_cfg->format = format;
         backend_change = true;
         ALOGI("%s:txbecf: afe: Codec backend needs to be updated. new bit width: %d "
               "new sample rate: %d new channel: %d new format: %d",
