@@ -85,6 +85,9 @@
 #define ACDB_DEV_TYPE_OUT 1
 #define ACDB_DEV_TYPE_IN 2
 
+/* SCO SWB codec mode */
+#define SPEECH_MODE_INVALID  0xFFFF
+
 /* support positional and index masks to 8ch */
 #define MAX_SUPPORTED_CHANNEL_MASKS (2 * FCC_8)
 #define MAX_SUPPORTED_FORMATS 15
@@ -527,6 +530,7 @@ struct audio_device {
     unsigned int cur_hdmi_bit_width;
     unsigned int cur_wfd_channels;
     bool bt_wb_speech_enabled;
+    unsigned int swb_speech_mode;
     bool allow_afe_proxy_usage;
     bool is_charging; // from battery listener
     bool mic_break_enabled;

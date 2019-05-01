@@ -3791,6 +3791,13 @@ static a2dp_start_capture_t a2dp_start_capture;
 typedef int (*a2dp_stop_capture_t)();
 static a2dp_stop_capture_t a2dp_stop_capture;
 
+typedef int (*sco_start_configuration_t)();
+static sco_start_configuration_t sco_start_configuration;
+
+typedef void (*sco_reset_configuration_t)();
+static sco_reset_configuration_t sco_reset_configuration;
+
+
 int a2dp_offload_feature_init(bool is_feature_enabled)
 {
     ALOGD("%s: Called with feature %s", __func__,
@@ -3841,6 +3848,15 @@ int a2dp_offload_feature_init(bool is_feature_enabled)
                  (a2dp_stop_capture_t)dlsym(a2dp_lib_handle, "a2dp_stop_capture"))) {
             ALOGE("%s: dlsym failed", __func__);
             goto feature_disabled;
+        }
+        // initialize APIs for SWB extension
+        if (!(sco_start_configuration =
+                 (sco_start_configuration_t)dlsym(a2dp_lib_handle, "sco_start_configuration")) ||
+             !(sco_reset_configuration =
+                 (sco_reset_configuration_t)dlsym(a2dp_lib_handle, "sco_reset_configuration"))) {
+            ALOGE("%s: dlsym failed for swb APIs", __func__);
+            sco_start_configuration = NULL;
+            sco_reset_configuration = NULL;
         }
         ALOGD("%s:: ---- Feature A2DP_OFFLOAD is Enabled ----", __func__);
         return 0;
@@ -3963,6 +3979,16 @@ int audio_extn_a2dp_start_capture()
 int audio_extn_a2dp_stop_capture()
 {
     return (a2dp_stop_capture ? a2dp_stop_capture() : 0);
+}
+
+int audio_extn_sco_start_configuration()
+{
+    return (sco_start_configuration? sco_start_configuration() : 0);
+}
+
+void audio_extn_sco_reset_configuration()
+{
+    return (sco_reset_configuration? sco_reset_configuration() : 0);
 }
 
 // END: A2DP_OFFLOAD =====================================================================
