@@ -189,6 +189,7 @@ static bool audio_extn_hdmi_passthru_enabled = false;
 static bool audio_extn_concurrent_capture_enabled = false;
 static bool audio_extn_compress_in_enabled = false;
 static bool audio_extn_battery_listener_enabled = false;
+static bool audio_extn_maxx_audio_enabled = false;
 
 #define AUDIO_PARAMETER_KEY_AANC_NOISE_LEVEL "aanc_noise_level"
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -4748,6 +4749,134 @@ bool audio_extn_battery_properties_is_charging()
 {
     return (batt_prop_is_charging)? batt_prop_is_charging(): false;
 }
+// END: BATTERY_LISTENER ================================================================
+
+// START: MAXX_AUDIO =====================================================================
+#ifdef __LP64__
+#define MAXX_AUDIO_LIB_PATH "/vendor/lib64/libmaxxaudio.so"
+#else
+#define MAXX_AUDIO_LIB_PATH "/vendor/lib/libmaxxaudio.so"
+#endif
+
+static void *maxxaudio_lib_handle = NULL;
+
+typedef void (*maxxaudio_init_t)(void *, maxx_audio_init_config_t);
+static maxxaudio_init_t maxxaudio_init;
+
+typedef void (*maxxaudio_deinit_t)();
+static maxxaudio_deinit_t maxxaudio_deinit;
+
+typedef bool (*maxxaudio_set_state_t)(struct audio_device*, int,
+                             float, bool);
+static maxxaudio_set_state_t maxxaudio_set_state;
+
+typedef void (*maxxaudio_set_device_t)(struct audio_usecase *);
+static maxxaudio_set_device_t maxxaudio_set_device;
+
+typedef void (*maxxaudio_set_parameters_t)(struct audio_device *,
+                                  struct str_parms *);
+static maxxaudio_set_parameters_t maxxaudio_set_parameters;
+
+typedef bool (*maxxaudio_supported_usb_t)();
+static maxxaudio_supported_usb_t maxxaudio_supported_usb;
+
+int maxx_audio_feature_init(bool is_feature_enabled)
+{
+    audio_extn_maxx_audio_enabled = is_feature_enabled;
+    ALOGD("%s: Called with feature %s", __func__,
+                  is_feature_enabled ? "Enabled" : "NOT Enabled");
+    if (is_feature_enabled) {
+        // dlopen lib
+        maxxaudio_lib_handle = dlopen(MAXX_AUDIO_LIB_PATH, RTLD_NOW);
+
+        if (!maxxaudio_lib_handle) {
+            ALOGE("%s: dlopen failed", __func__);
+            goto feature_disabled;
+        }
+
+        if (!(maxxaudio_init =
+                    (maxxaudio_init_t)dlsym(maxxaudio_lib_handle, "ma_init")) ||
+            !(maxxaudio_deinit =
+                 (maxxaudio_deinit_t)dlsym(maxxaudio_lib_handle, "ma_deinit")) ||
+            !(maxxaudio_set_state =
+                 (maxxaudio_set_state_t)dlsym(maxxaudio_lib_handle, "ma_set_state")) ||
+            !(maxxaudio_set_device =
+                 (maxxaudio_set_device_t)dlsym(maxxaudio_lib_handle, "ma_set_device")) ||
+            !(maxxaudio_set_parameters =
+                 (maxxaudio_set_parameters_t)dlsym(maxxaudio_lib_handle, "ma_set_parameters")) ||
+            !(maxxaudio_supported_usb =
+                 (maxxaudio_supported_usb_t)dlsym(
+                                    maxxaudio_lib_handle, "ma_supported_usb"))) {
+            ALOGE("%s: dlsym failed", __func__);
+            goto feature_disabled;
+        }
+        ALOGD("%s:: ---- Feature MAXX_AUDIO is Enabled ----", __func__);
+        return 0;
+    }
+
+feature_disabled:
+    if (maxxaudio_lib_handle) {
+        dlclose(maxxaudio_lib_handle);
+        maxxaudio_lib_handle = NULL;
+    }
+
+    maxxaudio_init = NULL;
+    maxxaudio_deinit = NULL;
+    maxxaudio_set_state = NULL;
+    maxxaudio_set_device = NULL;
+    maxxaudio_set_parameters = NULL;
+    maxxaudio_supported_usb = NULL;
+    ALOGW(":: %s: ---- Feature MAXX_AUDIO is disabled ----", __func__);
+    return -ENOSYS;
+}
+
+bool audio_extn_is_maxx_audio_enabled()
+{
+    return audio_extn_maxx_audio_enabled;
+}
+
+void audio_extn_ma_init(void *platform)
+{
+
+     if (maxxaudio_init) {
+        maxx_audio_init_config_t init_config;
+        init_config.fp_platform_set_parameters = platform_set_parameters;
+        init_config.fp_audio_extn_get_snd_card_split = audio_extn_get_snd_card_split;
+        maxxaudio_init(platform, init_config);
+     }
+}
+
+void audio_extn_ma_deinit()
+{
+     if (maxxaudio_deinit)
+        maxxaudio_deinit();
+}
+
+bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
+                             float vol, bool active)
+{
+    return (maxxaudio_set_state ?
+                maxxaudio_set_state(adev, stream_type, vol, active): false);
+}
+
+void audio_extn_ma_set_device(struct audio_usecase *usecase)
+{
+    if (maxxaudio_set_device)
+        maxxaudio_set_device(usecase);
+}
+
+void audio_extn_ma_set_parameters(struct audio_device *adev,
+                                  struct str_parms *parms)
+{
+    if (maxxaudio_set_parameters)
+        maxxaudio_set_parameters(adev, parms);
+}
+
+bool audio_extn_ma_supported_usb()
+{
+    return (maxxaudio_supported_usb ? maxxaudio_supported_usb(): false);
+}
+// END: MAXX_AUDIO =====================================================================
 
 void audio_extn_feature_init(int is_running_with_enhanced_fwk)
 {
@@ -4856,6 +4985,9 @@ void audio_extn_feature_init(int is_running_with_enhanced_fwk)
                 break;
             case BATTERY_LISTENER:
                 battery_listener_feature_init(enable);
+                break;
+            case MAXX_AUDIO:
+                maxx_audio_feature_init(enable);
                 break;
             default:
                 break;

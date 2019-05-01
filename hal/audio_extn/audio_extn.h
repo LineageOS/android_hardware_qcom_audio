@@ -326,7 +326,24 @@ struct a2dp_offload_init_config {
 };
 typedef struct a2dp_offload_init_config a2dp_offload_init_config_t;
 // END: A2DP_OFFLOAD FEATURE ====================================================
-
+// START: MAXX_AUDIO FEATURE ==================================================
+void audio_extn_ma_init(void *platform);
+void audio_extn_ma_deinit();
+bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
+                             float vol, bool active);
+void audio_extn_ma_set_device(struct audio_usecase *usecase);
+void audio_extn_ma_set_parameters(struct audio_device *adev,
+                                  struct str_parms *parms);
+bool audio_extn_ma_supported_usb();
+bool audio_extn_is_maxx_audio_enabled();
+typedef int (*fp_platform_set_parameters_t)(void*, struct str_parms*);
+// --- Function pointers from audio_extn needed by MAXX_AUDIO
+struct maxx_audio_init_config {
+    fp_platform_set_parameters_t fp_platform_set_parameters;
+    fp_audio_extn_get_snd_card_split_t fp_audio_extn_get_snd_card_split;
+};
+typedef struct maxx_audio_init_config maxx_audio_init_config_t;
+// START: MAXX_AUDIO FEATURE ==================================================
 //START: SSRRC_FEATURE ==========================================================
 bool audio_extn_ssr_check_usecase(struct stream_in *in);
 int audio_extn_ssr_set_usecase(struct stream_in *in,
