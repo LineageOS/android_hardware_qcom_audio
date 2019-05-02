@@ -1526,6 +1526,10 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("kona-mtp-snd-card")) ||
          !strncmp(snd_card_name, "kona-qrd-snd-card",
                    sizeof("kona-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "lito-mtp-snd-card",
+                   sizeof("lito-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "lito-qrd-snd-card",
+                   sizeof("lito-qrd-snd-card")) ||
          !strncmp(snd_card_name, "trinket-idp-snd-card",
                    sizeof("trinket-idp-snd-card")) ||
          !strncmp(snd_card_name, "sdm439-sku1-snd-card",
@@ -3021,6 +3025,9 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
                sizeof("kona-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "lito-qrd-snd-card",
+               sizeof("lito-qrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_WSA, my_data, PLATFORM);
@@ -3274,6 +3281,7 @@ acdb_init_fail:
         //TODO:: make generic interfaceface to check Slimbus/I2S/CDC_DMA
         if (!strncmp(snd_card_name, "sm6150", strlen("sm6150")) ||
             !strncmp(snd_card_name, "kona", strlen("kona")) ||
+            !strncmp(snd_card_name, "lito", strlen("lito")) ||
             !strncmp(snd_card_name, "trinket", strlen("trinket"))) {
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 Format");
