@@ -678,7 +678,6 @@ typedef struct {
     uint32_t sampling_rate;
     uint32_t bitrate;
     uint32_t bits_per_sample;
-    struct aac_frame_size_control_t frame_ctl;
 } audio_aac_encoder_config;
 #endif
 
