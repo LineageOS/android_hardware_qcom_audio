@@ -1300,11 +1300,8 @@ static int read_usb_sup_channel_masks(bool is_playback,
     }
     if (is_playback) {
         // start from 2 channels as framework currently doesn't support mono.
-        // TODO: consider only supporting channel index masks beyond stereo here.
-        for (channel_count = FCC_2;
-                channel_count <= channels && num_masks < max_masks;
-                ++channel_count) {
-            supported_channel_masks[num_masks++] = audio_channel_out_mask_from_count(channel_count);
+        if (channels >= FCC_2) {
+            supported_channel_masks[num_masks++] = audio_channel_out_mask_from_count(FCC_2);
         }
         for (channel_count = FCC_2;
                 channel_count <= channels && num_masks < max_masks;
@@ -1318,9 +1315,11 @@ static int read_usb_sup_channel_masks(bool is_playback,
         // audio_channel_in_mask_from_count() does the right conversion to either positional or
         // indexed mask
         for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
-            const audio_channel_mask_t mask =
-                    audio_channel_in_mask_from_count(channel_count);
-            supported_channel_masks[num_masks++] = mask;
+            audio_channel_mask_t mask = AUDIO_CHANNEL_NONE;
+            if (channel_count <= FCC_2) {
+                mask = audio_channel_in_mask_from_count(channel_count);
+                supported_channel_masks[num_masks++] = mask;
+            }
             const audio_channel_mask_t index_mask =
                     audio_channel_mask_for_index_assignment_from_count(channel_count);
             if (mask != index_mask && num_masks < max_masks) { // ensure index mask added.
