@@ -379,7 +379,7 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
 
     switch (param) {
     case EQ_PARAM_CUR_PRESET:
-        if (vsize < sizeof(int16_t)) {
+        if (vsize < (int32_t)sizeof(int16_t)) {
            p->status = -EINVAL;
            break;
         }
@@ -392,7 +392,7 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
         equalizer_set_preset(eq_ctxt, preset);
         break;
     case EQ_PARAM_BAND_LEVEL:
-        if (vsize < sizeof(int16_t)) {
+        if (vsize < (int32_t)sizeof(int16_t)) {
             p->status = -EINVAL;
             break;
         }
@@ -409,7 +409,7 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
         equalizer_set_band_level(eq_ctxt, band, level);
         break;
     case EQ_PARAM_PROPERTIES: {
-        if (vsize < sizeof(int16_t)) {
+        if (vsize < (int32_t)sizeof(int16_t)) {
             p->status = -EINVAL;
             break;
         }
@@ -421,7 +421,7 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
         if (prop[0] >= 0) {
             equalizer_set_preset(eq_ctxt, (int)prop[0]);
         } else {
-            if (vsize < (2 + NUM_EQ_BANDS) * sizeof(int16_t)) {
+            if (vsize < (int32_t)((2 + NUM_EQ_BANDS) * sizeof(int16_t))) {
                 android_errorWriteLog(0x534e4554, "37563371");
                 ALOGE("\tERROR EQ_PARAM_PROPERTIES valueSize %d < %d",
                                   vsize, (2 + NUM_EQ_BANDS) * sizeof(int16_t));
