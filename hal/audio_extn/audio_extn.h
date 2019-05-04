@@ -326,6 +326,22 @@ struct a2dp_offload_init_config {
 };
 typedef struct a2dp_offload_init_config a2dp_offload_init_config_t;
 // END: A2DP_OFFLOAD FEATURE ====================================================
+
+typedef int (*fp_platform_set_parameters_t)(void*, struct str_parms*);
+
+// START: AUDIOZOOM FEATURE ==================================================
+int audio_extn_audiozoom_init();
+int audio_extn_audiozoom_set_microphone_direction(struct stream_in *stream,
+                                           audio_microphone_direction_t dir);
+int audio_extn_audiozoom_set_microphone_field_dimension(struct stream_in *stream, float zoom);
+bool audio_extn_is_audiozoom_enabled();
+
+struct audiozoom_init_config {
+    fp_platform_set_parameters_t fp_platform_set_parameters;
+};
+typedef struct audiozoom_init_config audiozoom_init_config_t;
+// END:   AUDIOZOOM FEATURE ==================================================
+
 // START: MAXX_AUDIO FEATURE ==================================================
 void audio_extn_ma_init(void *platform);
 void audio_extn_ma_deinit();
@@ -336,7 +352,6 @@ void audio_extn_ma_set_parameters(struct audio_device *adev,
                                   struct str_parms *parms);
 bool audio_extn_ma_supported_usb();
 bool audio_extn_is_maxx_audio_enabled();
-typedef int (*fp_platform_set_parameters_t)(void*, struct str_parms*);
 // --- Function pointers from audio_extn needed by MAXX_AUDIO
 struct maxx_audio_init_config {
     fp_platform_set_parameters_t fp_platform_set_parameters;

@@ -340,12 +340,6 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GCOV)),true)
     LOCAL_STATIC_LIBRARIES += libprofile_rt
 endif
 
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUDIO_ZOOM)), true)
-    LOCAL_CFLAGS += -DAUDIOZOOM_QDSP_ENABLED
-    LOCAL_SRC_FILES += audio_extn/audiozoom.c
-endif
-
-
 #ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUTO_HAL)),true)
 #    LOCAL_CFLAGS += -DAUDIO_EXTN_AUTO_HAL_ENABLED
 #    LOCAL_SRC_FILES += audio_extn/auto_hal.c

@@ -70,6 +70,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="a2dp_offload_enabled" value="true" />
         <flag name="anc_headset_enabled" value="true" />
         <flag name="audiosphere_enabled" value="true" />
+        <flag name="audio_zoom_enabled" value="false" />
         <flag name="battery_listener_enabled" value="true" />
         <flag name="compress_capture_enabled" value="false" />
         <flag name="compress_in_enabled" value="true" />

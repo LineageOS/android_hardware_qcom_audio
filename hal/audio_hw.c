@@ -75,7 +75,6 @@
 #include "voice_extn.h"
 #include "ip_hdlr_intf.h"
 #include "audio_feature_manager.h"
-#include "audio_extn/audiozoom.h"
 
 #include "sound/compress_params.h"
 #include "sound/asound.h"
