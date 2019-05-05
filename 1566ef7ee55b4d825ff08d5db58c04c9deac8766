@@ -68,6 +68,30 @@
       "revId": "1566ef7ee55b4d825ff08d5db58c04c9deac8766",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "eb061d92_da9ee959",
+        "filename": "post_proc/equalizer.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 382,
+      "author": {
+        "id": 23045
+      },
+      "writtenOn": "2019-05-05T07:55:24Z",
+      "side": 1,
+      "message": "You probably are correct but as far as I can tell, this is device specific code that won\u0027t be used on another architecture. MSM8974 is an old chipset that isn\u0027t used in modern devices.\nAnd as I already mentioned in #247312 I haven\u0027t seen size_t being used in this code.",
+      "parentUuid": "c4c4127b_ac781c2c",
+      "range": {
+        "startLine": 382,
+        "startChar": 29,
+        "endLine": 382,
+        "endChar": 35
+      },
+      "revId": "1566ef7ee55b4d825ff08d5db58c04c9deac8766",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
