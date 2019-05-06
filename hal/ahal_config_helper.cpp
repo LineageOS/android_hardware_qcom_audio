@@ -62,8 +62,8 @@ void AHalConfigHelper::initConfigHelper(bool isVendorEnhancedFwk)
                      dlsym(handle, "getAudioHalExtConfigs");
         if (!getAHalConfigs) {
             ALOGE("%s: Could not find symbol: %s", __FUNCTION__, dlerror());
-            handle = nullptr;
             dlclose(handle);
+            handle = nullptr;
         }
     }
 

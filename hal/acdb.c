@@ -23,7 +23,7 @@
 
 #include <stdlib.h>
 #include <dlfcn.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/list.h>
 #include <time.h>
 #include "acdb.h"
