@@ -31,7 +31,7 @@
 /*#define LOG_NDEBUG 0*/
 
 #include "pm.h"
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/str_parms.h>
 
 #ifdef DYNAMIC_LOG_ENABLED

@@ -23,7 +23,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <hardware/audio_effect.h>
 #include <audio-base.h>
 
