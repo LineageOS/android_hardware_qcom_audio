@@ -210,12 +210,14 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAF)),true)
 endif
 
 # Hardware specific feature
-ifeq ($(strip $(BOARD_SUPPORTS_QAHW)),true)
-    LOCAL_CFLAGS += -DAUDIO_HW_EXTN_API_ENABLED
-    LOCAL_SRC_FILES += audio_hw_extn_api.c
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAP)),true)
+LOCAL_CFLAGS += -DQAP_EXTN_ENABLED -Wno-tautological-pointer-compare
+LOCAL_SRC_FILES += audio_extn/qap.c
+LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/qap_wrapper/
+LOCAL_HEADER_LIBRARIES += audio_qaf_headers
+LOCAL_SHARED_LIBRARIES += libqap_wrapper liblog
 endif
 
-# Hardware specific feature
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
     LOCAL_CFLAGS += -DAUDIO_LISTEN_ENABLED
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-listen
