@@ -331,6 +331,7 @@ struct stream_out {
     card_status_t card_status;
 
     void* qaf_stream_handle;
+    void* qap_stream_handle;
     pthread_cond_t qaf_offload_cond;
     pthread_t qaf_offload_thread;
     struct listnode qaf_offload_cmd_list;
