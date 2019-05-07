@@ -3471,6 +3471,11 @@ int start_output_stream(struct stream_out *out)
                                    &(adev->haptics_config));
             // failure to open haptics pcm shouldnt stop audio,
             // so do not close audio pcm in case of error
+
+            if (property_get_bool("vendor.audio.enable_haptic_audio_sync", false)) {
+                ALOGD("%s: enable haptic audio synchronization", __func__);
+                platform_set_qtime(adev->platform, out->pcm_device_id, adev->haptic_pcm_device_id);
+            }
         }
 
         if (!out->realtime)

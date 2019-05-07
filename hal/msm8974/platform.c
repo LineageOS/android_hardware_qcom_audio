@@ -95,6 +95,10 @@
 
 #include <resolv.h>
 
+#define QTIME_FREQ_KHZ  19200
+#define IPC_ERROR_DELAY 10000
+
+#define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
 #define TOSTRING_(x) #x
@@ -3973,6 +3977,186 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 int platform_get_haptics_pcm_device_id()
 {
     return HAPTICS_PCM_DEVICE;
+}
+
+uint64_t getQtime()
+{
+    uint64_t qTimerCount = 0;
+
+#if __aarch64__
+    asm volatile("mrs %0, cntvct_el0" : "=r" (qTimerCount));
+#else
+    asm volatile("mrrc p15, 1, %Q0, %R0, c14" : "=r" (qTimerCount));
+#endif
+
+    return qTimerCount;
+}
+
+int platform_get_delay(void *platform, int pcm_device_id)
+{
+    int ctl_len = 0;
+    struct audio_device *adev = ((struct platform_data *)platform)->adev;
+    struct mixer_ctl *ctl = NULL;
+    const char *mixer_ctl_name = "ADSP Path Latency";
+    const char *deviceNo = "NN";
+    char *mixer_str = NULL;
+    int path_delay = 0;
+
+    if (NULL == platform) {
+        ALOGE("%s: platform is NULL", __func__);
+        return -EINVAL;
+    }
+    if (pcm_device_id <= 0) {
+        ALOGE("%s: invalid pcm device id: %d", __func__, pcm_device_id);
+        return -EINVAL;
+    }
+
+    // Mixer control format: "ADSP Path Latency NN"
+    ctl_len = strlen(mixer_ctl_name) + 1 + strlen(deviceNo) + 1;
+
+    mixer_str = (char*) calloc(ctl_len, sizeof(char));
+    if (!mixer_str) {
+        ALOGE("%s: Could not allocate memory", __func__);
+        return -ENOMEM;
+    }
+
+    snprintf(mixer_str, ctl_len, "%s %d", mixer_ctl_name, pcm_device_id);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_str);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s", __func__, mixer_str);
+        free(mixer_str);
+        return -EINVAL;
+    }
+
+    path_delay = mixer_ctl_get_value(ctl, 0);
+    if (path_delay < 0) {
+        ALOGE("%s: Could not get val for mixer cmd - %s", __func__, mixer_str);
+    }
+    ALOGD("%s: Path Delay: %d", __func__, path_delay);
+
+    free(mixer_str);
+    return path_delay;
+}
+
+int send_qtime(void *platform, uint64_t qtime_value, int pcm_device_id)
+{
+    int ret = 0;
+    int ctl_len = 0;
+    struct audio_device *adev = ((struct platform_data *)platform)->adev;
+    struct mixer_ctl *ctl = NULL;
+    const char *mixer_ctl_name = "QTimer";
+    const char *deviceNo = "NN";
+    char *mixer_str = NULL;
+    uint32_t set_values[2];
+
+    set_values[0] = (uint32_t)qtime_value;
+    set_values[1] = (uint32_t)((qtime_value >> 16) >> 16);
+    ALOGD("%s: Send qtime msw: %u, lsw: %u", __func__, set_values[1],
+          set_values[0]);
+
+    // Mixer control format: "Qtimer NN"
+    ctl_len = strlen(mixer_ctl_name) + 1 + strlen(deviceNo) + 1;
+
+    mixer_str = (char*) calloc(ctl_len, sizeof(char));
+    if (!mixer_str) {
+        ALOGE("%s: Could not allocate memory", __func__);
+        return -ENOMEM;
+    }
+
+    snprintf(mixer_str, ctl_len, "%s %d", mixer_ctl_name, pcm_device_id);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_str);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_str);
+        free(mixer_str);
+        return -EINVAL;
+    }
+
+    ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+    if (ret < 0) {
+        ALOGE("%s: Could not set array for mixer cmd - %s",
+              __func__, mixer_str);
+    }
+    free(mixer_str);
+
+    return ret;
+}
+
+int platform_set_qtime(void *platform, int audio_pcm_device_id,
+                        int haptic_pcm_device_id)
+{
+    int ret = 0;
+    uint64_t qtime_count = 0;
+    uint64_t qtime_value = 0;
+    uint32_t qtime_remainder = 0;
+    int32_t audio_path_latency = 0;
+    int32_t haptic_path_latency = 0;
+
+    if (NULL == platform) {
+        ALOGE("%s: platform is NULL", __func__);
+        return -EINVAL;
+    }
+    if (audio_pcm_device_id <= 0 || haptic_pcm_device_id <= 0) {
+        ALOGE("%s: Invalid pcm device id - %d", __func__,
+              audio_pcm_device_id <= 0 ? audio_pcm_device_id
+              : haptic_pcm_device_id);
+        return -EINVAL;
+    }
+
+    audio_path_latency = platform_get_delay(platform, audio_pcm_device_id);
+    if (audio_path_latency <= 0) {
+        ALOGE("%s: error getting audio path latency: %d", __func__,
+              audio_path_latency);
+        return -EINVAL;
+    }
+    ALOGD("%s: Audio Path Latency: %d", __func__, audio_path_latency);
+
+    haptic_path_latency = platform_get_delay(platform, haptic_pcm_device_id);
+    if (haptic_path_latency <= 0) {
+        ALOGE("%s: error getting haptic path latency: %d", __func__,
+              haptic_path_latency);
+        return -EINVAL;
+    }
+    ALOGD("%s: Haptic Path Latency: %d", __func__, haptic_path_latency);
+
+    qtime_count = getQtime();
+
+    // Qtime count / Qtime freq (KHZ) = Qtime in milliseconds
+    qtime_value = (uint64_t) (qtime_count / QTIME_FREQ_KHZ);
+
+    // Convert Qtime to microseconds
+    qtime_value *= 1000;
+
+    // Adding max(path_latency)
+    qtime_value += (uint32_t) max(audio_path_latency, haptic_path_latency);
+
+    // Adding IPC delay + error correction ~10ms
+    qtime_value += IPC_ERROR_DELAY;
+
+    // Calculate remainder in microseconds
+    qtime_remainder = ((qtime_count % QTIME_FREQ_KHZ) * 1000) / QTIME_FREQ_KHZ;
+
+    // Add the remainder to qtime
+    qtime_value += qtime_remainder;
+    ALOGD("%s: Set qtime: %llu microsecs\n", __func__,
+          (unsigned long long int)qtime_value);
+
+    ret = send_qtime(platform, qtime_value, haptic_pcm_device_id);
+    if (ret < 0) {
+        ALOGE("%s: Could not send qtime for haptic session - %d",
+              __func__, ret);
+        return ret;
+    }
+
+    ret = send_qtime(platform, qtime_value, audio_pcm_device_id);
+    if (ret < 0) {
+        ALOGE("%s: Could not send qtime for audio session - %d",
+              __func__, ret);
+    }
+
+    return ret;
 }
 
 static int find_index(struct name_to_index * table, int32_t len, const char * name)
