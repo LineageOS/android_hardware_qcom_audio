@@ -2258,7 +2258,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                  (usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND)) ||
                                  ((vc_usecase->devices & AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND) &&
                                  (usecase->devices & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND)) ||
-                                (usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL))) {
+                                 (vc_usecase->devices == AUDIO_DEVICE_OUT_HEARING_AID) ||
+                                 (usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL))) {
                 in_snd_device = vc_usecase->in_snd_device;
                 out_snd_device = vc_usecase->out_snd_device;
             }
@@ -2335,6 +2336,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                     platform_set_echo_reference(adev, false, AUDIO_DEVICE_NONE);
                 } else if (usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY) {
                     out_device = AUDIO_DEVICE_OUT_TELEPHONY_TX;
+                } else {
+                    /* forcing speaker o/p device to get matching i/p pair
+                       in case o/p is not routed from same primary HAL */
+                    out_device = AUDIO_DEVICE_OUT_SPEAKER;
                 }
                 in_snd_device = platform_get_input_snd_device(adev->platform, out_device);
             }
@@ -3186,13 +3191,19 @@ static int stop_output_stream(struct stream_out *out)
             ALOGE("%s: audio_extn_ip_hdlr_intf_close failed %d",__func__, ret);
     }
 
+    /* 1) media + voip output routing to handset must route media back to
+          speaker when voip stops.
+       2) trigger voip input to reroute when voip output changes to
+          hearing aid. */
     if (has_voip_usecase ||
             out->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
         struct listnode *node;
         struct audio_usecase *usecase;
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_CAPTURE || usecase == uc_info)
+            if ((usecase->type == PCM_CAPTURE &&
+                     usecase->id != USECASE_AUDIO_RECORD_VOIP)
+                || usecase == uc_info)
                 continue;
 
             ALOGD("%s: select_devices at usecase(%d: %s) after removing the usecase(%d: %s)",
