@@ -1851,8 +1851,14 @@ static inline int read_usb_sup_channel_masks(bool is_playback,
 
     for (channel_count = channels; ((channel_count >= DEFAULT_CHANNEL_COUNT) &&
                                     (num_masks < max_masks)); channel_count--) {
-            supported_channel_masks[num_masks++] =
-                    audio_channel_mask_for_index_assignment_from_count(channel_count);
+        const audio_channel_mask_t mask =
+                audio_channel_in_mask_from_count(channel_count);
+        supported_channel_masks[num_masks++] = mask;
+        const audio_channel_mask_t index_mask =
+                audio_channel_mask_for_index_assignment_from_count(channel_count);
+        if (mask != index_mask && num_masks < max_masks) { // ensure index mask added.
+            supported_channel_masks[num_masks++] = index_mask;
+        }
     }
 
     ALOGV("%s: %s supported ch %d supported_channel_masks[0] %08x num_masks %d", __func__,
@@ -8154,6 +8160,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                                             devices,
                                                             flags,
                                                             source);
+    ALOGV("%s: enter: flags %#x, is_usb_dev %d, may_use_hifi_record %d,"
+            " sample_rate %u, channel_mask %#x, format %#x",
+            __func__, flags, is_usb_dev, may_use_hifi_record,
+            config->sample_rate, config->channel_mask, config->format);
 
     if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
@@ -8224,7 +8234,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->direction = MIC_DIRECTION_UNSPECIFIED;
     in->zoom = 0;
 
-    ALOGV("%s: source = %d, config->channel_mask = %d", __func__, source, config->channel_mask);
+    ALOGV("%s: source %d, config->channel_mask %#x", __func__, source, config->channel_mask);
     if (source == AUDIO_SOURCE_VOICE_UPLINK ||
         source == AUDIO_SOURCE_VOICE_DOWNLINK) {
         /* Force channel config requested to mono if incall
