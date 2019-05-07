@@ -1077,7 +1077,10 @@ int enable_audio_route(struct audio_device *adev,
     }
     audio_extn_set_custom_mtmx_params(adev, usecase, true);
 
-    strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
+    // we shouldn't truncate mixer_path
+    ALOGW_IF(strlcpy(mixer_path, use_case_table[usecase->id], sizeof(mixer_path))
+            >= sizeof(mixer_path), "%s: truncation on mixer path", __func__);
+    // this also appends to mixer_path
     platform_add_backend_name(mixer_path, snd_device, usecase);
     ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
     ret = audio_route_apply_and_update_path(adev->audio_route, mixer_path);
@@ -1106,7 +1109,10 @@ int disable_audio_route(struct audio_device *adev,
         snd_device = usecase->in_snd_device;
     else
         snd_device = usecase->out_snd_device;
-    strlcpy(mixer_path, use_case_table[usecase->id], MIXER_PATH_MAX_LENGTH);
+    // we shouldn't truncate mixer_path
+    ALOGW_IF(strlcpy(mixer_path, use_case_table[usecase->id], sizeof(mixer_path))
+            >= sizeof(mixer_path), "%s: truncation on mixer path", __func__);
+    // this also appends to mixer_path
     platform_add_backend_name(mixer_path, snd_device, usecase);
     ALOGD("%s: reset and update mixer path: %s", __func__, mixer_path);
     audio_route_reset_and_update_path(adev->audio_route, mixer_path);
