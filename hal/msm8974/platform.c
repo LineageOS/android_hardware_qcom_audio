@@ -3449,10 +3449,19 @@ acdb_init_fail:
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
                 strdup("SLIM_0_TX SampleRate");
         }
-        my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
-            strdup("SLIM_6_RX Format");
-        my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
-            strdup("SLIM_6_RX SampleRate");
+
+        if (strstr(snd_card_name, "intcodec")) {
+            my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
+                strdup("INT0_MI2S_RX Format");
+            my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
+                strdup("INT0_MI2S_RX SampleRate");
+        } else {
+            my_data->current_backend_cfg[HEADPHONE_BACKEND].bitwidth_mixer_ctl =
+                strdup("SLIM_6_RX Format");
+            my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
+                strdup("SLIM_6_RX SampleRate");
+        }
+
         //TODO: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend is defined
         //for headset-mic. This is to capture separate data from headset-mic and handset-mic.
         if(audio_extn_is_concurrent_capture_enabled())
