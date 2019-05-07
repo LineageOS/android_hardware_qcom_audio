@@ -1842,8 +1842,6 @@ static inline int read_usb_sup_channel_masks(bool is_playback,
     if (channels > MAX_HIFI_CHANNEL_COUNT)
         channels = MAX_HIFI_CHANNEL_COUNT;
 
-    channel_count = DEFAULT_CHANNEL_COUNT;
-
     if (is_playback) {
         // start from 2 channels as framework currently doesn't support mono.
         if (channels >= FCC_2) {
@@ -1856,6 +1854,8 @@ static inline int read_usb_sup_channel_masks(bool is_playback,
                     audio_channel_mask_for_index_assignment_from_count(channel_count);
         }
     } else {
+        // For capture we report all supported channel masks from 1 channel up.
+        channel_count = MIN_CHANNEL_COUNT;
         // audio_channel_in_mask_from_count() does the right conversion to either positional or
         // indexed mask
         for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
@@ -1872,20 +1872,10 @@ static inline int read_usb_sup_channel_masks(bool is_playback,
         }
     }
 
-    for (channel_count = channels; ((channel_count >= DEFAULT_CHANNEL_COUNT) &&
-                                    (num_masks < max_masks)); channel_count--) {
-        const audio_channel_mask_t mask =
-                audio_channel_in_mask_from_count(channel_count);
-        supported_channel_masks[num_masks++] = mask;
-        const audio_channel_mask_t index_mask =
-                audio_channel_mask_for_index_assignment_from_count(channel_count);
-        if (mask != index_mask && num_masks < max_masks) { // ensure index mask added.
-            supported_channel_masks[num_masks++] = index_mask;
-        }
+    for (size_t i = 0; i < num_masks; ++i) {
+        ALOGV("%s: %s supported ch %d supported_channel_masks[%zu] %08x num_masks %d", __func__,
+              is_playback ? "P" : "C", channels, i, supported_channel_masks[i], num_masks);
     }
-
-    ALOGV("%s: %s supported ch %d supported_channel_masks[0] %08x num_masks %d", __func__,
-          is_playback ? "P" : "C", channels, supported_channel_masks[0], num_masks);
     return num_masks;
 }
 
