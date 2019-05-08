@@ -1069,6 +1069,8 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_BUSY);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_BUSY);
     audio_extn_utils_send_app_type_cfg(adev, usecase);
+    if (audio_extn_is_maxx_audio_enabled())
+        audio_extn_ma_set_device(usecase);
     audio_extn_utils_send_audio_calibration(adev, usecase);
     if ((usecase->type == PCM_PLAYBACK) && is_offload_usecase(usecase->id)) {
         out = usecase->stream.out;
