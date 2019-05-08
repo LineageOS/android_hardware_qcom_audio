@@ -4123,7 +4123,7 @@ int platform_get_effect_config_data(snd_device_t snd_device,
         goto done;
     }
 
-    if(effect_config == NULL) {
+    if (effect_config == NULL) {
         ALOGE("%s: Invalid effect_config", __func__);
         ret = -EINVAL;
         goto done;
@@ -4151,6 +4151,10 @@ void platform_add_external_specific_device(snd_device_t snd_device,
     }
 
     device = (struct external_specific_device *)calloc(1, sizeof(struct external_specific_device));
+    if (device == NULL) {
+        ALOGE("%s: memory allocation failed", __func__);
+        return;
+    }
 
     device->usbid = strdup(usbid);
     device->acdb_id = acdb_id;

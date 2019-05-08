@@ -164,13 +164,13 @@ int acdb_init_v2(struct mixer *mixer)
 
     /* Get Sound card name */
     snd_card_name = mixer_get_name(mixer);
+    snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
     if (!snd_card_name) {
-        ALOGE("failed to allocate memory for snd_card_name");
+        ALOGE("failed to get snd_card_name");
         result = -1;
         goto cleanup;
     }
 
-    snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
     int key = 0;
     struct listnode *node = NULL;
     struct meta_key_list *key_info = NULL;
