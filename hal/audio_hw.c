@@ -5098,6 +5098,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                     pthread_mutex_lock(&adev->lock);
                     select_devices(adev, out->usecase);
                     if (!audio_extn_passthru_is_supported_backend_edid_cfg(adev, out)) {
+                        pthread_mutex_unlock(&adev->lock);
                         ret = -EINVAL;
                         goto exit;
                     }
