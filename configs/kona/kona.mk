@@ -207,6 +207,14 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.audio_hal.period_size=192
 
+##Ambisonic Capture
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.ambisonic.capture=true \
+vendor.audio.ambisonic.auto.profile=true
+
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.apptype.multirec.enabled=true
+
 ##fluencetype can be "fluence" or "fluencepro" or "none"
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.fluencetype=none\
