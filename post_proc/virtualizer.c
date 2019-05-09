@@ -21,24 +21,16 @@
 //#define LOG_NDEBUG 0
 
 #include <cutils/list.h>
+#include <cutils/properties.h>
 #include <log/log.h>
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include <audio_effects/effect_virtualizer.h>
-#include <audio_feature_manager.h>
-#include <dlfcn.h>
-#include <unistd.h>
 
 #include "effect_api.h"
 #include "virtualizer.h"
 
 #define VIRUALIZER_MAX_LATENCY 30
-
-#define PRIMARY_HAL_PATH XSTR(LIB_AUDIO_HAL)
-#define XSTR(x) STR(x)
-#define STR(x) #x
-
-static bool (*is_feature_enabled)(audio_ext_feature);
 
 #ifdef AUDIO_FEATURE_ENABLED_GCOV
 extern void  __gcov_flush();
@@ -113,11 +105,9 @@ int virtualizer_set_strength(virtualizer_context_t *context, uint32_t strength)
  *  true      device is applicable for effect
  */
 bool virtualizer_is_device_supported(audio_devices_t device) {
-    if (is_feature_enabled != NULL &&
-        is_feature_enabled(AFE_PROXY)) {
-        if (device == AUDIO_DEVICE_OUT_PROXY)
-            return false;
-    }
+    if ((property_get_bool("vendor.audio.feature.afe_proxy.enable", false)) &&
+        (device == AUDIO_DEVICE_OUT_PROXY))
+           return false;
 
     switch (device) {
     case AUDIO_DEVICE_OUT_SPEAKER:
@@ -481,20 +471,6 @@ int virtualizer_init(effect_context_t *context)
 {
     ALOGV("%s: ctxt %p", __func__, context);
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
-
-    if (access(PRIMARY_HAL_PATH, R_OK) == 0) {
-        void *hal_lib_pointer = dlopen(PRIMARY_HAL_PATH, RTLD_NOW);
-        if (hal_lib_pointer == NULL)
-            ALOGE("%s: DLOPEN failed for %s", __func__, PRIMARY_HAL_PATH);
-        else {
-            is_feature_enabled =
-                     (bool (*)(audio_ext_feature))dlsym(hal_lib_pointer,
-                               "audio_feature_manager_is_feature_enabled");
-            if (is_feature_enabled == NULL)
-                ALOGE("%s: dlsym failed", __func__);
-        }
-    } else
-        ALOGE("%s: not able to acces lib %s ", __func__, PRIMARY_HAL_PATH);
 
     context->config.inputCfg.accessMode = EFFECT_BUFFER_ACCESS_READ;
     context->config.inputCfg.channels = AUDIO_CHANNEL_OUT_STEREO;
