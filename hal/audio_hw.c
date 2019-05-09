@@ -2881,7 +2881,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          */
         if ((out->devices & AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) &&
                 (val == AUDIO_DEVICE_NONE) &&
-                !audio_extn_a2dp_is_ready()) {
+                !audio_extn_a2dp_is_ready() &&
+                !adev->bt_sco_on) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
 
@@ -5347,6 +5348,14 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
     if (ret >= 0) {
         adev->bt_wb_speech_enabled = !strcmp(value, AUDIO_PARAMETER_VALUE_ON);
+    }
+
+    ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
+    if (ret >= 0) {
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+            adev->bt_sco_on = true;
+        else
+            adev->bt_sco_on = false;
     }
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value, sizeof(value));
