@@ -23,7 +23,6 @@
 #include <expat.h>
 #include <audio_hw.h>
 #include <system/audio.h>
-#include <platform_api.h>
 #include "audio_extn.h"
 
 #include "audiozoom.h"
@@ -31,6 +30,9 @@
 #include <resolv.h>
 
 #define AUDIOZOOM_PRESET_FILE "/vendor/etc/audiozoom.xml"
+
+// --- external function dependency ---
+fp_platform_set_parameters_t fp_platform_set_parameters;
 
 typedef struct qdsp_audiozoom_cfg {
     uint32_t             topo_id;
@@ -116,7 +118,7 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     }
 }
 
-static int audio_extn_audiozoom_parse_info(const char *filename)
+static int audiozoom_parse_info(const char *filename)
 {
     XML_Parser      parser;
     FILE            *file;
@@ -176,7 +178,7 @@ done:
     return ret;
 }
 
-int audio_extn_audiozoom_set_microphone_direction(
+int audiozoom_set_microphone_direction(
     struct stream_in *in, audio_microphone_direction_t dir)
 {
     (void)in;
@@ -184,7 +186,7 @@ int audio_extn_audiozoom_set_microphone_direction(
     return 0;
 }
 
-static int audio_extn_audiozoom_set_microphone_field_dimension_zoom(
+static int audiozoom_set_microphone_field_dimension_zoom(
     struct stream_in *in, float zoom)
 {
     struct audio_device *adev = in->dev;
@@ -212,7 +214,7 @@ static int audio_extn_audiozoom_set_microphone_field_dimension_zoom(
     if (ret > 0) {
         str_parms_add_str(parms, "cal_data", data);
 
-        platform_set_parameters(adev->platform, parms);
+        fp_platform_set_parameters(adev->platform, parms);
     } else {
         ALOGE("%s: failed to convert data to string, ret %d", __func__, ret);
     }
@@ -222,7 +224,7 @@ static int audio_extn_audiozoom_set_microphone_field_dimension_zoom(
     return 0;
 }
 
-static int audio_extn_audiozoom_set_microphone_field_dimension_wide_angle(
+static int audiozoom_set_microphone_field_dimension_wide_angle(
     struct stream_in *in, float zoom)
 {
     (void)in;
@@ -230,24 +232,25 @@ static int audio_extn_audiozoom_set_microphone_field_dimension_wide_angle(
     return 0;
 }
 
-int audio_extn_audiozoom_set_microphone_field_dimension(
+int audiozoom_set_microphone_field_dimension(
     struct stream_in *in, float zoom)
 {
     if (zoom > 1.0 || zoom < -1.0)
         return -EINVAL;
 
     if (zoom >= 0 && zoom <= 1.0)
-        return audio_extn_audiozoom_set_microphone_field_dimension_zoom(in, zoom);
+        return audiozoom_set_microphone_field_dimension_zoom(in, zoom);
 
     if (zoom >= -1.0 && zoom <= 0)
-        return audio_extn_audiozoom_set_microphone_field_dimension_wide_angle(in, zoom);
+        return audiozoom_set_microphone_field_dimension_wide_angle(in, zoom);
 
     return 0;
 }
 
-int audio_extn_audiozoom_init()
+int audiozoom_init(audiozoom_init_config_t init_config)
 {
-    audio_extn_audiozoom_parse_info(AUDIOZOOM_PRESET_FILE);
+    fp_platform_set_parameters = init_config.fp_platform_set_parameters;
+    audiozoom_parse_info(AUDIOZOOM_PRESET_FILE);
 
     ALOGV("%s: topo_id=%d, module_id=%d, instance_id=%d, zoom__id=%d, dir_id=%d, app_type=%d",
         __func__, qdsp_audiozoom.topo_id, qdsp_audiozoom.module_id, qdsp_audiozoom.instance_id,

@@ -17,15 +17,9 @@
 #ifndef AUDIOZOOM_H_
 #define AUDIOZOOM_H_
 
-#ifndef AUDIOZOOM_QDSP_ENABLED
-#define audio_extn_audiozoom_init()                                          (0)
-#define audio_extn_audiozoom_set_microphone_direction(stream, dir)           (-ENOSYS)
-#define audio_extn_audiozoom_set_microphone_field_dimension(stream, zoom)    (-ENOSYS)
-#else
-int audio_extn_audiozoom_init();
-int audio_extn_audiozoom_set_microphone_direction(struct stream_in *stream,
+int audiozoom_init(audiozoom_init_config_t init_config);
+int audiozoom_set_microphone_direction(struct stream_in *stream,
                                            audio_microphone_direction_t dir);
-int audio_extn_audiozoom_set_microphone_field_dimension(struct stream_in *stream, float zoom);
-#endif
+int audiozoom_set_microphone_field_dimension(struct stream_in *stream, float zoom);
 
 #endif /* AUDIOZOOM_H_ */

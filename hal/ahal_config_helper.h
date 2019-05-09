@@ -76,6 +76,7 @@ typedef struct {
     bool incall_music_enabled;
     bool compress_voip_enabled;
     bool dynamic_ecns_enabled;
+    bool audio_zoom_enabled;
 } AHalValues;
 
 #ifdef __cplusplus

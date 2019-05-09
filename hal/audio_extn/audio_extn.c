@@ -191,6 +191,7 @@ static bool audio_extn_concurrent_capture_enabled = false;
 static bool audio_extn_compress_in_enabled = false;
 static bool audio_extn_battery_listener_enabled = false;
 static bool audio_extn_maxx_audio_enabled = false;
+static bool audio_extn_audiozoom_enabled = false;
 
 #define AUDIO_PARAMETER_KEY_AANC_NOISE_LEVEL "aanc_noise_level"
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -4762,6 +4763,105 @@ bool audio_extn_battery_properties_is_charging()
 }
 // END: BATTERY_LISTENER ================================================================
 
+// START: AUDIOZOOM_FEATURE =====================================================================
+#ifdef __LP64__
+#define AUDIOZOOM_LIB_PATH "/vendor/lib64/libaudiozoom.so"
+#else
+#define AUDIOZOOM_LIB_PATH "/vendor/lib/libaudiozoom.so"
+#endif
+
+static void *audiozoom_lib_handle = NULL;
+
+typedef int (*audiozoom_init_t)(audiozoom_init_config_t);
+static audiozoom_init_t audiozoom_init;
+
+typedef int (*audiozoom_set_microphone_direction_t)(struct stream_in *,
+                                                    audio_microphone_direction_t);
+static audiozoom_set_microphone_direction_t audiozoom_set_microphone_direction;
+
+typedef int (*audiozoom_set_microphone_field_dimension_t)(struct stream_in *, float);
+static audiozoom_set_microphone_field_dimension_t audiozoom_set_microphone_field_dimension;
+
+int audiozoom_feature_init(bool is_feature_enabled)
+{
+    audio_extn_audiozoom_enabled = is_feature_enabled;
+    ALOGD("%s: Called with feature %s", __func__,
+                  is_feature_enabled ? "Enabled" : "NOT Enabled");
+    if (is_feature_enabled) {
+        // dlopen lib
+        audiozoom_lib_handle = dlopen(AUDIOZOOM_LIB_PATH, RTLD_NOW);
+
+        if (!audiozoom_lib_handle) {
+            ALOGE("%s: dlopen failed", __func__);
+            goto feature_disabled;
+        }
+
+        if (!(audiozoom_init =
+                    (audiozoom_init_t)dlsym(audiozoom_lib_handle, "audiozoom_init")) ||
+            !(audiozoom_set_microphone_direction =
+                 (audiozoom_set_microphone_direction_t)dlsym(audiozoom_lib_handle,
+                                              "audiozoom_set_microphone_direction")) ||
+            !(audiozoom_set_microphone_field_dimension =
+                 (audiozoom_set_microphone_field_dimension_t)dlsym(audiozoom_lib_handle,
+                                        "audiozoom_set_microphone_field_dimension"))) {
+            ALOGE("%s: dlsym failed", __func__);
+            goto feature_disabled;
+        }
+
+        ALOGD("%s:: ---- Feature AUDIOZOOM is Enabled ----", __func__);
+        return 0;
+    }
+feature_disabled:
+    if (audiozoom_lib_handle) {
+        dlclose(audiozoom_lib_handle);
+        audiozoom_lib_handle = NULL;
+    }
+
+    audiozoom_init = NULL;
+    audiozoom_set_microphone_direction = NULL;
+    audiozoom_set_microphone_field_dimension = NULL;
+    ALOGW(":: %s: ---- Feature AUDIOZOOM is disabled ----", __func__);
+    return -ENOSYS;
+}
+
+bool audio_extn_is_audiozoom_enabled()
+{
+    return audio_extn_audiozoom_enabled;
+}
+
+int audio_extn_audiozoom_init()
+{
+     int ret_val = 0;
+     if (audiozoom_init) {
+        audiozoom_init_config_t init_config;
+        init_config.fp_platform_set_parameters = platform_set_parameters;
+        ret_val = audiozoom_init(init_config);
+     }
+
+     return ret_val;
+}
+
+int audio_extn_audiozoom_set_microphone_direction(struct stream_in *stream,
+                                           audio_microphone_direction_t dir)
+{
+     int ret_val = -ENOSYS;
+     if (audiozoom_set_microphone_direction)
+        ret_val = audiozoom_set_microphone_direction(stream, dir);
+
+     return ret_val;
+}
+
+int audio_extn_audiozoom_set_microphone_field_dimension(struct stream_in *stream,
+                                                         float zoom)
+{
+    int ret_val = -ENOSYS;
+    if (audiozoom_set_microphone_field_dimension)
+        ret_val = audiozoom_set_microphone_field_dimension(stream, zoom);
+
+    return ret_val;
+}
+// END:   AUDIOZOOM_FEATURE =====================================================================
+
 // START: MAXX_AUDIO =====================================================================
 #ifdef __LP64__
 #define MAXX_AUDIO_LIB_PATH "/vendor/lib64/libmaxxaudio.so"
@@ -5000,6 +5100,8 @@ void audio_extn_feature_init(int is_running_with_enhanced_fwk)
             case MAXX_AUDIO:
                 maxx_audio_feature_init(enable);
                 break;
+            case AUDIO_ZOOM:
+                audiozoom_feature_init(enable);
             default:
                 break;
         }
