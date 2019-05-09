@@ -262,7 +262,10 @@
     <path name="listen-ape-headset-mic">
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA DEC0 MUX" value="SWR_MIC" />
-        <ctl name="VA SMIC MUX0" value="ADC2" />
+        <ctl name="VA SMIC MUX0" value="ADC1" />
+        <ctl name="ADC2 Volume" value="62" />
+        <ctl name="ADC2_MIXER Switch" value="1" />
+        <ctl name="ADC2 MUX" value="INP2" />
     </path>
 
     <path name="echo-reference">
