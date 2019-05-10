@@ -371,6 +371,99 @@ audio.volume.headset.gain.depcal=true
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.audio.fluence.voicecomm=true
 
+#add dynamic feature flags here
+ifeq ($(GENERIC_ODM_IMAGE),true)
+# Generic ODM varient related
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.a2dp_offload.enable=true \
+vendor.audio.feature.afe_proxy.enable=false \
+vendor.audio.feature.anc_headset.enable=false \
+vendor.audio.feature.audio_sphere.enable=false \
+vendor.audio.feature.battery_listener.enable=false \
+vendor.audio.feature.compr_cap.enable=false \
+vendor.audio.feature.compress_in.enable=false \
+vendor.audio.feature.compress_meta_data.enable=false \
+vendor.audio.feature.compr_voip.enable=false \
+vendor.audio.feature.concurrent_capture.enable=true  \
+vendor.audio.feature.custom_stereo.enable=false \
+vendor.audio.feature.display_port.enable=false \
+vendor.audio.feature.dsm_feedback.enable=false \
+vendor.audio.feature.dynamic_ecns.enable=false \
+vendor.audio.feature.ext_hw_plugin.enable=false \
+vendor.audio.feature.external_dsp.enable=true  \
+vendor.audio.feature.external_speaker.enable=true  \
+vendor.audio.feature.external_speaker_tfa.enable=false \
+vendor.audio.feature.fluence.enable=false \
+vendor.audio.feature.fm.enable=false \
+vendor.audio.feature.hdmi_edid.enable=false \
+vendor.audio.feature.hdmi_passthrough.enable=false \
+vendor.audio.feature.hfp.enable=true  \
+vendor.audio.feature.hifi_audio.enable=false \
+vendor.audio.feature.hwdep_cal.enable=true  \
+vendor.audio.feature.incall_music.enable=true  \
+vendor.audio.feature.keep_alive.enable=false \
+vendor.audio.feature.kpi_optimize.enable=false \
+vendor.audio.feature.maxx_audio.enable=true  \
+vendor.audio.feature.ras.enable=false \
+vendor.audio.feature.record_play_concurency.enable=false \
+vendor.audio.feature.src_trkn.enable=false \
+vendor.audio.feature.spkr_prot.enable=true  \
+vendor.audio.feature.ssrec.enable=false \
+vendor.audio.feature.usb_offload.enable=true \
+vendor.audio.feature.usb_offload_burst_mode.enable=false  \
+vendor.audio.feature.usb_offload_sidetone_volume.enable=false \
+vendor.audio.feature.deepbuffer_as_primary.enable=false \
+vendor.audio.feature.vbat.enable=false \
+vendor.audio.feature.wsa.enable=false \
+vendor.audio.feature.audiozoom.enable=true \
+vendor.audio.feature.snd_mon.enable=true
+else
+# Non-Generic ODM varient related
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.a2dp_offload.enable=true \
+vendor.audio.feature.afe_proxy.enable=true \
+vendor.audio.feature.anc_headset.enable=true \
+vendor.audio.feature.audio_sphere.enable=true \
+vendor.audio.feature.battery_listener.enable=true \
+vendor.audio.feature.compr_cap.enable=false \
+vendor.audio.feature.compress_in.enable=true \
+vendor.audio.feature.compress_meta_data.enable=true \
+vendor.audio.feature.compr_voip.enable=false \
+vendor.audio.feature.concurrent_capture.enable=true \
+vendor.audio.feature.custom_stereo.enable=true \
+vendor.audio.feature.display_port.enable=true \
+vendor.audio.feature.dsm_feedback.enable=false \
+vendor.audio.feature.dynamic_ecns.enable=true \
+vendor.audio.feature.ext_hw_plugin.enable=true \
+vendor.audio.feature.external_dsp.enable=false \
+vendor.audio.feature.external_speaker.enable=false \
+vendor.audio.feature.external_speaker_tfa.enable=false \
+vendor.audio.feature.fluence.enable=true \
+vendor.audio.feature.fm.enable=true \
+vendor.audio.feature.hdmi_edid.enable=true \
+vendor.audio.feature.hdmi_passthrough.enable=true \
+vendor.audio.feature.hfp.enable=true \
+vendor.audio.feature.hifi_audio.enable=false \
+vendor.audio.feature.hwdep_cal.enable=false \
+vendor.audio.feature.incall_music.enable=true \
+vendor.audio.feature.keep_alive.enable=true \
+vendor.audio.feature.kpi_optimize.enable=true \
+vendor.audio.feature.maxx_audio.enable=false \
+vendor.audio.feature.ras.enable=true \
+vendor.audio.feature.record_play_concurency.enable=false \
+vendor.audio.feature.src_trkn.enable=true \
+vendor.audio.feature.spkr_prot.enable=true \
+vendor.audio.feature.ssrec.enable=true \
+vendor.audio.feature.usb_offload.enable=true \
+vendor.audio.feature.usb_offload_burst_mode.enable=true \
+vendor.audio.feature.usb_offload_sidetone_volume.enable=false \
+vendor.audio.feature.deepbuffer_as_primary.enable=false \
+vendor.audio.feature.vbat.enable=true \
+vendor.audio.feature.wsa.enable=false \
+vendor.audio.feature.audiozoom.enable=false \
+vendor.audio.feature.snd_mon.enable=true
+endif
+
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
