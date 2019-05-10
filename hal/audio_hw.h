@@ -356,6 +356,7 @@ struct stream_out {
     mix_matrix_params_t downmix_params;
     bool set_dual_mono;
     bool prev_card_status_offline;
+    bool pspd_coeff_sent;
 };
 
 struct stream_in {
@@ -539,6 +540,7 @@ struct audio_device {
     unsigned int interactive_usecase_state;
     bool dp_allowed_for_voice;
     void *ext_hw_plugin;
+    bool use_old_pspd_mix_ctrl;
 };
 
 int select_devices(struct audio_device *adev,
