@@ -108,6 +108,16 @@
 #define MAX_CHANNELS_SUPPORTED 8
 #endif
 
+#ifdef __LP64__
+#define VNDK_FWK_LIB_PATH "/vendor/lib64/libqti_vndfwk_detect.so"
+#else
+#define VNDK_FWK_LIB_PATH "/vendor/lib/libqti_vndfwk_detect.so"
+#endif
+
+static void *vndk_fwk_lib_handle = NULL;
+typedef int (*vndk_fwk_isVendorEnhancedFwk_t)();
+static vndk_fwk_isVendorEnhancedFwk_t vndk_fwk_isVendorEnhancedFwk;
+
 typedef struct {
     const char *id_string;
     const int value;
@@ -2751,4 +2761,32 @@ int audio_extn_utils_send_app_type_gain(struct audio_device *adev,
     ALOGV("%s app_type %d l(%d) r(%d)", __func__,  app_type, gain[0], gain[1]);
     return mixer_ctl_set_array(ctl, gain_cfg,
                                sizeof(gain_cfg)/sizeof(gain_cfg[0]));
+}
+
+int audio_extn_utils_is_vendor_enhanced_fwk()
+{
+    static int is_running_with_enhanced_fwk = -EINVAL;
+
+    if (is_running_with_enhanced_fwk == -EINVAL) {
+        vndk_fwk_lib_handle = dlopen(VNDK_FWK_LIB_PATH, RTLD_NOW);
+        if (vndk_fwk_lib_handle != NULL) {
+            vndk_fwk_isVendorEnhancedFwk = (vndk_fwk_isVendorEnhancedFwk_t)
+                        dlsym(vndk_fwk_lib_handle, "isRunningWithVendorEnhancedFramework");
+            if (vndk_fwk_isVendorEnhancedFwk == NULL) {
+                ALOGW("%s: dlsym failed, defaulting to enhanced_fwk configuration",
+                       __func__);
+                is_running_with_enhanced_fwk = 1;
+            } else {
+                is_running_with_enhanced_fwk = vndk_fwk_isVendorEnhancedFwk();
+            }
+            dlclose(vndk_fwk_lib_handle);
+            vndk_fwk_lib_handle = NULL;
+        } else {
+            ALOGW("%s: VNDK_FWK_LIB not found, setting stock configuration", __func__);
+            is_running_with_enhanced_fwk = 0;
+        }
+        ALOGV("%s: vndk_fwk_isVendorEnhancedFwk=%d", __func__, is_running_with_enhanced_fwk);
+    }
+
+    return is_running_with_enhanced_fwk;
 }
