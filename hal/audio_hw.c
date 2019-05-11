@@ -1616,7 +1616,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                                                                         usecase->out_snd_device,
                                                                         platform_get_input_snd_device(adev->platform, uc_info->devices));
                     enable_audio_route(adev, usecase);
-                    if (usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
+                    if (usecase->stream.out && usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
                         out_set_voip_volume(&usecase->stream.out->stream,
                                             usecase->stream.out->volume_l,
                                             usecase->stream.out->volume_r);
@@ -7813,7 +7813,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         struct listnode *node;
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if ((usecase->type == PCM_PLAYBACK) &&
+            if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
                 (usecase->devices & AUDIO_DEVICE_OUT_ALL_A2DP)){
                 ALOGD("reconfigure a2dp... forcing device switch");
 
@@ -8836,6 +8836,8 @@ static int adev_close(hw_device_t *device)
     pthread_mutex_lock(&adev_init_lock);
 
     if ((--audio_device_ref_count) == 0) {
+         if (audio_extn_spkr_prot_is_enabled())
+             audio_extn_spkr_prot_deinit();
         audio_extn_snd_mon_unregister_listener(adev);
         audio_extn_sound_trigger_deinit(adev);
         audio_extn_listen_deinit(adev);

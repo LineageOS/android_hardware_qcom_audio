@@ -284,7 +284,7 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (valid_usecase(usecase)) {
+        if (usecase->stream.out && valid_usecase(usecase)) {
             ma_cal.common.app_type = usecase->stream.out->app_type_cfg.app_type;
             ma_cal.common.device = usecase->stream.out->devices;
             ALOGV("%s: send usecase(%d) app_type(%d) device(%d)",
