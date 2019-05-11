@@ -505,6 +505,7 @@ void *capture_thread_loop(void *arg)
                         pcm_close(pcm);
                         pcm = NULL;
                         configure_proxy_capture(mixer, 0);
+                        pthread_cond_wait(&cond, &lock);
                     } else {
                         capture_enabled = true;
                         ALOGD("%s: capture ENABLED", __func__);
