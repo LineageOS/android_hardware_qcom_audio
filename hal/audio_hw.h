@@ -421,6 +421,7 @@ struct audio_device {
     /* logging */
     snd_device_t last_logged_snd_device[AUDIO_USECASE_MAX][2]; /* [out, in] */
     int camera_orientation; /* CAMERA_BACK_LANDSCAPE ... CAMERA_FRONT_PORTRAIT */
+    bool bt_sco_on;
 };
 
 int select_devices(struct audio_device *adev,
