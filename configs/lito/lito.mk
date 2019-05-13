@@ -81,6 +81,83 @@ AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := true
 ##AUDIO_FEATURE_FLAGS
 
+AUDIO_HARDWARE := audio.a2dp.default
+AUDIO_HARDWARE += audio.usb.default
+AUDIO_HARDWARE += audio.r_submix.default
+AUDIO_HARDWARE += audio.primary.lito
+
+#HAL Wrapper
+AUDIO_WRAPPER := libqahw
+AUDIO_WRAPPER += libqahwwrapper
+
+#HAL Test app
+AUDIO_HAL_TEST_APPS := hal_play_test
+AUDIO_HAL_TEST_APPS += hal_rec_test
+
+PRODUCT_PACKAGES += $(AUDIO_HARDWARE)
+PRODUCT_PACKAGES += $(AUDIO_WRAPPER)
+PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
+
+ifeq ($(AUDIO_FEATURE_ENABLED_DLKM),true)
+BOARD_VENDOR_KERNEL_MODULES := \
+    $(KERNEL_MODULES_OUT)/audio_apr.ko \
+    $(KERNEL_MODULES_OUT)/audio_q6_pdr.ko \
+    $(KERNEL_MODULES_OUT)/audio_q6_notifier.ko \
+    $(KERNEL_MODULES_OUT)/audio_adsp_loader.ko \
+    $(KERNEL_MODULES_OUT)/audio_q6.ko \
+    $(KERNEL_MODULES_OUT)/audio_usf.ko \
+    $(KERNEL_MODULES_OUT)/audio_pinctrl_lpi.ko \
+    $(KERNEL_MODULES_OUT)/audio_swr.ko \
+    $(KERNEL_MODULES_OUT)/audio_wcd_core.ko \
+    $(KERNEL_MODULES_OUT)/audio_swr_ctrl.ko \
+    $(KERNEL_MODULES_OUT)/audio_wsa881x.ko \
+    $(KERNEL_MODULES_OUT)/audio_platform.ko \
+    $(KERNEL_MODULES_OUT)/audio_hdmi.ko \
+    $(KERNEL_MODULES_OUT)/audio_stub.ko \
+    $(KERNEL_MODULES_OUT)/audio_wcd9xxx.ko \
+    $(KERNEL_MODULES_OUT)/audio_mbhc.ko \
+    $(KERNEL_MODULES_OUT)/audio_wcd938x.ko \
+    $(KERNEL_MODULES_OUT)/audio_wcd938x_slave.ko \
+    $(KERNEL_MODULES_OUT)/audio_bolero_cdc.ko \
+    $(KERNEL_MODULES_OUT)/audio_wsa_macro.ko \
+    $(KERNEL_MODULES_OUT)/audio_va_macro.ko \
+    $(KERNEL_MODULES_OUT)/audio_rx_macro.ko \
+    $(KERNEL_MODULES_OUT)/audio_tx_macro.ko \
+    $(KERNEL_MODULES_OUT)/audio_native.ko \
+    $(KERNEL_MODULES_OUT)/audio_machine_lito.ko \
+    $(KERNEL_MODULES_OUT)/audio_snd_event.ko
+endif
+
+#Audio DLKM
+AUDIO_DLKM := audio_apr.ko
+AUDIO_DLKM += audio_q6_pdr.ko
+AUDIO_DLKM += audio_q6_notifier.ko
+AUDIO_DLKM += audio_adsp_loader.ko
+AUDIO_DLKM += audio_q6.ko
+AUDIO_DLKM += audio_usf.ko
+AUDIO_DLKM += audio_pinctrl_wcd.ko
+AUDIO_DLKM += audio_swr.ko
+AUDIO_DLKM += audio_wcd_core.ko
+AUDIO_DLKM += audio_swr_ctrl.ko
+AUDIO_DLKM += audio_wsa881x.ko
+AUDIO_DLKM += audio_platform.ko
+AUDIO_DLKM += audio_hdmi.ko
+AUDIO_DLKM += audio_stub.ko
+AUDIO_DLKM += audio_wcd9xxx.ko
+AUDIO_DLKM += audio_mbhc.ko
+AUDIO_DLKM += audio_native.ko
+AUDIO_DLKM += audio_wcd938x.ko
+AUDIO_DLKM += audio_wcd938x_slave.ko
+AUDIO_DLKM += audio_bolero_cdc.ko
+AUDIO_DLKM += audio_wsa_macro.ko
+AUDIO_DLKM += audio_va_macro.ko
+AUDIO_DLKM += audio_rx_macro.ko
+AUDIO_DLKM += audio_tx_macro.ko
+AUDIO_DLKM += audio_machine_lito.ko
+AUDIO_DLKM += audio_snd_event.ko
+
+PRODUCT_PACKAGES += $(AUDIO_DLKM)
+
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
@@ -135,6 +212,19 @@ persist.vendor.audio.fluence.tmic.enabled=false
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.spv3.enable=true\
 persist.vendor.audio.avs.afe_api_version=2
+
+#
+#snapdragon value add features
+#
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.qc.sdk.audio.ssr=false
+
+##fluencetype can be "fluence" or "fluencepro" or "none"
+PRODUCT_PROPERTY_OVERRIDES += \
+ro.qc.sdk.audio.fluencetype=none\
+persist.audio.fluence.voicecall=true\
+persist.audio.fluence.voicerec=false\
+persist.audio.fluence.speaker=true
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
