@@ -4205,7 +4205,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
          */
         if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
                 (val == AUDIO_DEVICE_NONE) &&
-                !audio_extn_a2dp_source_is_ready()) {
+                !audio_extn_a2dp_source_is_ready() &&
+                !adev->bt_sco_on) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
         /*
