@@ -710,9 +710,9 @@ typedef struct {
     uint32_t bit_rate; /*303000,606000,909000(in bits per second)*/
     uint16_t channel_mode; /* 0, 4, 2, 1*/
     uint16_t mtu; /*679*/
+    uint32_t bits_per_sample;
     bool is_abr_enabled;
     struct quality_level_to_bitrate_info level_to_bitrate_map;
-    uint32_t bits_per_sample;
 } audio_ldac_encoder_config;
 
 /* Information about BT AAC decoder configuration
