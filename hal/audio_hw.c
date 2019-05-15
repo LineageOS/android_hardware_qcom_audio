@@ -6242,7 +6242,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
 
     struct audio_device *adev = in->dev;
     int ret = -1;
-    size_t bytes_read = 0;
+    size_t bytes_read = 0, frame_size = 0;
 
     lock_input_stream(in);
 
@@ -6334,6 +6334,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         memset(buffer, 0, bytes);
 
 exit:
+    frame_size = audio_stream_in_frame_size(stream);
+    if (frame_size > 0)
+        in->frames_read += bytes_read/frame_size;
+
     if (-ENETRESET == ret)
         in->card_status = CARD_STATUS_OFFLINE;
     pthread_mutex_unlock(&in->lock);
