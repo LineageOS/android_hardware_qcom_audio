@@ -124,3 +124,7 @@ PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.enable.mirrorlink=false
 
+#enable deep buffer
+PRODUCT_PROPERTY_OVERRIDES += \
+media.stagefright.audio.deep=false
+
