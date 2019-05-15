@@ -85,6 +85,9 @@
 #define ACDB_DEV_TYPE_OUT 1
 #define ACDB_DEV_TYPE_IN 2
 
+/* SCO SWB codec mode */
+#define SPEECH_MODE_INVALID  0xFFFF
+
 /* support positional and index masks to 8ch */
 #define MAX_SUPPORTED_CHANNEL_MASKS (2 * FCC_8)
 #define MAX_SUPPORTED_FORMATS 15
@@ -242,6 +245,33 @@ enum {
     OFFLOAD_CMD_ERROR,              /* offload playback hit some error */
 };
 
+/*
+ * Camera selection indicated via set_parameters "cameraFacing=front|back and
+ * "rotation=0|90|180|270""
+ */
+enum {
+  CAMERA_FACING_BACK = 0x0,
+  CAMERA_FACING_FRONT = 0x1,
+  CAMERA_FACING_MASK = 0x0F,
+  CAMERA_ROTATION_LANDSCAPE = 0x0,
+  CAMERA_ROTATION_INVERT_LANDSCAPE = 0x10,
+  CAMERA_ROTATION_PORTRAIT = 0x20,
+  CAMERA_ROTATION_MASK = 0xF0,
+  CAMERA_BACK_LANDSCAPE = (CAMERA_FACING_BACK|CAMERA_ROTATION_LANDSCAPE),
+  CAMERA_BACK_INVERT_LANDSCAPE = (CAMERA_FACING_BACK|CAMERA_ROTATION_INVERT_LANDSCAPE),
+  CAMERA_BACK_PORTRAIT = (CAMERA_FACING_BACK|CAMERA_ROTATION_PORTRAIT),
+  CAMERA_FRONT_LANDSCAPE = (CAMERA_FACING_FRONT|CAMERA_ROTATION_LANDSCAPE),
+  CAMERA_FRONT_INVERT_LANDSCAPE = (CAMERA_FACING_FRONT|CAMERA_ROTATION_INVERT_LANDSCAPE),
+  CAMERA_FRONT_PORTRAIT = (CAMERA_FACING_FRONT|CAMERA_ROTATION_PORTRAIT),
+
+  CAMERA_DEFAULT = CAMERA_BACK_LANDSCAPE,
+};
+
+//FIXME: to be replaced by proper video capture properties API
+#define AUDIO_PARAMETER_KEY_CAMERA_FACING "cameraFacing"
+#define AUDIO_PARAMETER_VALUE_FRONT "front"
+#define AUDIO_PARAMETER_VALUE_BACK "back"
+
 enum {
     OFFLOAD_STATE_IDLE,
     OFFLOAD_STATE_PLAYING,
@@ -314,6 +344,7 @@ struct stream_out {
     uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES+1];
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
+    int64_t mmap_time_offset_nanos; /* fudge factor to correct inaccuracies in DSP */
     audio_io_handle_t handle;
     struct stream_app_type_cfg app_type_cfg;
 
@@ -393,6 +424,7 @@ struct stream_in {
     bool enable_aec;
     bool enable_ns;
     audio_format_t format;
+    int64_t mmap_time_offset_nanos; /* fudge factor to correct inaccuracies in DSP */
     audio_io_handle_t capture_handle;
     audio_input_flags_t flags;
     char profile[MAX_STREAM_PROFILE_STR_LEN];
@@ -409,6 +441,8 @@ struct stream_in {
     struct audio_device *dev;
     card_status_t card_status;
     int capture_started;
+    float zoom;
+    audio_microphone_direction_t direction;
 
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
@@ -500,6 +534,7 @@ typedef void (*adm_on_routing_change_t)(void *, audio_io_handle_t);
 
 struct audio_device {
     struct audio_hw_device device;
+
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     pthread_mutex_t cal_lock;
     struct mixer *mixer;
@@ -525,6 +560,7 @@ struct audio_device {
     unsigned int cur_hdmi_bit_width;
     unsigned int cur_wfd_channels;
     bool bt_wb_speech_enabled;
+    unsigned int swb_speech_mode;
     bool allow_afe_proxy_usage;
     bool is_charging; // from battery listener
     bool mic_break_enabled;
@@ -603,6 +639,7 @@ struct audio_device {
     struct listnode active_inputs_list;
     struct listnode active_outputs_list;
     bool use_old_pspd_mix_ctrl;
+    int camera_orientation; /* CAMERA_BACK_LANDSCAPE ... CAMERA_FRONT_PORTRAIT */
 };
 
 int select_devices(struct audio_device *adev,

@@ -245,7 +245,7 @@ void send_ddp_endp_params(struct audio_device *adev,
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if ((usecase->type == PCM_PLAYBACK) &&
+        if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
             (usecase->devices & ddp_dev) &&
             (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
             ((usecase->stream.out->format == AUDIO_FORMAT_AC3) ||
@@ -263,7 +263,7 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev)
     struct audio_usecase *usecase;
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if ((usecase->type == PCM_PLAYBACK) &&
+        if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
             (usecase->devices & AUDIO_DEVICE_OUT_ALL) &&
             (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
             ((usecase->stream.out->format == AUDIO_FORMAT_AC3) ||

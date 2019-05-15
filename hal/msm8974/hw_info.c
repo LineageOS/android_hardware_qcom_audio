@@ -235,6 +235,7 @@ static const snd_device_t tavil_qrd_msmnile_variant_devices[] = {
     SND_DEVICE_OUT_HANDSET,
     SND_DEVICE_OUT_VOICE_HANDSET,
     SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET,
+    SND_DEVICE_IN_VOICE_HEADSET_MIC,
     SND_DEVICE_IN_HANDSET_MIC,
     SND_DEVICE_IN_HANDSET_MIC_AEC,
     SND_DEVICE_IN_HANDSET_MIC_NS,
@@ -521,9 +522,16 @@ static void update_hardware_info_kona(
     if (!strncmp(snd_card_name, "kona-mtp-snd-card",
                  sizeof("kona-mtp-snd-card"))) {
         strlcpy(hw_info->name, "kona", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lito-mtp-snd-card",
+                 sizeof("lito-mtp-snd-card"))) {
+        strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
                  sizeof("kona-qrd-snd-card"))) {
         strlcpy(hw_info->name, "kona", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
+    } else if (!strncmp(snd_card_name, "lito-qrd-snd-card",
+                 sizeof("lito-qrd-snd-card"))) {
+        strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
         hw_info->is_stereo_spkr = false;
     } else {
         ALOGW("%s: Not a kona device", __func__);
@@ -684,6 +692,10 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
                  sizeof("sm6150-qrd-snd-card"))) {
         hw_info->is_stereo_spkr = false;
         strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
+                 sizeof("sm6150-wcd9375qrd-snd-card"))) {
+        strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else if (!strncmp(snd_card_name, "sm6150-tavil-snd-card",
                  sizeof("sm6150-tavil-snd-card"))) {
         strlcpy(hw_info->name, "sm6150", sizeof(hw_info->name));
@@ -788,7 +800,7 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "sda845")) {
         ALOGV("SDA845 - variant soundcard");
         update_hardware_info_sda845(hw_info, snd_card_name);
-    } else if (strstr(snd_card_name, "kona")) {
+    } else if (strstr(snd_card_name, "kona") || strstr(snd_card_name, "lito")) {
         ALOGV("KONA - variant soundcard");
         update_hardware_info_kona(hw_info, snd_card_name);
     } else if(strstr(snd_card_name, "sdm439")) {

@@ -289,8 +289,17 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     if(adev->mic_break_enabled)
         platform_set_mic_break_det(adev->platform, true);
 
-    pcm_start(session->pcm_tx);
-    pcm_start(session->pcm_rx);
+    ret = pcm_start(session->pcm_tx);
+    if (ret != 0) {
+        ALOGE("%s: %s", __func__, pcm_get_error(session->pcm_tx));
+        goto error_start_voice;
+    }
+
+    ret = pcm_start(session->pcm_rx);
+    if (ret != 0) {
+        ALOGE("%s: %s", __func__, pcm_get_error(session->pcm_rx));
+        goto error_start_voice;
+    }
 
     /* Enable aanc only when no calls are active */
     if (!voice_is_call_state_active(adev))

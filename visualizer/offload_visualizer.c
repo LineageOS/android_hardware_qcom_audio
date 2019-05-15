@@ -364,11 +364,11 @@ int configure_proxy_capture(struct mixer *mixer, int value) {
 // Get sound card number from pcm device
 int get_snd_card_num(char *device_info)
 {
-    char *token = NULL;
+    char *token = NULL, *saveptr = NULL;;
     int num = -1;
 
-    token = strtok(device_info, ": ");
-    token = strtok(token, "-");
+    token = strtok_r(device_info, ": ", &saveptr);
+    token = strtok_r(token, "-", &saveptr);
     if (token)
         num = atoi(token);
 
@@ -381,7 +381,7 @@ int get_device_id(char *device_info)
     char *token = NULL, *saveptr = NULL;
     int id = -1;
 
-    token = strtok(device_info, ": ");
+    token = strtok_r(device_info, ": ", &saveptr);
     token = strtok_r(token, "-", &saveptr);
     while (token != NULL) {
         token = strtok_r(NULL, "-", &saveptr);
@@ -505,6 +505,7 @@ void *capture_thread_loop(void *arg)
                         pcm_close(pcm);
                         pcm = NULL;
                         configure_proxy_capture(mixer, 0);
+                        pthread_cond_wait(&cond, &lock);
                     } else {
                         capture_enabled = true;
                         ALOGD("%s: capture ENABLED", __func__);
