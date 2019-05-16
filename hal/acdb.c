@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -28,6 +28,8 @@
 #include <time.h>
 #include "acdb.h"
 #include "platform_api.h"
+#include "audio_extn.h"
+#include <platform.h>
 
 #ifdef INSTANCE_ID_ENABLED
 int check_and_set_instance_id_support(struct mixer* mixer, bool acdb_support)
@@ -57,6 +59,22 @@ int check_and_set_instance_id_support(struct mixer* mixer, bool acdb_support)
 #define check_and_set_instance_id_support(x, y) -ENOSYS
 #endif
 
+void get_platform_file_for_device(struct mixer *mixer, char* platform_info_file)
+{
+    const char *snd_card_name = NULL;
+
+    if (mixer != NULL) {
+        /* Get Sound card name */
+        snd_card_name = mixer_get_name(mixer);
+        if (!snd_card_name) {
+            ALOGE("failed to allocate memory for snd_card_name");
+            return;
+        }
+        /* Get platform info file for target */
+        audio_extn_utils_get_platform_info(snd_card_name, platform_info_file);
+    }
+}
+
 int acdb_init(int snd_card_num)
 {
 
@@ -84,7 +102,7 @@ int acdb_init_v2(struct mixer *mixer)
 
     int result = -1;
     char *cvd_version = NULL;
-
+    char platform_info_file[MIXER_PATH_MAX_LENGTH] = PLATFORM_INFO_XML_PATH;
     const char *snd_card_name = NULL;
     struct acdb_platform_data *my_data = NULL;
 
@@ -100,9 +118,9 @@ int acdb_init_v2(struct mixer *mixer)
     }
 
     list_init(&my_data->acdb_meta_key_list);
-
+    get_platform_file_for_device(mixer, platform_info_file);
     /* Extract META KEY LIST INFO */
-    platform_info_init(PLATFORM_INFO_XML_PATH, my_data, ACDB_EXTN);
+    platform_info_init(platform_info_file, my_data, ACDB_EXTN);
 
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
     if (my_data->acdb_handle == NULL) {
@@ -164,13 +182,13 @@ int acdb_init_v2(struct mixer *mixer)
 
     /* Get Sound card name */
     snd_card_name = mixer_get_name(mixer);
+    snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
     if (!snd_card_name) {
-        ALOGE("failed to allocate memory for snd_card_name");
+        ALOGE("failed to get snd_card_name");
         result = -1;
         goto cleanup;
     }
 
-    snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
     int key = 0;
     struct listnode *node = NULL;
     struct meta_key_list *key_info = NULL;

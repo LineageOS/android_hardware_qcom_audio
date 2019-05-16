@@ -1993,6 +1993,10 @@ int platform_acdb_init(void *platform)
 
     snd_card_name = mixer_get_name(my_data->adev->mixer);
     snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
+    if (!snd_card_name) {
+        ALOGE("Failed to get snd_card_name");
+        goto cleanup;
+    }
 
     my_data->acdb_init_data.cvd_version = cvd_version;
     my_data->acdb_init_data.snd_card_name = strdup(snd_card_name);
@@ -2014,6 +2018,7 @@ int platform_acdb_init(void *platform)
     strlcpy(my_data->snd_card_name, snd_card_name,
                                                MAX_SND_CARD_STRING_SIZE);
 
+cleanup:
     if (cvd_version)
         free(cvd_version);
     if (!result) {
@@ -2934,8 +2939,6 @@ void platform_deinit(void *platform)
     /* deinit usb */
     audio_extn_usb_deinit();
     audio_extn_dap_hal_deinit();
-    if (audio_extn_spkr_prot_is_enabled())
-        audio_extn_spkr_prot_deinit();
 #ifdef DYNAMIC_LOG_ENABLED
     log_utils_deinit();
 #endif
@@ -3152,6 +3155,13 @@ int platform_get_fluence_type(void *platform, char *value, uint32_t len)
         ret = -1;
 
     return ret;
+}
+
+void platform_add_external_specific_device(snd_device_t snd_device __unused,
+                                           const char *name __unused,
+                                           unsigned int acdb_id __unused)
+{
+    return;
 }
 
 int platform_get_snd_device_index(char *device_name)
@@ -3496,7 +3506,7 @@ int native_audio_set_params(struct platform_data *platform,
             list_for_each(node, &(platform->adev)->usecase_list) {
                  usecase = node_to_item(node, struct audio_usecase, list);
 
-                 if (is_offload_usecase(usecase->id) &&
+                 if (usecase->stream.out && is_offload_usecase(usecase->id) &&
                     (usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                     usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) &&
                     OUTPUT_SAMPLING_RATE_44100 == usecase->stream.out->sample_rate) {
@@ -6159,7 +6169,6 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         ALOGV("%s: Format doesnt have to be set", __func__);
     }
 
-    format = format & AUDIO_FORMAT_MAIN_MASK;
     /* Set data format only if there is a change from PCM to compressed
        and vice versa */
     if (set_mi2s_tx_data_format && (format ^ my_data->current_backend_cfg[backend_idx].format)) {
@@ -6169,7 +6178,7 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
                   __func__, ext_disp_format);
             return -EINVAL;
         }
-        if (format == AUDIO_FORMAT_PCM) {
+        if ((format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM) {
             ALOGE("%s:MI2S data format LPCM", __func__);
             mixer_ctl_set_enum_by_string(ctl, "LPCM");
         } else {
@@ -6724,18 +6733,25 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
               __func__, bit_width, sample_rate, channels);
     }
 
-    ALOGI("%s:txbecf: afe: Codec selected backend: %d updated bit width: %d and "
-          "sample rate: %d", __func__, backend_idx, bit_width, sample_rate);
+    ALOGI("%s:txbecf: afe: current backend bit_width %d sample_rate %d channels %d, format %x",
+                            __func__,
+                            my_data->current_backend_cfg[backend_idx].bit_width,
+                            my_data->current_backend_cfg[backend_idx].sample_rate,
+                            my_data->current_backend_cfg[backend_idx].channels,
+                            my_data->current_backend_cfg[backend_idx].format);
     // Force routing if the expected bitwdith or samplerate
     // is not same as current backend comfiguration
+    // Note that below if block would be entered even if main format is same
+    // but subformat is different for e.g. current backend is configured for 16 bit PCM
+    // as compared to 24 bit PCM backend requested
     if ((bit_width != my_data->current_backend_cfg[backend_idx].bit_width) ||
         (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate) ||
         (channels != my_data->current_backend_cfg[backend_idx].channels) ||
-        ((format & AUDIO_FORMAT_MAIN_MASK) != my_data->current_backend_cfg[backend_idx].format)) {
+        (format != my_data->current_backend_cfg[backend_idx].format)) {
         backend_cfg->bit_width = bit_width;
         backend_cfg->sample_rate= sample_rate;
         backend_cfg->channels = channels;
-        backend_cfg->format = format & AUDIO_FORMAT_MAIN_MASK;
+        backend_cfg->format = format;
         backend_change = true;
         ALOGI("%s:txbecf: afe: Codec backend needs to be updated. new bit width: %d "
               "new sample rate: %d new channel: %d new format: %d",
@@ -7794,7 +7810,8 @@ bool platform_send_gain_dep_cal(void *platform,
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
 
-            if (usecase != NULL && usecase->type == PCM_PLAYBACK) {
+            if (usecase != NULL && usecase->stream.out &&
+                                   usecase->type == PCM_PLAYBACK) {
                 int new_snd_device[2] = {0};
                 int i, num_devices = 1;
 
@@ -8293,7 +8310,7 @@ int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (usecase->type == PCM_PLAYBACK &&
+        if (usecase->stream.out && usecase->type == PCM_PLAYBACK &&
                 usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
             /*
              * If acdb tuning is different for SPEAKER_REVERSE, it is must

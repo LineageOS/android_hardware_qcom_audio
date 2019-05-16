@@ -185,6 +185,9 @@ void platform_add_operator_specific_device(snd_device_t snd_device,
                                            const char *operator,
                                            const char *mixer_path,
                                            unsigned int acdb_id);
+void platform_add_external_specific_device(snd_device_t snd_device,
+                                           const char *name,
+                                           unsigned int acdb_id);
 void platform_get_parameters(void *platform, struct str_parms *query,
                              struct str_parms *reply);
 int platform_set_parameters(void *platform, struct str_parms *parms);

@@ -46,6 +46,7 @@
 #include <cutils/properties.h>
 #include <log/log.h>
 #include <unistd.h>
+#include <sched.h>
 
 #include "audio_hw.h"
 #include "audio_extn.h"
@@ -189,6 +190,8 @@ static bool audio_extn_hdmi_passthru_enabled = false;
 static bool audio_extn_concurrent_capture_enabled = false;
 static bool audio_extn_compress_in_enabled = false;
 static bool audio_extn_battery_listener_enabled = false;
+static bool audio_extn_maxx_audio_enabled = false;
+static bool audio_extn_audiozoom_enabled = false;
 
 #define AUDIO_PARAMETER_KEY_AANC_NOISE_LEVEL "aanc_noise_level"
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -820,7 +823,7 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
         // Refresh device selection for anc playback
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type != PCM_CAPTURE) {
+            if (usecase->stream.out && usecase->type != PCM_CAPTURE) {
                 if (usecase->stream.out->devices == \
                     AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                     usecase->stream.out->devices ==  \
@@ -1104,6 +1107,7 @@ int usb_get_sup_sample_rates(bool type, uint32_t *sr, uint32_t l);
 bool usb_is_tunnel_supported();
 bool usb_alive(int card);
 bool usb_connected(struct str_parms *parms);
+char *usb_usbid(void);
 unsigned long usb_find_service_interval(bool min, bool playback);
 int usb_altset_for_service_interval(bool is_playback,
                                                unsigned long service_interval,
@@ -1260,6 +1264,15 @@ bool audio_extn_usb_connected(struct str_parms *parms)
     bool ret_val = false;
     if (is_usb_offload_enabled)
         ret_val = usb_connected(parms);
+
+    return ret_val;
+}
+
+char *audio_extn_usb_usbid(void)
+{
+    char *ret_val = NULL;
+    if (is_usb_offload_enabled)
+        ret_val = usb_usbid();
 
     return ret_val;
 }
@@ -3791,6 +3804,13 @@ static a2dp_start_capture_t a2dp_start_capture;
 typedef int (*a2dp_stop_capture_t)();
 static a2dp_stop_capture_t a2dp_stop_capture;
 
+typedef int (*sco_start_configuration_t)();
+static sco_start_configuration_t sco_start_configuration;
+
+typedef void (*sco_reset_configuration_t)();
+static sco_reset_configuration_t sco_reset_configuration;
+
+
 int a2dp_offload_feature_init(bool is_feature_enabled)
 {
     ALOGD("%s: Called with feature %s", __func__,
@@ -3841,6 +3861,15 @@ int a2dp_offload_feature_init(bool is_feature_enabled)
                  (a2dp_stop_capture_t)dlsym(a2dp_lib_handle, "a2dp_stop_capture"))) {
             ALOGE("%s: dlsym failed", __func__);
             goto feature_disabled;
+        }
+        // initialize APIs for SWB extension
+        if (!(sco_start_configuration =
+                 (sco_start_configuration_t)dlsym(a2dp_lib_handle, "sco_start_configuration")) ||
+             !(sco_reset_configuration =
+                 (sco_reset_configuration_t)dlsym(a2dp_lib_handle, "sco_reset_configuration"))) {
+            ALOGE("%s: dlsym failed for swb APIs", __func__);
+            sco_start_configuration = NULL;
+            sco_reset_configuration = NULL;
         }
         ALOGD("%s:: ---- Feature A2DP_OFFLOAD is Enabled ----", __func__);
         return 0;
@@ -3963,6 +3992,16 @@ int audio_extn_a2dp_start_capture()
 int audio_extn_a2dp_stop_capture()
 {
     return (a2dp_stop_capture ? a2dp_stop_capture() : 0);
+}
+
+int audio_extn_sco_start_configuration()
+{
+    return (sco_start_configuration? sco_start_configuration() : 0);
+}
+
+void audio_extn_sco_reset_configuration()
+{
+    return (sco_reset_configuration? sco_reset_configuration() : 0);
 }
 
 // END: A2DP_OFFLOAD =====================================================================
@@ -4722,6 +4761,233 @@ bool audio_extn_battery_properties_is_charging()
 {
     return (batt_prop_is_charging)? batt_prop_is_charging(): false;
 }
+// END: BATTERY_LISTENER ================================================================
+
+// START: AUDIOZOOM_FEATURE =====================================================================
+#ifdef __LP64__
+#define AUDIOZOOM_LIB_PATH "/vendor/lib64/libaudiozoom.so"
+#else
+#define AUDIOZOOM_LIB_PATH "/vendor/lib/libaudiozoom.so"
+#endif
+
+static void *audiozoom_lib_handle = NULL;
+
+typedef int (*audiozoom_init_t)(audiozoom_init_config_t);
+static audiozoom_init_t audiozoom_init;
+
+typedef int (*audiozoom_set_microphone_direction_t)(struct stream_in *,
+                                                    audio_microphone_direction_t);
+static audiozoom_set_microphone_direction_t audiozoom_set_microphone_direction;
+
+typedef int (*audiozoom_set_microphone_field_dimension_t)(struct stream_in *, float);
+static audiozoom_set_microphone_field_dimension_t audiozoom_set_microphone_field_dimension;
+
+int audiozoom_feature_init(bool is_feature_enabled)
+{
+    audio_extn_audiozoom_enabled = is_feature_enabled;
+    ALOGD("%s: Called with feature %s", __func__,
+                  is_feature_enabled ? "Enabled" : "NOT Enabled");
+    if (is_feature_enabled) {
+        // dlopen lib
+        audiozoom_lib_handle = dlopen(AUDIOZOOM_LIB_PATH, RTLD_NOW);
+
+        if (!audiozoom_lib_handle) {
+            ALOGE("%s: dlopen failed", __func__);
+            goto feature_disabled;
+        }
+
+        if (!(audiozoom_init =
+                    (audiozoom_init_t)dlsym(audiozoom_lib_handle, "audiozoom_init")) ||
+            !(audiozoom_set_microphone_direction =
+                 (audiozoom_set_microphone_direction_t)dlsym(audiozoom_lib_handle,
+                                              "audiozoom_set_microphone_direction")) ||
+            !(audiozoom_set_microphone_field_dimension =
+                 (audiozoom_set_microphone_field_dimension_t)dlsym(audiozoom_lib_handle,
+                                        "audiozoom_set_microphone_field_dimension"))) {
+            ALOGE("%s: dlsym failed", __func__);
+            goto feature_disabled;
+        }
+
+        ALOGD("%s:: ---- Feature AUDIOZOOM is Enabled ----", __func__);
+        return 0;
+    }
+feature_disabled:
+    if (audiozoom_lib_handle) {
+        dlclose(audiozoom_lib_handle);
+        audiozoom_lib_handle = NULL;
+    }
+
+    audiozoom_init = NULL;
+    audiozoom_set_microphone_direction = NULL;
+    audiozoom_set_microphone_field_dimension = NULL;
+    ALOGW(":: %s: ---- Feature AUDIOZOOM is disabled ----", __func__);
+    return -ENOSYS;
+}
+
+bool audio_extn_is_audiozoom_enabled()
+{
+    return audio_extn_audiozoom_enabled;
+}
+
+int audio_extn_audiozoom_init()
+{
+     int ret_val = 0;
+     if (audiozoom_init) {
+        audiozoom_init_config_t init_config;
+        init_config.fp_platform_set_parameters = platform_set_parameters;
+        ret_val = audiozoom_init(init_config);
+     }
+
+     return ret_val;
+}
+
+int audio_extn_audiozoom_set_microphone_direction(struct stream_in *stream,
+                                           audio_microphone_direction_t dir)
+{
+     int ret_val = -ENOSYS;
+     if (audiozoom_set_microphone_direction)
+        ret_val = audiozoom_set_microphone_direction(stream, dir);
+
+     return ret_val;
+}
+
+int audio_extn_audiozoom_set_microphone_field_dimension(struct stream_in *stream,
+                                                         float zoom)
+{
+    int ret_val = -ENOSYS;
+    if (audiozoom_set_microphone_field_dimension)
+        ret_val = audiozoom_set_microphone_field_dimension(stream, zoom);
+
+    return ret_val;
+}
+// END:   AUDIOZOOM_FEATURE =====================================================================
+
+// START: MAXX_AUDIO =====================================================================
+#ifdef __LP64__
+#define MAXX_AUDIO_LIB_PATH "/vendor/lib64/libmaxxaudio.so"
+#else
+#define MAXX_AUDIO_LIB_PATH "/vendor/lib/libmaxxaudio.so"
+#endif
+
+static void *maxxaudio_lib_handle = NULL;
+
+typedef void (*maxxaudio_init_t)(void *, maxx_audio_init_config_t);
+static maxxaudio_init_t maxxaudio_init;
+
+typedef void (*maxxaudio_deinit_t)();
+static maxxaudio_deinit_t maxxaudio_deinit;
+
+typedef bool (*maxxaudio_set_state_t)(struct audio_device*, int,
+                             float, bool);
+static maxxaudio_set_state_t maxxaudio_set_state;
+
+typedef void (*maxxaudio_set_device_t)(struct audio_usecase *);
+static maxxaudio_set_device_t maxxaudio_set_device;
+
+typedef void (*maxxaudio_set_parameters_t)(struct audio_device *,
+                                  struct str_parms *);
+static maxxaudio_set_parameters_t maxxaudio_set_parameters;
+
+typedef bool (*maxxaudio_supported_usb_t)();
+static maxxaudio_supported_usb_t maxxaudio_supported_usb;
+
+int maxx_audio_feature_init(bool is_feature_enabled)
+{
+    audio_extn_maxx_audio_enabled = is_feature_enabled;
+    ALOGD("%s: Called with feature %s", __func__,
+                  is_feature_enabled ? "Enabled" : "NOT Enabled");
+    if (is_feature_enabled) {
+        // dlopen lib
+        maxxaudio_lib_handle = dlopen(MAXX_AUDIO_LIB_PATH, RTLD_NOW);
+
+        if (!maxxaudio_lib_handle) {
+            ALOGE("%s: dlopen failed", __func__);
+            goto feature_disabled;
+        }
+
+        if (!(maxxaudio_init =
+                    (maxxaudio_init_t)dlsym(maxxaudio_lib_handle, "ma_init")) ||
+            !(maxxaudio_deinit =
+                 (maxxaudio_deinit_t)dlsym(maxxaudio_lib_handle, "ma_deinit")) ||
+            !(maxxaudio_set_state =
+                 (maxxaudio_set_state_t)dlsym(maxxaudio_lib_handle, "ma_set_state")) ||
+            !(maxxaudio_set_device =
+                 (maxxaudio_set_device_t)dlsym(maxxaudio_lib_handle, "ma_set_device")) ||
+            !(maxxaudio_set_parameters =
+                 (maxxaudio_set_parameters_t)dlsym(maxxaudio_lib_handle, "ma_set_parameters")) ||
+            !(maxxaudio_supported_usb =
+                 (maxxaudio_supported_usb_t)dlsym(
+                                    maxxaudio_lib_handle, "ma_supported_usb"))) {
+            ALOGE("%s: dlsym failed", __func__);
+            goto feature_disabled;
+        }
+        ALOGD("%s:: ---- Feature MAXX_AUDIO is Enabled ----", __func__);
+        return 0;
+    }
+
+feature_disabled:
+    if (maxxaudio_lib_handle) {
+        dlclose(maxxaudio_lib_handle);
+        maxxaudio_lib_handle = NULL;
+    }
+
+    maxxaudio_init = NULL;
+    maxxaudio_deinit = NULL;
+    maxxaudio_set_state = NULL;
+    maxxaudio_set_device = NULL;
+    maxxaudio_set_parameters = NULL;
+    maxxaudio_supported_usb = NULL;
+    ALOGW(":: %s: ---- Feature MAXX_AUDIO is disabled ----", __func__);
+    return -ENOSYS;
+}
+
+bool audio_extn_is_maxx_audio_enabled()
+{
+    return audio_extn_maxx_audio_enabled;
+}
+
+void audio_extn_ma_init(void *platform)
+{
+
+     if (maxxaudio_init) {
+        maxx_audio_init_config_t init_config;
+        init_config.fp_platform_set_parameters = platform_set_parameters;
+        init_config.fp_audio_extn_get_snd_card_split = audio_extn_get_snd_card_split;
+        maxxaudio_init(platform, init_config);
+     }
+}
+
+void audio_extn_ma_deinit()
+{
+     if (maxxaudio_deinit)
+        maxxaudio_deinit();
+}
+
+bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
+                             float vol, bool active)
+{
+    return (maxxaudio_set_state ?
+                maxxaudio_set_state(adev, stream_type, vol, active): false);
+}
+
+void audio_extn_ma_set_device(struct audio_usecase *usecase)
+{
+    if (maxxaudio_set_device)
+        maxxaudio_set_device(usecase);
+}
+
+void audio_extn_ma_set_parameters(struct audio_device *adev,
+                                  struct str_parms *parms)
+{
+    if (maxxaudio_set_parameters)
+        maxxaudio_set_parameters(adev, parms);
+}
+
+bool audio_extn_ma_supported_usb()
+{
+    return (maxxaudio_supported_usb ? maxxaudio_supported_usb(): false);
+}
+// END: MAXX_AUDIO =====================================================================
 
 void audio_extn_feature_init(int is_running_with_enhanced_fwk)
 {
@@ -4831,6 +5097,11 @@ void audio_extn_feature_init(int is_running_with_enhanced_fwk)
             case BATTERY_LISTENER:
                 battery_listener_feature_init(enable);
                 break;
+            case MAXX_AUDIO:
+                maxx_audio_feature_init(enable);
+                break;
+            case AUDIO_ZOOM:
+                audiozoom_feature_init(enable);
             default:
                 break;
         }

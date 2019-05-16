@@ -32,6 +32,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="a2dp_offload_enabled" value="true" />
         <flag name="afe_proxy_enabled" value="false" />
         <flag name="anc_headset_enabled" value="false" />
+        <flag name="audio_zoom_enabled" value="true" />
         <flag name="audiosphere_enabled" value="false" />
         <flag name="battery_listener_enabled" value="false" />
         <flag name="compress_capture_enabled" value="false" />
@@ -57,6 +58,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="incall_music_enabled" value="true" />
         <flag name="keep_alive_enabled" value="false" />
         <flag name="kpi_optimize_enabled" value="false" />
+        <flag name="maxx_audio_enabled" value="true" />
         <flag name="receiver_aided_stereo" value="false" />
         <flag name="record_play_concurrency" value="false" />
         <flag name="snd_monitor_enabled" value="true" />

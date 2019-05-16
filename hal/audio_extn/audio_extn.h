@@ -283,6 +283,7 @@ int audio_extn_usb_altset_for_service_interval(bool is_playback,
                                                uint32_t *bit_width,
                                                uint32_t *sample_rate,
                                                uint32_t *channel_count);
+char *audio_extn_usb_usbid(void);
 int audio_extn_usb_set_service_interval(bool playback,
                                         unsigned long service_interval,
                                         bool *reconfig);
@@ -313,6 +314,9 @@ bool audio_extn_a2dp_source_is_ready();
 bool audio_extn_a2dp_source_is_suspended();
 int audio_extn_a2dp_start_capture();
 int audio_extn_a2dp_stop_capture();
+int audio_extn_sco_start_configuration();
+void audio_extn_sco_reset_configuration();
+
 
 // --- Function pointers from audio_extn needed by A2DP_OFFLOAD
 typedef int (*fp_check_a2dp_restore_t)(struct audio_device *,
@@ -324,6 +328,38 @@ struct a2dp_offload_init_config {
 typedef struct a2dp_offload_init_config a2dp_offload_init_config_t;
 // END: A2DP_OFFLOAD FEATURE ====================================================
 
+typedef int (*fp_platform_set_parameters_t)(void*, struct str_parms*);
+
+// START: AUDIOZOOM FEATURE ==================================================
+int audio_extn_audiozoom_init();
+int audio_extn_audiozoom_set_microphone_direction(struct stream_in *stream,
+                                           audio_microphone_direction_t dir);
+int audio_extn_audiozoom_set_microphone_field_dimension(struct stream_in *stream, float zoom);
+bool audio_extn_is_audiozoom_enabled();
+
+struct audiozoom_init_config {
+    fp_platform_set_parameters_t fp_platform_set_parameters;
+};
+typedef struct audiozoom_init_config audiozoom_init_config_t;
+// END:   AUDIOZOOM FEATURE ==================================================
+
+// START: MAXX_AUDIO FEATURE ==================================================
+void audio_extn_ma_init(void *platform);
+void audio_extn_ma_deinit();
+bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
+                             float vol, bool active);
+void audio_extn_ma_set_device(struct audio_usecase *usecase);
+void audio_extn_ma_set_parameters(struct audio_device *adev,
+                                  struct str_parms *parms);
+bool audio_extn_ma_supported_usb();
+bool audio_extn_is_maxx_audio_enabled();
+// --- Function pointers from audio_extn needed by MAXX_AUDIO
+struct maxx_audio_init_config {
+    fp_platform_set_parameters_t fp_platform_set_parameters;
+    fp_audio_extn_get_snd_card_split_t fp_audio_extn_get_snd_card_split;
+};
+typedef struct maxx_audio_init_config maxx_audio_init_config_t;
+// START: MAXX_AUDIO FEATURE ==================================================
 //START: SSRRC_FEATURE ==========================================================
 bool audio_extn_ssr_check_usecase(struct stream_in *in);
 int audio_extn_ssr_set_usecase(struct stream_in *in,

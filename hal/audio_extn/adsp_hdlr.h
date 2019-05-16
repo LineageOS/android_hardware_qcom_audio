@@ -57,7 +57,7 @@ int audio_extn_adsp_hdlr_stream_set_param(void *handle,
                     adsp_hdlr_cmd_t cmd,
                     void *param);
 int audio_extn_adsp_hdlr_stream_register_event(void *handle,
-                void *param, adsp_event_callback_t cb, void *cookie);
+                void *param, adsp_event_callback_t cb, void *cookie, bool is_adm_event);
 int audio_extn_adsp_hdlr_stream_deregister_event(void *handle, void *param);
 #else
 #define audio_extn_adsp_hdlr_init(mixer)                                     (0)

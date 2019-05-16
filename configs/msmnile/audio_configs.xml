@@ -69,6 +69,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <!-- AHAL Configs -->
         <flag name="a2dp_offload_enabled" value="true" />
         <flag name="anc_headset_enabled" value="true" />
+        <flag name="audio_zoom_enabled" value="false" />
         <flag name="audiosphere_enabled" value="true" />
         <flag name="battery_listener_enabled" value="true" />
         <flag name="compress_capture_enabled" value="false" />
@@ -92,6 +93,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="incall_music_enabled" value="true" />
         <flag name="keep_alive_enabled" value="true" />
         <flag name="kpi_optimize_enabled" value="true" />
+        <flag name="maxx_audio_enabled" value="false" />
         <flag name="receiver_aided_stereo" value="true" />
         <flag name="snd_monitor_enabled" value="true" />
         <flag name="source_track_enabled" value="true" />

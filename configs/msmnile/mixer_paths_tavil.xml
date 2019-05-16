@@ -466,6 +466,7 @@
     <ctl name="RX INT8_1 MIX1 INP0" value="ZERO" />
     <ctl name="RX INT8_1 MIX1 INP1" value="ZERO" />
     <ctl name="RX INT8_1 MIX1 INP2" value="ZERO" />
+    <ctl name="RX INT7 MIX2 INP" value="ZERO" />
     <ctl name="RX INT0_2 MUX" value="ZERO" />
     <ctl name="RX INT1_2 MUX" value="ZERO" />
     <ctl name="RX INT2_2 MUX" value="ZERO" />
@@ -2300,6 +2301,11 @@
 
     <path name="voice-headset-mic">
         <path name="amic2" />
+    </path>
+
+    <path name="voice-headset-mic-qrd">
+        <path name="amic2" />
+        <ctl name="DEC0 Volume" value="84" />
     </path>
 
     <path name="speaker-and-headphones">
