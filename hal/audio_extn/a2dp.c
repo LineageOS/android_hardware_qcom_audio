@@ -1183,20 +1183,21 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
                     rate_str = SPEECH_TX_SAMPLE_RATE;
                 else
                     rate_str = ABR_TX_SAMPLE_RATE;
-            }
-            ALOGD("%s: set backend tx sample rate = %s", __func__, rate_str);
-            ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                            MIXER_SOURCE_SAMPLE_RATE_TX);
-            if (!ctl_sample_rate) {
-                ALOGE("%s: ERROR backend sample rate mixer control not identifed", __func__);
-                is_configured = false;
-                goto fail;
-            }
 
-            if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
-                ALOGE("%s: Failed to set backend sample rate = %s", __func__, rate_str);
-                is_configured = false;
-                goto fail;
+                ALOGD("%s: set backend tx sample rate = %s", __func__, rate_str);
+                ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                                MIXER_SOURCE_SAMPLE_RATE_TX);
+                if (!ctl_sample_rate) {
+                    ALOGE("%s: ERROR backend sample rate mixer control not identifed", __func__);
+                    is_configured = false;
+                    goto fail;
+                }
+
+                if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
+                    ALOGE("%s: Failed to set backend sample rate = %s", __func__, rate_str);
+                    is_configured = false;
+                    goto fail;
+                }
             }
         }
     } else {
