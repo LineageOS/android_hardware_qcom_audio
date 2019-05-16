@@ -480,7 +480,8 @@ enum {
     defined (PLATFORM_QCS605) ||defined (PLATFORM_SDX24) || \
     defined (PLATFORM_MSMNILE) || defined (PLATFORM_KONA) || \
     defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || \
-    defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO)
+    defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || \
+    defined (PLATFORM_ATOLL)
 #define PLAYBACK_OFFLOAD_DEVICE2 17
 #elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
 #define PLAYBACK_OFFLOAD_DEVICE2 24
@@ -493,7 +494,7 @@ enum {
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
-    defined (PLATFORM_MSM8937)
+    defined (PLATFORM_MSM8937) || defined (PLATFORM_ATOLL)
 #define PLAYBACK_OFFLOAD_DEVICE3 18
 #define PLAYBACK_OFFLOAD_DEVICE4 34
 #define PLAYBACK_OFFLOAD_DEVICE5 35
