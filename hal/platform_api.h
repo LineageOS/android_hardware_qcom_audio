@@ -314,6 +314,7 @@ int platform_split_snd_device(void *platform,
                               int *num_devices,
                               snd_device_t *new_snd_devices);
 
+bool platform_check_all_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 int platform_set_sidetone(struct audio_device *adev,
                           snd_device_t out_snd_device,
