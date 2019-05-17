@@ -5751,7 +5751,7 @@ static void adjust_mmap_period_count(struct pcm_config *config, int32_t min_size
 static int64_t get_mmap_out_time_offset() {
     const int32_t kDefaultOffsetMicros = 0;
     int32_t mmap_time_offset_micros = property_get_int32(
-        "persist.audio.out_mmap_delay_micros", kDefaultOffsetMicros);
+        "persist.vendor.audio.out_mmap_delay_micros", kDefaultOffsetMicros);
     ALOGI("mmap_time_offset_micros = %d for output", mmap_time_offset_micros);
     return mmap_time_offset_micros * (int64_t)1000;
 }
@@ -6544,7 +6544,7 @@ static int in_start(const struct audio_stream_in* stream)
 static int64_t in_get_mmap_time_offset() {
     const int32_t kDefaultOffsetMicros = 0;
     int32_t mmap_time_offset_micros = property_get_int32(
-            "persist.audio.in_mmap_delay_micros", kDefaultOffsetMicros);
+            "persist.vendor.audio.in_mmap_delay_micros", kDefaultOffsetMicros);
     ALOGI("mmap_time_offset_micros = %d for input", mmap_time_offset_micros);
     return mmap_time_offset_micros * (int64_t)1000;
 }
