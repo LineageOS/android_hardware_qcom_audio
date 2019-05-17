@@ -5,20 +5,6 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := libqcaudioperf
-
-LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
-LOCAL_SHARED_LIBRARIES += libbase libhidlbase libhwbinder libutils android.hardware.power@1.2 liblog
-LOCAL_SRC_FILES := audio_perf.cpp
-LOCAL_MODULE_RELATIVE_PATH := hw
-LOCAL_MODULE_TAGS := optional
-LOCAL_MODULE_OWNER := qti
-LOCAL_VENDOR_MODULE := true
-
-include $(BUILD_SHARED_LIBRARY)
-
-include $(CLEAR_VARS)
-
 LOCAL_ARM_MODE := arm
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
@@ -358,7 +344,9 @@ endif
 #    LOCAL_CFLAGS += -DAUDIO_EXTN_AUTO_HAL_ENABLED
 #    LOCAL_SRC_FILES += audio_extn/auto_hal.c
 #endif
-LOCAL_SHARED_LIBRARIES += libqcaudioperf
+
+LOCAL_SHARED_LIBRARIES += libbase libhidlbase libhwbinder libutils android.hardware.power@1.2 liblog
+LOCAL_SRC_FILES += audio_perf.cpp
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 

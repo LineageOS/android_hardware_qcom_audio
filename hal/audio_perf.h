@@ -31,4 +31,4 @@ int audio_low_latency_hint_end();
 }
 #endif
 
-#endif //__QAUDIOPERF_H___
+#endif //__QAUDIOPERF_H__
