@@ -74,7 +74,6 @@
 #include "audio_extn.h"
 #include "voice_extn.h"
 #include "ip_hdlr_intf.h"
-#include "audio_feature_manager.h"
 
 #include "sound/compress_params.h"
 #include "sound/asound.h"
@@ -6787,7 +6786,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                       (devices != AUDIO_DEVICE_OUT_USB_ACCESSORY);
     bool direct_dev = is_hdmi || is_usb_dev;
     bool use_db_as_primary =
-           audio_feature_manager_is_feature_enabled(USE_DEEP_BUFFER_AS_PRIMARY_OUTPUT);
+         property_get_bool("vendor.audio.feature.deepbuffer_as_primary.enable",
+                            false);
     bool force_haptic_path =
             property_get_bool("vendor.audio.test_haptic", false);
     bool is_voip_rx = flags & AUDIO_OUTPUT_FLAG_VOIP_RX;
@@ -9099,8 +9099,9 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->bt_sco_on = false;
     /* adev->cur_hdmi_channels = 0;  by calloc() */
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
-    /* Init audio feature manager */
-    audio_feature_manager_init();
+    /* Init audio and voice feature */
+    audio_extn_feature_init();
+    voice_extn_feature_init();
     voice_init(adev);
     list_init(&adev->usecase_list);
     list_init(&adev->active_inputs_list);
