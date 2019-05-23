@@ -266,6 +266,10 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
     patch_record->usecase = usecase;
     patch_record->input_io_handle = input_io_handle;
     patch_record->output_io_handle = output_io_handle;
+    memcpy((void *)&patch_record->source, (void *)sources,
+        sizeof(struct audio_port_config));
+    memcpy((void *)&patch_record->sink, (void *)sinks,
+        sizeof(struct audio_port_config));
     list_add_tail(&adev->audio_patch_record_list, &patch_record->list);
     pthread_mutex_unlock(&adev->lock);
 
@@ -592,20 +596,21 @@ int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
              *        to be part of port config upon audio patch creation. If not, need
              *        to create a list of audio port configs in adev context.
              */
-#if 0
             list_for_each(node, &adev->audio_patch_record_list) {
                 struct audio_patch_record *patch_record = node_to_item(node,
                                                     struct audio_patch_record,
                                                     list);
-                /* limit audio gain support for bus device only */
-                if (patch_record->sink.type == AUDIO_PORT_TYPE_DEVICE &&
+                /* limit audio gain support for device -> bus device patch */
+                if (patch_record->source.type == AUDIO_PORT_TYPE_DEVICE &&
+                    patch_record->sink.type == AUDIO_PORT_TYPE_DEVICE &&
                     patch_record->sink.role == AUDIO_PORT_ROLE_SINK &&
                     patch_record->sink.ext.device.type == AUDIO_DEVICE_OUT_BUS &&
                     patch_record->sink.ext.device.type == config->ext.device.type &&
                     strcmp(patch_record->sink.ext.device.address,
                         config->ext.device.address) == 0) {
-                    /* cache / update gain per audio patch sink */
-                    patch_record->sink.gain = config->gain;
+                    /* cache audio port configuration for sink */
+                    memcpy((void *)&patch_record->sink, (void *)config,
+                        sizeof(struct audio_port_config));
 
                     struct audio_usecase *uc_info = get_usecase_from_list(adev,
                                                         patch_record->usecase);
@@ -614,18 +619,17 @@ int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                             __func__, patch_record->usecase);
                         ret = -EINVAL;
                     } else {
-                        volume = config->gain->values[0];
+                        volume = config->gain.values[0];
                         /* linear interpolation from millibel to level */
                         int vol_level = lrint(((volume + (0 - MIN_VOLUME_VALUE_MB)) /
                                                (MAX_VOLUME_VALUE_MB - MIN_VOLUME_VALUE_MB)) * 40);
-                        ALOGV("%s: set volume to patch: %p", __func__,
+                        ALOGV("%s: set volume to patch %x", __func__,
                             patch_record->handle);
                         ret = audio_extn_ext_hw_plugin_set_audio_gain(adev,
                                 uc_info, vol_level);
                     }
                 }
             }
-#endif
             pthread_mutex_unlock(&adev->lock);
         } else if (config->role == AUDIO_PORT_ROLE_SOURCE) {
             // FIXME: handle input devices.

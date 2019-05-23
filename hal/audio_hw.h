@@ -686,6 +686,8 @@ struct audio_patch_record {
     audio_usecase_t usecase;
     audio_io_handle_t input_io_handle;
     audio_io_handle_t output_io_handle;
+    struct audio_port_config source;
+    struct audio_port_config sink;
 };
 
 int select_devices(struct audio_device *adev,
