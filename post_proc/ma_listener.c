@@ -23,12 +23,12 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <hardware/audio_effect.h>
 #include <audio-base.h>
 
 #define MA_FLAG ( EFFECT_FLAG_TYPE_INSERT | \
-                   EFFECT_FLAG_VOLUME_IND | \
+                   EFFECT_FLAG_VOLUME_MONITOR | \
                    EFFECT_FLAG_DEVICE_IND | \
                    EFFECT_FLAG_OFFLOAD_SUPPORTED | \
                    EFFECT_FLAG_NO_PROCESS)

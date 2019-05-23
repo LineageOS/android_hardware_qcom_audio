@@ -31,7 +31,7 @@
 
 #include <errno.h>
 #include <pthread.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <math.h>
 #include <audio_hw.h>
 #include "audio_extn.h"

@@ -1824,6 +1824,30 @@ static void spkr_v_vali_thread_create()
     }
 }
 
+static bool fbsp_parms_allowed(struct str_parms *parms)
+{
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_FBSP_TRIGGER_SPKR_CAL))
+        return true;
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_FBSP_APPLY_SPKR_CAL))
+        return true;
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_FBSP_GET_SPKR_CAL))
+        return true;
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_FBSP_CFG_WAIT_TIME))
+        return true;
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_FBSP_CFG_FTM_TIME))
+        return true;
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_FBSP_GET_FTM_PARAM))
+        return true;
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_FBSP_TRIGGER_V_VALI))
+        return true;
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_FBSP_V_VALI_WAIT_TIME))
+        return true;
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_FBSP_V_VALI_VALI_TIME))
+        return true;
+
+    return false;
+}
+
 int fbsp_set_parameters(struct str_parms *parms)
 {
     int ret= 0 , err;
@@ -1841,9 +1865,14 @@ int fbsp_set_parameters(struct str_parms *parms)
     }
     ALOGV_IF(kv_pairs != NULL, "%s: enter: %s", __func__, kv_pairs);
 
+    if (!fbsp_parms_allowed(parms)) {
+        ret = -EINVAL;
+        goto done;
+    }
+
     len = strlen(kv_pairs);
     value = (char*)calloc(len, sizeof(char));
-    if(value == NULL) {
+    if (value == NULL) {
         ret = -ENOMEM;
         ALOGE("[%s] failed to allocate memory",__func__);
         goto done;

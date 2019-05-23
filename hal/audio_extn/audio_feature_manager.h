@@ -33,6 +33,7 @@
 #include <ahal_config_helper.h>
 
 enum audio_ext_feature_t {
+    // Start Audio feature flags
     SND_MONITOR = 0,
     COMPRESS_CAPTURE,
     SOURCE_TRACK,
@@ -70,10 +71,15 @@ enum audio_ext_feature_t {
     COMPRESS_IN_CAPTURE,
     BATTERY_LISTENER,
     COMPRESS_METADATA_NEEDED,
+    MAXX_AUDIO,
+    AUDIO_ZOOM,
+    // End Audio feature flags
+    // Start Voice feature flags
     COMPRESS_VOIP,
     VOICE_START = COMPRESS_VOIP,
     DYNAMIC_ECNS,
     INCALL_MUSIC,
+    // End Voice feature flags
     MAX_SUPPORTED_FEATURE
 };
 

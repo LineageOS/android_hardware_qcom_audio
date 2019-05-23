@@ -71,10 +71,12 @@ typedef struct {
     bool concurrent_capture_enabled;
     bool compress_in_enabled;
     bool battery_listener_enabled;
+    bool maxx_audio_enabled;
     bool compress_metadata_needed;
     bool incall_music_enabled;
     bool compress_voip_enabled;
     bool dynamic_ecns_enabled;
+    bool audio_zoom_enabled;
 } AHalValues;
 
 #ifdef __cplusplus

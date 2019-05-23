@@ -185,6 +185,9 @@ void platform_add_operator_specific_device(snd_device_t snd_device,
                                            const char *operator,
                                            const char *mixer_path,
                                            unsigned int acdb_id);
+void platform_add_external_specific_device(snd_device_t snd_device,
+                                           const char *name,
+                                           unsigned int acdb_id);
 void platform_get_parameters(void *platform, struct str_parms *query,
                              struct str_parms *reply);
 int platform_set_parameters(void *platform, struct str_parms *parms);
@@ -344,6 +347,9 @@ int platform_get_active_microphones(void *platform, unsigned int channels,
 
 int platform_get_license_by_product(void *platform, const char* product_name, int *product_id, char* product_license);
 int platform_get_haptics_pcm_device_id();
+int platform_set_qtime(void *platform, int audio_pcm_device_id,
+                       int haptic_pcm_device_id);
+int platform_get_delay(void *platform, int pcm_device_id);
 struct audio_custom_mtmx_params *
     platform_get_custom_mtmx_params(void *platform,
                                     struct audio_custom_mtmx_params_info *info);

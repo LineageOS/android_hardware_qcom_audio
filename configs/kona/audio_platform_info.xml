@@ -56,10 +56,10 @@
             <device name="SND_DEVICE_IN_SPEAKER_MIC_AEC_NS" module_id="0x10F31" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
             <device name="SND_DEVICE_IN_HANDSET_DMIC_AEC_NS" module_id="0x10F33" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
             <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS" module_id="0x10F31" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
-            <device name="SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_SB" module_id="0x10F33" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
-            <device name="SND_DEVICE_IN_SPEAKER_MIC_AEC_NS_SB" module_id="0x10F31" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
-            <device name="SND_DEVICE_IN_HANDSET_DMIC_AEC_NS_SB" module_id="0x10F33" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
-            <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS_SB" module_id="0x10F31" instance_id="0x0" param_id="0x10EAF" param_value="0x01"/>
+            <device name="SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_SB" module_id="0x10F39" instance_id="0x8000" param_id="0x10EAF" param_value="0x01"/>
+            <device name="SND_DEVICE_IN_SPEAKER_MIC_AEC_NS_SB" module_id="0x10F38" instance_id="0x8000" param_id="0x10EAF" param_value="0x01"/>
+            <device name="SND_DEVICE_IN_HANDSET_DMIC_AEC_NS_SB" module_id="0x10F39" instance_id="0x8000" param_id="0x10EAF" param_value="0x01"/>
+            <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS_SB" module_id="0x10F38" instance_id="0x8000" param_id="0x10EAF" param_value="0x01"/>
         </aec>
         <ns>
             <device name="SND_DEVICE_IN_SPEAKER_TMIC_AEC_NS" module_id="0x10F35" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
@@ -68,10 +68,10 @@
             <device name="SND_DEVICE_IN_SPEAKER_MIC_AEC_NS" module_id="0x10F31" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
             <device name="SND_DEVICE_IN_HANDSET_DMIC_AEC_NS" module_id="0x10F33" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
             <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS" module_id="0x10F31" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
-            <device name="SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_SB" module_id="0x10F33" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
-            <device name="SND_DEVICE_IN_SPEAKER_MIC_AEC_NS_SB" module_id="0x10F31" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
-            <device name="SND_DEVICE_IN_HANDSET_DMIC_AEC_NS_SB" module_id="0x10F33" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
-            <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS_SB" module_id="0x10F31" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
+            <device name="SND_DEVICE_IN_SPEAKER_DMIC_AEC_NS_SB" module_id="0x10F39" instance_id="0x8000" param_id="0x10EAF" param_value="0x02"/>
+            <device name="SND_DEVICE_IN_SPEAKER_MIC_AEC_NS_SB" module_id="0x10F38" instance_id="0x8000" param_id="0x10EAF" param_value="0x02"/>
+            <device name="SND_DEVICE_IN_HANDSET_DMIC_AEC_NS_SB" module_id="0x10F39" instance_id="0x8000" param_id="0x10EAF" param_value="0x02"/>
+            <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS_SB" module_id="0x10F38" instance_id="0x8000" param_id="0x10EAF" param_value="0x02"/>
         </ns>
     </module_ids>
 
@@ -108,6 +108,7 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_MMAP" type="out" id="29" />
         <usecase name="USECASE_AUDIO_RECORD_MMAP" type="in" id="29" />
         <usecase name="USECASE_AUDIO_A2DP_ABR_FEEDBACK" type="in" id="36" />
+        <usecase name="USECASE_AUDIO_A2DP_ABR_FEEDBACK" type="out" id="36" />
         <usecase name="USECASE_INCALL_MUSIC_UPLINK" type="out" id="23" />
     </pcm_ids>
     <config_params>

@@ -31,15 +31,15 @@
 /*#define LOG_NDEBUG 0*/
 #include <stdlib.h>
 #include <cutils/atomic.h>
+#include <cutils/properties.h>
 #include <cutils/str_parms.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <unistd.h>
 #include <pthread.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "platform_api.h"
 #include <platform.h>
-#include <cutils/properties.h>
 
 #include "sound/compress_params.h"
 
@@ -284,7 +284,7 @@ void passthru_on_start(struct stream_out * out)
         /* find max period time among active playback use cases */
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_PLAYBACK &&
+            if (usecase->stream.out && usecase->type == PCM_PLAYBACK &&
                 usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
                 o = usecase->stream.out;
                 temp = o->config.period_size * 1000000LL / o->sample_rate;

@@ -17,23 +17,12 @@
 #ifndef MAXXAUDIO_H_
 #define MAXXAUDIO_H_
 
-#ifndef MAXXAUDIO_QDSP_ENABLED
-#define audio_extn_ma_init(platform)                                (0)
-#define audio_extn_ma_deinit()                                      (0)
-#define audio_extn_ma_set_state(adev, type, vol, active)            (false)
-#define audio_extn_ma_set_device(usecase)                           (0)
-#define audio_extn_ma_set_parameters(adev, param)                   (0)
-#define audio_extn_ma_supported_usb()                               (false)
-#else
-void audio_extn_ma_init(void *platform);
-void audio_extn_ma_deinit();
-bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
+void ma_init(void *platform, maxx_audio_init_config_t init_config);
+void ma_deinit();
+bool ma_set_state(struct audio_device *adev, int stream_type,
                              float vol, bool active);
-void audio_extn_ma_set_device(struct audio_usecase *usecase);
-void audio_extn_ma_set_parameters(struct audio_device *adev,
+void ma_set_device(struct audio_usecase *usecase);
+void ma_set_parameters(struct audio_device *adev,
                                   struct str_parms *parms);
-bool audio_extn_ma_supported_usb();
-#endif /* MAXXAUDIO_QDSP_ENABLED */
-
+bool ma_supported_usb();
 #endif /* MAXXAUDIO_H_ */
-

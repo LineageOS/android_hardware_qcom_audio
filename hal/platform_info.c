@@ -72,6 +72,7 @@ typedef enum {
     MIC_INFO,
     CUSTOM_MTMX_PARAMS,
     CUSTOM_MTMX_PARAM_COEFFS,
+    EXTERNAL_DEVICE_SPECIFIC,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -95,6 +96,7 @@ static void process_snd_dev(const XML_Char **attr);
 static void process_mic_info(const XML_Char **attr);
 static void process_custom_mtmx_params(const XML_Char **attr);
 static void process_custom_mtmx_param_coeffs(const XML_Char **attr);
+static void process_external_dev(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -115,6 +117,7 @@ static section_process_fn section_table[] = {
     [MIC_INFO] = process_mic_info,
     [CUSTOM_MTMX_PARAMS] = process_custom_mtmx_params,
     [CUSTOM_MTMX_PARAM_COEFFS] = process_custom_mtmx_param_coeffs,
+    [EXTERNAL_DEVICE_SPECIFIC] = process_external_dev,
 };
 
 static section_t section;
@@ -455,6 +458,38 @@ static void process_operator_specific(const XML_Char **attr)
     }
 
     platform_add_operator_specific_device(snd_device, (char *)attr[3], (char *)attr[5], atoi((char *)attr[7]));
+
+done:
+    return;
+}
+
+static void process_external_dev(const XML_Char **attr)
+{
+    snd_device_t snd_device = SND_DEVICE_NONE;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found", __func__);
+        goto done;
+    }
+
+    snd_device = platform_get_snd_device_index((char *)attr[1]);
+    if (snd_device < 0) {
+        ALOGE("%s: Device %s in %s not found, no ACDB ID set!",
+              __func__, (char *)attr[3], PLATFORM_INFO_XML_PATH);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "usbid") != 0) {
+        ALOGE("%s: 'usbid' not found", __func__);
+        goto done;
+    }
+
+    if (strcmp(attr[4], "acdb_id") != 0) {
+        ALOGE("%s: 'acdb_id' not found", __func__);
+        goto done;
+    }
+
+    platform_add_external_specific_device(snd_device, (char *)attr[3], atoi((char *)attr[5]));
 
 done:
     return;
@@ -1204,6 +1239,11 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
             section = CUSTOM_MTMX_PARAM_COEFFS;
             section_process_fn fn = section_table[section];
             fn(attr);
+        } else if (strcmp(tag_name, "external_specific_dev") == 0) {
+            section = EXTERNAL_DEVICE_SPECIFIC;
+        } else if (strcmp(tag_name, "ext_device") == 0) {
+            section_process_fn fn = section_table[section];
+            fn(attr);
         }
     } else {
         if(strcmp(tag_name, "config_params") == 0) {
@@ -1255,6 +1295,8 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
     } else if (strcmp(tag_name, "microphone_characteristics") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "snd_devices") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "external_specific_dev") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "input_snd_device") == 0) {
         section = SND_DEVICES;

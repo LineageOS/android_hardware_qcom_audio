@@ -466,6 +466,7 @@
     <ctl name="RX INT8_1 MIX1 INP0" value="ZERO" />
     <ctl name="RX INT8_1 MIX1 INP1" value="ZERO" />
     <ctl name="RX INT8_1 MIX1 INP2" value="ZERO" />
+    <ctl name="RX INT7 MIX2 INP" value="ZERO" />
     <ctl name="RX INT0_2 MUX" value="ZERO" />
     <ctl name="RX INT1_2 MUX" value="ZERO" />
     <ctl name="RX INT2_2 MUX" value="ZERO" />
@@ -1506,12 +1507,20 @@
         <path name="incall-rec-uplink" />
     </path>
 
+    <path name="incall-rec-uplink headset-mic">
+        <path name="incall-rec-uplink" />
+    </path>
+
     <path name="incall-rec-uplink afe-proxy">
         <path name="incall-rec-uplink" />
     </path>
 
     <path name="incall-rec-uplink-compress">
         <ctl name="MultiMedia8 Mixer VOC_REC_UL" value="1" />
+    </path>
+
+    <path name="incall-rec-uplink-compress headset-mic">
+        <path name="incall-rec-uplink-compress" />
     </path>
 
     <path name="incall-rec-uplink-compress bt-sco">
@@ -1546,12 +1555,20 @@
         <path name="incall-rec-downlink" />
     </path>
 
+    <path name="incall-rec-downlink headset-mic">
+        <path name="incall-rec-downlink" />
+    </path>
+
     <path name="incall-rec-downlink afe-proxy">
         <path name="incall-rec-downlink" />
     </path>
 
     <path name="incall-rec-downlink-compress">
         <ctl name="MultiMedia8 Mixer VOC_REC_DL" value="1" />
+    </path>
+
+    <path name="incall-rec-downlink-compress headset-mic">
+        <path name="incall-rec-downlink-compress" />
     </path>
 
     <path name="incall-rec-downlink-compress bt-sco">
@@ -1587,6 +1604,10 @@
         <path name="incall-rec-uplink-and-downlink" />
     </path>
 
+    <path name="incall-rec-uplink-and-downlink headset-mic">
+        <path name="incall-rec-uplink-and-downlink" />
+    </path>
+
     <path name="incall-rec-uplink-and-downlink afe-proxy">
         <path name="incall-rec-uplink-and-downlink" />
     </path>
@@ -1597,6 +1618,10 @@
     </path>
 
     <path name="incall-rec-uplink-and-downlink-compress bt-sco">
+        <path name="incall-rec-uplink-and-downlink-compress" />
+    </path>
+
+    <path name="incall-rec-uplink-and-downlink-compress headset-mic">
         <path name="incall-rec-uplink-and-downlink-compress" />
     </path>
 
@@ -2276,6 +2301,11 @@
 
     <path name="voice-headset-mic">
         <path name="amic2" />
+    </path>
+
+    <path name="voice-headset-mic-qrd">
+        <path name="amic2" />
+        <ctl name="DEC0 Volume" value="84" />
     </path>
 
     <path name="speaker-and-headphones">

@@ -43,7 +43,9 @@
 
 #define MA_QDSP_PARAM_INIT      "maxxaudio_qdsp_initialize"
 #define MA_QDSP_PARAM_DEINIT    "maxxaudio_qdsp_uninitialize"
+#define MA_QDSP_IS_FEATURE_USED "maxxaudio_qdsp_is_feature_supported"
 #define MA_QDSP_SET_LR_SWAP     "maxxaudio_qdsp_set_lr_swap"
+#define MA_QDSP_SET_ORIENTATION "maxxaudio_qdsp_set_orientation"
 #define MA_QDSP_SET_MODE        "maxxaudio_qdsp_set_sound_mode"
 #define MA_QDSP_SET_VOL         "maxxaudio_qdsp_set_volume"
 #define MA_QDSP_SET_VOLT        "maxxaudio_qdsp_set_volume_table"
@@ -87,8 +89,8 @@ typedef enum MA_CMD {
     MA_CMD_VOL,
     MA_CMD_SWAP_ENABLE,
     MA_CMD_SWAP_DISABLE,
-    MA_CMD_SOFT_MUTE_ENABLE,
-    MA_CMD_SOFT_MUTE_DISABLE,
+    MA_CMD_ROTATE_ENABLE,
+    MA_CMD_ROTATE_DISABLE,
 } ma_cmd_t;
 
 typedef struct ma_audio_cal_version {
@@ -120,8 +122,13 @@ typedef bool (*ma_param_init_t)(ma_audio_cal_handle_t *, const char *,
 
 typedef bool (*ma_param_deinit_t)(ma_audio_cal_handle_t *);
 
+typedef bool (*ma_is_feature_used_t)(ma_audio_cal_handle_t, const char *);
+
 typedef bool (*ma_set_lr_swap_t)(ma_audio_cal_handle_t,
                                  const struct ma_audio_cal_settings *, bool);
+
+typedef bool (*ma_set_orientation_t)(ma_audio_cal_handle_t,
+                                     const struct ma_audio_cal_settings *, int);
 
 typedef bool (*ma_set_sound_mode_t)(ma_audio_cal_handle_t,
                                     const struct ma_audio_cal_settings *,
@@ -144,24 +151,31 @@ struct ma_platform_data {
     pthread_mutex_t lock;
     ma_param_init_t          ma_param_init;
     ma_param_deinit_t        ma_param_deinit;
+    ma_is_feature_used_t     ma_is_feature_used;
     ma_set_lr_swap_t         ma_set_lr_swap;
+    ma_set_orientation_t     ma_set_orientation;
     ma_set_sound_mode_t      ma_set_sound_mode;
     ma_set_volume_t          ma_set_volume;
     ma_set_volume_table_t    ma_set_volume_table;
     ma_set_param_t           ma_set_param;
     bool speaker_lr_swap;
+    bool orientation_used;
+    int dispaly_orientation;
 };
 
 ma_audio_cal_handle_t g_ma_audio_cal_handle = NULL;
 static uint16_t g_supported_dev = 0;
 static struct ma_state ma_cur_state_table[STREAM_MAX_TYPES];
 static struct ma_platform_data *my_data = NULL;
+// --- external function dependency ---
+fp_platform_set_parameters_t fp_platform_set_parameters;
+fp_audio_extn_get_snd_card_split_t fp_audio_extn_get_snd_card_split;
 
 static int set_audio_cal(const char *audio_cal)
 {
     ALOGV("set_audio_cal: %s", audio_cal);
 
-    return platform_set_parameters(my_data->platform,
+    return fp_platform_set_parameters(my_data->platform,
                                    str_parms_create_str(audio_cal));
 }
 
@@ -170,6 +184,13 @@ static bool ma_set_lr_swap_l(
 {
     return my_data->ma_set_lr_swap(g_ma_audio_cal_handle,
                                    audio_cal_settings, swap);
+}
+
+static bool ma_set_orientation_l(
+    const struct ma_audio_cal_settings *audio_cal_settings, int orientation)
+{
+    return my_data->ma_set_orientation(g_ma_audio_cal_handle,
+                                   audio_cal_settings, orientation);
 }
 
 static bool ma_set_volume_table_l(
@@ -189,6 +210,25 @@ static bool ma_set_param_l(
                                  audio_cal_settings, index, value);
 }
 
+static void print_state_log()
+{
+    ALOGD("%s: send volume table -(%i,%f,%s),(%i,%f,%s),(%i,%f,%s),(%i,%f,%s),"
+          "(%i,%f,%s),(%i,%f,%s)", __func__,
+          STREAM_VOICE, ma_cur_state_table[STREAM_VOICE].vol,
+          ma_cur_state_table[STREAM_VOICE].active ? "T" : "F",
+          STREAM_SYSTEM, ma_cur_state_table[STREAM_SYSTEM].vol,
+          ma_cur_state_table[STREAM_SYSTEM].active ? "T" : "F",
+          STREAM_RING, ma_cur_state_table[STREAM_RING].vol,
+          ma_cur_state_table[STREAM_RING].active ? "T" : "F",
+          STREAM_MUSIC, ma_cur_state_table[STREAM_MUSIC].vol,
+          ma_cur_state_table[STREAM_MUSIC].active ? "T" : "F",
+          STREAM_ALARM, ma_cur_state_table[STREAM_ALARM].vol,
+          ma_cur_state_table[STREAM_ALARM].active ? "T" : "F",
+          STREAM_NOTIFICATION, ma_cur_state_table[STREAM_NOTIFICATION].vol,
+          ma_cur_state_table[STREAM_NOTIFICATION].active ? "T" : "F");
+
+}
+
 static inline bool valid_usecase(struct audio_usecase *usecase)
 {
     if ((usecase->type == PCM_PLAYBACK) &&
@@ -200,7 +240,7 @@ static inline bool valid_usecase(struct audio_usecase *usecase)
         ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
          (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
          (audio_is_usb_out_device(usecase->devices) &&
-          audio_extn_ma_supported_usb())))
+          ma_supported_usb())))
         /* TODO: enable A2DP when it is ready */
 
         return true;
@@ -244,7 +284,7 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
 
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
-        if (valid_usecase(usecase)) {
+        if (usecase->stream.out && valid_usecase(usecase)) {
             ma_cal.common.app_type = usecase->stream.out->app_type_cfg.app_type;
             ma_cal.common.device = usecase->stream.out->devices;
             ALOGV("%s: send usecase(%d) app_type(%d) device(%d)",
@@ -259,13 +299,7 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
                         ALOGV("ma_set_volume_table_l success");
                     else
                         ALOGE("ma_set_volume_table_l returned with error.");
-
-                    ALOGV("%s: send volume table === Start", __func__);
-                    for (i = 0; i < STREAM_MAX_TYPES; i++)
-                        ALOGV("%s: stream(%d) volume(%f) active(%s)", __func__,
-                              i, ma_cur_state_table[i].vol,
-                              ma_cur_state_table[i].active ? "T" : "F");
-                    ALOGV("%s: send volume table === End", __func__);
+                    print_state_log();
                     break;
 
                 case MA_CMD_SWAP_ENABLE:
@@ -287,22 +321,24 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
                         ALOGE("ma_set_lr_swap_l disable returned with error.");
                     break;
 
-                case MA_CMD_SOFT_MUTE_ENABLE:
-                    if (usecase->id == USECASE_AUDIO_PLAYBACK_LOW_LATENCY) break;
-
-                    ma_cal.effect_scope_flag = EFFECTIVE_SCOPE_RTC;
-                    ret = ma_set_param_l(&ma_cal, MAAP_OUTPUT_GAIN, -96);
-                    if (!ret)
-                        ALOGE("soft mute enable returned with error.");
+                case MA_CMD_ROTATE_ENABLE:
+                    if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
+                        ret = ma_set_orientation_l(&ma_cal, my_data->dispaly_orientation);
+                        if (ret)
+                            ALOGV("ma_set_orientation_l %d returned with success.",
+                                  my_data->dispaly_orientation);
+                        else
+                            ALOGE("ma_set_orientation_l %d returned with error.",
+                                  my_data->dispaly_orientation);
+                    }
                     break;
 
-                case MA_CMD_SOFT_MUTE_DISABLE:
-                    if (usecase->id == USECASE_AUDIO_PLAYBACK_LOW_LATENCY) break;
-
-                    ma_cal.effect_scope_flag = EFFECTIVE_SCOPE_RTC;
-                    ret = ma_set_param_l(&ma_cal, MAAP_OUTPUT_GAIN, 0);
-                    if (!ret)
-                        ALOGE("soft mute disable returned with error.");
+                case MA_CMD_ROTATE_DISABLE:
+                    ret = ma_set_orientation_l(&ma_cal, 0);
+                    if (ret)
+                        ALOGV("ma_set_orientation_l 0 returned with success.");
+                    else
+                        ALOGE("ma_set_orientation_l 0 returned with error.");
                     break;
 
                 default:
@@ -348,6 +384,14 @@ static void ma_set_swap_l(struct audio_device *adev, bool enable)
         check_and_send_all_audio_cal(adev, MA_CMD_SWAP_DISABLE);
 }
 
+static void ma_set_rotation_l(struct audio_device *adev, int orientation)
+{
+    if (orientation != 0)
+        check_and_send_all_audio_cal(adev, MA_CMD_ROTATE_ENABLE);
+    else
+        check_and_send_all_audio_cal(adev, MA_CMD_ROTATE_DISABLE);
+}
+
 static void ma_support_usb(bool enable, int card)
 {
     char path[128];
@@ -390,7 +434,7 @@ done:
 }
 
 // adev_init lock held
-void audio_extn_ma_init(void *platform)
+void ma_init(void *platform, maxx_audio_init_config_t init_config)
 {
     ma_stream_type_t i = 0;
     int ret = 0;
@@ -398,7 +442,11 @@ void audio_extn_ma_init(void *platform)
     char mps_path[128] = {0};
     char cnf_path[128] = {0};
     struct snd_card_split *snd_split_handle = NULL;
-    snd_split_handle = audio_extn_get_snd_card_split();
+
+    fp_platform_set_parameters = init_config.fp_platform_set_parameters;
+    fp_audio_extn_get_snd_card_split = init_config.fp_audio_extn_get_snd_card_split;
+
+    snd_split_handle = fp_audio_extn_get_snd_card_split();
 
     if (platform == NULL) {
         ALOGE("%s: platform is NULL", __func__);
@@ -423,7 +471,7 @@ void audio_extn_ma_init(void *platform)
 
     my_data->waves_handle = dlopen(lib_path, RTLD_NOW);
     if (my_data->waves_handle == NULL) {
-         ALOGE("%s: DLOPEN failed for %s", __func__, LIB_MA_PARAM);
+         ALOGE("%s: DLOPEN failed for %s, %s", __func__, LIB_MA_PARAM, dlerror());
          goto error;
     } else {
          ALOGV("%s: DLOPEN successful for %s", __func__, LIB_MA_PARAM);
@@ -441,6 +489,18 @@ void audio_extn_ma_init(void *platform)
              ALOGE("%s: dlsym error %s for ma_param_deinit", __func__, dlerror());
              goto error;
          }
+
+        my_data->ma_is_feature_used = (ma_is_feature_used_t)dlsym(my_data->waves_handle,
+                                    MA_QDSP_IS_FEATURE_USED);
+        if (!my_data->ma_is_feature_used) {
+            ALOGV("%s: dlsym error %s for ma_is_feature_used", __func__, dlerror());
+        }
+
+        my_data->ma_set_orientation = (ma_set_orientation_t)dlsym(my_data->waves_handle,
+                                        MA_QDSP_SET_ORIENTATION);
+        if (!my_data->ma_set_orientation) {
+            ALOGV("%s: dlsym error %s for ma_set_orientation", __func__, dlerror());
+        }
 
          my_data->ma_set_lr_swap = (ma_set_lr_swap_t)dlsym(my_data->waves_handle,
                                     MA_QDSP_SET_LR_SWAP);
@@ -540,6 +600,13 @@ void audio_extn_ma_init(void *platform)
     }
 
     my_data->speaker_lr_swap = false;
+    my_data->orientation_used = false;
+    my_data->dispaly_orientation = 0;
+
+    if (g_ma_audio_cal_handle && my_data->ma_is_feature_used) {
+        my_data->orientation_used = my_data->ma_is_feature_used(
+                g_ma_audio_cal_handle, "SET_ORIENTATION");
+    }
 
     return;
 
@@ -549,7 +616,7 @@ error:
 }
 
 //adev_init lock held
-void audio_extn_ma_deinit()
+void ma_deinit()
 {
     if (my_data) {
         /* deinit ma parameter */
@@ -566,11 +633,10 @@ void audio_extn_ma_deinit()
 }
 
 // adev_init and adev lock held
-bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
+bool ma_set_state(struct audio_device *adev, int stream_type,
                              float vol, bool active)
 {
     bool ret = false;
-    bool first_enable = false;
     struct ma_state pr_mstate;
 
     if (stream_type >= STREAM_MAX_TYPES ||
@@ -594,16 +660,9 @@ bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
     if (pr_mstate.vol != vol || pr_mstate.active != active) {
 
         pthread_mutex_lock(&my_data->lock);
-        // get active state before updating
-        first_enable = (!is_active()) && active;
 
         ma_cur_state_table[(ma_stream_type_t)stream_type].vol = vol;
         ma_cur_state_table[(ma_stream_type_t)stream_type].active = active;
-
-        if (first_enable) //all F -> one of T
-            ret = check_and_send_all_audio_cal(adev, MA_CMD_SOFT_MUTE_DISABLE);
-        else if (!is_active()) // all F
-            ret = check_and_send_all_audio_cal(adev, MA_CMD_SOFT_MUTE_ENABLE);
 
         ret = check_and_send_all_audio_cal(adev, MA_CMD_VOL);
 
@@ -613,7 +672,7 @@ bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
     return ret;
 }
 
-void audio_extn_ma_set_device(struct audio_usecase *usecase)
+void ma_set_device(struct audio_usecase *usecase)
 {
     int i = 0;
     struct ma_audio_cal_settings ma_cal;
@@ -640,17 +699,19 @@ void audio_extn_ma_set_device(struct audio_usecase *usecase)
     pthread_mutex_lock(&my_data->lock);
 
     if (is_active()) {
-        if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER)
-            ma_set_swap_l(usecase->stream.out->dev, my_data->speaker_lr_swap);
-        else
-            ma_set_swap_l(usecase->stream.out->dev, false);
 
-        ALOGV("%s: send volume table === Start", __func__);
-        for (i = 0; i < STREAM_MAX_TYPES; i++)
-            ALOGV("%s: stream(%d) volume(%f) active(%s)", __func__, i,
-                   ma_cur_state_table[i].vol,
-                   ma_cur_state_table[i].active ? "T" : "F");
-        ALOGV("%s: send volume table === End", __func__);
+        if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
+            if (my_data->orientation_used)
+                ma_set_rotation_l(usecase->stream.out->dev,
+                                  my_data->dispaly_orientation);
+            else
+                ma_set_swap_l(usecase->stream.out->dev, my_data->speaker_lr_swap);
+        } else {
+            if (my_data->orientation_used)
+                ma_set_rotation_l(usecase->stream.out->dev, 0);
+            else
+                ma_set_swap_l(usecase->stream.out->dev, false);
+        }
 
         if (!ma_set_volume_table_l(&ma_cal,
                                    STREAM_MAX_TYPES,
@@ -658,12 +719,13 @@ void audio_extn_ma_set_device(struct audio_usecase *usecase)
             ALOGE("ma_set_volume_table_l returned with error.");
         else
             ALOGV("ma_set_volume_table_l success");
+        print_state_log();
 
     }
     pthread_mutex_unlock(&my_data->lock);
 }
 
-void audio_extn_ma_set_parameters(struct audio_device *adev,
+void ma_set_parameters(struct audio_device *adev,
                                   struct str_parms *parms)
 {
     int ret;
@@ -688,7 +750,12 @@ void audio_extn_ma_set_parameters(struct audio_device *adev,
             my_data->speaker_lr_swap = false;
             break;
         }
-        ma_set_swap_l(adev, my_data->speaker_lr_swap);
+        my_data->dispaly_orientation = val;
+
+        if (my_data->orientation_used)
+            ma_set_rotation_l(adev, my_data->dispaly_orientation);
+        else
+            ma_set_swap_l(adev, my_data->speaker_lr_swap);
     }
 
     // check connect status
@@ -720,7 +787,7 @@ void audio_extn_ma_set_parameters(struct audio_device *adev,
     }
 }
 
-bool audio_extn_ma_supported_usb()
+bool ma_supported_usb()
 {
     ALOGV("%s: current support 0x%x", __func__, g_supported_dev);
     return (g_supported_dev & SUPPORTED_USB) ? true : false;

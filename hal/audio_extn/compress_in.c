@@ -31,10 +31,9 @@
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
 
-#include <cutils/log.h>
 #include <cutils/properties.h>
 #include <cutils/str_parms.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <pthread.h>
 
 #include "audio_hw.h"

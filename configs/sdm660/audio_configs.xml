@@ -92,13 +92,14 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="incall_music_enabled" value="false" />
         <flag name="keep_alive_enabled" value="false" />
         <flag name="kpi_optimize_enabled" value="true" />
+        <flag name="maxx_audio_enabled" value="false" />
         <flag name="receiver_aided_stereo" value="true" />
         <flag name="snd_monitor_enabled" value="true" />
         <flag name="source_track_enabled" value="true" />
         <flag name="spkr_prot_enabled" value="true" />
         <flag name="ssrec_enabled" value="true" />
         <flag name="usb_offload_burst_mode" value="false" />
-        <flag name="usb_offload_enabled" value="false" />
+        <flag name="usb_offload_enabled" value="true" />
         <flag name="usb_offload_sidetone_vol_enabled" value="false" />
         <flag name="use_deep_buffer_as_primary_output" value="false" />
         <flag name="vbat_enabled" value="true" />

@@ -289,8 +289,17 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     if(adev->mic_break_enabled)
         platform_set_mic_break_det(adev->platform, true);
 
-    pcm_start(session->pcm_tx);
-    pcm_start(session->pcm_rx);
+    ret = pcm_start(session->pcm_tx);
+    if (ret != 0) {
+        ALOGE("%s: %s", __func__, pcm_get_error(session->pcm_tx));
+        goto error_start_voice;
+    }
+
+    ret = pcm_start(session->pcm_rx);
+    if (ret != 0) {
+        ALOGE("%s: %s", __func__, pcm_get_error(session->pcm_rx));
+        goto error_start_voice;
+    }
 
     /* Enable aanc only when no calls are active */
     if (!voice_is_call_state_active(adev))
@@ -409,8 +418,8 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
         session_id = voice_get_active_session_id(adev);
         ret = platform_set_incall_recording_session_id(adev->platform,
                                                        session_id, rec_mode);
-        ret = platform_set_incall_recording_session_channels(adev->platform,
-                                                        in->config.channels);
+        platform_set_incall_recording_session_channels(adev->platform,
+                                                       in->config.channels);
         ALOGV("%s: Update usecase to %d",__func__, in->usecase);
     } else {
         /*

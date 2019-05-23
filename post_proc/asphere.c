@@ -197,6 +197,18 @@ static int asphere_init() {
     return asphere.init_status;
 }
 
+static bool asphere_parms_allowed(struct str_parms *parms)
+{
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_ASPHERE_ENABLE))
+        return true;
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_ASPHERE_STRENGTH))
+        return true;
+    if (str_parms_has_key(parms, AUDIO_PARAMETER_KEY_ASPHERE_STATUS))
+        return true;
+
+    return false;
+}
+
 void asphere_set_parameters(struct str_parms *parms)
 {
     int ret = 0;
@@ -204,6 +216,10 @@ void asphere_set_parameters(struct str_parms *parms)
     int strength = -1;
     char value[32] = {0};
     bool set_enable = false, set_strength = false;
+
+    if (!asphere_parms_allowed(parms)) {
+        return;
+    }
 
     if (asphere_init() != 1) {
         ALOGW("%s: init check failed!!!", __func__);
