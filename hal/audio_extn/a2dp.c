@@ -1128,11 +1128,15 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
     } else {
         sampling_rate = a2dp.enc_sampling_rate;
     }
-    //For LDAC encoder and AAC decoder open slimbus port at
-    //96Khz for 48Khz input and 88.2Khz for 44.1Khz input.
+    /*
+     * For LDAC encoder and AAC decoder open slimbus port at
+     * 96Khz for 48Khz input and 88.2Khz for 44.1Khz input.
+     * For APTX AD encoder, open slimbus port at 96Khz for 48Khz input.
+     */
     if (((a2dp.bt_encoder_format == CODEC_TYPE_LDAC) ||
          (a2dp.bt_decoder_format == CODEC_TYPE_SBC) ||
-         (a2dp.bt_decoder_format == AUDIO_FORMAT_AAC)) &&
+         (a2dp.bt_decoder_format == AUDIO_FORMAT_AAC) ||
+         (a2dp.bt_encoder_format == CODEC_TYPE_APTX_AD)) &&
         (sampling_rate == 48000 || sampling_rate == 44100 )) {
         sampling_rate = sampling_rate *2;
     }
