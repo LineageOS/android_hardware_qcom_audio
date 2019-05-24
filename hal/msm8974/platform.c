@@ -3390,6 +3390,17 @@ acdb_init_fail:
                 strdup("RX_CDC_DMA_RX_0 Format");
             my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
                 strdup("RX_CDC_DMA_RX_0 SampleRate");
+            /*
+             * TODO: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend
+             * is defined for headset-mic. This is to capture separate data from
+             * headset-mic and handset-mic.
+             */
+            if(audio_extn_is_concurrent_capture_enabled()) {
+                my_data->current_backend_cfg[HEADSET_TX_BACKEND].bitwidth_mixer_ctl =
+                                                    strdup("TX_CDC_DMA_TX_4 Format");
+                my_data->current_backend_cfg[HEADSET_TX_BACKEND].samplerate_mixer_ctl =
+                                                    strdup("TX_CDC_DMA_TX_4 SampleRate");
+            }
 
             if (default_rx_backend)
                 free(default_rx_backend);
