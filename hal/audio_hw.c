@@ -4977,6 +4977,10 @@ int split_and_write_audio_haptic_data(struct stream_out *out,
 
     if (alloc_haptic_buffer) {
         adev->haptic_buffer = (uint8_t *)calloc(1, total_haptic_buffer_size);
+        if(adev->haptic_buffer == NULL) {
+            ALOGE("%s: failed to allocate mem for dev->haptic_buffer", __func__);
+            return -ENOMEM;
+        }
         adev->haptic_buffer_size = total_haptic_buffer_size;
     }
 
