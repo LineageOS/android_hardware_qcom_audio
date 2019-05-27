@@ -1068,13 +1068,19 @@ static void process_custom_mtmx_param_in_ch_info(const XML_Char **attr)
 
 static void process_custom_mtmx_in_params(const XML_Char **attr)
 {
-    int attr_idx = 0;
+    int attr_idx = 0, i = 0;
+    char *context = NULL, *value = NULL;
 
     if (strcmp(attr[attr_idx++], "usecase") != 0) {
         ALOGE("%s: 'usecase' not found", __func__);
         return;
     }
-    mtmx_in_params_info.usecase_id = platform_get_usecase_index((char *)attr[attr_idx++]);
+    /* Check if multi usecases are supported for this custom mtrx params */
+    value = strtok_r((char *)attr[attr_idx++], ",", &context);
+    while (value && (i < CUSTOM_MTRX_PARAMS_MAX_USECASE)) {
+        mtmx_in_params_info.usecase_id[i++] = platform_get_usecase_index(value);
+        value = strtok_r(NULL, ",", &context);
+    }
 
     if (strcmp(attr[attr_idx++], "out_channel_count") != 0) {
         ALOGE("%s: 'out_channel_count' not found", __func__);
@@ -1089,7 +1095,7 @@ static void process_custom_mtmx_in_params(const XML_Char **attr)
 static void process_custom_mtmx_param_coeffs(const XML_Char **attr)
 {
     uint32_t attr_idx = 0, out_ch_idx = -1, ch_coeff_count = 0;
-    uint32_t ip_channels = 0, op_channels = 0;
+    uint32_t ip_channels = 0, op_channels = 0, idx = 0;
     char *context = NULL, *ch_coeff_value = NULL;
     struct audio_custom_mtmx_params *mtmx_params = NULL;
 
@@ -1109,7 +1115,7 @@ static void process_custom_mtmx_param_coeffs(const XML_Char **attr)
         return;
     }
     mtmx_params = platform_get_custom_mtmx_params((void *)my_data.platform,
-                                                  &mtmx_params_info);
+                                                  &mtmx_params_info, &idx);
     if (mtmx_params == NULL) {
         ALOGE("%s: mtmx params with given param info, not found", __func__);
         return;
@@ -1129,7 +1135,10 @@ static void process_custom_mtmx_param_coeffs(const XML_Char **attr)
 
 static void process_custom_mtmx_params(const XML_Char **attr)
 {
-    int attr_idx = 0;
+    int attr_idx = 0, i = 0;
+    char *context = NULL, *value = NULL;
+
+    memset(&mtmx_params_info, 0, sizeof(mtmx_params_info));
 
     if (strcmp(attr[attr_idx++], "param_id") != 0) {
         ALOGE("%s: 'param_id' not found", __func__);
@@ -1153,7 +1162,13 @@ static void process_custom_mtmx_params(const XML_Char **attr)
         ALOGE("%s: 'usecase' not found", __func__);
         return;
     }
-    mtmx_params_info.usecase_id = platform_get_usecase_index((char *)attr[attr_idx++]);
+
+    /* check if multi usecases are supported for this custom mtrx params */
+    value = strtok_r((char *)attr[attr_idx++], ",", &context);
+    while (value && (i < CUSTOM_MTRX_PARAMS_MAX_USECASE)) {
+        mtmx_params_info.usecase_id[i++] = platform_get_usecase_index(value);
+        value = strtok_r(NULL, ",", &context);
+    }
 
     if (strcmp(attr[attr_idx++], "snd_device") != 0) {
         ALOGE("%s: 'snd_device' not found", __func__);
@@ -1161,12 +1176,15 @@ static void process_custom_mtmx_params(const XML_Char **attr)
     }
     mtmx_params_info.snd_device = platform_get_snd_device_index((char *)attr[attr_idx++]);
 
-    if ((attr[attr_idx] != NULL) && (strcmp(attr[attr_idx++], "fe_name") == 0)) {
-        strlcpy(mtmx_params_info.fe_name, (char *)attr[attr_idx++],
-                sizeof(mtmx_params_info.fe_name));
-    } else {
-        ALOGD("%s: 'fe_name' not found", __func__);
-        mtmx_params_info.fe_name[0] = '\0';
+    if ((attr[attr_idx] != NULL) && (strcmp(attr[attr_idx++], "fe_id") == 0)) {
+        i = 0;
+        value = strtok_r((char *)attr[attr_idx++], ",", &context);
+        while (value && (i < CUSTOM_MTRX_PARAMS_MAX_USECASE)) {
+            mtmx_params_info.fe_id[i++] = atoi(value);
+            value = strtok_r(NULL, ",", &context);
+        }
+
+        attr_idx++;
     }
 
     platform_add_custom_mtmx_params((void *)my_data.platform, &mtmx_params_info);

@@ -3680,11 +3680,18 @@ acdb_init_fail:
 
 struct audio_custom_mtmx_params *
     platform_get_custom_mtmx_params(void *platform,
-                                    struct audio_custom_mtmx_params_info *info)
+                                    struct audio_custom_mtmx_params_info *info,
+                                    uint32_t *idx)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct listnode *node = NULL;
     struct audio_custom_mtmx_params *params = NULL;
+    int i = 0;
+
+    if (!info || !idx) {
+        ALOGE("%s: Invalid params", __func__);
+        return NULL;
+    }
 
     list_for_each(node, &my_data->custom_mtmx_params_list) {
         params = node_to_item(node, struct audio_custom_mtmx_params, list);
@@ -3692,17 +3699,22 @@ struct audio_custom_mtmx_params *
             params->info.id == info->id &&
             params->info.ip_channels == info->ip_channels &&
             params->info.op_channels == info->op_channels &&
-            params->info.usecase_id == info->usecase_id &&
             params->info.snd_device == info->snd_device) {
-            ALOGV("%s: found params with ip_ch %d op_ch %d uc_id %d snd_dev %d",
-                  __func__, info->ip_channels, info->op_channels,
-                  info->usecase_id, info->snd_device);
-            return params;
+            while (params->info.usecase_id[i] != 0) {
+                if (params->info.usecase_id[i] == info->usecase_id[0]) {
+                    ALOGV("%s: found params with ip_ch %d op_ch %d uc_id %d snd_dev %d",
+                           __func__, info->ip_channels, info->op_channels,
+                           info->usecase_id[0], info->snd_device);
+                    *idx = i;
+                    return params;
+                }
+                i++;
+            }
         }
     }
     ALOGI("%s: no matching param with id %d ip_ch %d op_ch %d uc_id %d snd_dev %d",
           __func__, info->id, info->ip_channels, info->op_channels,
-          info->usecase_id, info->snd_device);
+          info->usecase_id[0], info->snd_device);
     return NULL;
 }
 
@@ -3712,6 +3724,12 @@ int platform_add_custom_mtmx_params(void *platform,
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_custom_mtmx_params *params = NULL;
     uint32_t size = sizeof(*params);
+    int i = 0;
+
+    if (!info) {
+        ALOGE("%s: Invalid params", __func__);
+        return -EINVAL;
+    }
 
     if (info->ip_channels > AUDIO_CHANNEL_COUNT_MAX ||
         info->op_channels > AUDIO_CHANNEL_COUNT_MAX) {
@@ -3727,9 +3745,14 @@ int platform_add_custom_mtmx_params(void *platform,
         return -ENOMEM;
     }
 
-    ALOGI("%s: adding mtmx params with id %d ip_ch %d op_ch %d uc_id %d snd_dev %d",
+    ALOGI("%s: adding mtmx params with id %d ip_ch %d op_ch %d snd_dev %d",
           __func__, info->id, info->ip_channels, info->op_channels,
-          info->usecase_id, info->snd_device);
+          info->snd_device);
+    while (info->usecase_id[i] != 0) {
+        ALOGI("%s: supported usecase ids for added mtmx params %d",
+              __func__, info->usecase_id[i]);
+        i++;
+    }
 
     params->info = *info;
     list_add_tail(&my_data->custom_mtmx_params_list, &params->list);
@@ -3753,20 +3776,30 @@ struct audio_custom_mtmx_in_params *platform_get_custom_mtmx_in_params(void *pla
     struct platform_data *my_data = (struct platform_data *)platform;
     struct listnode *node = NULL;
     struct audio_custom_mtmx_in_params *params = NULL;
+    int i = 0;
+
+    if (!info) {
+        ALOGE("%s: Invalid params", __func__);
+        return NULL;
+    }
 
     list_for_each(node, &my_data->custom_mtmx_in_params_list) {
         params = node_to_item(node, struct audio_custom_mtmx_in_params, list);
         if (params &&
-            params->in_info.op_channels == info->op_channels &&
-            params->in_info.usecase_id == info->usecase_id) {
-            ALOGV("%s: found params with op_ch %d uc_id %d",
-                  __func__, info->op_channels, info->usecase_id);
-            return params;
+            params->in_info.op_channels == info->op_channels) {
+            while (params->in_info.usecase_id[i] != 0) {
+                if (params->in_info.usecase_id[i] == info->usecase_id[0]) {
+                    ALOGV("%s: found params with op_ch %d uc_id %d",
+                          __func__, info->op_channels, info->usecase_id[0]);
+                    return params;
+                }
+                i++;
+            }
         }
     }
 
     ALOGI("%s: no matching param with op_ch %d uc_id %d",
-           __func__, info->op_channels, info->usecase_id);
+           __func__, info->op_channels, info->usecase_id[0]);
     return NULL;
 }
 
@@ -3776,6 +3809,12 @@ int platform_add_custom_mtmx_in_params(void *platform,
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_custom_mtmx_in_params *params = NULL;
     uint32_t size = sizeof(*params);
+    int i = 0;
+
+    if (!info) {
+        ALOGE("%s: Invalid params", __func__);
+        return -EINVAL;
+    }
 
     if (info->op_channels > AUDIO_CHANNEL_COUNT_MAX) {
         ALOGE("%s: unusupported channels in %d", __func__, info->op_channels);
@@ -3788,8 +3827,14 @@ int platform_add_custom_mtmx_in_params(void *platform,
         return -ENOMEM;
     }
 
-    ALOGI("%s: adding mtmx in params with op_ch %d uc_id %d",
-          __func__, info->op_channels, info->usecase_id);
+    ALOGI("%s: adding mtmx in params with op_ch %d",
+          __func__, info->op_channels);
+
+    while (info->usecase_id[i] != 0) {
+        ALOGI("%s: supported usecase ids for added mtmx in params %d",
+              __func__, info->usecase_id[i]);
+        i++;
+    }
 
     params->in_info = *info;
     list_add_tail(&my_data->custom_mtmx_in_params_list, &params->list);
@@ -6208,6 +6253,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
     int str_bitwidth = (in == NULL) ? CODEC_BACKEND_DEFAULT_BIT_WIDTH : in->bit_width;
     int sample_rate = (in == NULL) ? 8000 : in->sample_rate;
     struct audio_usecase *usecase = NULL;
+    audio_usecase_t uc_id = (in == NULL) ? USECASE_AUDIO_RECORD : in->usecase;
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
@@ -6613,7 +6659,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
             }
         } else if (in_device & AUDIO_DEVICE_IN_LOOPBACK) {
             if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-                usecase = get_usecase_from_list(adev, USECASE_AUDIO_RECORD);
+                usecase = get_usecase_from_list(adev, uc_id);
                 if (usecase == NULL) {
                     ALOGE("%s: Could not find the record usecase", __func__);
                     snd_device = SND_DEVICE_NONE;
