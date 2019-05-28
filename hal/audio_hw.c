@@ -5119,6 +5119,24 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
             volume[1] = (long)(AmpToDb(right));
             mixer_ctl_set_array(ctl, volume, sizeof(volume)/sizeof(volume[0]));
             return 0;
+        } else if ((out->devices & AUDIO_DEVICE_OUT_BUS) &&
+                (audio_extn_auto_hal_get_snd_device_for_car_audio_stream(out) ==
+                    SND_DEVICE_OUT_BUS_MEDIA)) {
+            ALOGD("%s: Overriding offload set volume for media bus stream", __func__);
+            struct listnode *node = NULL;
+            list_for_each(node, &adev->active_outputs_list) {
+                streams_output_ctxt_t *out_ctxt = node_to_item(node,
+                                                    streams_output_ctxt_t,
+                                                    list);
+                if (out_ctxt->output->usecase == USECASE_AUDIO_PLAYBACK_MEDIA) {
+                    out->volume_l = out_ctxt->output->volume_l;
+                    out->volume_r = out_ctxt->output->volume_r;
+                }
+            }
+            if (!out->a2dp_compress_mute) {
+                ret = out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
+            }
+            return ret;
         } else {
             pthread_mutex_lock(&out->compr_mute_lock);
             ALOGV("%s: compress mute %d", __func__, out->a2dp_compress_mute);
