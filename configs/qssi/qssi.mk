@@ -23,6 +23,7 @@ AUDIO_FEATURE_ENABLED_AAC_ADTS_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_3D_AUDIO := true
+AUDIO_FEATURE_ENABLED_AHAL_EXT := true
 DOLBY_ENABLE := false
 endif
 
@@ -123,4 +124,8 @@ PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
 #enable mirror-link feature
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.enable.mirrorlink=false
+
+#enable deep buffer
+PRODUCT_PROPERTY_OVERRIDES += \
+media.stagefright.audio.deep=false
 

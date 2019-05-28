@@ -105,7 +105,6 @@ LOCAL_CFLAGS += -Wno-macro-redefined
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 
 LOCAL_SRC_FILES := \
-    ahal_config_helper.cpp \
     audio_hw.c \
     acdb.c \
     platform_info.c \
@@ -113,7 +112,6 @@ LOCAL_SRC_FILES := \
     voice.c
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c \
-                   audio_extn/audio_feature_manager.c \
                    audio_extn/audio_hidl.cpp \
                    audio_extn/compress_in.c \
                    audio_extn/fm.c \

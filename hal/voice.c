@@ -73,6 +73,7 @@ static bool voice_is_sidetone_device(snd_device_t out_device,
         strlcpy(mixer_path, "sidetone-handset", MIXER_PATH_MAX_LENGTH);
         break;
     case SND_DEVICE_OUT_VOICE_HEADPHONES:
+    case SND_DEVICE_OUT_VOICE_HEADSET:
     case SND_DEVICE_OUT_VOICE_ANC_HEADSET:
     case SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET:
         is_sidetone_dev = true;

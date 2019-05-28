@@ -33,7 +33,6 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <dlfcn.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <log/log.h>
@@ -42,7 +41,6 @@
 #include <cutils/properties.h>
 #include <hardware/audio_effect.h>
 #include <pthread.h>
-#include <audio_feature_manager.h>
 #include "bundle.h"
 #include "equalizer.h"
 #include "bass_boost.h"
@@ -57,10 +55,6 @@
 #define AUDIO_PARAMETER_KEY_ASPHERE_STRENGTH "asphere_strength"
 
 #define AUDIO_ASPHERE_EVENT_NODE "/data/misc/audio_pp/event_node"
-
-#define PRIMARY_HAL_PATH XSTR(LIB_AUDIO_HAL)
-#define XSTR(x) STR(x)
-#define STR(x) #x
 
 enum {
     ASPHERE_ACTIVE = 0,
@@ -90,7 +84,6 @@ struct asphere_module {
 
 static struct asphere_module asphere;
 pthread_once_t asphere_once = PTHREAD_ONCE_INIT;
-static bool (*is_feature_enabled)(audio_ext_feature);
 
 static int asphere_create_app_notification_node(void)
 {
@@ -170,23 +163,14 @@ static void asphere_init_once() {
     ALOGD("%s", __func__);
     pthread_mutex_init(&asphere.lock, NULL);
 
-    if (access(PRIMARY_HAL_PATH, R_OK) == 0) {
-        void *hal_lib_pointer = dlopen(PRIMARY_HAL_PATH, RTLD_NOW);
-        if (hal_lib_pointer == NULL)
-            ALOGE("%s: DLOPEN failed for %s", __func__, PRIMARY_HAL_PATH);
-        else if ((is_feature_enabled = (bool (*)(audio_ext_feature))dlsym(hal_lib_pointer,
-                                     "audio_feature_manager_is_feature_enabled")) != NULL) {
-            if (is_feature_enabled(AUDIOSPHERE)) {
-                asphere.init_status = 1;
-                asphere_get_values_from_mixer();
-                asphere_create_app_notification_node();
-                return;
-            } else
-                ALOGW("%s: asphere feature not enabled", __func__);
-        } else
-            ALOGE("%s: dlsym failed", __func__);
-    } else
-        ALOGE("%s: not able to acces lib %s ", __func__, PRIMARY_HAL_PATH);
+    if (property_get_bool("vendor.audio.feature.audio_sphere.enable", false)) {
+        asphere.init_status = 1;
+        asphere_get_values_from_mixer();
+        asphere_create_app_notification_node();
+        return;
+    } else {
+        ALOGW("%s: asphere feature not enabled", __func__);
+    }
 
     asphere.init_status = 0;
 }
