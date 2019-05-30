@@ -26,6 +26,7 @@
 #include <math.h>
 #include <log/log.h>
 #include <cutils/str_parms.h>
+#include <cutils/properties.h>
 #include <sys/ioctl.h>
 #include <time.h>
 #include <sound/voice_params.h>
@@ -35,7 +36,6 @@
 #include "platform.h"
 #include "platform_api.h"
 #include "voice_extn.h"
-#include "audio_feature_manager.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -86,7 +86,6 @@ struct pcm_config pcm_config_incall_music = {
 
 static bool voice_extn_compress_voip_enabled = false;
 static bool voice_extn_dynamic_ecns_feature_enabled = false;
-static int voice_extn_is_running_vendor_enhanced_fwk = 1;
 static bool voice_extn_incall_music_enabled = false;
 
 int voice_extn_is_call_state_active(struct audio_device *adev, bool *is_call_active);
@@ -396,43 +395,48 @@ void dynamic_ecns_feature_init(bool is_feature_enabled)
 {
     voice_extn_dynamic_ecns_feature_enabled = is_feature_enabled;
     ALOGD(":: %s: ---- Feature DYNAMIC_ECNS is %s ----", __func__,
-                            is_feature_enabled? "ENABLED": " NOT ENABLED");
+                            is_feature_enabled ? "ENABLED" : "NOT ENABLED");
 }
-
-// START: INCALL_MUSIC ===================================================================
-void incall_music_feature_init(bool is_feature_enabled)
-{
-   voice_extn_incall_music_enabled = is_feature_enabled;
-    ALOGD("%s: ---- Feature INCALL_MUSIC is %s----", __func__,
-                                is_feature_enabled? "ENABLED": "NOT ENABLED");
-}
-// END: INCALL_MUSIC ===================================================================
 
 bool voice_extn_is_dynamic_ecns_enabled()
 {
     return voice_extn_dynamic_ecns_feature_enabled;
 }
 
-void voice_extn_feature_init(int is_running_with_enhanced_fwk)
+// START: INCALL_MUSIC ===================================================================
+void incall_music_feature_init(bool is_feature_enabled)
 {
-    voice_extn_is_running_vendor_enhanced_fwk = is_running_with_enhanced_fwk;
-    for(int index = VOICE_START; index < MAX_SUPPORTED_FEATURE; index++)
-    {
-        bool enable = audio_feature_manager_is_feature_enabled(index);
-        switch (index) {
-            case COMPRESS_VOIP:
-                compr_voip_feature_init(enable);
-                break;
-            case DYNAMIC_ECNS:
-                dynamic_ecns_feature_init(enable);
-                break;
-            case INCALL_MUSIC:
-                incall_music_feature_init(enable);
-                break;
-            default:
-                break;
-        }
-    }
+    voice_extn_incall_music_enabled = is_feature_enabled;
+    ALOGV("%s: ---- Feature INCALL_MUSIC is %s----", __func__,
+                                is_feature_enabled ? "ENABLED" : "NOT ENABLED");
+}
+// END: INCALL_MUSIC ===================================================================
+
+void compr_voip_feature_init(bool is_feature_enabled)
+{
+    voice_extn_compress_voip_enabled = is_feature_enabled;
+    ALOGV("%s:: ---- Feature COMPRESS_VOIP is %s ----", __func__,
+                                is_feature_enabled ? "ENABLED" : "NOT ENABLED");
+}
+
+bool voice_extn_is_compress_voip_supported()
+{
+    return voice_extn_compress_voip_enabled;
+}
+
+void voice_extn_feature_init()
+{
+    // Register feature function here
+    // every feature should have a feature flag
+    compr_voip_feature_init(
+       property_get_bool("vendor.audio.feature.compr_voip.enable",
+                          false));
+    dynamic_ecns_feature_init(
+       property_get_bool("vendor.audio.feature.dynamic_ecns.enable",
+                          false));
+    incall_music_feature_init(
+       property_get_bool("vendor.audio.feature.incall_music.enable",
+                          true));
 }
 
 void voice_extn_init(struct audio_device *adev)
@@ -444,17 +448,6 @@ void voice_extn_init(struct audio_device *adev)
     adev->voice.session[VOWLAN_SESS_IDX].vsid = VOWLAN_VSID;
     adev->voice.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
     adev->voice.session[MMODE2_SESS_IDX].vsid = VOICEMMODE2_VSID;
-}
-
-void compr_voip_feature_init(bool is_feature_enabled)
-{
-    voice_extn_compress_voip_enabled = is_feature_enabled;
-    ALOGD("%s:: ---- Feature COMPRESS_VOIP is %s ----", __func__, is_feature_enabled?"ENABLED":"NOT ENABLED");
-}
-
-bool voice_extn_is_compress_voip_supported()
-{
-    return voice_extn_compress_voip_enabled;
 }
 
 int voice_extn_get_session_from_use_case(struct audio_device *adev,

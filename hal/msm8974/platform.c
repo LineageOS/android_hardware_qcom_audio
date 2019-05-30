@@ -95,6 +95,10 @@
 
 #include <resolv.h>
 
+#define QTIME_FREQ_KHZ  19200
+#define IPC_ERROR_DELAY 10000
+
+#define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
 #define TOSTRING_(x) #x
@@ -499,6 +503,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA] = "wsa-voice-speaker-2",
     [SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = "voice-speaker-2-vbat",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
+    [SND_DEVICE_OUT_VOICE_HEADSET] = "voice-headset",
     [SND_DEVICE_OUT_VOICE_LINE] = "voice-line",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
@@ -758,6 +763,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = 14,
     [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = 53,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_VOICE_HEADSET] = 10,
     [SND_DEVICE_OUT_VOICE_LINE] = 10,
     [SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET] = 10,
@@ -978,6 +984,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HDMI)},
@@ -2085,6 +2092,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_2] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_HEADPHONES] = strdup("SLIMBUS_6_RX");
+    hw_interface_table[SND_DEVICE_OUT_VOICE_HEADSET] = strdup("SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_MUSIC_TX] = strdup("VOICE_PLAYBACK_TX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_LINE] = strdup("SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_HDMI] = strdup("HDMI");
@@ -3463,14 +3471,14 @@ acdb_init_fail:
                 strdup("SLIM_6_RX SampleRate");
         }
 
-        //TODO: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend is defined
+        //NOTE: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend is defined
         //for headset-mic. This is to capture separate data from headset-mic and handset-mic.
-        if(audio_extn_is_concurrent_capture_enabled())
+        if(audio_extn_is_concurrent_capture_enabled()) {
             my_data->current_backend_cfg[HEADSET_TX_BACKEND].bitwidth_mixer_ctl =
-                                                            strdup("SLIM_1_TX Format");
-        else
+                strdup("SLIM_1_TX Format");
             my_data->current_backend_cfg[HEADSET_TX_BACKEND].samplerate_mixer_ctl =
-                                                            strdup("SLIM_1_TX SampleRate");
+                strdup("SLIM_1_TX SampleRate");
+        }
     }
 
     my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].bitwidth_mixer_ctl =
@@ -3972,6 +3980,186 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 int platform_get_haptics_pcm_device_id()
 {
     return HAPTICS_PCM_DEVICE;
+}
+
+uint64_t getQtime()
+{
+    uint64_t qTimerCount = 0;
+
+#if __aarch64__
+    asm volatile("mrs %0, cntvct_el0" : "=r" (qTimerCount));
+#else
+    asm volatile("mrrc p15, 1, %Q0, %R0, c14" : "=r" (qTimerCount));
+#endif
+
+    return qTimerCount;
+}
+
+int platform_get_delay(void *platform, int pcm_device_id)
+{
+    int ctl_len = 0;
+    struct audio_device *adev = ((struct platform_data *)platform)->adev;
+    struct mixer_ctl *ctl = NULL;
+    const char *mixer_ctl_name = "ADSP Path Latency";
+    const char *deviceNo = "NN";
+    char *mixer_str = NULL;
+    int path_delay = 0;
+
+    if (NULL == platform) {
+        ALOGE("%s: platform is NULL", __func__);
+        return -EINVAL;
+    }
+    if (pcm_device_id <= 0) {
+        ALOGE("%s: invalid pcm device id: %d", __func__, pcm_device_id);
+        return -EINVAL;
+    }
+
+    // Mixer control format: "ADSP Path Latency NN"
+    ctl_len = strlen(mixer_ctl_name) + 1 + strlen(deviceNo) + 1;
+
+    mixer_str = (char*) calloc(ctl_len, sizeof(char));
+    if (!mixer_str) {
+        ALOGE("%s: Could not allocate memory", __func__);
+        return -ENOMEM;
+    }
+
+    snprintf(mixer_str, ctl_len, "%s %d", mixer_ctl_name, pcm_device_id);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_str);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s", __func__, mixer_str);
+        free(mixer_str);
+        return -EINVAL;
+    }
+
+    path_delay = mixer_ctl_get_value(ctl, 0);
+    if (path_delay < 0) {
+        ALOGE("%s: Could not get val for mixer cmd - %s", __func__, mixer_str);
+    }
+    ALOGD("%s: Path Delay: %d", __func__, path_delay);
+
+    free(mixer_str);
+    return path_delay;
+}
+
+int send_qtime(void *platform, uint64_t qtime_value, int pcm_device_id)
+{
+    int ret = 0;
+    int ctl_len = 0;
+    struct audio_device *adev = ((struct platform_data *)platform)->adev;
+    struct mixer_ctl *ctl = NULL;
+    const char *mixer_ctl_name = "QTimer";
+    const char *deviceNo = "NN";
+    char *mixer_str = NULL;
+    uint32_t set_values[2];
+
+    set_values[0] = (uint32_t)qtime_value;
+    set_values[1] = (uint32_t)((qtime_value >> 16) >> 16);
+    ALOGD("%s: Send qtime msw: %u, lsw: %u", __func__, set_values[1],
+          set_values[0]);
+
+    // Mixer control format: "Qtimer NN"
+    ctl_len = strlen(mixer_ctl_name) + 1 + strlen(deviceNo) + 1;
+
+    mixer_str = (char*) calloc(ctl_len, sizeof(char));
+    if (!mixer_str) {
+        ALOGE("%s: Could not allocate memory", __func__);
+        return -ENOMEM;
+    }
+
+    snprintf(mixer_str, ctl_len, "%s %d", mixer_ctl_name, pcm_device_id);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_str);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_str);
+        free(mixer_str);
+        return -EINVAL;
+    }
+
+    ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+    if (ret < 0) {
+        ALOGE("%s: Could not set array for mixer cmd - %s",
+              __func__, mixer_str);
+    }
+    free(mixer_str);
+
+    return ret;
+}
+
+int platform_set_qtime(void *platform, int audio_pcm_device_id,
+                        int haptic_pcm_device_id)
+{
+    int ret = 0;
+    uint64_t qtime_count = 0;
+    uint64_t qtime_value = 0;
+    uint32_t qtime_remainder = 0;
+    int32_t audio_path_latency = 0;
+    int32_t haptic_path_latency = 0;
+
+    if (NULL == platform) {
+        ALOGE("%s: platform is NULL", __func__);
+        return -EINVAL;
+    }
+    if (audio_pcm_device_id <= 0 || haptic_pcm_device_id <= 0) {
+        ALOGE("%s: Invalid pcm device id - %d", __func__,
+              audio_pcm_device_id <= 0 ? audio_pcm_device_id
+              : haptic_pcm_device_id);
+        return -EINVAL;
+    }
+
+    audio_path_latency = platform_get_delay(platform, audio_pcm_device_id);
+    if (audio_path_latency <= 0) {
+        ALOGE("%s: error getting audio path latency: %d", __func__,
+              audio_path_latency);
+        return -EINVAL;
+    }
+    ALOGD("%s: Audio Path Latency: %d", __func__, audio_path_latency);
+
+    haptic_path_latency = platform_get_delay(platform, haptic_pcm_device_id);
+    if (haptic_path_latency <= 0) {
+        ALOGE("%s: error getting haptic path latency: %d", __func__,
+              haptic_path_latency);
+        return -EINVAL;
+    }
+    ALOGD("%s: Haptic Path Latency: %d", __func__, haptic_path_latency);
+
+    qtime_count = getQtime();
+
+    // Qtime count / Qtime freq (KHZ) = Qtime in milliseconds
+    qtime_value = (uint64_t) (qtime_count / QTIME_FREQ_KHZ);
+
+    // Convert Qtime to microseconds
+    qtime_value *= 1000;
+
+    // Adding max(path_latency)
+    qtime_value += (uint32_t) max(audio_path_latency, haptic_path_latency);
+
+    // Adding IPC delay + error correction ~10ms
+    qtime_value += IPC_ERROR_DELAY;
+
+    // Calculate remainder in microseconds
+    qtime_remainder = ((qtime_count % QTIME_FREQ_KHZ) * 1000) / QTIME_FREQ_KHZ;
+
+    // Add the remainder to qtime
+    qtime_value += qtime_remainder;
+    ALOGD("%s: Set qtime: %llu microsecs\n", __func__,
+          (unsigned long long int)qtime_value);
+
+    ret = send_qtime(platform, qtime_value, haptic_pcm_device_id);
+    if (ret < 0) {
+        ALOGE("%s: Could not send qtime for haptic session - %d",
+              __func__, ret);
+        return ret;
+    }
+
+    ret = send_qtime(platform, qtime_value, audio_pcm_device_id);
+    if (ret < 0) {
+        ALOGE("%s: Could not send qtime for audio session - %d",
+              __func__, ret);
+    }
+
+    return ret;
 }
 
 static int find_index(struct name_to_index * table, int32_t len, const char * name)
@@ -5393,6 +5581,10 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET;
                 else
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_HEADSET;
+            } else if (audio_extn_is_concurrent_capture_enabled() &&
+                        (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
+                //Separate backend is added for headset-mic as part of concurrent capture
+                snd_device = SND_DEVICE_OUT_VOICE_HEADSET;
             } else {
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
             }

@@ -74,7 +74,6 @@
 #include "audio_extn.h"
 #include "voice_extn.h"
 #include "ip_hdlr_intf.h"
-#include "audio_feature_manager.h"
 
 #include "sound/compress_params.h"
 #include "sound/asound.h"
@@ -3471,6 +3470,11 @@ int start_output_stream(struct stream_out *out)
                                    &(adev->haptics_config));
             // failure to open haptics pcm shouldnt stop audio,
             // so do not close audio pcm in case of error
+
+            if (property_get_bool("vendor.audio.enable_haptic_audio_sync", false)) {
+                ALOGD("%s: enable haptic audio synchronization", __func__);
+                platform_set_qtime(adev->platform, out->pcm_device_id, adev->haptic_pcm_device_id);
+            }
         }
 
         if (!out->realtime)
@@ -5283,7 +5287,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                      __func__, frames, frame_size, bytes_to_write);
 
             if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
-                out->usecase == USECASE_INCALL_MUSIC_UPLINK2) {
+                out->usecase == USECASE_INCALL_MUSIC_UPLINK2 ||
+                (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP &&
+                 !audio_extn_utils_is_vendor_enhanced_fwk())) {
                 size_t channel_count = audio_channel_count_from_out_mask(out->channel_mask);
                 int16_t *src = (int16_t *)buffer;
                 int16_t *dst = (int16_t *)buffer;
@@ -5746,7 +5752,7 @@ static void adjust_mmap_period_count(struct pcm_config *config, int32_t min_size
 static int64_t get_mmap_out_time_offset() {
     const int32_t kDefaultOffsetMicros = 0;
     int32_t mmap_time_offset_micros = property_get_int32(
-        "persist.audio.out_mmap_delay_micros", kDefaultOffsetMicros);
+        "persist.vendor.audio.out_mmap_delay_micros", kDefaultOffsetMicros);
     ALOGI("mmap_time_offset_micros = %d for output", mmap_time_offset_micros);
     return mmap_time_offset_micros * (int64_t)1000;
 }
@@ -6237,7 +6243,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
 
     struct audio_device *adev = in->dev;
     int ret = -1;
-    size_t bytes_read = 0;
+    size_t bytes_read = 0, frame_size = 0;
 
     lock_input_stream(in);
 
@@ -6329,6 +6335,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         memset(buffer, 0, bytes);
 
 exit:
+    frame_size = audio_stream_in_frame_size(stream);
+    if (frame_size > 0)
+        in->frames_read += bytes_read/frame_size;
+
     if (-ENETRESET == ret)
         in->card_status = CARD_STATUS_OFFLINE;
     pthread_mutex_unlock(&in->lock);
@@ -6539,7 +6549,7 @@ static int in_start(const struct audio_stream_in* stream)
 static int64_t in_get_mmap_time_offset() {
     const int32_t kDefaultOffsetMicros = 0;
     int32_t mmap_time_offset_micros = property_get_int32(
-            "persist.audio.in_mmap_delay_micros", kDefaultOffsetMicros);
+            "persist.vendor.audio.in_mmap_delay_micros", kDefaultOffsetMicros);
     ALOGI("mmap_time_offset_micros = %d for input", mmap_time_offset_micros);
     return mmap_time_offset_micros * (int64_t)1000;
 }
@@ -6782,7 +6792,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                       (devices != AUDIO_DEVICE_OUT_USB_ACCESSORY);
     bool direct_dev = is_hdmi || is_usb_dev;
     bool use_db_as_primary =
-           audio_feature_manager_is_feature_enabled(USE_DEEP_BUFFER_AS_PRIMARY_OUTPUT);
+         property_get_bool("vendor.audio.feature.deepbuffer_as_primary.enable",
+                            false);
     bool force_haptic_path =
             property_get_bool("vendor.audio.test_haptic", false);
     bool is_voip_rx = flags & AUDIO_OUTPUT_FLAG_VOIP_RX;
@@ -6928,7 +6939,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         if (!voice_extn_is_compress_voip_supported()) {
             if (out->sample_rate == 8000 || out->sample_rate == 16000 ||
              out->sample_rate == 32000 || out->sample_rate == 48000) {
-                out->channel_mask = AUDIO_CHANNEL_OUT_MONO;
+                out->channel_mask = audio_extn_utils_is_vendor_enhanced_fwk() ?
+                                        AUDIO_CHANNEL_OUT_MONO : AUDIO_CHANNEL_OUT_STEREO;
                 out->usecase = USECASE_AUDIO_PLAYBACK_VOIP;
                 out->format = AUDIO_FORMAT_PCM_16_BIT;
 
@@ -9094,8 +9106,9 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->bt_sco_on = false;
     /* adev->cur_hdmi_channels = 0;  by calloc() */
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
-    /* Init audio feature manager */
-    audio_feature_manager_init();
+    /* Init audio and voice feature */
+    audio_extn_feature_init();
+    voice_extn_feature_init();
     voice_init(adev);
     list_init(&adev->usecase_list);
     list_init(&adev->active_inputs_list);

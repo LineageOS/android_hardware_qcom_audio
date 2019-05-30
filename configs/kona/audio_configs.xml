@@ -31,7 +31,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <!-- APM Configs -->
         <property name="audio.deep_buffer.media" value="true"/>
         <property name="audio.offload.disable" value="false"/>
-        <property name="audio.offload.min.duration.secs" value="60"/>
+        <property name="audio.offload.min.duration.secs" value="30"/>
         <property name="audio.offload.video" value="true"/>
         <property name="persist.vendor.audio.sva.conc.enabled" value="false"/>
         <property name="persist.vendor.audio.va_concurrency_enabled" value="false"/>
