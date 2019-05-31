@@ -650,6 +650,8 @@ int enable_audio_route(struct audio_device *adev,
 
     ALOGV("%s: enter: usecase(%d)", __func__, usecase->id);
 
+    audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_BUSY);
+
     if (usecase->type == PCM_CAPTURE)
         snd_device = usecase->in_snd_device;
     else
@@ -664,7 +666,6 @@ int enable_audio_route(struct audio_device *adev,
     // this also appends to mixer_path
     platform_add_backend_name(adev->platform, mixer_path, snd_device);
 
-    audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_BUSY);
     ALOGD("%s: usecase(%d) apply and update mixer path: %s", __func__,  usecase->id, mixer_path);
     audio_route_apply_and_update_path(adev->audio_route, mixer_path);
 
@@ -1442,8 +1443,7 @@ struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
 
 static bool force_device_switch(struct audio_usecase *usecase)
 {
-    if (usecase->stream.out == NULL) {
-        ALOGE("%s: stream.out is NULL", __func__);
+    if (usecase->type == PCM_CAPTURE || usecase->stream.out == NULL) {
         return false;
     }
 
