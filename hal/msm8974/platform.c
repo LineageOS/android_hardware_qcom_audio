@@ -3079,7 +3079,7 @@ exit:
 #ifdef DYNAMIC_ECNS_ENABLED
 static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
                                                   struct stream_in *in __unused,
-                                                  audio_devices_t out_device,
+                                                  audio_devices_t out_device __unused,
                                                   audio_devices_t in_device)
 {
     struct audio_device *adev = my_data->adev;
@@ -3114,7 +3114,7 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
                 ALOGE("%s: Unsupported in_device %#x", __func__, in_device);
                 break;
         }
-        platform_set_echo_reference(adev, true, out_device);
+        in->enable_ec_port = true;
     }
 
     return snd_device;
@@ -3122,7 +3122,7 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
 #else
 static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
                                                   struct stream_in *in,
-                                                  audio_devices_t out_device,
+                                                  audio_devices_t out_device __unused,
                                                   audio_devices_t in_device)
 {
     struct audio_device *adev = my_data->adev;
@@ -3150,7 +3150,6 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
         } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
         }
-        platform_set_echo_reference(adev, true, out_device);
     } else if (in->enable_aec) {
         if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
             if (my_data->fluence_in_spkr_mode &&
@@ -3172,7 +3171,6 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
        } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
            snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
        }
-       platform_set_echo_reference(adev, true, out_device);
     } else if (in->enable_ns) {
         if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
             if (my_data->fluence_in_spkr_mode &&
@@ -3366,7 +3364,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
                     else
                         snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
                 }
-                platform_set_echo_reference(adev, true, out_device);
+                in->enable_ec_port = true;
             } else if ((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) &&
                        (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
                 snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_STEREO;
@@ -3384,7 +3382,6 @@ snd_device_t platform_get_input_snd_device(void *platform,
                     } else {
                         snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC;
                     }
-                    platform_set_echo_reference(adev, true, out_device);
                 } else if (in->enable_ns) {
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
                 } else {

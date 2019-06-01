@@ -285,6 +285,10 @@ struct stream_in {
     audio_usecase_t usecase;
     bool enable_aec;
     bool enable_ns;
+    bool enable_ec_port;
+    bool ec_opened;
+    struct listnode aec_list;
+    struct listnode ns_list;
     int64_t frames_read; /* total frames read, not cleared when entering standby */
     int64_t frames_muted; /* total frames muted, not cleared when entering standby */
     int64_t mmap_time_offset_nanos; /* fudge factor to correct inaccuracies in DSP */
