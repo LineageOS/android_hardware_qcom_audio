@@ -422,7 +422,7 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
     if (valid_type && platform_sound_trigger_usecase_needs_event(uc_info->id)) {
         ALOGV("%s: uc_id %d of type %d for Event %d, with Raise=%d",
               __func__, uc_info->id, uc_info->type, event, raise_event);
-        if (uc_info->type == PCM_CAPTURE) {
+        if (uc_info->type == PCM_CAPTURE || uc_info->type == VOICE_CALL) {
             ev = (event == ST_EVENT_STREAM_BUSY) ? AUDIO_EVENT_CAPTURE_STREAM_ACTIVE :
                                                    AUDIO_EVENT_CAPTURE_STREAM_INACTIVE;
         } else {
