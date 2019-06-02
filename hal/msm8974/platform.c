@@ -503,6 +503,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA] = "wsa-voice-speaker-2",
     [SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = "voice-speaker-2-vbat",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
+    [SND_DEVICE_OUT_VOICE_HEADSET] = "voice-headset",
     [SND_DEVICE_OUT_VOICE_LINE] = "voice-line",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
@@ -762,6 +763,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = 14,
     [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = 53,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_VOICE_HEADSET] = 10,
     [SND_DEVICE_OUT_VOICE_LINE] = 10,
     [SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET] = 10,
@@ -982,6 +984,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HDMI)},
@@ -2089,6 +2092,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_2] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_HEADPHONES] = strdup("SLIMBUS_6_RX");
+    hw_interface_table[SND_DEVICE_OUT_VOICE_HEADSET] = strdup("SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_MUSIC_TX] = strdup("VOICE_PLAYBACK_TX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_LINE] = strdup("SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_HDMI] = strdup("HDMI");
@@ -3357,8 +3361,6 @@ acdb_init_fail:
         strdup("SLIM_0_RX Format");
     my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
         strdup("SLIM_0_RX SampleRate");
-    my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
-        strdup("SLIM_0_RX Channels");
 
     my_data->current_backend_cfg[DSD_NATIVE_BACKEND].bitwidth_mixer_ctl =
         strdup("SLIM_2_RX Format");
@@ -3467,14 +3469,14 @@ acdb_init_fail:
                 strdup("SLIM_6_RX SampleRate");
         }
 
-        //TODO: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend is defined
+        //NOTE: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend is defined
         //for headset-mic. This is to capture separate data from headset-mic and handset-mic.
-        if(audio_extn_is_concurrent_capture_enabled())
+        if(audio_extn_is_concurrent_capture_enabled()) {
             my_data->current_backend_cfg[HEADSET_TX_BACKEND].bitwidth_mixer_ctl =
-                                                            strdup("SLIM_1_TX Format");
-        else
+                strdup("SLIM_1_TX Format");
             my_data->current_backend_cfg[HEADSET_TX_BACKEND].samplerate_mixer_ctl =
-                                                            strdup("SLIM_1_TX SampleRate");
+                strdup("SLIM_1_TX SampleRate");
+        }
     }
 
     my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].bitwidth_mixer_ctl =
@@ -3483,8 +3485,6 @@ acdb_init_fail:
         strdup("USB_AUDIO_TX SampleRate");
     my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].channels_mixer_ctl =
         strdup("USB_AUDIO_TX Channels");
-    my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
-        strdup("SLIM_0_RX Channels");
     my_data->current_backend_cfg[SLIMBUS_0_TX].bitwidth_mixer_ctl =
         strdup("SLIM_0_TX Format");
     my_data->current_backend_cfg[SLIMBUS_0_TX].samplerate_mixer_ctl =
@@ -3965,7 +3965,12 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 {
-    int device_id;
+    int device_id = -1;
+
+    if ((usecase >= AUDIO_USECASE_MAX) || (usecase <= USECASE_INVALID)) {
+        ALOGE("%s: invalid usecase case idx %d", __func__, usecase);
+        return device_id;
+    }
     if (device_type == PCM_PLAYBACK)
         device_id = pcm_device_table[usecase][0];
     else
@@ -3994,7 +3999,7 @@ uint64_t getQtime()
 int platform_get_delay(void *platform, int pcm_device_id)
 {
     int ctl_len = 0;
-    struct audio_device *adev = ((struct platform_data *)platform)->adev;
+    struct audio_device *adev = NULL;
     struct mixer_ctl *ctl = NULL;
     const char *mixer_ctl_name = "ADSP Path Latency";
     const char *deviceNo = "NN";
@@ -4009,6 +4014,8 @@ int platform_get_delay(void *platform, int pcm_device_id)
         ALOGE("%s: invalid pcm device id: %d", __func__, pcm_device_id);
         return -EINVAL;
     }
+
+    adev = ((struct platform_data *)platform)->adev;
 
     // Mixer control format: "ADSP Path Latency NN"
     ctl_len = strlen(mixer_ctl_name) + 1 + strlen(deviceNo) + 1;
@@ -5577,6 +5584,10 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET;
                 else
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_HEADSET;
+            } else if (audio_extn_is_concurrent_capture_enabled() &&
+                        (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
+                //Separate backend is added for headset-mic as part of concurrent capture
+                snd_device = SND_DEVICE_OUT_VOICE_HEADSET;
             } else {
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
             }

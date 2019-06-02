@@ -142,6 +142,7 @@ static audio_devices_t get_audio_device(snd_device_t snd_device)
         {SND_DEVICE_OUT_VOICE_HEADPHONES, AUDIO_DEVICE_OUT_WIRED_HEADPHONE},
         {SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
             AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_WIRED_HEADPHONE}
+        {SND_DEVICE_OUT_VOICE_HEADSET, AUDIO_DEVICE_OUT_WIRED_HEADSET},
     };
 
     audio_devices_t aud_device = AUDIO_DEVICE_NONE;

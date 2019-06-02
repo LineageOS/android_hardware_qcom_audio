@@ -76,6 +76,7 @@
 #define MEDIA_FMT_SBC_ALLOCATION_METHOD_LOUDNESS           0
 #define MEDIA_FMT_SBC_ALLOCATION_METHOD_SNR                1
 #define MIXER_ENC_CONFIG_BLOCK            "SLIM_7_RX Encoder Config"
+#define MIXER_ENC_APTX_AD_CONFIG_BLOCK    "SLIM_7_RX APTX_AD Enc Cfg"
 #define MIXER_SOURCE_DEC_CONFIG_BLOCK     "SLIM_7_TX Decoder Config"
 #define MIXER_SINK_DEC_CONFIG_BLOCK       "SLIM_9_TX Decoder Config"
 #define MIXER_ENC_BIT_FORMAT       "AFE Input Bit Format"
@@ -577,6 +578,30 @@ struct aptx_ad_enc_cfg_t
     struct abr_enc_cfg_t abr_cfg;
 } __attribute__ ((packed));
 
+struct aptx_ad_enc_cfg_ext_r2_t
+{
+    uint32_t  sampling_freq;
+    uint32_t  mtu;
+    uint32_t  channel_mode;
+    uint32_t  min_sink_modeA;
+    uint32_t  max_sink_modeA;
+    uint32_t  min_sink_modeB;
+    uint32_t  max_sink_modeB;
+    uint32_t  min_sink_modeC;
+    uint32_t  max_sink_modeC;
+    uint32_t  mode;
+    uint32_t  input_mode;
+    uint32_t  fade_duration;
+    uint8_t   sink_cap[11];
+} __attribute__ ((packed));
+
+struct aptx_ad_enc_cfg_r2_t
+{
+    struct custom_enc_cfg_t  custom_cfg;
+    struct aptx_ad_enc_cfg_ext_r2_t aptx_ad_cfg;
+    struct abr_enc_cfg_t abr_cfg;
+} __attribute__ ((packed));
+
 /* APTX AD SPEECH structure */
 struct aptx_ad_speech_enc_cfg_t
 {
@@ -636,21 +661,26 @@ typedef struct {
 } audio_aptx_default_config;
 
 typedef struct {
-    uint8_t  sampling_rate;
-    uint8_t  channel_mode;
-    uint16_t mtu;
-    uint8_t  min_sink_modeA;
-    uint8_t  max_sink_modeA;
-    uint8_t  min_sink_modeB;
-    uint8_t  max_sink_modeB;
-    uint8_t  min_sink_modeC;
-    uint8_t  max_sink_modeC;
+    uint32_t sampling_rate;
+    uint32_t mtu;
+    int32_t  channel_mode;
+    uint32_t min_sink_modeA;
+    uint32_t max_sink_modeA;
+    uint32_t min_sink_modeB;
+    uint32_t max_sink_modeB;
+    uint32_t min_sink_modeC;
+    uint32_t max_sink_modeC;
+    uint32_t encoder_mode;
     uint8_t  TTP_modeA_low;
     uint8_t  TTP_modeA_high;
     uint8_t  TTP_modeB_low;
     uint8_t  TTP_modeB_high;
+    uint8_t  TTP_TWS_low;
+    uint8_t  TTP_TWS_high;
     uint32_t bits_per_sample;
-    uint16_t  encoder_mode;
+    uint32_t input_mode;
+    uint32_t fade_duration;
+    uint8_t  sink_cap[11];
 } audio_aptx_ad_config;
 
 typedef struct {
@@ -1127,11 +1157,15 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
     } else {
         sampling_rate = a2dp.enc_sampling_rate;
     }
-    //For LDAC encoder and AAC decoder open slimbus port at
-    //96Khz for 48Khz input and 88.2Khz for 44.1Khz input.
+    /*
+     * For LDAC encoder and AAC decoder open slimbus port at
+     * 96Khz for 48Khz input and 88.2Khz for 44.1Khz input.
+     * For APTX AD encoder, open slimbus port at 96Khz for 48Khz input.
+     */
     if (((a2dp.bt_encoder_format == CODEC_TYPE_LDAC) ||
          (a2dp.bt_decoder_format == CODEC_TYPE_SBC) ||
-         (a2dp.bt_decoder_format == AUDIO_FORMAT_AAC)) &&
+         (a2dp.bt_decoder_format == AUDIO_FORMAT_AAC) ||
+         (a2dp.bt_encoder_format == CODEC_TYPE_APTX_AD)) &&
         (sampling_rate == 48000 || sampling_rate == 44100 )) {
         sampling_rate = sampling_rate *2;
     }
@@ -1182,20 +1216,21 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
                     rate_str = SPEECH_TX_SAMPLE_RATE;
                 else
                     rate_str = ABR_TX_SAMPLE_RATE;
-            }
-            ALOGD("%s: set backend tx sample rate = %s", __func__, rate_str);
-            ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
-                                            MIXER_SOURCE_SAMPLE_RATE_TX);
-            if (!ctl_sample_rate) {
-                ALOGE("%s: ERROR backend sample rate mixer control not identifed", __func__);
-                is_configured = false;
-                goto fail;
-            }
 
-            if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
-                ALOGE("%s: Failed to set backend sample rate = %s", __func__, rate_str);
-                is_configured = false;
-                goto fail;
+                ALOGD("%s: set backend tx sample rate = %s", __func__, rate_str);
+                ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                                MIXER_SOURCE_SAMPLE_RATE_TX);
+                if (!ctl_sample_rate) {
+                    ALOGE("%s: ERROR backend sample rate mixer control not identifed", __func__);
+                    is_configured = false;
+                    goto fail;
+                }
+
+                if (mixer_ctl_set_enum_by_string(ctl_sample_rate, rate_str) != 0) {
+                    ALOGE("%s: Failed to set backend sample rate = %s", __func__, rate_str);
+                    is_configured = false;
+                    goto fail;
+                }
             }
         }
     } else {
@@ -1697,6 +1732,79 @@ static int update_aptx_ad_dsp_config(struct aptx_ad_enc_cfg_t *aptx_dsp_cfg,
     return ret;
 }
 
+static int update_aptx_ad_dsp_config_r2(struct aptx_ad_enc_cfg_r2_t *aptx_dsp_cfg,
+                                     audio_aptx_encoder_config *aptx_bt_cfg)
+{
+    int ret = 0;
+
+    if (aptx_dsp_cfg == NULL || aptx_bt_cfg == NULL) {
+        ALOGE("Invalid param, aptx_dsp_cfg %p aptx_bt_cfg %p",
+              aptx_dsp_cfg, aptx_bt_cfg);
+        return -EINVAL;
+    }
+
+    memset(aptx_dsp_cfg, 0x0, sizeof(struct aptx_ad_enc_cfg_r2_t));
+    aptx_dsp_cfg->custom_cfg.enc_format = MEDIA_FMT_APTX_AD;
+
+
+    aptx_dsp_cfg->aptx_ad_cfg.sampling_freq = aptx_bt_cfg->ad_cfg->sampling_rate;
+    aptx_dsp_cfg->aptx_ad_cfg.mtu = aptx_bt_cfg->ad_cfg->mtu;
+    aptx_dsp_cfg->aptx_ad_cfg.channel_mode = aptx_bt_cfg->ad_cfg->channel_mode;
+    aptx_dsp_cfg->aptx_ad_cfg.min_sink_modeA = aptx_bt_cfg->ad_cfg->min_sink_modeA;
+    aptx_dsp_cfg->aptx_ad_cfg.max_sink_modeA = aptx_bt_cfg->ad_cfg->max_sink_modeA;
+    aptx_dsp_cfg->aptx_ad_cfg.min_sink_modeB = aptx_bt_cfg->ad_cfg->min_sink_modeB;
+    aptx_dsp_cfg->aptx_ad_cfg.max_sink_modeB = aptx_bt_cfg->ad_cfg->max_sink_modeB;
+    aptx_dsp_cfg->aptx_ad_cfg.min_sink_modeC = aptx_bt_cfg->ad_cfg->min_sink_modeC;
+    aptx_dsp_cfg->aptx_ad_cfg.max_sink_modeC = aptx_bt_cfg->ad_cfg->max_sink_modeC;
+    aptx_dsp_cfg->aptx_ad_cfg.mode = aptx_bt_cfg->ad_cfg->encoder_mode;
+    aptx_dsp_cfg->aptx_ad_cfg.input_mode = aptx_bt_cfg->ad_cfg->input_mode;
+    aptx_dsp_cfg->aptx_ad_cfg.fade_duration = aptx_bt_cfg->ad_cfg->fade_duration;
+    for (int i = 0; i < sizeof(aptx_dsp_cfg->aptx_ad_cfg.sink_cap); i ++)
+        aptx_dsp_cfg->aptx_ad_cfg.sink_cap[i] = aptx_bt_cfg->ad_cfg->sink_cap[i];
+    aptx_dsp_cfg->abr_cfg.imc_info.direction = IMC_RECEIVE;
+    aptx_dsp_cfg->abr_cfg.imc_info.enable = IMC_ENABLE;
+    aptx_dsp_cfg->abr_cfg.imc_info.purpose = IMC_PURPOSE_ID_BT_INFO;
+    aptx_dsp_cfg->abr_cfg.imc_info.comm_instance = a2dp.abr_config.imc_instance;
+
+
+    switch(aptx_dsp_cfg->aptx_ad_cfg.channel_mode) {
+        case APTX_AD_CHANNEL_UNCHANGED:
+        case APTX_AD_CHANNEL_JOINT_STEREO:
+        case APTX_AD_CHANNEL_DUAL_MONO:
+        case APTX_AD_CHANNEL_STEREO_TWS:
+        case APTX_AD_CHANNEL_EARBUD:
+        default:
+             a2dp.enc_channels = CH_STEREO;
+             aptx_dsp_cfg->custom_cfg.num_channels = CH_STEREO;
+             aptx_dsp_cfg->custom_cfg.channel_mapping[0] = PCM_CHANNEL_L;
+             aptx_dsp_cfg->custom_cfg.channel_mapping[1] = PCM_CHANNEL_R;
+             break;
+        case APTX_AD_CHANNEL_MONO:
+             a2dp.enc_channels = CH_MONO;
+             aptx_dsp_cfg->custom_cfg.num_channels = CH_MONO;
+             aptx_dsp_cfg->custom_cfg.channel_mapping[0] = PCM_CHANNEL_C;
+            break;
+    }
+    switch(aptx_dsp_cfg->aptx_ad_cfg.sampling_freq) {
+        case APTX_AD_SR_UNCHANGED:
+        case APTX_AD_48:
+        default:
+            a2dp.enc_sampling_rate = SAMPLING_RATE_48K;
+            aptx_dsp_cfg->custom_cfg.sample_rate = SAMPLING_RATE_48K;
+            break;
+        case APTX_AD_44_1:
+            a2dp.enc_sampling_rate = SAMPLING_RATE_441K;
+            aptx_dsp_cfg->custom_cfg.sample_rate = SAMPLING_RATE_441K;
+        break;
+    }
+    ALOGV("Successfully updated APTX AD enc format with \
+               samplingrate: %d channels:%d",
+               aptx_dsp_cfg->custom_cfg.sample_rate,
+               aptx_dsp_cfg->custom_cfg.num_channels);
+
+    return ret;
+}
+
 static void audio_a2dp_update_tws_channel_mode()
 {
     char* channel_mode;
@@ -1809,6 +1917,7 @@ static int update_aptx_dsp_config_v1(struct custom_enc_cfg_t *aptx_dsp_cfg,
 bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 {
     struct mixer_ctl *ctl_enc_data = NULL;
+    struct mixer_ctl *aptx_ad_ctl = NULL;
     int mixer_size = 0;
     bool is_configured = false;
     int ret = 0;
@@ -1826,9 +1935,17 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
 #ifndef LINUX_ENABLED
     struct aptx_enc_cfg_t aptx_dsp_cfg;
     struct aptx_ad_enc_cfg_t aptx_ad_dsp_cfg;
+    struct aptx_ad_enc_cfg_r2_t aptx_ad_dsp_cfg_r2;
     if (a2dp.is_aptx_adaptive) {
-        mixer_size = sizeof(struct aptx_ad_enc_cfg_t);
-        ret = update_aptx_ad_dsp_config(&aptx_ad_dsp_cfg, aptx_bt_cfg);
+        aptx_ad_ctl = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                    MIXER_ENC_APTX_AD_CONFIG_BLOCK);
+        if (aptx_ad_ctl) {
+            mixer_size = sizeof(struct aptx_ad_enc_cfg_r2_t);
+            ret = update_aptx_ad_dsp_config_r2(&aptx_ad_dsp_cfg_r2, aptx_bt_cfg);
+        } else {
+            mixer_size = sizeof(struct aptx_ad_enc_cfg_t);
+            ret = update_aptx_ad_dsp_config(&aptx_ad_dsp_cfg, aptx_bt_cfg);
+        }
         sample_rate_backup = aptx_ad_dsp_cfg.custom_cfg.sample_rate;
     } else {
         mixer_size = sizeof(struct aptx_enc_cfg_t);
@@ -1841,7 +1958,11 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     }
 
     if (a2dp.is_aptx_adaptive) {
-        ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_ad_dsp_cfg,
+        if (aptx_ad_ctl)
+            ret = mixer_ctl_set_array(aptx_ad_ctl, (void *)&aptx_ad_dsp_cfg_r2,
+                              mixer_size);
+        else
+            ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_ad_dsp_cfg,
                               mixer_size);
     } else {
         ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_dsp_cfg,

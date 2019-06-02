@@ -568,6 +568,10 @@
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_6_RX" />
     </path>
 
+    <path name="echo-reference headset">
+        <path name="echo-reference headphones" />
+    </path>
+
     <path name="echo-reference display-port">
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="DISPLAY_PORT" />
     </path>
@@ -581,6 +585,10 @@
 
     <path name="echo-reference-voip headphones">
         <ctl name="AUDIO_REF_EC_UL10 MUX" value="SLIM_6_RX" />
+    </path>
+
+    <path name="echo-reference-voip headset">
+        <path name="echo-reference-voip headphones" />
     </path>
 
     <path name="echo-reference-voip display-port">
@@ -632,6 +640,10 @@
 
     <path name="deep-buffer-playback headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia1" value="1" />
+    </path>
+
+    <path name="deep-buffer-playback headset">
+        <path name="deep-buffer-playback headphones" />
     </path>
 
     <path name="deep-buffer-playback speaker-and-headphones">
@@ -696,6 +708,10 @@
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia5" value="1" />
     </path>
 
+    <path name="low-latency-playback headset">
+        <path name="low-latency-playback headphones" />
+    </path>
+
     <path name="low-latency-playback speaker-and-headphones">
         <path name="low-latency-playback headphones" />
         <path name="low-latency-playback" />
@@ -725,6 +741,10 @@
 
     <path name="audio-ull-playback headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia8" value="1" />
+    </path>
+
+    <path name="audio-ull-playback headset">
+        <path name="audio-ull-playback headphones" />
     </path>
 
     <path name="audio-ull-playback speaker-and-headphones">
@@ -831,6 +851,10 @@
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia4" value="1" />
     </path>
 
+    <path name="compress-offload-playback headset">
+        <path name="compress-offload-playback headphones" />
+    </path>
+
     <path name="compress-offload-playback headphones-44.1">
         <ctl name="SLIMBUS_5_RX Audio Mixer MultiMedia4" value="1" />
     </path>
@@ -897,6 +921,10 @@
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia7" value="1" />
     </path>
 
+    <path name="compress-offload-playback2 headset">
+        <path name="compress-offload-playback2 headphones" />
+    </path>
+
     <path name="compress-offload-playback2 headphones-44.1">
         <ctl name="SLIMBUS_5_RX Audio Mixer MultiMedia7" value="1" />
     </path>
@@ -961,6 +989,10 @@
 
     <path name="compress-offload-playback3 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="compress-offload-playback3 headset">
+        <path name="compress-offload-playback3 headphones" />
     </path>
 
     <path name="compress-offload-playback3 headphones-44.1">
@@ -1030,6 +1062,10 @@
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia11" value="1" />
     </path>
 
+    <path name="compress-offload-playback4 headset">
+        <path name="compress-offload-playback4 headphones" />
+    </path>
+
     <path name="compress-offload-playback4 headphones-44.1">
         <ctl name="SLIMBUS_5_RX Audio Mixer MultiMedia11" value="1" />
     </path>
@@ -1094,6 +1130,10 @@
 
     <path name="compress-offload-playback5 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia12" value="1" />
+    </path>
+
+    <path name="compress-offload-playback5 headset">
+        <path name="compress-offload-playback5 headphones" />
     </path>
 
     <path name="compress-offload-playback5 headphones-44.1">
@@ -1162,6 +1202,10 @@
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia13" value="1" />
     </path>
 
+    <path name="compress-offload-playback6 headset">
+        <path name="compress-offload-playback6 headphones" />
+    </path>
+
     <path name="compress-offload-playback6 headphones-44.1">
         <ctl name="SLIMBUS_5_RX Audio Mixer MultiMedia13" value="1" />
     </path>
@@ -1226,6 +1270,10 @@
 
     <path name="compress-offload-playback7 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia14" value="1" />
+    </path>
+
+    <path name="compress-offload-playback7 headset">
+        <path name="compress-offload-playback7 headphones" />
     </path>
 
     <path name="compress-offload-playback7 headphones-44.1">
@@ -1294,6 +1342,10 @@
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia15" value="1" />
     </path>
 
+    <path name="compress-offload-playback8 headset">
+        <path name="compress-offload-playback8 headphones" />
+    </path>
+
     <path name="compress-offload-playback8 headphones-44.1">
         <ctl name="SLIMBUS_5_RX Audio Mixer MultiMedia15" value="1" />
     </path>
@@ -1358,6 +1410,10 @@
 
     <path name="compress-offload-playback9 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="compress-offload-playback9 headset">
+        <path name="compress-offload-playback9 headphones" />
     </path>
 
     <path name="compress-offload-playback9 headphones-44.1">
@@ -1489,6 +1545,10 @@
         <ctl name="SLIMBUS_8 LOOPBACK Volume" value="1" />
         <ctl name="SLIMBUS_6_RX Port Mixer SLIM_8_TX" value="1" />
         <ctl name="SLIMBUS6_DL_HL Switch" value="1" />
+    </path>
+
+    <path name="play-fm headset">
+        <path name="play-fm headphones" />
     </path>
 
     <path name="incall-rec-uplink">
@@ -1643,11 +1703,19 @@
     <path name="hfp-sco headphones">
     </path>
 
+    <path name="hfp-sco headset">
+        <path name="hfp-sco headphones" />
+    </path>
+
    <path name="hfp-sco-wb">
         <path name="hfp-sco" />
    </path>
 
     <path name="hfp-sco-wb headphones">
+        <path name="hfp-sco headphones" />
+    </path>
+
+    <path name="hfp-sco-wb headset">
         <path name="hfp-sco headphones" />
     </path>
 
@@ -1663,9 +1731,13 @@
 
     <path name="compress-voip-call headphones">
         <ctl name="SLIM_6_RX_Voice Mixer Voip" value="1" />
-        <ctl name="Voip_Tx Mixer SLIM_1_TX_Voip" value="1" />
+        <ctl name="Voip_Tx Mixer SLIM_0_TX_Voip" value="1" />
     </path>
 
+    <path name="compress-voip-call headset">
+        <ctl name="SLIM_6_RX_Voice Mixer Voip" value="1" />
+        <ctl name="Voip_Tx Mixer SLIM_1_TX_Voip" value="1" />
+    </path>
 
     <path name="compress-voip-call bt-sco">
         <ctl name="SLIM_7_RX_Voice Mixer Voip" value="1" />
@@ -1698,6 +1770,11 @@
     </path>
 
     <path name="voicemmode1-call headphones">
+        <ctl name="SLIM_6_RX_Voice Mixer VoiceMMode1" value="1" />
+        <ctl name="VoiceMMode1_Tx Mixer SLIM_0_TX_MMode1" value="1" />
+    </path>
+
+    <path name="voicemmode1-call headset">
         <ctl name="SLIM_6_RX_Voice Mixer VoiceMMode1" value="1" />
         <ctl name="VoiceMMode1_Tx Mixer SLIM_1_TX_MMode1" value="1" />
     </path>
@@ -1744,6 +1821,11 @@
 
     <path name="voicemmode2-call headphones">
         <ctl name="SLIM_6_RX_Voice Mixer VoiceMMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
+    </path>
+
+    <path name="voicemmode2-call headset">
+        <ctl name="SLIM_6_RX_Voice Mixer VoiceMMode2" value="1" />
         <ctl name="VoiceMMode2_Tx Mixer SLIM_1_TX_MMode2" value="1" />
     </path>
 
@@ -1789,6 +1871,10 @@
 
     <path name="audio-playback-voip headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip headset">
+        <path name="audio-playback-voip headphones" />
     </path>
 
     <path name="audio-playback-voip bt-sco">
@@ -2292,6 +2378,10 @@
     </path>
 
     <path name="voice-headphones">
+        <path name="headphones" />
+    </path>
+
+    <path name="voice-headset">
         <path name="headphones" />
     </path>
 
@@ -2984,6 +3074,10 @@
 
     <path name="mmap-playback headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback headset">
+        <path name="mmap-playback headphones" />
     </path>
 
     <path name="mmap-playback speaker-and-headphones">
