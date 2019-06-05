@@ -583,14 +583,19 @@ static void request_out_focus(struct stream_out *out, long ns)
         adev->adm_request_focus(adev->adm_data, out->handle);
 }
 
-static void request_in_focus(struct stream_in *in, long ns)
+static int request_in_focus(struct stream_in *in, long ns)
 {
     struct audio_device *adev = in->dev;
+    int ret = 0;
 
-    if (adev->adm_request_focus_v2)
+    if (adev->adm_request_focus_v2_1)
+        ret = adev->adm_request_focus_v2_1(adev->adm_data, in->capture_handle, ns);
+    else if (adev->adm_request_focus_v2)
         adev->adm_request_focus_v2(adev->adm_data, in->capture_handle, ns);
     else if (adev->adm_request_focus)
         adev->adm_request_focus(adev->adm_data, in->capture_handle);
+
+    return ret;
 }
 
 static void release_out_focus(struct stream_out *out)
@@ -6157,6 +6162,8 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
                         adev->adm_on_routing_change(adev->adm_data,
                                                     in->capture_handle);
                         ret = select_devices(adev, in->usecase);
+                        if (in->usecase == USECASE_AUDIO_RECORD_LOW_LATENCY)
+                            adev->adm_routing_changed = true;
                     }
                 }
             }
@@ -6290,6 +6297,12 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         goto exit;
     }
 
+    if (in->usecase == USECASE_AUDIO_RECORD_LOW_LATENCY &&
+        !in->standby && adev->adm_routing_changed) {
+        ret = -ENOSYS;
+        goto exit;
+    }
+
     if (in->standby) {
         pthread_mutex_lock(&adev->lock);
         if (in->usecase == USECASE_COMPRESS_VOIP_CALL)
@@ -6312,7 +6325,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         ns = pcm_bytes_to_frames(in->pcm, bytes)*1000000000LL/
                                              in->config.rate;
 
-    request_in_focus(in, ns);
+    ret = request_in_focus(in, ns);
+    if (ret != 0)
+        goto exit;
     bool use_mmap = is_mmap_usecase(in->usecase) || in->realtime;
 
     if (audio_extn_cin_attached_usecase(in->usecase)) {
@@ -6381,6 +6396,8 @@ exit:
             memset(buffer, 0, bytes);
         }
         in_standby(&in->stream.common);
+        if (in->usecase == USECASE_AUDIO_RECORD_LOW_LATENCY)
+            adev->adm_routing_changed = false;
         ALOGV("%s: read failed status %d- sleeping for buffer duration", __func__, ret);
         usleep((uint64_t)bytes * 1000000 / audio_stream_in_frame_size(stream) /
                                    in_get_sample_rate(&in->stream.common));
@@ -9151,6 +9168,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->dsp_bit_width_enforce_mode = 0;
     adev->enable_hfp = false;
     adev->use_old_pspd_mix_ctrl = false;
+    adev->adm_routing_changed = false;
 
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
@@ -9262,6 +9280,8 @@ static int adev_open(const hw_module_t *module, const char *name,
                                     dlsym(adev->adm_lib, "adm_is_noirq_avail");
             adev->adm_on_routing_change = (adm_on_routing_change_t)
                                     dlsym(adev->adm_lib, "adm_on_routing_change");
+            adev->adm_request_focus_v2_1 = (adm_request_focus_v2_1_t)
+                                    dlsym(adev->adm_lib, "adm_request_focus_v2_1");
         }
     }
 

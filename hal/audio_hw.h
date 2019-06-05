@@ -531,6 +531,7 @@ typedef void (*adm_set_config_t)(void *, audio_io_handle_t,
 typedef void (*adm_request_focus_v2_t)(void *, audio_io_handle_t, long);
 typedef bool (*adm_is_noirq_avail_t)(void *, int, int, int);
 typedef void (*adm_on_routing_change_t)(void *, audio_io_handle_t);
+typedef int (*adm_request_focus_v2_1_t)(void *, audio_io_handle_t, long);
 
 struct audio_device {
     struct audio_hw_device device;
@@ -600,6 +601,7 @@ struct audio_device {
     adm_request_focus_v2_t adm_request_focus_v2;
     adm_is_noirq_avail_t adm_is_noirq_avail;
     adm_on_routing_change_t adm_on_routing_change;
+    adm_request_focus_v2_1_t adm_request_focus_v2_1;
 
     void (*offload_effects_get_parameters)(struct str_parms *,
                                            struct str_parms *);
@@ -640,6 +642,7 @@ struct audio_device {
     struct listnode active_outputs_list;
     bool use_old_pspd_mix_ctrl;
     int camera_orientation; /* CAMERA_BACK_LANDSCAPE ... CAMERA_FRONT_PORTRAIT */
+    bool adm_routing_changed;
 };
 
 int select_devices(struct audio_device *adev,
