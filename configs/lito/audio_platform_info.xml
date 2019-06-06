@@ -72,7 +72,7 @@
     </bit_width_configs>
     <pcm_ids>
         <usecase name="USECASE_AUDIO_PLAYBACK_LOW_LATENCY" type="out" id="9"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD" type="out" id="8"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD" type="out" id="7"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD2" type="out" id="11"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD3" type="out" id="12"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD4" type="out" id="24"/>

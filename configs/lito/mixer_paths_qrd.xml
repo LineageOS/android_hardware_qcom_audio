@@ -162,7 +162,7 @@
     <ctl name="AFE_PCM_RX Audio Mixer MultiMedia5" value="0" />
     <!-- usb headset end -->
     <!-- fm -->
-    <ctl name="Tert MI2S LOOPBACK Volume" value="0" />
+    <ctl name="SLIMBUS_8 LOOPBACK Volume" value="0" />
     <ctl name="WSA_CDC_DMA_RX_0 Port Mixer SLIM_8_TX" value="0" />
     <ctl name="WSA_CDC_DMA_RX_0_DL_HL Switch" value="0" />
     <ctl name="RX_CDC_DMA_RX_0 Port Mixer SLIM_8_TX" value="0" />
@@ -1448,13 +1448,13 @@
     </path>
 
     <path name="play-fm">
-        <ctl name="Tert MI2S LOOPBACK Volume" value="1" />
+        <ctl name="SLIMBUS_8 LOOPBACK Volume" value="1" />
         <ctl name="WSA_CDC_DMA_RX_0 Port Mixer SLIM_8_TX" value="1" />
         <ctl name="WSA_CDC_DMA_RX_0_DL_HL Switch" value="1" />
     </path>
 
     <path name="play-fm headphones">
-        <ctl name="Tert MI2S LOOPBACK Volume" value="1" />
+        <ctl name="SLIMBUS_8 LOOPBACK Volume" value="1" />
         <ctl name="RX_CDC_DMA_RX_0 Port Mixer SLIM_8_TX" value="1" />
         <ctl name="RX_CDC_DMA_RX_0_DL_HL Switch" value="1" />
     </path>
