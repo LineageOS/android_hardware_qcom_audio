@@ -1083,6 +1083,12 @@ int audio_extn_utils_set_pan_scale_params(
 int audio_extn_utils_set_downmix_params(
             struct stream_out *out,
             struct mix_matrix_params *mm_params);
+int audio_ext_get_presentation_position(struct stream_out *out,
+            struct audio_out_presentation_position_param *pos_param);
+int audio_extn_utils_compress_get_dsp_presentation_pos(struct stream_out *out,
+            uint64_t *frames, struct timespec *timestamp, int32_t clock_id);
+int audio_extn_utils_pcm_get_dsp_presentation_pos(struct stream_out *out,
+            uint64_t *frames, struct timespec *timestamp, int32_t clock_id);
 #ifdef AUDIO_HW_LOOPBACK_ENABLED
 /* API to create audio patch */
 int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,

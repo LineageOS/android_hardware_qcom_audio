@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2011 The Android Open Source Project *
@@ -313,6 +313,12 @@ struct qahw_out_correct_drift {
     int64_t        adjust_time;
 };
 
+struct qahw_out_presentation_position_param {
+    struct timespec timestamp;
+    uint64_t frames;
+    int32_t clock_id;
+};
+
 #define QAHW_MAX_ADSP_STREAM_CMD_PAYLOAD_LEN 512
 
 typedef enum {
@@ -378,6 +384,7 @@ typedef union {
     struct qahw_device_cfg_param device_cfg_params;
     struct qahw_mix_matrix_params mix_matrix_params;
     struct qahw_license_params license_params;
+    struct qahw_out_presentation_position_param pos_param;
 } qahw_param_payload;
 
 typedef enum {
@@ -397,6 +404,7 @@ typedef enum {
     QAHW_PARAM_OUT_MIX_MATRIX_PARAMS,
     QAHW_PARAM_CH_MIX_MATRIX_PARAMS,
     QAHW_PARAM_LICENSE_PARAMS,
+    QAHW_PARAM_OUT_PRESENTATION_POSITION,
 } qahw_param_id;
 
 
