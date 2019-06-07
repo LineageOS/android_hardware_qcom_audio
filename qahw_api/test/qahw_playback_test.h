@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017,2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -145,6 +145,7 @@ typedef struct {
     pthread_mutex_t input_buffer_available_lock;
     uint32_t input_buffer_available_size;
     char *set_params;
+    bool bt_wbs;
 }stream_config;
 
 qahw_module_handle_t * load_hal(audio_devices_t dev);

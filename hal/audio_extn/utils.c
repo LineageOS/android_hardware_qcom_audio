@@ -30,6 +30,7 @@
 #include <log/log.h>
 #include <cutils/misc.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 
 #include "audio_hw.h"
@@ -39,6 +40,7 @@
 #include "voice.h"
 #include <sound/compress_params.h>
 #include <sound/compress_offload.h>
+#include <sound/devdep_params.h>
 #include <tinycompress/tinycompress.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
@@ -2255,6 +2257,80 @@ int audio_extn_utils_compress_set_start_delay(
 {
     ALOGD("%s:: configuring render window not supported", __func__);
     return 0;
+}
+#endif
+
+#ifdef SNDRV_COMPRESS_DSP_POSITION
+int audio_extn_utils_compress_get_dsp_presentation_pos(struct stream_out *out,
+            uint64_t *frames, struct timespec *timestamp, int32_t clock_id)
+{
+    int ret = -EINVAL;
+    uint64_t *val = NULL;
+    uint64_t time = 0;
+    struct snd_compr_metadata metadata;
+
+    ALOGV("%s:: Quering DSP position with clock id %d",__func__, clock_id);
+    metadata.key = SNDRV_COMPRESS_DSP_POSITION;
+    metadata.value[0] = clock_id;
+    ret = compress_get_metadata(out->compr, &metadata);
+    if (ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+        ret = -errno;
+        goto exit;
+    }
+    val = (uint64_t *)&metadata.value[1];
+    *frames = *val;
+    time = *(val + 1);
+    timestamp->tv_sec = time / 1000000;
+    timestamp->tv_nsec = (time % 1000000)*1000;
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_get_dsp_presentation_pos(struct stream_out *out __unused,
+            uint64_t *frames __unused, struct timespec *timestamp __unused,
+            int32_t clock_id __unused)
+{
+    ALOGD("%s:: dsp presentation position not supported", __func__);
+    return 0;
+
+}
+#endif
+
+#ifdef SNDRV_PCM_IOCTL_DSP_POSITION
+int audio_extn_utils_pcm_get_dsp_presentation_pos(struct stream_out *out,
+            uint64_t *frames, struct timespec *timestamp, int32_t clock_id)
+{
+    int ret = -EINVAL;
+    uint64_t time = 0;
+    struct snd_pcm_prsnt_position prsnt_position;
+
+    ALOGV("%s:: Quering DSP position with clock id %d",__func__, clock_id);
+    prsnt_position.clock_id = clock_id;
+    ret = pcm_ioctl(out->pcm, SNDRV_PCM_IOCTL_DSP_POSITION, &prsnt_position);
+    if (ret) {
+        ALOGE("%s::error  %d", __func__, ret);
+        ret = -EIO;
+        goto exit;
+    }
+
+    *frames = prsnt_position.frames;
+    time = prsnt_position.timestamp;
+    timestamp->tv_sec = time / 1000000;
+    timestamp->tv_nsec = (time % 1000000)*1000;
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_pcm_get_dsp_presentation_pos(struct stream_out *out __unused,
+            uint64_t *frames __unused, struct timespec *timestamp __unused,
+            int32_t clock_id __unused)
+{
+    ALOGD("%s:: dsp presentation position not supported", __func__);
+    return 0;
+
 }
 #endif
 

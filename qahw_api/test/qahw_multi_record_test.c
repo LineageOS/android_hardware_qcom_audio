@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -77,6 +77,7 @@ struct audio_config_params {
     char kvpairs[256];
     bool timestamp_mode;
     char timestamp_file_in[256];
+    bool bt_wbs;
 };
 
 struct timed_params {
@@ -260,7 +261,7 @@ void *start_input(void *thread_param)
   double time_elapsed = 0;
   ssize_t bytes_read = -1;
   char param[100] = "audio_stream_profile=";
-  char file_name[256] = "/data/rec";
+  char file_name[256] = "/data/audio/rec";
   int data_sz = 0, name_len = strlen(file_name);
   qahw_in_buffer_t in_buf;
   static int64_t timestamp = 1;
@@ -346,6 +347,12 @@ void *start_input(void *thread_param)
   /* set profile for the recording session */
   strlcat(param, params->profile, sizeof(param));
   qahw_in_set_parameters(in_handle, param);
+
+  if (audio_is_bluetooth_sco_device(params->input_device)) {
+      char param1[50];
+      snprintf(param1, sizeof(param1), "bt_wbs=%s", ((params->bt_wbs == 1) ? "on" : "off"));
+      qahw_set_parameters(qahw_mod_handle, param1);
+  }
 
   /* Caution: Below ADL log shouldnt be altered without notifying automation APT since it used for
    * automation testing
@@ -548,6 +555,11 @@ int read_config_params_from_user(struct audio_config_params *thread_param) {
     scanf(" %d", &thread_param->input_device);
     thread_param->input_device |= AUDIO_DEVICE_BIT_IN;
 
+    if (thread_param->input_device == AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
+         printf(" \n Enable wbs for BT sco?? (1 - Enable 0 - Disable) ::::: ");
+         scanf("%d", &thread_param->bt_wbs);
+    }
+
     printf(" \n Enter the format (1 ->16 bit pcm recording, 6 -> 24 bit packed pcm recording) ::::: ");
     scanf(" %d", &thread_param->config.format);
 
@@ -587,6 +599,7 @@ void fill_default_params(struct audio_config_params *thread_param, int rec_sessi
     thread_param->record_length = 8 /*sec*/;
     thread_param->record_delay = 0 /*sec*/;
     thread_param->timestamp_mode = false;
+    thread_param->bt_wbs = false;
 
     thread_param->handle = 0x99A - rec_session;
 }
@@ -613,6 +626,7 @@ void usage() {
     printf("                                             All other flags passed would be ignore if this flag is used\n\n");
     printf(" -S  --source-tracking                     - Use this flag to show capture source tracking params for recordings\n\n");
     printf(" -k --kvpairs                              - kvpairs to be set globally\n");
+    printf(" -z --bt-wbs                               - set bt_wbs param\n");
     printf(" -h  --help                                - Show this help\n\n");
     printf(" \n Examples \n");
     printf(" hal_rec_test     -> start a recording stream with default configurations\n\n");
@@ -670,6 +684,7 @@ int main(int argc, char* argv[]) {
         {"source-tracking", no_argument,          0, 'S'},
         {"kvpairs",         required_argument,    0, 'k'},
         {"help",            no_argument,          0, 'h'},
+        {"bt-wbs",          no_argument,          0, 'z'},
         {0, 0, 0, 0}
     };
 
@@ -677,7 +692,7 @@ int main(int argc, char* argv[]) {
     int option_index = 0;
     while ((opt = getopt_long(argc,
                               argv,
-                              "-d:f:F:r:c:s:p:t:D:l:m:k:KiSh",
+                              "-d:f:F:r:c:s:p:t:D:l:m:k:KiShz",
                               long_options,
                               &option_index)) != -1) {
             switch (opt) {
@@ -726,6 +741,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'k':
                 snprintf(params[0].kvpairs, sizeof(params[0].kvpairs), "%s", optarg);
+                break;
+            case 'z':
+                params[0].bt_wbs = true;
                 break;
             case 'h':
                 usage();

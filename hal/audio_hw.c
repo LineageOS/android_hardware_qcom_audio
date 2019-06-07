@@ -69,6 +69,7 @@
 #include <audio_effects/effect_ns.h>
 #include <audio_utils/format.h>
 #include "audio_hw.h"
+#include "audio_perf.h"
 #include "platform_api.h"
 #include <platform.h>
 #include "audio_extn.h"
@@ -582,14 +583,19 @@ static void request_out_focus(struct stream_out *out, long ns)
         adev->adm_request_focus(adev->adm_data, out->handle);
 }
 
-static void request_in_focus(struct stream_in *in, long ns)
+static int request_in_focus(struct stream_in *in, long ns)
 {
     struct audio_device *adev = in->dev;
+    int ret = 0;
 
-    if (adev->adm_request_focus_v2)
+    if (adev->adm_request_focus_v2_1)
+        ret = adev->adm_request_focus_v2_1(adev->adm_data, in->capture_handle, ns);
+    else if (adev->adm_request_focus_v2)
         adev->adm_request_focus_v2(adev->adm_data, in->capture_handle, ns);
     else if (adev->adm_request_focus)
         adev->adm_request_focus(adev->adm_data, in->capture_handle);
+
+    return ret;
 }
 
 static void release_out_focus(struct stream_out *out)
@@ -1842,33 +1848,40 @@ static inline int read_usb_sup_channel_masks(bool is_playback,
     if (channels > MAX_HIFI_CHANNEL_COUNT)
         channels = MAX_HIFI_CHANNEL_COUNT;
 
-    channel_count = DEFAULT_CHANNEL_COUNT;
-
     if (is_playback) {
-        // For playback we never report mono because the framework always outputs stereo
-        // audio_channel_out_mask_from_count() does return positional masks for channel counts
-        // above 2 but we want indexed masks here.
-        supported_channel_masks[num_masks++] = audio_channel_out_mask_from_count(channel_count);
+        // start from 2 channels as framework currently doesn't support mono.
+        if (channels >= FCC_2) {
+            supported_channel_masks[num_masks++] = audio_channel_out_mask_from_count(FCC_2);
+        }
+        for (channel_count = FCC_2;
+                channel_count <= channels && num_masks < max_masks;
+                ++channel_count) {
+            supported_channel_masks[num_masks++] =
+                    audio_channel_mask_for_index_assignment_from_count(channel_count);
+        }
     } else {
+        // For capture we report all supported channel masks from 1 channel up.
+        channel_count = MIN_CHANNEL_COUNT;
         // audio_channel_in_mask_from_count() does the right conversion to either positional or
         // indexed mask
-        supported_channel_masks[num_masks++] = audio_channel_in_mask_from_count(channel_count);
-    }
-
-    for (channel_count = channels; ((channel_count >= DEFAULT_CHANNEL_COUNT) &&
-                                    (num_masks < max_masks)); channel_count--) {
-        const audio_channel_mask_t mask =
-                audio_channel_in_mask_from_count(channel_count);
-        supported_channel_masks[num_masks++] = mask;
-        const audio_channel_mask_t index_mask =
-                audio_channel_mask_for_index_assignment_from_count(channel_count);
-        if (mask != index_mask && num_masks < max_masks) { // ensure index mask added.
-            supported_channel_masks[num_masks++] = index_mask;
+        for ( ; channel_count <= channels && num_masks < max_masks; channel_count++) {
+            audio_channel_mask_t mask = AUDIO_CHANNEL_NONE;
+            if (channel_count <= FCC_2) {
+                mask = audio_channel_in_mask_from_count(channel_count);
+                supported_channel_masks[num_masks++] = mask;
+            }
+            const audio_channel_mask_t index_mask =
+                    audio_channel_mask_for_index_assignment_from_count(channel_count);
+            if (mask != index_mask && num_masks < max_masks) { // ensure index mask added.
+                supported_channel_masks[num_masks++] = index_mask;
+            }
         }
     }
 
-    ALOGV("%s: %s supported ch %d supported_channel_masks[0] %08x num_masks %d", __func__,
-          is_playback ? "P" : "C", channels, supported_channel_masks[0], num_masks);
+    for (size_t i = 0; i < num_masks; ++i) {
+        ALOGV("%s: %s supported ch %d supported_channel_masks[%zu] %08x num_masks %d", __func__,
+              is_playback ? "P" : "C", channels, i, supported_channel_masks[i], num_masks);
+    }
     return num_masks;
 }
 
@@ -2705,6 +2718,7 @@ int start_input_stream(struct stream_in *in)
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
+    audio_streaming_hint_start();
     audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
                                  adev->perf_lock_opts,
                                  adev->perf_lock_opts_size);
@@ -2807,14 +2821,17 @@ int start_input_stream(struct stream_in *in)
     audio_extn_audiozoom_set_microphone_field_dimension(in, in->direction);
 
 done_open:
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     ALOGD("%s: exit", __func__);
     enable_gcov();
     return ret;
 
 error_open:
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     stop_input_stream(in);
+
 error_config:
     adev->active_input = get_next_active_input(adev);
     /*
@@ -3159,6 +3176,9 @@ static int stop_output_stream(struct stream_out *out)
 
         if (adev->offload_effects_stop_output != NULL)
             adev->offload_effects_stop_output(out->handle, out->pcm_device_id);
+    } else if (out->usecase == USECASE_AUDIO_PLAYBACK_ULL ||
+               out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
+        audio_low_latency_hint_end();
     }
 
     if (out->usecase == USECASE_INCALL_MUSIC_UPLINK)
@@ -3368,6 +3388,7 @@ int start_output_stream(struct stream_out *out)
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
+    audio_streaming_hint_start();
     audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
                                  adev->perf_lock_opts,
                                  adev->perf_lock_opts_size);
@@ -3566,9 +3587,14 @@ int start_output_stream(struct stream_out *out)
                 goto error_open;
         }
     }
-
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     ALOGD("%s: exit", __func__);
+
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_ULL ||
+        out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
+        audio_low_latency_hint_start();
+    }
 
     if (out->ip_hdlr_handle) {
         ret = audio_extn_ip_hdlr_intf_open(out->ip_hdlr_handle, true, out, out->usecase);
@@ -3591,6 +3617,7 @@ error_open:
         pcm_close(adev->haptic_pcm);
         adev->haptic_pcm = NULL;
     }
+    audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     stop_output_stream(out);
 error_config:
@@ -4977,6 +5004,10 @@ int split_and_write_audio_haptic_data(struct stream_out *out,
 
     if (alloc_haptic_buffer) {
         adev->haptic_buffer = (uint8_t *)calloc(1, total_haptic_buffer_size);
+        if(adev->haptic_buffer == NULL) {
+            ALOGE("%s: failed to allocate mem for dev->haptic_buffer", __func__);
+            return -ENOMEM;
+        }
         adev->haptic_buffer_size = total_haptic_buffer_size;
     }
 
@@ -6131,6 +6162,8 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
                         adev->adm_on_routing_change(adev->adm_data,
                                                     in->capture_handle);
                         ret = select_devices(adev, in->usecase);
+                        if (in->usecase == USECASE_AUDIO_RECORD_LOW_LATENCY)
+                            adev->adm_routing_changed = true;
                     }
                 }
             }
@@ -6264,6 +6297,12 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         goto exit;
     }
 
+    if (in->usecase == USECASE_AUDIO_RECORD_LOW_LATENCY &&
+        !in->standby && adev->adm_routing_changed) {
+        ret = -ENOSYS;
+        goto exit;
+    }
+
     if (in->standby) {
         pthread_mutex_lock(&adev->lock);
         if (in->usecase == USECASE_COMPRESS_VOIP_CALL)
@@ -6286,7 +6325,9 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         ns = pcm_bytes_to_frames(in->pcm, bytes)*1000000000LL/
                                              in->config.rate;
 
-    request_in_focus(in, ns);
+    ret = request_in_focus(in, ns);
+    if (ret != 0)
+        goto exit;
     bool use_mmap = is_mmap_usecase(in->usecase) || in->realtime;
 
     if (audio_extn_cin_attached_usecase(in->usecase)) {
@@ -6355,6 +6396,8 @@ exit:
             memset(buffer, 0, bytes);
         }
         in_standby(&in->stream.common);
+        if (in->usecase == USECASE_AUDIO_RECORD_LOW_LATENCY)
+            adev->adm_routing_changed = false;
         ALOGV("%s: read failed status %d- sleeping for buffer duration", __func__, ret);
         usleep((uint64_t)bytes * 1000000 / audio_stream_in_frame_size(stream) /
                                    in_get_sample_rate(&in->stream.common));
@@ -8012,7 +8055,9 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     if (adev->mode != mode) {
         ALOGD("%s: mode %d\n", __func__, mode);
         adev->mode = mode;
-        if ((mode == AUDIO_MODE_NORMAL) && voice_is_in_call(adev)) {
+        if (voice_is_in_call(adev) &&
+            (mode == AUDIO_MODE_NORMAL ||
+             (mode == AUDIO_MODE_IN_COMMUNICATION && !voice_is_call_state_active(adev)))) {
             list_for_each(node, &adev->usecase_list) {
                 usecase = node_to_item(node, struct audio_usecase, list);
                 if (usecase->type == VOICE_CALL)
@@ -9123,6 +9168,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->dsp_bit_width_enforce_mode = 0;
     adev->enable_hfp = false;
     adev->use_old_pspd_mix_ctrl = false;
+    adev->adm_routing_changed = false;
 
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
@@ -9234,6 +9280,8 @@ static int adev_open(const hw_module_t *module, const char *name,
                                     dlsym(adev->adm_lib, "adm_is_noirq_avail");
             adev->adm_on_routing_change = (adm_on_routing_change_t)
                                     dlsym(adev->adm_lib, "adm_on_routing_change");
+            adev->adm_request_focus_v2_1 = (adm_request_focus_v2_1_t)
+                                    dlsym(adev->adm_lib, "adm_request_focus_v2_1");
         }
     }
 
