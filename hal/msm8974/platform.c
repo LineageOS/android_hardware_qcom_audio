@@ -251,6 +251,8 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
 
     [USECASE_INCALL_MUSIC_UPLINK] = {INCALL_MUSIC_UPLINK_PCM_DEVICE,
                                      INCALL_MUSIC_UPLINK_PCM_DEVICE},
+    [USECASE_INCALL_MUSIC_UPLINK2] = {INCALL_MUSIC_UPLINK2_PCM_DEVICE,
+                                     INCALL_MUSIC_UPLINK2_PCM_DEVICE},
 };
 
 /* Array to store sound devices */
@@ -712,6 +714,7 @@ static const struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_VOIP)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_VOIP)},
     {TO_NAME_INDEX(USECASE_INCALL_MUSIC_UPLINK)},
+    {TO_NAME_INDEX(USECASE_INCALL_MUSIC_UPLINK2)},
     {TO_NAME_INDEX(USECASE_AUDIO_A2DP_ABR_FEEDBACK)},
 };
 
