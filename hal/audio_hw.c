@@ -315,6 +315,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_RECORD_VOIP] = "audio-record-voip",
 
     [USECASE_INCALL_MUSIC_UPLINK] = "incall-music-uplink",
+    [USECASE_INCALL_MUSIC_UPLINK2] = "incall-music-uplink2",
 
     [USECASE_AUDIO_A2DP_ABR_FEEDBACK] = "a2dp-abr-feedback",
 };
@@ -1725,7 +1726,8 @@ int select_devices_with_force_switch(struct audio_device *adev,
             out_snd_device = SND_DEVICE_OUT_SPEAKER;
     }
 
-    if (usecase->id == USECASE_INCALL_MUSIC_UPLINK) {
+    if (usecase->id == USECASE_INCALL_MUSIC_UPLINK ||
+        usecase->id == USECASE_INCALL_MUSIC_UPLINK2) {
         out_snd_device = SND_DEVICE_OUT_VOICE_MUSIC_TX;
     }
 
@@ -2338,8 +2340,10 @@ static int stop_output_stream(struct stream_out *out)
         audio_low_latency_hint_end();
     }
 
-    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK)
+    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
+        out->usecase == USECASE_INCALL_MUSIC_UPLINK2) {
         voice_set_device_mute_flag(adev, false);
+    }
 
     /* 1. Get and set stream specific mixer controls */
     disable_audio_route(adev, uc_info);
@@ -2444,6 +2448,16 @@ int start_output_stream(struct stream_out *out)
         goto error_config;
     }
 
+    //Update incall music usecase to reflect correct voice session
+    if (out->flags & AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
+        ret = voice_extn_check_and_set_incall_music_usecase(adev, out);
+        if (ret != 0) {
+            ALOGE("%s: Incall music delivery usecase cannot be set error:%d",
+                __func__, ret);
+            goto error_config;
+        }
+    }
+
     if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
         if (!audio_extn_a2dp_is_ready()) {
             if (out->devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
@@ -2506,8 +2520,10 @@ int start_output_stream(struct stream_out *out)
 
     audio_extn_extspk_update(adev->extspk);
 
-    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK)
+    if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
+        out->usecase == USECASE_INCALL_MUSIC_UPLINK2) {
         voice_set_device_mute_flag(adev, true);
+    }
 
     ALOGV("%s: Opening PCM device card_id(%d) device_id(%d) format(%#x)",
           __func__, adev->snd_card, out->pcm_device_id, out->config.format);
@@ -3502,7 +3518,9 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             if (out->muted)
                 memset((void *)buffer, 0, bytes);
             // FIXME: this can be removed once audio flinger mixer supports mono output
-            if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP || out->usecase == USECASE_INCALL_MUSIC_UPLINK) {
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP ||
+                out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
+                out->usecase == USECASE_INCALL_MUSIC_UPLINK2) {
                 size_t channel_count = audio_channel_count_from_out_mask(out->channel_mask);
                 int16_t *src = (int16_t *)buffer;
                 int16_t *dst = (int16_t *)buffer;
