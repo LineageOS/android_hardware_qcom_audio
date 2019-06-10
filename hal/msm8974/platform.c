@@ -3361,8 +3361,6 @@ acdb_init_fail:
         strdup("SLIM_0_RX Format");
     my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
         strdup("SLIM_0_RX SampleRate");
-    my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
-        strdup("SLIM_0_RX Channels");
 
     my_data->current_backend_cfg[DSD_NATIVE_BACKEND].bitwidth_mixer_ctl =
         strdup("SLIM_2_RX Format");
@@ -3487,8 +3485,6 @@ acdb_init_fail:
         strdup("USB_AUDIO_TX SampleRate");
     my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].channels_mixer_ctl =
         strdup("USB_AUDIO_TX Channels");
-    my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
-        strdup("SLIM_0_RX Channels");
     my_data->current_backend_cfg[SLIMBUS_0_TX].bitwidth_mixer_ctl =
         strdup("SLIM_0_TX Format");
     my_data->current_backend_cfg[SLIMBUS_0_TX].samplerate_mixer_ctl =
@@ -3969,7 +3965,12 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 {
-    int device_id;
+    int device_id = -1;
+
+    if ((usecase >= AUDIO_USECASE_MAX) || (usecase <= USECASE_INVALID)) {
+        ALOGE("%s: invalid usecase case idx %d", __func__, usecase);
+        return device_id;
+    }
     if (device_type == PCM_PLAYBACK)
         device_id = pcm_device_table[usecase][0];
     else
@@ -3998,7 +3999,7 @@ uint64_t getQtime()
 int platform_get_delay(void *platform, int pcm_device_id)
 {
     int ctl_len = 0;
-    struct audio_device *adev = ((struct platform_data *)platform)->adev;
+    struct audio_device *adev = NULL;
     struct mixer_ctl *ctl = NULL;
     const char *mixer_ctl_name = "ADSP Path Latency";
     const char *deviceNo = "NN";
@@ -4013,6 +4014,8 @@ int platform_get_delay(void *platform, int pcm_device_id)
         ALOGE("%s: invalid pcm device id: %d", __func__, pcm_device_id);
         return -EINVAL;
     }
+
+    adev = ((struct platform_data *)platform)->adev;
 
     // Mixer control format: "ADSP Path Latency NN"
     ctl_len = strlen(mixer_ctl_name) + 1 + strlen(deviceNo) + 1;

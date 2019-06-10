@@ -423,7 +423,12 @@ void platform_add_backend_name(char *mixer_path, snd_device_t snd_device,
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 {
-    int device_id;
+    int device_id = -1;
+
+    if ((usecase >= AUDIO_USECASE_MAX) || (usecase <= USECASE_INVALID)) {
+        ALOGE("%s: invalid usecase case idx %d", __func__, usecase);
+        return device_id;
+    }
     if (device_type == PCM_PLAYBACK)
         device_id = pcm_device_table[usecase][0];
     else
