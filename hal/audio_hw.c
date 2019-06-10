@@ -93,6 +93,7 @@
 #define MMAP_PLAYBACK_VOLUME_MAX 0x2000
 #define PCM_PLAYBACK_VOLUME_MAX 0x2000
 #define DSD_VOLUME_MIN_DB (-110)
+#define INVALID_OUT_VOLUME -1
 
 #define RECORD_GAIN_MIN 0.0f
 #define RECORD_GAIN_MAX 1.0f
@@ -777,6 +778,11 @@ static inline bool is_mmap_usecase(audio_usecase_t uc_id)
 {
     return (uc_id == USECASE_AUDIO_RECORD_AFE_PROXY) ||
            (uc_id == USECASE_AUDIO_PLAYBACK_AFE_PROXY);
+}
+
+static inline bool is_valid_volume(float left, float right)
+{
+    return ((left >= 0.0f && right >= 0.0f) ? true : false);
 }
 
 static int enable_audio_route_for_voice_usecases(struct audio_device *adev,
@@ -4820,6 +4826,12 @@ static int out_set_voip_volume(struct audio_stream_out *stream, float left,
     struct mixer_ctl *ctl;
     long set_values[4];
 
+    if (!is_valid_volume(left, right)) {
+        ALOGE("%s: Invalid stream volume for left=%f, right=%f",
+                   __func__, left, right);
+        return -EINVAL;
+    }
+
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
@@ -6980,6 +6992,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                                         AUDIO_CHANNEL_OUT_MONO : AUDIO_CHANNEL_OUT_STEREO;
                 out->usecase = USECASE_AUDIO_PLAYBACK_VOIP;
                 out->format = AUDIO_FORMAT_PCM_16_BIT;
+                out->volume_l = INVALID_OUT_VOLUME;
+                out->volume_r = INVALID_OUT_VOLUME;
 
                 out->config = default_pcm_config_voip_copp;
                 out->config.period_size = VOIP_IO_BUF_SIZE(out->sample_rate, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE)/2;
