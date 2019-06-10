@@ -1738,7 +1738,7 @@ static int update_aptx_ad_dsp_config_r2(struct aptx_ad_enc_cfg_r2_t *aptx_dsp_cf
     int ret = 0;
 
     if (aptx_dsp_cfg == NULL || aptx_bt_cfg == NULL) {
-        ALOGE("Invalid param, aptx_dsp_cfg %p aptx_bt_cfg %p",
+        ALOGE("Invalid param, aptx_dsp_cfg %pK aptx_bt_cfg %pK",
               aptx_dsp_cfg, aptx_bt_cfg);
         return -EINVAL;
     }
@@ -1921,7 +1921,7 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     int mixer_size = 0;
     bool is_configured = false;
     int ret = 0;
-    int sample_rate_backup;
+    int sample_rate_backup = SAMPLING_RATE_48K;
 
     if (aptx_bt_cfg == NULL)
         return false;
@@ -1939,19 +1939,13 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     if (a2dp.is_aptx_adaptive) {
         aptx_ad_ctl = mixer_get_ctl_by_name(a2dp.adev->mixer,
                                     MIXER_ENC_APTX_AD_CONFIG_BLOCK);
-        if (aptx_ad_ctl) {
-            mixer_size = sizeof(struct aptx_ad_enc_cfg_r2_t);
+        if (aptx_ad_ctl)
             ret = update_aptx_ad_dsp_config_r2(&aptx_ad_dsp_cfg_r2, aptx_bt_cfg);
-        } else {
-            mixer_size = sizeof(struct aptx_ad_enc_cfg_t);
+        else
             ret = update_aptx_ad_dsp_config(&aptx_ad_dsp_cfg, aptx_bt_cfg);
-        }
-        sample_rate_backup = aptx_ad_dsp_cfg.custom_cfg.sample_rate;
-    } else {
-        mixer_size = sizeof(struct aptx_enc_cfg_t);
-        sample_rate_backup = aptx_bt_cfg->default_cfg->sampling_rate;
+    } else
         ret = update_aptx_dsp_config_v2(&aptx_dsp_cfg, aptx_bt_cfg);
-    }
+
     if (ret) {
         is_configured = false;
         goto fail;
@@ -1960,13 +1954,13 @@ bool configure_aptx_enc_format(audio_aptx_encoder_config *aptx_bt_cfg)
     if (a2dp.is_aptx_adaptive) {
         if (aptx_ad_ctl)
             ret = mixer_ctl_set_array(aptx_ad_ctl, (void *)&aptx_ad_dsp_cfg_r2,
-                              mixer_size);
+                              sizeof(struct aptx_ad_enc_cfg_r2_t));
         else
             ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_ad_dsp_cfg,
-                              mixer_size);
+                              sizeof(struct aptx_ad_enc_cfg_t));
     } else {
         ret = mixer_ctl_set_array(ctl_enc_data, (void *)&aptx_dsp_cfg,
-                              mixer_size);
+                              sizeof(struct aptx_enc_cfg_t));
     }
 #else
     struct custom_enc_cfg_t aptx_dsp_cfg;
