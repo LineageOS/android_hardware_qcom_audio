@@ -157,7 +157,7 @@ typedef int (*fp_platform_get_snd_device_name_extn_t)(void *platform, snd_device
                                       char *device_name);
 typedef int (*fp_platform_get_default_app_type_v2_t)(void *, usecase_type_t);
 typedef int (*fp_platform_send_audio_calibration_t)(void *, struct audio_usecase *,
-                                                   int, int);
+                                                   int);
 typedef int (*fp_platform_get_pcm_device_id_t)(audio_usecase_t, int);
 typedef const char *(*fp_platform_get_snd_device_name_t)(snd_device_t);
 typedef int (*fp_platform_spkr_prot_is_wsa_analog_mode_t)(void *);
@@ -801,6 +801,8 @@ int audio_extn_utils_get_sample_rate_from_string(const char *);
 int audio_extn_utils_get_channels_from_string(const char *);
 void audio_extn_utils_release_snd_device(snd_device_t snd_device);
 int audio_extn_utils_is_vendor_enhanced_fwk();
+int audio_extn_utils_get_app_sample_rate_for_device(struct audio_device *adev,
+                                    struct audio_usecase *usecase, int snd_device);
 
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
