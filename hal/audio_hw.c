@@ -919,6 +919,11 @@ static int send_effect_enable_disable_mixer_ctl(struct audio_device *adev,
     long set_values[6];
     struct stream_in *in = adev_get_active_input(adev);
 
+    if (in == NULL) {
+        ALOGE("%s: active input stream is NULL", __func__);
+        return -EINVAL;
+    }
+
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s: Could not get mixer ctl - %s",
@@ -946,6 +951,11 @@ static int update_effect_param_ecns(struct audio_device *adev, unsigned int modu
     struct audio_effect_config other_effect_config;
     struct audio_usecase *usecase = NULL;
     struct stream_in *in = adev_get_active_input(adev);
+
+    if (in == NULL) {
+        ALOGE("%s: active input stream is NULL", __func__);
+        return -EINVAL;
+    }
 
     usecase = get_usecase_from_list(adev, in->usecase);
     if (!usecase)
