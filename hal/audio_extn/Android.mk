@@ -50,9 +50,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 #--------------------------------------------
@@ -112,9 +109,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -174,9 +168,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 #include $(BUILD_SHARED_LIBRARY)
 
 #--------------------------------------------
@@ -236,9 +227,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 #--------------------------------------------
@@ -294,9 +282,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 #====================================================================================================
 # --- enable 3rd Party Spkr-prot lib
@@ -352,9 +337,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -413,9 +395,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -477,9 +456,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -539,9 +515,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -604,9 +577,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -677,9 +647,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -739,9 +706,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 #include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -800,9 +764,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 #-------------------------------------------
 #            Build AUDIOZOOM
@@ -860,9 +821,6 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 
