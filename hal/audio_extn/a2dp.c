@@ -3136,9 +3136,11 @@ int sco_start_configuration()
 
 void sco_reset_configuration()
 {
-    ALOGD("sco_reset_configuration start");
+    if (a2dp.swb_configured) {
+        ALOGD("sco_reset_configuration start");
 
-    reset_codec_config();
-    a2dp.bt_encoder_format = CODEC_TYPE_INVALID;
-    a2dp.swb_configured = false;
+        reset_codec_config();
+        a2dp.bt_encoder_format = CODEC_TYPE_INVALID;
+        a2dp.swb_configured = false;
+    }
 }

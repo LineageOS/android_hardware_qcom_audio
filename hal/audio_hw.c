@@ -1125,7 +1125,8 @@ int disable_audio_route(struct audio_device *adev,
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_FREE);
     audio_extn_set_custom_mtmx_params(adev, usecase, false);
-    if (usecase->stream.out != NULL)
+    if ((usecase->type == PCM_PLAYBACK) &&
+            (usecase->stream.out != NULL))
         usecase->stream.out->pspd_coeff_sent = false;
     ALOGV("%s: exit", __func__);
     return 0;
@@ -1301,14 +1302,7 @@ int disable_snd_device(struct audio_device *adev,
             audio_extn_a2dp_stop_playback();
         else if (snd_device == SND_DEVICE_IN_BT_A2DP)
             audio_extn_a2dp_stop_capture();
-        else if ((snd_device == SND_DEVICE_OUT_BT_SCO_SWB) ||
-                 (snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC) ||
-                 (snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB)) {
-            if ((adev->snd_dev_ref_cnt[SND_DEVICE_OUT_BT_SCO_SWB] == 0) &&
-                (adev->snd_dev_ref_cnt[SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC] == 0) &&
-                (adev->snd_dev_ref_cnt[SND_DEVICE_IN_BT_SCO_MIC_SWB] == 0))
-                audio_extn_sco_reset_configuration();
-       } else if ((snd_device == SND_DEVICE_OUT_HDMI) ||
+        else if ((snd_device == SND_DEVICE_OUT_HDMI) ||
                 (snd_device == SND_DEVICE_OUT_DISPLAY_PORT))
             adev->is_channel_status_set = false;
         else if ((snd_device == SND_DEVICE_OUT_HEADPHONES) &&
@@ -7716,6 +7710,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     int ret;
     int status = 0;
     bool a2dp_reconfig = false;
+    struct listnode *node;
+    struct audio_usecase *usecase = NULL;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -7723,16 +7719,31 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (!parms)
         goto error;
 
+    pthread_mutex_lock(&adev->lock);
     ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
     if (ret >= 0) {
         /* When set to false, HAL should disable EC and NS */
-        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0){
             adev->bt_sco_on = true;
-        else
+        } else {
+            ALOGD("sco is off, reset sco and route device to handset/mic");
             adev->bt_sco_on = false;
+            audio_extn_sco_reset_configuration();
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                if ((usecase->type == PCM_PLAYBACK) && usecase->stream.out &&
+                    (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_SCO))
+                    usecase->stream.out->devices = AUDIO_DEVICE_OUT_EARPIECE;
+                else if ((usecase->type == PCM_CAPTURE) && usecase->stream.in &&
+                         (usecase->stream.in->device & AUDIO_DEVICE_IN_ALL_SCO))
+                    usecase->stream.in->device = AUDIO_DEVICE_IN_BUILTIN_MIC;
+                else
+                    continue;
+                select_devices(adev, usecase->id);
+            }
+        }
     }
 
-    pthread_mutex_lock(&adev->lock);
     status = voice_set_parameters(adev, parms);
     if (status != 0)
         goto done;
