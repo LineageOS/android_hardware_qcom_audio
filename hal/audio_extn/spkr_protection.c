@@ -1030,7 +1030,7 @@ exit:
             app_type = fp_platform_get_default_app_type_v2(adev->platform,
                                                 PCM_CAPTURE);
             fp_platform_send_audio_calibration(adev->platform, uc_info_tx,
-                                                    app_type, 8000);
+                                                    app_type);
         }
         if (!v_validation) {
             if (!status.status) {
@@ -2281,6 +2281,8 @@ int spkr_prot_start_processing(snd_device_t snd_device)
     if (!uc_info_tx) {
         return -ENOMEM;
     }
+    uc_info_tx->id = USECASE_AUDIO_SPKR_CALIB_TX;
+    uc_info_tx->type = PCM_CAPTURE;
 
     if (fp_platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0) {
         ALOGE("%s: Invalid sound device returned", __func__);
@@ -2293,8 +2295,6 @@ int spkr_prot_start_processing(snd_device_t snd_device)
 
     pthread_mutex_lock(&handle.mutex_spkr_prot);
     if (handle.spkr_processing_state == SPKR_PROCESSING_IN_IDLE) {
-        uc_info_tx->id = USECASE_AUDIO_SPKR_CALIB_TX;
-        uc_info_tx->type = PCM_CAPTURE;
         uc_info_tx->in_snd_device = in_snd_device;
         uc_info_tx->out_snd_device = SND_DEVICE_NONE;
         handle.pcm_tx = NULL;
@@ -2333,15 +2333,13 @@ exit:
         app_type = fp_platform_get_default_app_type_v2(adev->platform,
                                             PCM_CAPTURE);
         fp_platform_send_audio_calibration(adev->platform, uc_info_tx,
-                                                app_type, 8000);
+                                                app_type);
     }
     if (ret) {
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);
         handle.pcm_tx = NULL;
         list_remove(&uc_info_tx->list);
-        uc_info_tx->id = USECASE_AUDIO_SPKR_CALIB_TX;
-        uc_info_tx->type = PCM_CAPTURE;
         uc_info_tx->in_snd_device = in_snd_device;
         uc_info_tx->out_snd_device = SND_DEVICE_NONE;
         fp_disable_snd_device(adev, in_snd_device);
