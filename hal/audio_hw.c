@@ -6815,6 +6815,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     int val;
     int ret;
     int status = 0;
+    struct listnode *node;
+    struct audio_usecase *usecase = NULL;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -6822,16 +6824,30 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (!parms)
         goto error;
 
+    pthread_mutex_lock(&adev->lock);
     ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
     if (ret >= 0) {
         /* When set to false, HAL should disable EC and NS */
-        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0){
             adev->bt_sco_on = true;
-        else
+        } else {
+            ALOGD("route device to handset/mic when sco is off");
             adev->bt_sco_on = false;
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                if ((usecase->type == PCM_PLAYBACK) && usecase->stream.out &&
+                    (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_SCO))
+                    usecase->stream.out->devices = AUDIO_DEVICE_OUT_EARPIECE;
+                else if ((usecase->type == PCM_CAPTURE) && usecase->stream.in &&
+                         (usecase->stream.in->device & AUDIO_DEVICE_IN_ALL_SCO))
+                    usecase->stream.in->device = AUDIO_DEVICE_IN_BUILTIN_MIC;
+                else
+                    continue;
+                select_devices(adev, usecase->id);
+            }
+        }
     }
 
-    pthread_mutex_lock(&adev->lock);
     status = voice_set_parameters(adev, parms);
     if (status != 0)
         goto done;
