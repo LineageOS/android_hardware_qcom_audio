@@ -7124,7 +7124,9 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     if (adev->mode != mode) {
         ALOGD("%s: mode %d\n", __func__, mode);
         adev->mode = mode;
-        if ((mode == AUDIO_MODE_NORMAL) && voice_is_in_call(adev)) {
+        if (voice_is_in_call(adev) &&
+            (mode == AUDIO_MODE_NORMAL ||
+             (mode == AUDIO_MODE_IN_COMMUNICATION && !voice_is_call_state_active(adev)))) {
             list_for_each(node, &adev->usecase_list) {
                 usecase = node_to_item(node, struct audio_usecase, list);
                 if (usecase->type == VOICE_CALL)
