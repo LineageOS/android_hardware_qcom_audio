@@ -3051,11 +3051,11 @@ void *platform_init(struct audio_device *adev)
         }
     }
     /* Check for Ambisonic Capture Enablement */
-    if (property_get_bool("persist.vendor.audio.ambisonic.capture",false))
+    if (property_get_bool("vendor.audio.ambisonic.capture",false))
         my_data->ambisonic_capture = true;
 
     /* Check for Ambisonic Profile Assignment*/
-    if (property_get_bool("persist.vendor.audio.ambisonic.auto.profile",false))
+    if (property_get_bool("vendor.audio.ambisonic.auto.profile",false))
         my_data->ambisonic_profile = true;
 
     if (check_and_get_wsa_info((char *)snd_card_name, &wsaCount, &is_wsa_combo_supported)
@@ -6053,6 +6053,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
     audio_channel_mask_t channel_mask = (in == NULL) ? AUDIO_CHANNEL_IN_MONO : in->channel_mask;
     int channel_count = audio_channel_count_from_in_mask(channel_mask);
     int str_bitwidth = (in == NULL) ? CODEC_BACKEND_DEFAULT_BIT_WIDTH : in->bit_width;
+    int sample_rate = (in == NULL) ? 8000 : in->sample_rate;
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
@@ -6263,7 +6264,9 @@ snd_device_t platform_get_input_snd_device(void *platform,
                (in_device & AUDIO_DEVICE_IN_BACK_MIC)) &&       // OR Back-mic
                (source == AUDIO_SOURCE_MIC ||                   // AND source is MIC for 16bit
                 source == AUDIO_SOURCE_UNPROCESSED ||           // OR unprocessed for 24bit
-                source == AUDIO_SOURCE_CAMCORDER)) {            // OR camera usecase
+                source == AUDIO_SOURCE_CAMCORDER) &&            // OR camera usecase
+                ((int)channel_mask == (int)AUDIO_CHANNEL_INDEX_MASK_4) && // AND 4mic channel mask
+                (sample_rate == 48000)) {             // AND sample rate is 48Khz
                 snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
                 /* Below check is true only in LA build to set
                    ambisonic profile. In LE hal client will set profile
@@ -6279,7 +6282,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
                        Ambisonic capture.
                      */
                     if (((int)channel_mask != (int)AUDIO_CHANNEL_INDEX_MASK_4) ||
-                         (in->sample_rate != 48000)) {
+                         (sample_rate != 48000)) {
                           snd_device = SND_DEVICE_NONE;
                           ALOGW("Unsupported Input configuration for ambisonic capture");
                           goto exit;
