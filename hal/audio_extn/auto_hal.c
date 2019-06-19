@@ -60,6 +60,16 @@ typedef struct auto_hal_module {
 /* Auto hal module struct */
 static struct auto_hal_module *auto_hal = NULL;
 
+extern struct pcm_config pcm_config_deep_buffer;
+extern struct pcm_config pcm_config_low_latency;
+
+static const audio_usecase_t bus_device_usecases[] = {
+    USECASE_AUDIO_PLAYBACK_MEDIA,
+    USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
+    USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
+    USECASE_AUDIO_PLAYBACK_PHONE,
+};
+
 /* Note: Due to ADP H/W design, SoC TERT/SEC TDM CLK and FSYNC lines are
  * both connected with CODEC and a single master is needed to provide
  * consistent CLK and FSYNC to slaves, hence configuring SoC TERT TDM as
@@ -310,6 +320,118 @@ int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
     return ret;
 }
 
+int32_t audio_extn_auto_hal_get_car_audio_stream_from_address(const char *address)
+{
+    int32_t bus_num = -1;
+    char *str = NULL;
+    char *last_r = NULL;
+    char local_address[AUDIO_DEVICE_MAX_ADDRESS_LEN];
+
+    /* bus device with null address error out */
+    if (address == NULL) {
+        ALOGE("%s: null address for car stream", __func__);
+        return -1;
+    }
+
+    /* strtok will modify the original string. make a copy first */
+    strlcpy(local_address, address, AUDIO_DEVICE_MAX_ADDRESS_LEN);
+
+    /* extract bus number from address */
+    str = strtok_r(local_address, "BUS_",&last_r);
+    if (str != NULL)
+        bus_num = (int32_t)strtol(str, (char **)NULL, 10);
+
+    /* validate bus number */
+    if ((bus_num < 0) || (bus_num >= MAX_CAR_AUDIO_STREAMS)) {
+        ALOGE("%s: invalid bus number %d", __func__, bus_num);
+        return -1;
+    }
+
+    return (0x1 << bus_num);
+}
+
+int32_t audio_extn_auto_hal_open_output_stream(struct stream_out *out)
+{
+    int ret = 0;
+    unsigned int channels = audio_channel_count_from_out_mask(out->channel_mask);
+
+    switch(out->car_audio_stream) {
+    case CAR_AUDIO_STREAM_MEDIA:
+        /* media bus stream shares pcm device with deep-buffer */
+        out->usecase = USECASE_AUDIO_PLAYBACK_MEDIA;
+        out->config = pcm_config_deep_buffer;
+        out->config.period_size = get_output_period_size(out->sample_rate, out->format,
+                                        channels, DEEP_BUFFER_OUTPUT_PERIOD_DURATION);
+        if (out->config.period_size <= 0) {
+            ALOGE("Invalid configuration period size is not valid");
+            ret = -EINVAL;
+            goto error;
+        }
+        break;
+    case CAR_AUDIO_STREAM_SYS_NOTIFICATION:
+        /* sys notification bus stream shares pcm device with low-latency */
+        out->usecase = USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION;
+        out->config = pcm_config_low_latency;
+        break;
+    case CAR_AUDIO_STREAM_NAV_GUIDANCE:
+        out->usecase = USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE;
+        out->config = pcm_config_deep_buffer;
+        out->config.period_size = get_output_period_size(out->sample_rate, out->format,
+                                        channels, DEEP_BUFFER_OUTPUT_PERIOD_DURATION);
+        if (out->config.period_size <= 0) {
+            ALOGE("Invalid configuration period size is not valid");
+            ret = -EINVAL;
+            goto error;
+        }
+        break;
+    case CAR_AUDIO_STREAM_PHONE:
+        out->usecase = USECASE_AUDIO_PLAYBACK_PHONE;
+        out->config = pcm_config_low_latency;
+        break;
+    default:
+        ALOGE("%s: Car audio stream %x not supported", __func__,
+            out->car_audio_stream);
+        ret = -EINVAL;
+        goto error;
+    }
+
+error:
+    return ret;
+}
+
+bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id)
+{
+    unsigned int i;
+    for (i = 0; i < sizeof(bus_device_usecases)/sizeof(bus_device_usecases[0]); i++) {
+        if (uc_id == bus_device_usecases[i])
+            return true;
+    }
+    return false;
+}
+
+snd_device_t audio_extn_auto_hal_get_snd_device_for_car_audio_stream(struct stream_out *out)
+{
+    snd_device_t snd_device = SND_DEVICE_NONE;
+
+    switch(out->car_audio_stream) {
+    case CAR_AUDIO_STREAM_MEDIA:
+        snd_device = SND_DEVICE_OUT_BUS_MEDIA;
+        break;
+    case CAR_AUDIO_STREAM_SYS_NOTIFICATION:
+        snd_device = SND_DEVICE_OUT_BUS_SYS;
+        break;
+    case CAR_AUDIO_STREAM_NAV_GUIDANCE:
+        snd_device = SND_DEVICE_OUT_BUS_NAV;
+        break;
+    case CAR_AUDIO_STREAM_PHONE:
+        snd_device = SND_DEVICE_OUT_BUS_PHN;
+        break;
+    default:
+        ALOGE("%s: Unknown car audio stream (%x)",
+            __func__, out->car_audio_stream);
+    }
+    return snd_device;
+}
 int32_t audio_extn_auto_hal_init(struct audio_device *adev)
 {
     int32_t ret = 0;

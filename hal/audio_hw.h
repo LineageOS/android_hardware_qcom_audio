@@ -222,6 +222,12 @@ enum {
 
     USECASE_AUDIO_A2DP_ABR_FEEDBACK,
 
+    /* car streams usecases */
+    USECASE_AUDIO_PLAYBACK_MEDIA,
+    USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
+    USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
+    USECASE_AUDIO_PLAYBACK_PHONE,
+
     AUDIO_USECASE_MAX
 };
 
@@ -289,6 +295,21 @@ typedef enum render_mode {
     RENDER_MODE_AUDIO_MASTER,
     RENDER_MODE_AUDIO_STC_MASTER,
 } render_mode_t;
+
+#ifdef AUDIO_EXTN_AUTO_HAL_ENABLED
+/* This defines the physical car streams supported in audio HAL,
+ * limited by the available frontend PCM driver.
+ * Max number of physical streams supported is currently 8 and is
+ * represented by stream bit flag as indicated in vehicle HAL interface.
+ */
+#define MAX_CAR_AUDIO_STREAMS    8
+enum {
+    CAR_AUDIO_STREAM_MEDIA            = 0x1,
+    CAR_AUDIO_STREAM_SYS_NOTIFICATION = 0x2,
+    CAR_AUDIO_STREAM_NAV_GUIDANCE     = 0x4,
+    CAR_AUDIO_STREAM_PHONE            = 0x8,
+};
+#endif
 
 struct stream_app_type_cfg {
     int sample_rate;
@@ -407,6 +428,9 @@ struct stream_out {
 
     error_log_t *error_log;
     bool pspd_coeff_sent;
+
+    char address[AUDIO_DEVICE_MAX_ADDRESS_LEN];
+    int car_audio_stream;
 };
 
 struct stream_in {
@@ -690,6 +714,11 @@ streams_input_ctxt_t *in_get_stream(struct audio_device *dev,
                                   audio_io_handle_t input);
 streams_output_ctxt_t *out_get_stream(struct audio_device *dev,
                                   audio_io_handle_t output);
+
+size_t get_output_period_size(uint32_t sample_rate,
+                            audio_format_t format,
+                            int channel_count,
+                            int duration /*in millisecs*/);
 
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
