@@ -48,6 +48,7 @@
         <param backend_dai_name="VA_CDC_DMA_TX_0" />
         <!-- Param used to indicate if SVA has dedicated SLIM ports -->
         <param dedicated_sva_path="true" />
+        <param dedicated_headset_path="false" />
         <param platform_lpi_enable="true" />
     </common_config>
     <acdb_ids>
