@@ -4608,6 +4608,7 @@ void hdmi_passthrough_feature_init(bool is_feature_enabled)
                                                     audio_extn_utils_is_dolby_format;
         passthru_init(init_config);
         ALOGD("%s:: ---- Feature HDMI_PASSTHROUGH is Enabled ----", __func__);
+        return;
     }
 
 feature_disabled:
@@ -4721,7 +4722,6 @@ static batt_prop_is_charging_t batt_prop_is_charging;
 void battery_listener_feature_init(bool is_feature_enabled)
 {
     audio_extn_battery_listener_enabled = is_feature_enabled;
-    ALOGD("%s: ---- Feature BATTERY_LISTENER is %s----", __func__, is_feature_enabled? "ENABLED": "NOT ENABLED");
     if (is_feature_enabled) {
         // dlopen lib
         batt_listener_lib_handle = dlopen(BATTERY_LISTENER_LIB_PATH, RTLD_NOW);
@@ -4741,6 +4741,8 @@ void battery_listener_feature_init(bool is_feature_enabled)
              ALOGE("%s: dlsym failed", __func__);
                 goto feature_disabled;
         }
+        ALOGD("%s: ---- Feature BATTERY_LISTENER is enabled ----", __func__);
+        return;
     }
 
     feature_disabled:
