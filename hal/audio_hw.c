@@ -4107,7 +4107,7 @@ static int in_standby(struct audio_stream *stream)
 
     lock_input_stream(in);
 
-    if (!in->standby && in->is_st_session) {
+    if (!in->standby && (in->flags & AUDIO_INPUT_FLAG_HW_HOTWORD)) {
         ALOGV("%s: sound trigger pcm stop lab", __func__);
         audio_extn_sound_trigger_stop_lab(in);
         in->standby = true;
@@ -4347,7 +4347,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     const size_t frame_size = audio_stream_in_frame_size(stream);
     const size_t frames = bytes / frame_size;
 
-    if (in->is_st_session) {
+    if (in->flags & AUDIO_INPUT_FLAG_HW_HOTWORD) {
         ALOGVV(" %s: reading on st session bytes=%zu", __func__, bytes);
         /* Read from sound trigger HAL */
         audio_extn_sound_trigger_read(in, buffer, bytes);
@@ -4460,7 +4460,7 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
     // on standby. Therefore, we may return an error even though the
     // pcm stream is still opened.
     if (in->standby) {
-        ALOGE_IF(in->pcm != NULL && !in->is_st_session,
+        ALOGE_IF(in->pcm != NULL && !(in->flags & AUDIO_INPUT_FLAG_HW_HOTWORD),
                  "%s stream in standby but pcm not NULL for non ST session", __func__);
         goto exit;
     }
@@ -6076,6 +6076,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     /* This stream could be for sound trigger lab,
        get sound trigger pcm if present */
     audio_extn_sound_trigger_check_and_get_session(in);
+
+    if (in->is_st_session)
+        in->flags |= AUDIO_INPUT_FLAG_HW_HOTWORD;
 
     lock_input_stream(in);
     audio_extn_snd_mon_register_listener(in, in_snd_mon_cb);
