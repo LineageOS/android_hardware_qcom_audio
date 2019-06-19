@@ -4262,52 +4262,52 @@ void* audio_extn_ext_hw_plugin_init(struct audio_device *adev)
 int audio_extn_ext_hw_plugin_deinit(void *plugin)
 {
     return ((ext_hw_plugin_deinit) ?
-                            ext_hw_plugin_deinit(plugin): -1);
+                            ext_hw_plugin_deinit(plugin): 0);
 }
 
 int audio_extn_ext_hw_plugin_usecase_start(void *plugin, struct audio_usecase *usecase)
 {
     return ((ext_hw_plugin_usecase_start) ?
-                            ext_hw_plugin_usecase_start(plugin, usecase): -1);
+                            ext_hw_plugin_usecase_start(plugin, usecase): 0);
 }
 
 int audio_extn_ext_hw_plugin_usecase_stop(void *plugin, struct audio_usecase *usecase)
 {
     return ((ext_hw_plugin_usecase_stop) ?
-                            ext_hw_plugin_usecase_stop(plugin, usecase): -1);
+                            ext_hw_plugin_usecase_stop(plugin, usecase): 0);
 }
 
 int audio_extn_ext_hw_plugin_set_parameters(void *plugin,
                                            struct str_parms *parms)
 {
     return ((ext_hw_plugin_set_parameters) ?
-                            ext_hw_plugin_set_parameters(plugin, parms): -1);
+                            ext_hw_plugin_set_parameters(plugin, parms): 0);
 }
 
 int audio_extn_ext_hw_plugin_get_parameters(void *plugin,
                   struct str_parms *query, struct str_parms *reply)
 {
     return ((ext_hw_plugin_get_parameters) ?
-                        ext_hw_plugin_get_parameters(plugin, query, reply): -1);
+                        ext_hw_plugin_get_parameters(plugin, query, reply): 0);
 }
 
 int audio_extn_ext_hw_plugin_set_mic_mute(void *plugin, bool mute)
 {
     return ((ext_hw_plugin_set_mic_mute) ?
-                        ext_hw_plugin_set_mic_mute(plugin, mute): -1);
+                        ext_hw_plugin_set_mic_mute(plugin, mute): 0);
 }
 
 int audio_extn_ext_hw_plugin_get_mic_mute(void *plugin, bool *mute)
 {
     return ((ext_hw_plugin_get_mic_mute) ?
-                        ext_hw_plugin_get_mic_mute(plugin, mute): -1);
+                        ext_hw_plugin_get_mic_mute(plugin, mute): 0);
 }
 
 int audio_extn_ext_hw_plugin_set_audio_gain(void *plugin,
             struct audio_usecase *usecase, uint32_t gain)
 {
     return ((ext_hw_plugin_set_audio_gain) ?
-                        ext_hw_plugin_set_audio_gain(plugin, usecase, gain): -1);
+                        ext_hw_plugin_set_audio_gain(plugin, usecase, gain): 0);
 }
 // END: EXT_HW_PLUGIN ===================================================================
 
