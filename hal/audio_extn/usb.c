@@ -628,6 +628,7 @@ static int usb_get_usbid(struct usb_card_config *usb_card_info,
     int32_t fd=-1;
     char path[128];
     int ret = 0;
+    char *saveptr = NULL;
 
     memset(usb_card_info->usbid, 0, sizeof(usb_card_info->usbid));
 
@@ -655,7 +656,7 @@ static int usb_get_usbid(struct usb_card_config *usb_card_info,
         goto done;
     }
 
-    strtok(usb_card_info->usbid, "\n");
+    strtok_r(usb_card_info->usbid, "\n", &saveptr);
 
 done:
     if (fd >= 0)
