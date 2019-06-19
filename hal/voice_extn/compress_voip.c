@@ -501,7 +501,6 @@ int compress_voip_start_input_stream(struct stream_in *in)
     if (!voip_data.in_stream_count)
         ret = compress_voip_open_input_stream(in);
 
-    adev->active_input = in;
     ret = voip_start_call(adev, &in->config);
     in->pcm = voip_data.pcm_tx;
 
@@ -539,7 +538,6 @@ int compress_voip_close_input_stream(struct audio_stream *stream)
     if(voip_data.in_stream_count > 0) {
        voip_data.in_stream_count--;
        status = voip_stop_call(adev);
-       adev->active_input = get_next_active_input(adev);
        in->pcm = NULL;
     }
 

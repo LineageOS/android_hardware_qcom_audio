@@ -1652,12 +1652,12 @@ static snd_device_t fixup_usb_headset_mic_snd_device(void *platform,
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
-    if (adev->active_input == NULL) {
+    struct stream_in *in = adev_get_active_input(adev);
+    if (in == NULL)
         return base;
-    }
-    unsigned int sr = adev->active_input->sample_rate;
-    unsigned int ch = popcount(adev->active_input->channel_mask);
-    unsigned int bit_width = adev->active_input->bit_width;
+    unsigned int sr = in->sample_rate;
+    unsigned int ch = popcount(in->channel_mask);
+    unsigned int bit_width = in->bit_width;
     if (audio_extn_usb_is_config_supported(&bit_width, &sr, &ch, false)
                                            && ((ch == 6) || (ch == 8))) {
         return other;
@@ -5430,9 +5430,10 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     audio_devices_t devices = out->devices;
     unsigned int sample_rate = out->sample_rate;
     int na_mode = platform_get_native_support();
+    struct stream_in *in = adev_get_active_input(adev);
 
-    audio_channel_mask_t channel_mask = (adev->active_input == NULL) ?
-                                AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
+    audio_channel_mask_t channel_mask = (in == NULL) ?
+                                AUDIO_CHANNEL_IN_MONO : in->channel_mask;
     int channel_count = popcount(channel_mask);
 
     ALOGV("%s: enter: output devices(%#x)", __func__, devices);
@@ -5884,9 +5885,9 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_
 {
     struct audio_device *adev = my_data->adev;
     snd_device_t snd_device = SND_DEVICE_NONE;
+    struct stream_in *in = adev_get_active_input(adev);
 
-    if (adev->active_input->enable_aec &&
-        adev->active_input->enable_ns) {
+    if (in != NULL && in->enable_aec && in->enable_ns) {
         if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
             if (my_data->fluence_in_spkr_mode) {
                 if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
@@ -5932,7 +5933,7 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
         }
         platform_set_echo_reference(adev, true, out_device);
-    } else if (adev->active_input->enable_aec) {
+    } else if (in != NULL && in->enable_aec) {
         if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
             if (my_data->fluence_in_spkr_mode) {
                 if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
@@ -5976,7 +5977,7 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
         }
         platform_set_echo_reference(adev, true, out_device);
-    } else if (adev->active_input->enable_ns) {
+    } else if (in != NULL && in->enable_ns) {
         if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
             if (my_data->fluence_in_spkr_mode) {
                 if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
@@ -6034,27 +6035,24 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
         return get_snd_device_for_voice_comm_ecns_disabled(my_data, out_device, in_device);
 }
 
-snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device)
+snd_device_t platform_get_input_snd_device(void *platform,
+                                           struct stream_in *in,
+                                           audio_devices_t out_device)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
-    /*
-     * TODO: active_input always points to last opened input. Source returned will
-     * be wrong if more than one active inputs are present.
-     */
-    audio_source_t  source = (adev->active_input == NULL) ?
-                                AUDIO_SOURCE_DEFAULT : adev->active_input->source;
-
-    audio_mode_t    mode   = adev->mode;
-    audio_devices_t in_device = ((adev->active_input == NULL) ?
-                                    AUDIO_DEVICE_NONE : adev->active_input->device)
-                                & ~AUDIO_DEVICE_BIT_IN;
-    audio_channel_mask_t channel_mask = (adev->active_input == NULL) ?
-                                AUDIO_CHANNEL_IN_MONO : adev->active_input->channel_mask;
+    audio_mode_t mode = adev->mode;
     snd_device_t snd_device = SND_DEVICE_NONE;
-    int channel_count = popcount(channel_mask);
-    int str_bitwidth = (adev->active_input == NULL) ?
-                 CODEC_BACKEND_DEFAULT_BIT_WIDTH : adev->active_input->bit_width;
+
+    if (in == NULL)
+        in = adev_get_active_input(adev);
+
+    audio_source_t source = (in == NULL) ? AUDIO_SOURCE_DEFAULT : in->source;
+    audio_devices_t in_device =
+        ((in == NULL) ? AUDIO_DEVICE_NONE : in->device) & ~AUDIO_DEVICE_BIT_IN;
+    audio_channel_mask_t channel_mask = (in == NULL) ? AUDIO_CHANNEL_IN_MONO : in->channel_mask;
+    int channel_count = audio_channel_count_from_in_mask(channel_mask);
+    int str_bitwidth = (in == NULL) ? CODEC_BACKEND_DEFAULT_BIT_WIDTH : in->bit_width;
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
@@ -6270,18 +6268,18 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 /* Below check is true only in LA build to set
                    ambisonic profile. In LE hal client will set profile
                  */
-                if (my_data->ambisonic_profile == true) {
-                    strlcpy(adev->active_input->profile, "record_ambisonic",
-                            sizeof(adev->active_input->profile));
-                }
+                if (my_data->ambisonic_profile == true &&
+                    in != NULL)
+                    strlcpy(in->profile, "record_ambisonic",
+                            sizeof(in->profile));
 
-                if (!strncmp(adev->active_input->profile, "record_ambisonic",
-                            strlen("record_ambisonic"))) {
+                if (in != NULL && !strncmp(in->profile, "record_ambisonic",
+                                           strlen("record_ambisonic"))) {
                     /* Validate input stream configuration for
                        Ambisonic capture.
                      */
                     if (((int)channel_mask != (int)AUDIO_CHANNEL_INDEX_MASK_4) ||
-                         (adev->active_input->sample_rate != 48000)) {
+                         (in->sample_rate != 48000)) {
                           snd_device = SND_DEVICE_NONE;
                           ALOGW("Unsupported Input configuration for ambisonic capture");
                           goto exit;
@@ -6347,19 +6345,19 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             if (my_data->fluence_in_voice_rec && channel_count == 1) {
                 if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                     (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
-                    if (adev->active_input->enable_aec)
+                    if (in != NULL && in->enable_aec)
                         snd_device = SND_DEVICE_IN_HANDSET_QMIC_AEC;
                     else
                         snd_device = SND_DEVICE_IN_VOICE_REC_QMIC_FLUENCE;
                 } else if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                     (my_data->source_mic_type & SOURCE_THREE_MIC)) {
-                    if (adev->active_input->enable_aec)
+                    if (in != NULL && in->enable_aec)
                         snd_device = SND_DEVICE_IN_HANDSET_TMIC_AEC;
                     else
                         snd_device = SND_DEVICE_IN_VOICE_REC_TMIC;
                 } else if ((my_data->fluence_type & FLUENCE_DUAL_MIC) &&
                     (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
-                    if (adev->active_input->enable_aec)
+                    if (in != NULL && in->enable_aec)
                         snd_device = SND_DEVICE_IN_HANDSET_DMIC_AEC;
                     else
                         snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
@@ -6377,14 +6375,14 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
             }
             if (snd_device == SND_DEVICE_NONE) {
-                if (adev->active_input->enable_aec) {
-                    if (adev->active_input->enable_ns) {
+                if (in != NULL && in->enable_aec) {
+                    if (in->enable_ns) {
                         snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC_NS;
                     } else {
                         snd_device = SND_DEVICE_IN_VOICE_REC_MIC_AEC;
                     }
                     platform_set_echo_reference(adev, true, out_device);
-                } else if (adev->active_input->enable_ns)
+                } else if (in != NULL && in->enable_ns)
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC_NS;
                 else
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
@@ -6435,9 +6433,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         in_device = ((out_device == AUDIO_DEVICE_NONE) ?
                       AUDIO_DEVICE_IN_BUILTIN_MIC : in_device) & ~AUDIO_DEVICE_BIT_IN;
 
-        if (adev->active_input) {
+        if (in)
             snd_device = get_snd_device_for_voice_comm(my_data, out_device, in_device);
-        }
     } else if (source == AUDIO_SOURCE_MIC) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC &&
                 channel_count == 1 ) {
@@ -6465,7 +6462,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         goto exit;
     }
 
-    if (adev->active_input && (audio_extn_ssr_get_stream() == adev->active_input))
+    if (in && (audio_extn_ssr_get_stream() == in))
         snd_device = SND_DEVICE_IN_THREE_MIC;
 
     if (snd_device != SND_DEVICE_NONE) {
@@ -6476,7 +6473,7 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
             !(in_device & AUDIO_DEVICE_IN_VOICE_CALL) &&
             !(in_device & AUDIO_DEVICE_IN_COMMUNICATION)) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-            if ((adev->active_input && (audio_extn_ssr_get_stream() == adev->active_input)) ||
+            if ((in && (audio_extn_ssr_get_stream() == in)) ||
                 ((my_data->source_mic_type & SOURCE_QUAD_MIC) &&
                  channel_mask == AUDIO_CHANNEL_INDEX_MASK_4))
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
@@ -6879,9 +6876,11 @@ static void set_audiocal(void *platform, struct str_parms *parms, char *value, i
             goto done_key_audcal;
         }
 
-        if(cal.dev_id) {
-          if(audio_is_input_device(cal.dev_id)) {
-              cal.snd_dev_id = platform_get_input_snd_device(platform, cal.dev_id);
+        if (cal.dev_id) {
+          if (audio_is_input_device(cal.dev_id)) {
+              // FIXME: why pass an input device whereas
+              // platform_get_input_snd_device() expects as an output device?
+              cal.snd_dev_id = platform_get_input_snd_device(platform, NULL, cal.dev_id);
           } else {
               out.devices = cal.dev_id;
               out.sample_rate = cal.sampling_rate;
@@ -7436,8 +7435,8 @@ static void get_audiocal(void *platform, void *keys, void *pReply) {
         goto done;
     }
 
-    if(cal.dev_id & AUDIO_DEVICE_BIT_IN) {
-        cal.snd_dev_id = platform_get_input_snd_device(platform, cal.dev_id);
+    if (cal.dev_id & AUDIO_DEVICE_BIT_IN) {
+        cal.snd_dev_id = platform_get_input_snd_device(platform, NULL, cal.dev_id);
     } else if(cal.dev_id) {
         out.devices = cal.dev_id;
         out.sample_rate = cal.sampling_rate;
@@ -8615,6 +8614,7 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
     unsigned int channels;
     unsigned int format;
     struct platform_data *my_data = (struct platform_data *)adev->platform;
+    struct stream_in *in = adev_get_active_input(adev);
 
     bit_width = backend_cfg->bit_width;
     sample_rate = backend_cfg->sample_rate;
@@ -8638,7 +8638,7 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
     } else if (my_data->is_internal_codec && !audio_is_usb_in_device(snd_device)) {
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
-        if (adev->active_input && adev->active_input->bit_width == 24)
+        if (in && in->bit_width == 24)
             bit_width = platform_get_snd_device_bit_width(snd_device);
     } else {
         struct listnode *node;
@@ -10533,7 +10533,7 @@ int platform_get_active_microphones(void *platform, unsigned int channels,
     size_t actual_mic_count = 0;
 
     snd_device_t active_input_snd_device =
-            platform_get_input_snd_device(platform, usecase->stream.in->device);
+            platform_get_input_snd_device(platform, usecase->stream.in, AUDIO_DEVICE_NONE);
     if (active_input_snd_device == SND_DEVICE_NONE) {
         ALOGI("%s: No active microphones found", __func__);
         goto end;
