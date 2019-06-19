@@ -448,6 +448,10 @@ struct stream_in {
     bool enable_aec;
     bool enable_ns;
     audio_format_t format;
+    bool enable_ec_port;
+    bool ec_opened;
+    struct listnode aec_list;
+    struct listnode ns_list;
     int64_t mmap_time_offset_nanos; /* fudge factor to correct inaccuracies in DSP */
     audio_io_handle_t capture_handle;
     audio_input_flags_t flags;
