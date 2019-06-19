@@ -3665,6 +3665,8 @@ int start_output_stream(struct stream_out *out)
                   out->usecase == USECASE_AUDIO_PLAYBACK_ULL) && (out->apply_volume)) {
                  out_set_pcm_volume(&out->stream, out->volume_l, out->volume_r);
                  out->apply_volume = false;
+        } else if (audio_extn_auto_hal_is_bus_device_usecase(out->usecase)) {
+            out_set_pcm_volume(&out->stream, out->volume_l, out->volume_r);
         }
     } else {
         platform_set_stream_channel_map(adev->platform, out->channel_mask,
@@ -3726,6 +3728,22 @@ int start_output_stream(struct stream_out *out)
             if (adev->offload_effects_start_output != NULL)
                 adev->offload_effects_start_output(out->handle, out->pcm_device_id, adev->mixer);
             audio_extn_check_and_set_dts_hpx_state(adev);
+        }
+
+        if (out->devices & AUDIO_DEVICE_OUT_BUS) {
+            /* Update cached volume from media to offload/direct stream */
+            struct listnode *node = NULL;
+            list_for_each(node, &adev->active_outputs_list) {
+                streams_output_ctxt_t *out_ctxt = node_to_item(node,
+                                                    streams_output_ctxt_t,
+                                                    list);
+                if (out_ctxt->output->usecase == USECASE_AUDIO_PLAYBACK_MEDIA) {
+                    out->volume_l = out_ctxt->output->volume_l;
+                    out->volume_r = out_ctxt->output->volume_r;
+                }
+            }
+            out_set_compr_volume(&out->stream,
+                                 out->volume_l, out->volume_r);
         }
     }
 
@@ -5108,6 +5126,13 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
         else
             out->apply_volume = true;
 
+        out->volume_l = left;
+        out->volume_r = right;
+        return ret;
+    } else if (audio_extn_auto_hal_is_bus_device_usecase(out->usecase)) {
+        ALOGV("%s: bus device set volume called", __func__);
+        if (!out->standby)
+            ret = out_set_pcm_volume(stream, left, right);
         out->volume_l = left;
         out->volume_r = right;
         return ret;
@@ -9128,13 +9153,21 @@ int adev_release_audio_patch(struct audio_hw_device *dev,
 
 int adev_get_audio_port(struct audio_hw_device *dev, struct audio_port *config)
 {
-    return audio_extn_hw_loopback_get_audio_port(dev, config);
+    int ret = 0;
+
+    ret = audio_extn_hw_loopback_get_audio_port(dev, config);
+    ret |= audio_extn_auto_hal_get_audio_port(dev, config);
+    return ret;
 }
 
 int adev_set_audio_port_config(struct audio_hw_device *dev,
                         const struct audio_port_config *config)
 {
-    return audio_extn_hw_loopback_set_audio_port_config(dev, config);
+    int ret = 0;
+
+    ret = audio_extn_hw_loopback_set_audio_port_config(dev, config);
+    ret |= audio_extn_auto_hal_set_audio_port_config(dev, config);
+    return ret;
 }
 
 static int adev_dump(const audio_hw_device_t *device __unused,
