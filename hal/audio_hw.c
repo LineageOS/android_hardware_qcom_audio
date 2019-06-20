@@ -4180,6 +4180,13 @@ static int out_standby(struct audio_stream *stream)
             if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
                 do_stop = out->playback_started;
                 out->playback_started = false;
+
+                if (out->mmap_shared_memory_fd >= 0) {
+                    ALOGV("%s: closing mmap_shared_memory_fd = %d",
+                          __func__, out->mmap_shared_memory_fd);
+                    close(out->mmap_shared_memory_fd);
+                    out->mmap_shared_memory_fd = -1;
+                }
             }
         } else {
             ALOGD("copl(%p):standby", out);
@@ -6107,6 +6114,9 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
         // Fall back to non exclusive mode
         info->shared_memory_fd = pcm_get_poll_fd(out->pcm);
     } else {
+        out->mmap_shared_memory_fd = info->shared_memory_fd; // for closing later
+        ALOGV("%s: opened mmap_shared_memory_fd = %d", __func__, out->mmap_shared_memory_fd);
+
         if (mmap_size < buffer_size) {
             step = "mmap";
             goto exit;
@@ -6253,6 +6263,12 @@ static int in_standby(struct audio_stream *stream)
         } else if (in->usecase == USECASE_AUDIO_RECORD_MMAP) {
             do_stop = in->capture_started;
             in->capture_started = false;
+            if (in->mmap_shared_memory_fd >= 0) {
+                ALOGV("%s: closing mmap_shared_memory_fd = %d",
+                      __func__, in->mmap_shared_memory_fd);
+                close(in->mmap_shared_memory_fd);
+                in->mmap_shared_memory_fd = -1;
+            }
         } else {
             if (audio_extn_cin_attached_usecase(in->usecase))
                 audio_extn_cin_close_input_stream(in);
@@ -6981,6 +6997,9 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
         // Fall back to non exclusive mode
         info->shared_memory_fd = pcm_get_poll_fd(in->pcm);
     } else {
+        in->mmap_shared_memory_fd = info->shared_memory_fd; // for closing later
+        ALOGV("%s: opened mmap_shared_memory_fd = %d", __func__, in->mmap_shared_memory_fd);
+
         if (mmap_size < buffer_size) {
             step = "mmap";
             goto exit;
@@ -7196,6 +7215,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->set_dual_mono = false;
     out->prev_card_status_offline = false;
     out->pspd_coeff_sent = false;
+    out->mmap_shared_memory_fd = -1; // not open
 
     if ((flags & AUDIO_OUTPUT_FLAG_BD) &&
         (property_get_bool("vendor.audio.matrix.limiter.enable", false)))
@@ -8704,6 +8724,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->zoom = 0;
     list_init(&in->aec_list);
     list_init(&in->ns_list);
+    in->mmap_shared_memory_fd = -1; // not open
 
     ALOGV("%s: source %d, config->channel_mask %#x", __func__, source, config->channel_mask);
     if (source == AUDIO_SOURCE_VOICE_UPLINK ||
