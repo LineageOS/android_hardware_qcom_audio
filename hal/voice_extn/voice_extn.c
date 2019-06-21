@@ -469,11 +469,10 @@ void voice_extn_feature_init()
                           false));
     incall_music_feature_init(
        property_get_bool("vendor.audio.feature.incall_music.enable",
-                          true));
+                          false));
     multi_voice_session_feature_init(
        property_get_bool("vendor.audio.feature.multi_voice_session.enable",
-                          true));
-
+                          false));
 }
 
 void voice_extn_init(struct audio_device *adev)
