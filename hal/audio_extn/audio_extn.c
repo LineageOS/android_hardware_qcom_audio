@@ -55,7 +55,6 @@
 #include "platform.h"
 #include "platform_api.h"
 #include "edid.h"
-#include "audio_feature_manager.h"
 #include "sound/compress_params.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
@@ -69,7 +68,7 @@
 #define MAX_NUM_CHANNELS 8
 #define Q14_GAIN_UNITY 0x4000
 
-static int is_running_vendor_enhanced_fwk = 1;
+static int is_running_vendor_enhanced_fwk = 0;
 static bool is_compress_meta_data_enabled = false;
 
 struct snd_card_split cur_snd_card_split = {
@@ -932,7 +931,7 @@ int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev,
     struct mixer_ctl *ctl = NULL;
     const char *mixer_ctl_name = "PROXY_RX Channels";
 
-    if (!audio_feature_manager_is_feature_enabled(AFE_PROXY)) {
+    if (!property_get_bool("vendor.audio.feature.afe_proxy.enable", false)) {
         ALOGW("%s: AFE_PROXY is disabled", __func__);
         return -ENOSYS;
     }
@@ -1013,7 +1012,8 @@ int32_t audio_extn_read_afe_proxy_channel_masks(struct stream_out *out)
     int ret = 0;
     int channels = aextnmod.proxy_channel_num;
 
-    if (!audio_feature_manager_is_feature_enabled(AFE_PROXY)) {
+    if (!property_get_bool("vendor.audio.feature.afe_proxy.enable",
+                            false)) {
         ALOGW("%s: AFE_PROXY is disabled", __func__);
         return -ENOSYS;
     }
@@ -1043,7 +1043,8 @@ int32_t audio_extn_read_afe_proxy_channel_masks(struct stream_out *out)
 int32_t audio_extn_get_afe_proxy_channel_count()
 {
 
-    if (!audio_feature_manager_is_feature_enabled(AFE_PROXY)) {
+    if (!property_get_bool("vendor.audio.feature.afe_proxy.enable",
+                            false)) {
         ALOGW("%s: AFE_PROXY is disabled", __func__);
         return -ENOSYS;
     }
@@ -3131,6 +3132,13 @@ int audio_extn_out_get_param_data(struct stream_out *out,
                     ALOGE("%s:: avdrift query failed error %d", __func__, ret);
             }
             break;
+        case AUDIO_EXTN_PARAM_OUT_PRESENTATION_POSITION:
+            ret = audio_ext_get_presentation_position(out,
+                      (struct audio_out_presentation_position_param *)payload);
+                if (ret < 0)
+                    ALOGE("%s:: presentation position query failed error %d",
+                           __func__, ret);
+            break;
         default:
             ALOGE("%s:: unsupported param_id %d", __func__, param_id);
             break;
@@ -4989,123 +4997,121 @@ bool audio_extn_ma_supported_usb()
 }
 // END: MAXX_AUDIO =====================================================================
 
-void audio_extn_feature_init(int is_running_with_enhanced_fwk)
+void audio_extn_feature_init()
 {
-    is_running_vendor_enhanced_fwk = is_running_with_enhanced_fwk;
-    for(int index = 0; index < VOICE_START; index++)
-    {
-        bool enable = audio_feature_manager_is_feature_enabled(index);
-        switch (index) {
-            case SND_MONITOR:
-                snd_mon_feature_init(enable);
-                break;
-            case COMPRESS_CAPTURE:
-                compr_cap_feature_init(enable);
-                break;
-            case DSM_FEEDBACK:
-                dsm_feedback_feature_init(enable);
-                break;
-            case SSREC:
-                ssrec_feature_init(enable);
-                break;
-            case SOURCE_TRACK:
-                src_trkn_feature_init(enable);
-            case HDMI_EDID:
-                hdmi_edid_feature_init(enable);
-                break;
-            case KEEP_ALIVE:
-                keep_alive_feature_init(enable);
-                break;
-            case HIFI_AUDIO:
-                hifi_audio_feature_init(enable);
-                break;
-            case RECEIVER_AIDED_STEREO:
-                ras_feature_init(enable);
-                break;
-            case KPI_OPTIMIZE:
-                kpi_optimize_feature_init(enable);
-                break;
-            case USB_OFFLOAD:
-                usb_offload_feature_init(enable);
-                break;
-            case USB_OFFLOAD_BURST_MODE:
-                usb_offload_burst_mode_feature_init(enable);
-                break;
-            case USB_OFFLOAD_SIDETONE_VOLM:
-                usb_offload_sidetone_volume_feature_init(enable);
-                break;
-            case A2DP_OFFLOAD:
-                a2dp_offload_feature_init(enable);
-                break;
-            case WSA:
-                 wsa_feature_init(enable);
-                 break;
-            case COMPRESS_METADATA_NEEDED:
-                compress_meta_data_feature_init(enable);
-                break;
-            case VBAT:
-                vbat_feature_init(enable);
-                break;
-            case DISPLAY_PORT:
-                display_port_feature_init(enable);
-                break;
-            case FLUENCE:
-                fluence_feature_init(enable);
-                break;
-             case CUSTOM_STEREO:
-                custom_stereo_feature_init(enable);
-                break;
-            case ANC_HEADSET:
-                anc_headset_feature_init(enable);
-                break;
-            case SPKR_PROT:
-                spkr_prot_feature_init(enable);
-                break;
-            case FM_POWER_OPT_FEATURE:
-                fm_feature_init(enable);
-                break;
-            case EXTERNAL_QDSP:
-                external_qdsp_feature_init(enable);
-                break;
-            case EXTERNAL_SPEAKER:
-                external_speaker_feature_init(enable);
-                break;
-            case EXTERNAL_SPEAKER_TFA:
-                external_speaker_tfa_feature_init(enable);
-                break;
-            case HWDEP_CAL:
-                hwdep_cal_feature_init(enable);
-                break;
-            case HFP:
-                hfp_feature_init(enable);
-                break;
-            case EXT_HW_PLUGIN:
-                ext_hw_plugin_feature_init(enable);
-                break;
-            case RECORD_PLAY_CONCURRENCY:
-                record_play_concurency_feature_init(enable);
-                break;
-            case HDMI_PASSTHROUGH:
-                hdmi_passthrough_feature_init(enable);
-                break;
-            case CONCURRENT_CAPTURE:
-                concurrent_capture_feature_init(enable);
-                break;
-            case COMPRESS_IN_CAPTURE:
-                compress_in_feature_init(enable);
-                break;
-            case BATTERY_LISTENER:
-                battery_listener_feature_init(enable);
-                break;
-            case MAXX_AUDIO:
-                maxx_audio_feature_init(enable);
-                break;
-            case AUDIO_ZOOM:
-                audiozoom_feature_init(enable);
-            default:
-                break;
-        }
-    }
+    is_running_vendor_enhanced_fwk = audio_extn_utils_is_vendor_enhanced_fwk();
+
+    // register feature init functions here
+    // each feature needs a vendor property
+    // default value added is for GSI (non vendor modified images)
+    snd_mon_feature_init(
+        property_get_bool("vendor.audio.feature.snd_mon.enable",
+                           true));
+    compr_cap_feature_init(
+        property_get_bool("vendor.audio.feature.compr_cap.enable",
+                           false));
+    dsm_feedback_feature_init(
+        property_get_bool("vendor.audio.feature.dsm_feedback.enable",
+                           false));
+    ssrec_feature_init(
+        property_get_bool("vendor.audio.feature.ssrec.enable",
+                           false));
+    src_trkn_feature_init(
+        property_get_bool("vendor.audio.feature.src_trkn.enable",
+                           false));
+    hdmi_edid_feature_init(
+        property_get_bool("vendor.audio.feature.hdmi_edid.enable",
+                           false));
+    keep_alive_feature_init(
+        property_get_bool("vendor.audio.feature.keep_alive.enable",
+                           false));
+    hifi_audio_feature_init(
+        property_get_bool("vendor.audio.feature.hifi_audio.enable",
+                           false));
+    ras_feature_init(
+        property_get_bool("vendor.audio.feature.ras.enable",
+                           false));
+    kpi_optimize_feature_init(
+        property_get_bool("vendor.audio.feature.kpi_optimize.enable",
+                           false));
+    usb_offload_feature_init(
+        property_get_bool("vendor.audio.feature.usb_offload.enable",
+                           true));
+    usb_offload_burst_mode_feature_init(
+        property_get_bool("vendor.audio.feature.usb_offload_burst_mode.enable",
+                           false));
+    usb_offload_sidetone_volume_feature_init(
+        property_get_bool("vendor.audio.feature.usb_offload_sidetone_volume.enable",
+                           false));
+    a2dp_offload_feature_init(
+        property_get_bool("vendor.audio.feature.a2dp_offload.enable",
+                           false));
+    wsa_feature_init(
+        property_get_bool("vendor.audio.feature.wsa.enable",
+                           false));
+    compress_meta_data_feature_init(
+        property_get_bool("vendor.audio.feature.compress_meta_data.enable",
+                           false));
+    vbat_feature_init(
+        property_get_bool("vendor.audio.feature.vbat.enable",
+                           false));
+    display_port_feature_init(
+        property_get_bool("vendor.audio.feature.display_port.enable",
+                           false));
+    fluence_feature_init(
+        property_get_bool("vendor.audio.feature.fluence.enable",
+                           false));
+    custom_stereo_feature_init(
+        property_get_bool("vendor.audio.feature.custom_stereo.enable",
+                           false));
+    anc_headset_feature_init(
+        property_get_bool("vendor.audio.feature.anc_headset.enable",
+                           false));
+    spkr_prot_feature_init(
+        property_get_bool("vendor.audio.feature.spkr_prot.enable",
+                           true));
+    fm_feature_init(
+        property_get_bool("vendor.audio.feature.fm.enable",
+                           false));
+    external_qdsp_feature_init(
+        property_get_bool("vendor.audio.feature.external_dsp.enable",
+                           true));
+    external_speaker_feature_init(
+        property_get_bool("vendor.audio.feature.external_speaker.enable",
+                           true));
+    external_speaker_tfa_feature_init(
+        property_get_bool("vendor.audio.feature.external_speaker_tfa.enable",
+                           false));
+    hwdep_cal_feature_init(
+        property_get_bool("vendor.audio.feature.hwdep_cal.enable",
+                           true));
+    hfp_feature_init(
+        property_get_bool("vendor.audio.feature.hfp.enable",
+                           true));
+    ext_hw_plugin_feature_init(
+        property_get_bool("vendor.audio.feature.ext_hw_plugin.enable",
+                           false));
+    record_play_concurency_feature_init(
+        property_get_bool("vendor.audio.feature.record_play_concurency.enable",
+                           false));
+    hdmi_passthrough_feature_init(
+        property_get_bool("vendor.audio.feature.hdmi_passthrough.enable",
+                           false));
+    concurrent_capture_feature_init(
+        property_get_bool("vendor.audio.feature.concurrent_capture.enable",
+                           true));
+    compress_in_feature_init(
+        property_get_bool("vendor.audio.feature.compress_in.enable",
+                           false));
+    battery_listener_feature_init(
+        property_get_bool("vendor.audio.feature.battery_listener.enable",
+                           false));
+    maxx_audio_feature_init(
+        property_get_bool("vendor.audio.feature.maxx_audio.enable",
+                           true));
+    audiozoom_feature_init(
+        property_get_bool("vendor.audio.feature.audiozoom.enable",
+                           true));
 }
 
 void audio_extn_set_parameters(struct audio_device *adev,
@@ -5164,4 +5170,30 @@ void audio_extn_get_parameters(const struct audio_device *adev,
     kv_pairs = str_parms_to_str(reply);
     ALOGD_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
     free(kv_pairs);
+}
+
+int audio_ext_get_presentation_position(struct stream_out *out,
+                           struct audio_out_presentation_position_param *pos_param)
+{
+    int ret = -ENODATA;
+
+    if (!out) {
+        ALOGE("%s:: Invalid stream",__func__);
+        return ret;
+    }
+
+    if (is_offload_usecase(out->usecase)) {
+        if (out->compr != NULL)
+            ret = audio_extn_utils_compress_get_dsp_presentation_pos(out,
+                                  &pos_param->frames, &pos_param->timestamp, pos_param->clock_id);
+    } else {
+        if (out->pcm)
+            ret = audio_extn_utils_pcm_get_dsp_presentation_pos(out,
+                                  &pos_param->frames, &pos_param->timestamp, pos_param->clock_id);
+    }
+
+    ALOGV("%s frames %lld timestamp %lld", __func__, (long long int)pos_param->frames,
+           pos_param->timestamp.tv_sec*1000000000LL + pos_param->timestamp.tv_nsec);
+
+    return ret;
 }

@@ -30,6 +30,7 @@
 #include <log/log.h>
 #include <cutils/misc.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 
 #include "audio_hw.h"
@@ -39,6 +40,7 @@
 #include "voice.h"
 #include <sound/compress_params.h>
 #include <sound/compress_offload.h>
+#include <sound/devdep_params.h>
 #include <tinycompress/tinycompress.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
@@ -107,6 +109,16 @@
 #ifndef MAX_CHANNELS_SUPPORTED
 #define MAX_CHANNELS_SUPPORTED 8
 #endif
+
+#ifdef __LP64__
+#define VNDK_FWK_LIB_PATH "/vendor/lib64/libqti_vndfwk_detect.so"
+#else
+#define VNDK_FWK_LIB_PATH "/vendor/lib/libqti_vndfwk_detect.so"
+#endif
+
+static void *vndk_fwk_lib_handle = NULL;
+typedef int (*vndk_fwk_isVendorEnhancedFwk_t)();
+static vndk_fwk_isVendorEnhancedFwk_t vndk_fwk_isVendorEnhancedFwk;
 
 typedef struct {
     const char *id_string;
@@ -1013,6 +1025,87 @@ exit_send_app_type_cfg:
     return rc;
 }
 
+int audio_extn_utils_get_app_sample_rate_for_device(
+                              struct audio_device *adev,
+                              struct audio_usecase *usecase, int snd_device)
+{
+    char value[PROPERTY_VALUE_MAX] = {0};
+    int sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+
+    if ((usecase->type == PCM_PLAYBACK) && (usecase->stream.out != NULL)) {
+        property_get("vendor.audio.playback.mch.downsample",value,"");
+        if (!strncmp("true", value, sizeof("true"))) {
+            if ((popcount(usecase->stream.out->channel_mask) > 2) &&
+                (usecase->stream.out->app_type_cfg.sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
+                !(usecase->stream.out->flags &
+                            (audio_output_flags_t)AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
+               sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        }
+
+        if (usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
+            usecase->stream.out->app_type_cfg.sample_rate = usecase->stream.out->sample_rate;
+        } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        } else if ((snd_device == SND_DEVICE_OUT_HDMI ||
+                    snd_device == SND_DEVICE_OUT_USB_HEADSET ||
+                    snd_device == SND_DEVICE_OUT_DISPLAY_PORT) &&
+                   (usecase->stream.out->sample_rate >= OUTPUT_SAMPLING_RATE_44100)) {
+             /*
+              * To best utlize DSP, check if the stream sample rate is supported/multiple of
+              * configured device sample rate, if not update the COPP rate to be equal to the
+              * device sample rate, else open COPP at stream sample rate
+              */
+              platform_check_and_update_copp_sample_rate(adev->platform, snd_device,
+                                      usecase->stream.out->sample_rate,
+                                      &usecase->stream.out->app_type_cfg.sample_rate);
+        } else if (((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+                     !audio_is_this_native_usecase(usecase)) &&
+            usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
+            (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
+            /* Reset to default if no native stream is active*/
+            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+                 /*
+                  * For a2dp playback get encoder sampling rate and set copp sampling rate,
+                  * for bit width use the stream param only.
+                  */
+                   audio_extn_a2dp_get_enc_sample_rate(&usecase->stream.out->app_type_cfg.sample_rate);
+                   ALOGI("%s using %d sample rate rate for A2DP CoPP",
+                        __func__, usecase->stream.out->app_type_cfg.sample_rate);
+        }
+        audio_extn_btsco_get_sample_rate(snd_device, &usecase->stream.out->app_type_cfg.sample_rate);
+        sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
+
+        if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
+            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC) ||
+            (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD))
+            && audio_extn_passthru_is_passthrough_stream(usecase->stream.out)
+            && !audio_extn_passthru_is_convert_supported(adev, usecase->stream.out)) {
+            sample_rate = sample_rate * 4;
+            if (sample_rate > HDMI_PASSTHROUGH_MAX_SAMPLE_RATE)
+                sample_rate = HDMI_PASSTHROUGH_MAX_SAMPLE_RATE;
+        }
+    } else if (usecase->type == PCM_CAPTURE) {
+        if (usecase->stream.in != NULL) {
+            if (usecase->id == USECASE_AUDIO_RECORD_VOIP)
+                usecase->stream.in->app_type_cfg.sample_rate = usecase->stream.in->sample_rate;
+            if (voice_is_in_call_rec_stream(usecase->stream.in)) {
+                audio_extn_btsco_get_sample_rate(usecase->in_snd_device,
+                                                 &usecase->stream.in->app_type_cfg.sample_rate);
+            } else {
+                audio_extn_btsco_get_sample_rate(snd_device,
+                                                 &usecase->stream.in->app_type_cfg.sample_rate);
+            }
+            sample_rate = usecase->stream.in->app_type_cfg.sample_rate;
+        } else if (usecase->id == USECASE_AUDIO_SPKR_CALIB_TX) {
+            sample_rate = SAMPLE_RATE_8000;
+        }
+    } else if (usecase->type == TRANSCODE_LOOPBACK_RX) {
+        sample_rate = usecase->stream.inout->out_config.sample_rate;
+    }
+    return sample_rate;
+}
+
 static int send_app_type_cfg_for_device(struct audio_device *adev,
                                         struct audio_usecase *usecase,
                                         int split_snd_device)
@@ -1024,7 +1117,6 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
     int pcm_device_id = 0, acdb_dev_id, app_type;
     int snd_device = split_snd_device, snd_device_be_idx = -1;
     int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-    char value[PROPERTY_VALUE_MAX] = {0};
     struct streams_io_cfg *s_info = NULL;
     struct listnode *node = NULL;
     int bd_app_type = 0;
@@ -1099,58 +1191,9 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
               snd_device_be_idx);
     }
 
+    sample_rate = audio_extn_utils_get_app_sample_rate_for_device(adev, usecase, snd_device);
+
     if ((usecase->type == PCM_PLAYBACK) && (usecase->stream.out != NULL)) {
-
-        property_get("vendor.audio.playback.mch.downsample",value,"");
-        if (!strncmp("true", value, sizeof("true"))) {
-            if ((popcount(usecase->stream.out->channel_mask) > 2) &&
-                   (usecase->stream.out->app_type_cfg.sample_rate > CODEC_BACKEND_DEFAULT_SAMPLE_RATE) &&
-                   !(usecase->stream.out->flags &
-                            (audio_output_flags_t)AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH))
-               sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        }
-
-        if (usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
-            usecase->stream.out->app_type_cfg.sample_rate = usecase->stream.out->sample_rate;
-        } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
-            if (platform_spkr_use_default_sample_rate(adev->platform)) {
-                 usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-            } else {
-                 platform_check_and_update_copp_sample_rate(adev->platform, snd_device,
-                                      usecase->stream.out->sample_rate,
-                                      &usecase->stream.out->app_type_cfg.sample_rate);
-            }
-
-        } else if ((snd_device == SND_DEVICE_OUT_HDMI ||
-                    snd_device == SND_DEVICE_OUT_USB_HEADSET ||
-                    snd_device == SND_DEVICE_OUT_DISPLAY_PORT) &&
-                   (usecase->stream.out->sample_rate >= OUTPUT_SAMPLING_RATE_44100)) {
-             /*
-              * To best utlize DSP, check if the stream sample rate is supported/multiple of
-              * configured device sample rate, if not update the COPP rate to be equal to the
-              * device sample rate, else open COPP at stream sample rate
-              */
-              platform_check_and_update_copp_sample_rate(adev->platform, snd_device,
-                                      usecase->stream.out->sample_rate,
-                                      &usecase->stream.out->app_type_cfg.sample_rate);
-        } else if (((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
-                     !audio_is_this_native_usecase(usecase)) &&
-            usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
-            (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
-            /* Reset to default if no native stream is active*/
-            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
-                 /*
-                  * For a2dp playback get encoder sampling rate and set copp sampling rate,
-                  * for bit width use the stream param only.
-                  */
-                   audio_extn_a2dp_get_enc_sample_rate(&usecase->stream.out->app_type_cfg.sample_rate);
-                   ALOGI("%s using %d sample rate rate for A2DP CoPP",
-                        __func__, usecase->stream.out->app_type_cfg.sample_rate);
-        }
-        audio_extn_btsco_get_sample_rate(snd_device, &usecase->stream.out->app_type_cfg.sample_rate);
-        sample_rate = usecase->stream.out->app_type_cfg.sample_rate;
-
         /* Interactive streams are supported with only direct app type id.
          * Get Direct profile app type and use it for interactive streams
          */
@@ -1167,16 +1210,6 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
             app_type = usecase->stream.out->app_type_cfg.app_type;
         app_type_cfg[len++] = app_type;
         app_type_cfg[len++] = acdb_dev_id;
-        if (((usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
-            (usecase->stream.out->format == AUDIO_FORMAT_E_AC3_JOC) ||
-            (usecase->stream.out->format == AUDIO_FORMAT_DOLBY_TRUEHD))
-            && audio_extn_passthru_is_passthrough_stream(usecase->stream.out)
-            && !audio_extn_passthru_is_convert_supported(adev, usecase->stream.out)) {
-
-            sample_rate = sample_rate * 4;
-            if (sample_rate > HDMI_PASSTHROUGH_MAX_SAMPLE_RATE)
-                sample_rate = HDMI_PASSTHROUGH_MAX_SAMPLE_RATE;
-        }
         app_type_cfg[len++] = sample_rate;
 
         if (snd_device_be_idx > 0)
@@ -1189,19 +1222,6 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         app_type = usecase->stream.in->app_type_cfg.app_type;
         app_type_cfg[len++] = app_type;
         app_type_cfg[len++] = acdb_dev_id;
-        if (usecase->id == USECASE_AUDIO_RECORD_VOIP)
-            usecase->stream.in->app_type_cfg.sample_rate = usecase->stream.in->sample_rate;
-        if (voice_is_in_call_rec_stream(usecase->stream.in)) {
-            audio_extn_btsco_get_sample_rate(usecase->in_snd_device, &usecase->stream.in->app_type_cfg.sample_rate);
-        } else {
-            audio_extn_btsco_get_sample_rate(snd_device, &usecase->stream.in->app_type_cfg.sample_rate);
-        }
-        if (usecase->stream.in->device & AUDIO_DEVICE_IN_BLUETOOTH_A2DP & ~AUDIO_DEVICE_BIT_IN) {
-            audio_extn_a2dp_get_dec_sample_rate(&usecase->stream.in->app_type_cfg.sample_rate);
-            ALOGI("%s using %d sample rate rate for A2DP dec CoPP",
-                  __func__, usecase->stream.in->app_type_cfg.sample_rate);
-        }
-        sample_rate = usecase->stream.in->app_type_cfg.sample_rate;
         app_type_cfg[len++] = sample_rate;
         if (snd_device_be_idx > 0)
             app_type_cfg[len++] = snd_device_be_idx;
@@ -1210,7 +1230,6 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
     } else {
         app_type = platform_get_default_app_type_v2(adev->platform, usecase->type);
         if(usecase->type == TRANSCODE_LOOPBACK_RX) {
-            sample_rate = usecase->stream.inout->out_config.sample_rate;
             app_type = usecase->stream.inout->out_app_type_cfg.app_type;
         }
         app_type_cfg[len++] = app_type;
@@ -1570,29 +1589,15 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
     int type = usecase->type;
 
     if (type == PCM_PLAYBACK && usecase->stream.out != NULL) {
-        struct stream_out *out = usecase->stream.out;
-        int snd_device = usecase->out_snd_device;
-        snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
-                     platform_get_spkr_prot_snd_device(snd_device) : snd_device;
         platform_send_audio_calibration(adev->platform, usecase,
-                                        out->app_type_cfg.app_type,
-                                        usecase->stream.out->app_type_cfg.sample_rate);
+                         usecase->stream.out->app_type_cfg.app_type);
     } else if (type == PCM_CAPTURE && usecase->stream.in != NULL) {
         platform_send_audio_calibration(adev->platform, usecase,
-                         usecase->stream.in->app_type_cfg.app_type,
-                         usecase->stream.in->app_type_cfg.sample_rate);
-    } else if (type == PCM_HFP_CALL || type == PCM_CAPTURE) {
-        /* when app type is default. the sample rate is not used to send cal */
+                         usecase->stream.in->app_type_cfg.app_type);
+    } else if ((type == PCM_HFP_CALL) || (type == PCM_CAPTURE) ||
+               (type == TRANSCODE_LOOPBACK_RX && usecase->stream.inout != NULL)) {
         platform_send_audio_calibration(adev->platform, usecase,
-                         platform_get_default_app_type_v2(adev->platform, usecase->type),
-                         48000);
-    } else if (type == TRANSCODE_LOOPBACK_RX && usecase->stream.inout != NULL) {
-        int snd_device = usecase->out_snd_device;
-        snd_device = (snd_device == SND_DEVICE_OUT_SPEAKER) ?
-                     platform_get_spkr_prot_snd_device(snd_device) : snd_device;
-        platform_send_audio_calibration(adev->platform, usecase,
-                         platform_get_default_app_type_v2(adev->platform, usecase->type),
-                         usecase->stream.inout->out_config.sample_rate);
+                         platform_get_default_app_type_v2(adev->platform, usecase->type));
     } else {
         /* No need to send audio calibration for voice and voip call usecases */
         if ((type != VOICE_CALL) && (type != VOIP_CALL))
@@ -2248,6 +2253,80 @@ int audio_extn_utils_compress_set_start_delay(
 }
 #endif
 
+#ifdef SNDRV_COMPRESS_DSP_POSITION
+int audio_extn_utils_compress_get_dsp_presentation_pos(struct stream_out *out,
+            uint64_t *frames, struct timespec *timestamp, int32_t clock_id)
+{
+    int ret = -EINVAL;
+    uint64_t *val = NULL;
+    uint64_t time = 0;
+    struct snd_compr_metadata metadata;
+
+    ALOGV("%s:: Quering DSP position with clock id %d",__func__, clock_id);
+    metadata.key = SNDRV_COMPRESS_DSP_POSITION;
+    metadata.value[0] = clock_id;
+    ret = compress_get_metadata(out->compr, &metadata);
+    if (ret) {
+        ALOGE("%s::error %s", __func__, compress_get_error(out->compr));
+        ret = -errno;
+        goto exit;
+    }
+    val = (uint64_t *)&metadata.value[1];
+    *frames = *val;
+    time = *(val + 1);
+    timestamp->tv_sec = time / 1000000;
+    timestamp->tv_nsec = (time % 1000000)*1000;
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_compress_get_dsp_presentation_pos(struct stream_out *out __unused,
+            uint64_t *frames __unused, struct timespec *timestamp __unused,
+            int32_t clock_id __unused)
+{
+    ALOGD("%s:: dsp presentation position not supported", __func__);
+    return 0;
+
+}
+#endif
+
+#ifdef SNDRV_PCM_IOCTL_DSP_POSITION
+int audio_extn_utils_pcm_get_dsp_presentation_pos(struct stream_out *out,
+            uint64_t *frames, struct timespec *timestamp, int32_t clock_id)
+{
+    int ret = -EINVAL;
+    uint64_t time = 0;
+    struct snd_pcm_prsnt_position prsnt_position;
+
+    ALOGV("%s:: Quering DSP position with clock id %d",__func__, clock_id);
+    prsnt_position.clock_id = clock_id;
+    ret = pcm_ioctl(out->pcm, SNDRV_PCM_IOCTL_DSP_POSITION, &prsnt_position);
+    if (ret) {
+        ALOGE("%s::error  %d", __func__, ret);
+        ret = -EIO;
+        goto exit;
+    }
+
+    *frames = prsnt_position.frames;
+    time = prsnt_position.timestamp;
+    timestamp->tv_sec = time / 1000000;
+    timestamp->tv_nsec = (time % 1000000)*1000;
+
+exit:
+    return ret;
+}
+#else
+int audio_extn_utils_pcm_get_dsp_presentation_pos(struct stream_out *out __unused,
+            uint64_t *frames __unused, struct timespec *timestamp __unused,
+            int32_t clock_id __unused)
+{
+    ALOGD("%s:: dsp presentation position not supported", __func__);
+    return 0;
+
+}
+#endif
+
 #define MAX_SND_CARD 8
 #define RETRY_US 1000000
 #define RETRY_NUMBER 40
@@ -2751,4 +2830,32 @@ int audio_extn_utils_send_app_type_gain(struct audio_device *adev,
     ALOGV("%s app_type %d l(%d) r(%d)", __func__,  app_type, gain[0], gain[1]);
     return mixer_ctl_set_array(ctl, gain_cfg,
                                sizeof(gain_cfg)/sizeof(gain_cfg[0]));
+}
+
+int audio_extn_utils_is_vendor_enhanced_fwk()
+{
+    static int is_running_with_enhanced_fwk = -EINVAL;
+
+    if (is_running_with_enhanced_fwk == -EINVAL) {
+        vndk_fwk_lib_handle = dlopen(VNDK_FWK_LIB_PATH, RTLD_NOW);
+        if (vndk_fwk_lib_handle != NULL) {
+            vndk_fwk_isVendorEnhancedFwk = (vndk_fwk_isVendorEnhancedFwk_t)
+                        dlsym(vndk_fwk_lib_handle, "isRunningWithVendorEnhancedFramework");
+            if (vndk_fwk_isVendorEnhancedFwk == NULL) {
+                ALOGW("%s: dlsym failed, defaulting to enhanced_fwk configuration",
+                       __func__);
+                is_running_with_enhanced_fwk = 1;
+            } else {
+                is_running_with_enhanced_fwk = vndk_fwk_isVendorEnhancedFwk();
+            }
+            dlclose(vndk_fwk_lib_handle);
+            vndk_fwk_lib_handle = NULL;
+        } else {
+            ALOGW("%s: VNDK_FWK_LIB not found, setting stock configuration", __func__);
+            is_running_with_enhanced_fwk = 0;
+        }
+        ALOGV("%s: vndk_fwk_isVendorEnhancedFwk=%d", __func__, is_running_with_enhanced_fwk);
+    }
+
+    return is_running_with_enhanced_fwk;
 }

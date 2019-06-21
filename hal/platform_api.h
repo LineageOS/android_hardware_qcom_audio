@@ -63,7 +63,8 @@ struct mic_info {
 enum {
     NATIVE_AUDIO_MODE_SRC = 1,
     NATIVE_AUDIO_MODE_TRUE_44_1,
-    NATIVE_AUDIO_MODE_MULTIPLE_44_1,
+    NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC,
+    NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_DSP,
     NATIVE_AUDIO_MODE_INVALID
 };
 
@@ -154,7 +155,7 @@ int platform_get_meta_info_key_from_list(void *platform, char *mod_name);
 int platform_set_native_support(int na_mode);
 int platform_get_native_support();
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
-                                    int app_type, int sample_rate);
+                                    int app_type);
 int platform_get_default_app_type(void *platform);
 int platform_get_default_app_type_v2(void *platform, usecase_type_t  type);
 int platform_switch_voice_call_device_pre(void *platform);

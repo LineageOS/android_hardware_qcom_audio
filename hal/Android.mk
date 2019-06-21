@@ -74,6 +74,7 @@ endif
 ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_KONA
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
+  LOCAL_CFLAGS += -DINCALL_STEREO_CAPTURE_ENABLED
 endif
 ifneq ($(filter $(MSMSTEPPE) ,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSMSTEPPE
@@ -85,6 +86,7 @@ ifneq ($(filter $(TRINKET) ,$(TARGET_BOARD_PLATFORM)),)
 endif
 ifneq ($(filter lito,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_LITO
+  LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
 endif
 ifneq ($(filter sdm660,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_MSMFALCON
@@ -105,7 +107,6 @@ LOCAL_CFLAGS += -Wno-macro-redefined
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 
 LOCAL_SRC_FILES := \
-    ahal_config_helper.cpp \
     audio_hw.c \
     acdb.c \
     platform_info.c \
@@ -113,7 +114,6 @@ LOCAL_SRC_FILES := \
     voice.c
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c \
-                   audio_extn/audio_feature_manager.c \
                    audio_extn/audio_hidl.cpp \
                    audio_extn/compress_in.c \
                    audio_extn/fm.c \
@@ -344,6 +344,9 @@ endif
 #    LOCAL_CFLAGS += -DAUDIO_EXTN_AUTO_HAL_ENABLED
 #    LOCAL_SRC_FILES += audio_extn/auto_hal.c
 #endif
+
+LOCAL_SHARED_LIBRARIES += libbase libhidlbase libhwbinder libutils android.hardware.power@1.2 liblog
+LOCAL_SRC_FILES += audio_perf.cpp
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 

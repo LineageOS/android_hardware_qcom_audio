@@ -503,6 +503,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA] = "wsa-voice-speaker-2",
     [SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = "voice-speaker-2-vbat",
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = "voice-headphones",
+    [SND_DEVICE_OUT_VOICE_HEADSET] = "voice-headset",
     [SND_DEVICE_OUT_VOICE_LINE] = "voice-line",
     [SND_DEVICE_OUT_HDMI] = "hdmi",
     [SND_DEVICE_OUT_SPEAKER_AND_HDMI] = "speaker-and-hdmi",
@@ -762,6 +763,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = 14,
     [SND_DEVICE_OUT_VOICE_HAC_HANDSET] = 53,
     [SND_DEVICE_OUT_VOICE_HEADPHONES] = 10,
+    [SND_DEVICE_OUT_VOICE_HEADSET] = 10,
     [SND_DEVICE_OUT_VOICE_LINE] = 10,
     [SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES] = 10,
     [SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET] = 10,
@@ -982,6 +984,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HDMI)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HDMI)},
@@ -2089,6 +2092,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_2] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_HEADPHONES] = strdup("SLIMBUS_6_RX");
+    hw_interface_table[SND_DEVICE_OUT_VOICE_HEADSET] = strdup("SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_MUSIC_TX] = strdup("VOICE_PLAYBACK_TX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_LINE] = strdup("SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_HDMI] = strdup("HDMI");
@@ -3357,8 +3361,6 @@ acdb_init_fail:
         strdup("SLIM_0_RX Format");
     my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
         strdup("SLIM_0_RX SampleRate");
-    my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
-        strdup("SLIM_0_RX Channels");
 
     my_data->current_backend_cfg[DSD_NATIVE_BACKEND].bitwidth_mixer_ctl =
         strdup("SLIM_2_RX Format");
@@ -3388,6 +3390,17 @@ acdb_init_fail:
                 strdup("RX_CDC_DMA_RX_0 Format");
             my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
                 strdup("RX_CDC_DMA_RX_0 SampleRate");
+            /*
+             * TODO: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend
+             * is defined for headset-mic. This is to capture separate data from
+             * headset-mic and handset-mic.
+             */
+            if(audio_extn_is_concurrent_capture_enabled()) {
+                my_data->current_backend_cfg[HEADSET_TX_BACKEND].bitwidth_mixer_ctl =
+                                                    strdup("TX_CDC_DMA_TX_4 Format");
+                my_data->current_backend_cfg[HEADSET_TX_BACKEND].samplerate_mixer_ctl =
+                                                    strdup("TX_CDC_DMA_TX_4 SampleRate");
+            }
 
             if (default_rx_backend)
                 free(default_rx_backend);
@@ -3467,14 +3480,14 @@ acdb_init_fail:
                 strdup("SLIM_6_RX SampleRate");
         }
 
-        //TODO: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend is defined
+        //NOTE: enable CONCURRENT_CAPTURE_ENABLED flag only if separate backend is defined
         //for headset-mic. This is to capture separate data from headset-mic and handset-mic.
-        if(audio_extn_is_concurrent_capture_enabled())
+        if(audio_extn_is_concurrent_capture_enabled()) {
             my_data->current_backend_cfg[HEADSET_TX_BACKEND].bitwidth_mixer_ctl =
-                                                            strdup("SLIM_1_TX Format");
-        else
+                strdup("SLIM_1_TX Format");
             my_data->current_backend_cfg[HEADSET_TX_BACKEND].samplerate_mixer_ctl =
-                                                            strdup("SLIM_1_TX SampleRate");
+                strdup("SLIM_1_TX SampleRate");
+        }
     }
 
     my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].bitwidth_mixer_ctl =
@@ -3483,8 +3496,6 @@ acdb_init_fail:
         strdup("USB_AUDIO_TX SampleRate");
     my_data->current_backend_cfg[USB_AUDIO_TX_BACKEND].channels_mixer_ctl =
         strdup("USB_AUDIO_TX Channels");
-    my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].channels_mixer_ctl =
-        strdup("SLIM_0_RX Channels");
     my_data->current_backend_cfg[SLIMBUS_0_TX].bitwidth_mixer_ctl =
         strdup("SLIM_0_TX Format");
     my_data->current_backend_cfg[SLIMBUS_0_TX].samplerate_mixer_ctl =
@@ -3596,7 +3607,7 @@ acdb_init_fail:
             ALOGD("%s:DSD playback is supported", __func__);
             my_data->is_dsd_supported = true;
             my_data->is_asrc_supported = true;
-            platform_set_native_support(NATIVE_AUDIO_MODE_MULTIPLE_44_1);
+            platform_set_native_support(NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC);
         }
     }
 
@@ -3965,7 +3976,12 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 {
-    int device_id;
+    int device_id = -1;
+
+    if ((usecase >= AUDIO_USECASE_MAX) || (usecase <= USECASE_INVALID)) {
+        ALOGE("%s: invalid usecase case idx %d", __func__, usecase);
+        return device_id;
+    }
     if (device_type == PCM_PLAYBACK)
         device_id = pcm_device_table[usecase][0];
     else
@@ -3994,7 +4010,7 @@ uint64_t getQtime()
 int platform_get_delay(void *platform, int pcm_device_id)
 {
     int ctl_len = 0;
-    struct audio_device *adev = ((struct platform_data *)platform)->adev;
+    struct audio_device *adev = NULL;
     struct mixer_ctl *ctl = NULL;
     const char *mixer_ctl_name = "ADSP Path Latency";
     const char *deviceNo = "NN";
@@ -4009,6 +4025,8 @@ int platform_get_delay(void *platform, int pcm_device_id)
         ALOGE("%s: invalid pcm device id: %d", __func__, pcm_device_id);
         return -EINVAL;
     }
+
+    adev = ((struct platform_data *)platform)->adev;
 
     // Mixer control format: "ADSP Path Latency NN"
     ctl_len = strlen(mixer_ctl_name) + 1 + strlen(deviceNo) + 1;
@@ -4497,12 +4515,14 @@ int platform_get_snd_device_bit_width(snd_device_t snd_device)
 int platform_set_native_support(int na_mode)
 {
     if (NATIVE_AUDIO_MODE_SRC == na_mode || NATIVE_AUDIO_MODE_TRUE_44_1 == na_mode
-        || NATIVE_AUDIO_MODE_MULTIPLE_44_1 == na_mode) {
+        || NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC == na_mode
+        || NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_DSP == na_mode) {
         na_props.platform_na_prop_enabled = na_props.ui_na_prop_enabled = true;
         na_props.na_mode = na_mode;
         ALOGD("%s:napb: native audio playback enabled in (%s) mode", __func__,
               ((na_mode == NATIVE_AUDIO_MODE_SRC)?"SRC":
-               (na_mode == NATIVE_AUDIO_MODE_TRUE_44_1)?"True":"Multiple"));
+               (na_mode == NATIVE_AUDIO_MODE_TRUE_44_1)?"True":
+               (na_mode == NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC)?"Multiple_Mix_Codec":"Multiple_Mix_DSP"));
     }
     else {
         na_props.platform_na_prop_enabled = false;
@@ -4577,8 +4597,10 @@ int native_audio_set_params(struct platform_data *platform,
             mode = NATIVE_AUDIO_MODE_SRC;
         else if (value && !strncmp(value, "true", sizeof("true")))
             mode = NATIVE_AUDIO_MODE_TRUE_44_1;
-        else if (value && !strncmp(value, "multiple", sizeof("multiple")))
-            mode = NATIVE_AUDIO_MODE_MULTIPLE_44_1;
+        else if (value && !strncmp(value, "multiple_mix_codec", sizeof("multiple_mix_codec")))
+            mode = NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC;
+        else if (value && !strncmp(value, "multiple_mix_dsp", sizeof("multiple_mix_dsp")))
+            mode = NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_DSP;
         else {
             mode = NATIVE_AUDIO_MODE_INVALID;
             ALOGE("%s:napb:native_audio_mode in platform info xml,invalid mode string",
@@ -4708,7 +4730,7 @@ int platform_get_backend_index(snd_device_t snd_device)
 }
 
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
-                                    int app_type, int sample_rate)
+                                    int app_type)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;
@@ -4717,6 +4739,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     int i, num_devices = 1;
     bool is_incall_rec_usecase = false;
     snd_device_t incall_rec_device;
+    int sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
 
     if (voice_is_in_call(my_data->adev))
         is_incall_rec_usecase = voice_is_in_call_rec_stream(usecase->stream.in);
@@ -4751,11 +4774,16 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     }
 
     for (i = 0; i < num_devices; i++) {
-        if (!is_incall_rec_usecase)
+        if (!is_incall_rec_usecase) {
             acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(new_snd_device[i])];
-        else
+            sample_rate = audio_extn_utils_get_app_sample_rate_for_device(my_data->adev, usecase,
+                                                          new_snd_device[i]);
+        } else {
             // Use in_call_rec snd_device to extract the ACDB device ID instead of split snd devices
             acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(snd_device)];
+            sample_rate = audio_extn_utils_get_app_sample_rate_for_device(my_data->adev, usecase,
+                                                          snd_device);
+        }
 
         // Do not use Rx path default app type for TX path
         if ((usecase->type == PCM_CAPTURE) && (app_type == DEFAULT_APP_TYPE_RX_PATH)) {
@@ -5577,6 +5605,10 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET;
                 else
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_HEADSET;
+            } else if (audio_extn_is_concurrent_capture_enabled() &&
+                        (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
+                //Separate backend is added for headset-mic as part of concurrent capture
+                snd_device = SND_DEVICE_OUT_VOICE_HEADSET;
             } else {
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
             }
@@ -5701,7 +5733,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (NATIVE_AUDIO_MODE_SRC == na_mode &&
                    OUTPUT_SAMPLING_RATE_44100 == sample_rate) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
-        } else if (NATIVE_AUDIO_MODE_MULTIPLE_44_1 == na_mode &&
+        } else if (NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC == na_mode &&
                    (sample_rate % OUTPUT_SAMPLING_RATE_44100 == 0) &&
                    (out->format != AUDIO_FORMAT_DSD)) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
@@ -8311,7 +8343,26 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                  ALOGD("%s:becf: afe: true napb active set rate to 44.1 khz",
                        __func__);
             }
-        } else if (na_mode != NATIVE_AUDIO_MODE_MULTIPLE_44_1) {
+        } else if (na_mode == NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_DSP) {
+            struct listnode *node;
+            list_for_each(node, &adev->usecase_list) {
+                struct audio_usecase *uc;
+                uc = node_to_item(node, struct audio_usecase, list);
+                struct stream_out *curr_out =
+                    (struct stream_out*) uc->stream.out;
+
+                /*if native audio playback
+                * is active then it will take priority
+                */
+                if (curr_out && PCM_PLAYBACK == uc->type) {
+                    if (is_offload_usecase(uc->id) &&
+                        (curr_out->sample_rate % OUTPUT_SAMPLING_RATE_44100 == 0)) {
+                        ALOGD("%s:napb:native stream detected %d sampling rate", __func__, curr_out->sample_rate);
+                        sample_rate = curr_out->sample_rate;
+                    }
+                }
+            }
+        } else if (na_mode != NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_CODEC) {
             /*
              * Map native sampling rates to upper limit range
              * if multiple of native sampling rates are not supported.

@@ -423,7 +423,12 @@ void platform_add_backend_name(char *mixer_path, snd_device_t snd_device,
 
 int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
 {
-    int device_id;
+    int device_id = -1;
+
+    if ((usecase >= AUDIO_USECASE_MAX) || (usecase <= USECASE_INVALID)) {
+        ALOGE("%s: invalid usecase case idx %d", __func__, usecase);
+        return device_id;
+    }
     if (device_type == PCM_PLAYBACK)
         device_id = pcm_device_table[usecase][0];
     else
@@ -517,7 +522,7 @@ int platform_get_default_app_type(void *platform __unused)
 }
 
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
-                                    int app_type __unused, int sample_rate __unused)
+                                    int app_type __unused)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;

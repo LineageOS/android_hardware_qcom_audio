@@ -34,7 +34,7 @@
     </interface_names>
     <pcm_ids>
         <usecase name="USECASE_AUDIO_PLAYBACK_LOW_LATENCY" type="out" id="9"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD" type="out" id="8"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD" type="out" id="7"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD2" type="out" id="11"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD3" type="out" id="12"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD4" type="out" id="24"/>
@@ -49,8 +49,8 @@
         <usecase name="USECASE_VOWLAN_CALL" type="in" id="-1"/>
         <usecase name="USECASE_VOWLAN_CALL" type="out" id="-1"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_FM" type="out" id="30"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_FM" type="in" id="32"/>
-        <usecase name="USECASE_AUDIO_SPKR_CALIB_RX" type="out" id="38"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_FM" type="in" id="38"/>
+        <usecase name="USECASE_AUDIO_SPKR_CALIB_RX" type="out" id="30"/>
         <usecase name="USECASE_AUDIO_SPKR_CALIB_TX" type="in" id="33"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_AFE_PROXY" type="out" id="5"/>
         <usecase name="USECASE_AUDIO_RECORD_AFE_PROXY" type="in" id="6"/>
@@ -73,7 +73,7 @@
         <param key="mono_speaker" value="right"/>
         <param key="spkr_2_tz_name" value="wsatz.14"/>
         <param key="true_32_bit" value="true"/>
-        <param key="native_audio_mode" value="true"/>
+        <param key="native_audio_mode" value="multiple_mix_dsp"/>
         <param key="hfp_pcm_dev_id" value="39"/>
         <param key="input_mic_max_count" value="2"/>
     </config_params>
