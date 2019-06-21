@@ -2817,6 +2817,14 @@ static int out_standby_l(struct audio_stream *stream)
             if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
                 do_stop = out->playback_started;
                 out->playback_started = false;
+
+                if (out->mmap_shared_memory_fd >= 0) {
+                    ALOGV("%s: closing mmap_shared_memory_fd = %d",
+                          __func__, out->mmap_shared_memory_fd);
+                    close(out->mmap_shared_memory_fd);
+                    out->mmap_shared_memory_fd = -1;
+                }
+
             }
         } else {
             stop_compressed_output_l(out);
@@ -3989,6 +3997,9 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
         // Fall back to non exclusive mode
         info->shared_memory_fd = pcm_get_poll_fd(out->pcm);
     } else {
+        out->mmap_shared_memory_fd = info->shared_memory_fd; // for closing later
+        ALOGV("%s: opened mmap_shared_memory_fd = %d", __func__, out->mmap_shared_memory_fd);
+
         if (mmap_size < buffer_size) {
             step = "mmap";
             goto exit;
@@ -4122,6 +4133,14 @@ static int in_standby(struct audio_stream *stream)
         if (in->usecase == USECASE_AUDIO_RECORD_MMAP) {
             do_stop = in->capture_started;
             in->capture_started = false;
+
+            if (in->mmap_shared_memory_fd >= 0) {
+                ALOGV("%s: closing mmap_shared_memory_fd = %d",
+                      __func__, in->mmap_shared_memory_fd);
+                close(in->mmap_shared_memory_fd);
+                in->mmap_shared_memory_fd = -1;
+            }
+
         }
         if (in->pcm) {
             pcm_close(in->pcm);
@@ -4718,6 +4737,9 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
         // Fall back to non exclusive mode
         info->shared_memory_fd = pcm_get_poll_fd(in->pcm);
     } else {
+        in->mmap_shared_memory_fd = info->shared_memory_fd; // for closing later
+        ALOGV("%s: opened mmap_shared_memory_fd = %d", __func__, in->mmap_shared_memory_fd);
+
         if (mmap_size < buffer_size) {
             step = "mmap";
             goto exit;
@@ -4930,6 +4952,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->dev = adev;
     out->handle = handle;
     out->a2dp_compress_mute = false;
+    out->mmap_shared_memory_fd = -1; // not open
 
     /* Init use case and pcm_config */
     if ((is_hdmi || is_usb_dev) &&
@@ -5893,6 +5916,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->flags = flags;
     in->direction = MIC_DIRECTION_UNSPECIFIED;
     in->zoom = 0;
+    in->mmap_shared_memory_fd = -1; // not open
     list_init(&in->aec_list);
     list_init(&in->ns_list);
 
