@@ -3874,8 +3874,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     if (!parms)
         goto error;
 
-    amplifier_out_set_parameters(parms);
-
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (err >= 0) {
         val = atoi(value);
@@ -4040,6 +4038,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         pthread_mutex_unlock(&out->lock);
     }
     routing_fail:
+
+    amplifier_out_set_parameters(parms);
 
     if (out == adev->primary_output) {
         pthread_mutex_lock(&adev->lock);
