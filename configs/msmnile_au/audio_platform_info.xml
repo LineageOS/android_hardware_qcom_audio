@@ -38,12 +38,15 @@
         <device name="SND_DEVICE_OUT_BT_A2DP" acdb_id="78"/>
         <device name="SND_DEVICE_OUT_VOICE_HANDSET" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER" acdb_id="94"/>
+        <device name="SND_DEVICE_OUT_VOICE_SPEAKER_HFP" acdb_id="94"/>
+        <device name="SND_DEVICE_OUT_VOICE_SPEAKER_STEREO" acdb_id="94"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_SPEAKER_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_BUS" acdb_id="11"/>
         <device name="SND_DEVICE_IN_HEADSET_MIC" acdb_id="11"/>
-        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" acdb_id="95"/>
         <device name="SND_DEVICE_IN_VOICE_HEADSET_MIC" acdb_id="95"/>
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" acdb_id="95"/>
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP" acdb_id="95"/>
         <device name="SND_DEVICE_IN_BT_SCO_MIC" acdb_id="95"/>
         <device name="SND_DEVICE_IN_BT_SCO_MIC_WB" acdb_id="95"/>
         <device name="SND_DEVICE_IN_HANDSET_DMIC" acdb_id="80"/>
@@ -140,11 +143,14 @@
         <device name="SND_DEVICE_OUT_BT_A2DP" interface="TERT_TDM_RX_0"/>
         <device name="SND_DEVICE_OUT_VOICE_HANDSET" interface="TERT_TDM_RX_2"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER" interface="TERT_TDM_RX_2"/>
+        <device name="SND_DEVICE_OUT_VOICE_SPEAKER_HFP" interface="TERT_TDM_RX_2"/>
+        <device name="SND_DEVICE_OUT_VOICE_SPEAKER_STEREO" interface="TERT_TDM_RX_2"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_SPEAKER_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_HEADSET_MIC" interface="TERT_TDM_TX_0"/>
-        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_VOICE_HEADSET_MIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_BT_SCO_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_BT_SCO_MIC_WB" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_HANDSET_DMIC" interface="TERT_TDM_TX_0"/>
