@@ -1128,7 +1128,9 @@ int enable_audio_route(struct audio_device *adev,
                 in->ec_opened = true;
             }
         }
-    } else if (usecase->type == TRANSCODE_LOOPBACK_TX) {
+    } else if ((usecase->type == TRANSCODE_LOOPBACK_TX) || ((usecase->type == PCM_HFP_CALL) &&
+        ((usecase->id == USECASE_AUDIO_HFP_SCO) || (usecase->id == USECASE_AUDIO_HFP_SCO_WB)) &&
+        (usecase->in_snd_device == SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP_MMSECNS))) {
         snd_device = usecase->in_snd_device;
     } else {
         snd_device = usecase->out_snd_device;
