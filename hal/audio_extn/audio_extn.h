@@ -1097,6 +1097,7 @@ void audio_extn_source_track_get_parameters(const struct audio_device *adev,
 void audio_extn_fm_set_parameters(struct audio_device *adev,
                                    struct str_parms *parms);
 void audio_extn_fm_get_parameters(struct str_parms *query, struct str_parms *reply);
+void audio_extn_fm_route_on_selected_device(struct audio_device *adev, audio_devices_t device);
 
 #ifndef APTX_DECODER_ENABLED
 #define audio_extn_aptx_dec_set_license(adev); (0)
