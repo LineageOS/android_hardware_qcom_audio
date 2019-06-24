@@ -3698,6 +3698,8 @@ static int out_standby(struct audio_stream *stream)
         if (do_stop) {
             stop_output_stream(out);
         }
+        // if fm is active route on selected device in UI
+        audio_extn_fm_route_on_selected_device(adev, out->devices);
         pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&out->lock);
