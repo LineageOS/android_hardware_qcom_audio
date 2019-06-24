@@ -3906,9 +3906,9 @@ static int adev_dump(const audio_hw_device_t *device __unused,
 
 static int adev_close(hw_device_t *device)
 {
-    struct audio_device *adev = (struct audio_device *)device;
+    struct audio_device *adev_temp = (struct audio_device *)device;
 
-    if (!adev)
+    if (!adev_temp)
         return 0;
 
     pthread_mutex_lock(&adev_init_lock);
