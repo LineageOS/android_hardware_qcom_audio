@@ -2988,7 +2988,17 @@
         <path name="tty-headphones" />
     </path>
 
+    <path name="voice-tty-full-headset">
+        <ctl name="TTY Mode" value="FULL" />
+        <path name="tty-headphones" />
+    </path>
+
     <path name="voice-tty-vco-headphones">
+        <ctl name="TTY Mode" value="VCO" />
+        <path name="tty-headphones" />
+    </path>
+
+    <path name="voice-tty-vco-headset">
         <ctl name="TTY Mode" value="VCO" />
         <path name="tty-headphones" />
     </path>
@@ -3011,7 +3021,7 @@
     <path name="voice-tty-full-headset-mic">
         <path name="amic2" />
         <ctl name="ADC2 Volume" value="0" />
-        <ctl name="DEC0 Volume" value="84" />
+        <ctl name="DEC1 Volume" value="84" />
     </path>
 
     <path name="voice-tty-hco-headset-mic">
