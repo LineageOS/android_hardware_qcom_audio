@@ -527,7 +527,9 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP] = "speaker-safe-and-bt-a2dp",
     [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = "voice-handset-tmus",
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = "voice-tty-full-headphones",
+    [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADSET] = "voice-tty-full-headset",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = "voice-tty-vco-headphones",
+    [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADSET] = "voice-tty-vco-headset",
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = "voice-tty-hco-handset",
     [SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = "voice-tty-full-usb",
     [SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = "voice-tty-vco-usb",
@@ -806,7 +808,9 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP] = 14,
     [SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = 88,
     [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = 17,
+    [SND_DEVICE_OUT_VOICE_TTY_FULL_HEADSET] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = 17,
+    [SND_DEVICE_OUT_VOICE_TTY_VCO_HEADSET] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = 37,
     [SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = 17,
     [SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = 17,
@@ -1028,7 +1032,9 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HANDSET_TMUS)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_HAC_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_FULL_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_VCO_HEADSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_BT_SCO)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_BT_SCO_WB)},
@@ -2150,7 +2156,9 @@ static void set_platform_defaults(struct platform_data * my_data)
         strdup("SLIMBUS_0_RX-and-SLIMBUS_7_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_HANDSET_TMUS] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES] = strdup("SLIMBUS_6_RX");
+    hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_FULL_HEADSET] = strdup("SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES] = strdup("SLIMBUS_6_RX");
+    hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_VCO_HEADSET] = strdup("SLIMBUS_6_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_FULL_USB] = strdup("USB_AUDIO_RX");
     hw_interface_table[SND_DEVICE_OUT_VOICE_TTY_VCO_USB] = strdup("USB_AUDIO_RX");
@@ -5718,10 +5726,22 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 !voice_extn_compress_voip_is_active(adev)) {
                 switch (adev->voice.tty_mode) {
                 case TTY_MODE_FULL:
-                    snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
+                    if (audio_extn_is_concurrent_capture_enabled() &&
+                         (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
+                        //Separate backend is added for headset-mic as part of concurrent capture
+                        snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADSET;
+                    } else {
+                        snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADPHONES;
+                    }
                     break;
                 case TTY_MODE_VCO:
-                    snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
+                    if (audio_extn_is_concurrent_capture_enabled() &&
+                         (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
+                        //Separate backend is added for headset-mic as part of concurrent capture
+                        snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADSET;
+                    } else {
+                        snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADPHONES;
+                    }
                     break;
                 case TTY_MODE_HCO:
                     snd_device = SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET;
