@@ -7829,13 +7829,17 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
                 (usecase->devices & AUDIO_DEVICE_OUT_ALL_A2DP)){
                 ALOGD("reconfigure a2dp... forcing device switch");
-
                 pthread_mutex_unlock(&adev->lock);
                 lock_output_stream(usecase->stream.out);
                 pthread_mutex_lock(&adev->lock);
                 audio_extn_a2dp_set_handoff_mode(true);
+                ALOGD("Switching to speaker and muting the stream before select_devices");
+                check_a2dp_restore_l(adev, usecase->stream.out, false);
                 //force device switch to re configure encoder
                 select_devices(adev, usecase->id);
+                ALOGD("Unmuting the stream after select_devices");
+                usecase->stream.out->a2dp_compress_mute = false;
+                out_set_compr_volume(&usecase->stream.out->stream, usecase->stream.out->volume_l, usecase->stream.out->volume_r);
                 audio_extn_a2dp_set_handoff_mode(false);
                 pthread_mutex_unlock(&usecase->stream.out->lock);
                 break;
