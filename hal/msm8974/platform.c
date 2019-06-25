@@ -1525,9 +1525,6 @@ static int msm_be_id_array_len  =
 #define ULL_PLATFORM_DELAY         (3*1000LL)
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
 
-static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
-static bool is_tmus = false;
-
 static bool is_usb_snd_dev(snd_device_t snd_device)
 {
     if (snd_device < SND_DEVICE_IN_BEGIN) {
@@ -1549,7 +1546,7 @@ static bool is_usb_snd_dev(snd_device_t snd_device)
     return false;
 }
 
-static void check_operator()
+bool is_operator_tmus()
 {
     char value[PROPERTY_VALUE_MAX];
     int mccmnc;
@@ -1574,15 +1571,10 @@ static void check_operator()
     case 310210:
     case 310200:
     case 310160:
-        is_tmus = true;
-        break;
+        return true;
+    default:
+        return false;
     }
-}
-
-bool is_operator_tmus()
-{
-    pthread_once(&check_op_once_ctl, check_operator);
-    return is_tmus;
 }
 
 static char *get_current_operator()
