@@ -283,6 +283,15 @@ void *start_input(void *thread_param)
   case 8:
       params->config.channel_mask = AUDIO_CHANNEL_INDEX_MASK_8;
       break;
+  case 10:
+      params->config.channel_mask = AUDIO_CHANNEL_INDEX_MASK_10;
+      break;
+  case 12:
+      params->config.channel_mask = AUDIO_CHANNEL_INDEX_MASK_12;
+      break;
+  case 14:
+      params->config.channel_mask = AUDIO_CHANNEL_INDEX_MASK_14;
+      break;
   default:
       fprintf(log_file, "ERROR :::: channle count %d not supported, handle(%d)", params->channels, params->handle);
       if (log_file != stdout)

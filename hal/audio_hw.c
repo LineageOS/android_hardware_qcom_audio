@@ -1081,6 +1081,7 @@ int enable_audio_route(struct audio_device *adev,
     snd_device_t snd_device;
     char mixer_path[MIXER_PATH_MAX_LENGTH];
     struct stream_out *out = NULL;
+    struct stream_in *in = NULL;
     int ret = 0;
 
     if (usecase == NULL)
@@ -1139,7 +1140,16 @@ int enable_audio_route(struct audio_device *adev,
         if (out && out->compr)
             audio_extn_utils_compress_set_clk_rec_mode(usecase);
     }
-    audio_extn_set_custom_mtmx_params(adev, usecase, true);
+
+    if (usecase->type == PCM_CAPTURE) {
+        in = usecase->stream.in;
+        if (in && is_loopback_input_device(in->device)) {
+            ALOGD("%s: set custom mtmx params v1", __func__);
+            audio_extn_set_custom_mtmx_params_v1(adev, usecase, true);
+        }
+    } else {
+        audio_extn_set_custom_mtmx_params_v2(adev, usecase, true);
+    }
 
     // we shouldn't truncate mixer_path
     ALOGW_IF(strlcpy(mixer_path, use_case_table[usecase->id], sizeof(mixer_path))
@@ -1164,6 +1174,7 @@ int disable_audio_route(struct audio_device *adev,
 {
     snd_device_t snd_device;
     char mixer_path[MIXER_PATH_MAX_LENGTH];
+    struct stream_in *in = NULL;
 
     if (usecase == NULL || usecase->id == USECASE_INVALID)
         return -EINVAL;
@@ -1189,10 +1200,21 @@ int disable_audio_route(struct audio_device *adev,
     }
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_FREE);
-    audio_extn_set_custom_mtmx_params(adev, usecase, false);
+
+    if (usecase->type == PCM_CAPTURE) {
+        in = usecase->stream.in;
+        if (in && is_loopback_input_device(in->device)) {
+            ALOGD("%s: reset custom mtmx params v1", __func__);
+            audio_extn_set_custom_mtmx_params_v1(adev, usecase, false);
+        }
+    } else {
+        audio_extn_set_custom_mtmx_params_v2(adev, usecase, false);
+    }
+
     if ((usecase->type == PCM_PLAYBACK) &&
             (usecase->stream.out != NULL))
         usecase->stream.out->pspd_coeff_sent = false;
+
     ALOGV("%s: exit", __func__);
     return 0;
 }
@@ -2790,6 +2812,9 @@ static int stop_input_stream(struct stream_in *in)
     /* 2. Disable the tx device */
     disable_snd_device(adev, uc_info->in_snd_device);
 
+    if (is_loopback_input_device(in->device))
+        audio_extn_keep_alive_stop(KEEP_ALIVE_OUT_PRIMARY);
+
     list_remove(&uc_info->list);
     free(uc_info);
 
@@ -2976,6 +3001,9 @@ int start_input_stream(struct stream_in *in)
     check_and_enable_effect(adev);
     audio_extn_audiozoom_set_microphone_direction(in, in->zoom);
     audio_extn_audiozoom_set_microphone_field_dimension(in, in->direction);
+
+    if (is_loopback_input_device(in->device))
+        audio_extn_keep_alive_start(KEEP_ALIVE_OUT_PRIMARY);
 
 done_open:
     audio_streaming_hint_end();
@@ -3834,6 +3862,9 @@ static int check_input_parameters(uint32_t sample_rate,
     case 4:
     case 6:
     case 8:
+    case 10:
+    case 12:
+    case 14:
         break;
     default:
         ret = -EINVAL;
@@ -5397,7 +5428,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
          */
         usecase = get_usecase_from_list(adev, out->usecase);
         if (usecase != NULL) {
-            audio_extn_set_custom_mtmx_params(adev, usecase, true);
+            audio_extn_set_custom_mtmx_params_v2(adev, usecase, true);
             out->pspd_coeff_sent = true;
         }
     }
