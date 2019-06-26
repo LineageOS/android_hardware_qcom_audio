@@ -434,6 +434,7 @@ void audio_extn_listen_set_parameters(struct audio_device *adev,
 #define audio_extn_sound_trigger_update_device_status(snd_dev, event)  (0)
 #define audio_extn_sound_trigger_update_stream_status(uc_info, event)  (0)
 #define audio_extn_sound_trigger_update_battery_status(charging)       (0)
+#define audio_extn_sound_trigger_update_screen_status(screen_off)      (0)
 #define audio_extn_sound_trigger_set_parameters(adev, parms)           (0)
 #define audio_extn_sound_trigger_get_parameters(adev, query, reply)    (0)
 #define audio_extn_sound_trigger_check_and_get_session(in)             (0)
@@ -458,6 +459,7 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
 void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info,
                                      st_event_type_t event);
 void audio_extn_sound_trigger_update_battery_status(bool charging);
+void audio_extn_sound_trigger_update_screen_status(bool screen_off);
 void audio_extn_sound_trigger_set_parameters(struct audio_device *adev,
                                              struct str_parms *parms);
 void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in);

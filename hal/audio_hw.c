@@ -8079,6 +8079,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->screen_off = false;
         else
             adev->screen_off = true;
+        audio_extn_sound_trigger_update_screen_status(adev->screen_off);
     }
 
     ret = str_parms_get_int(parms, "rotation", &val);

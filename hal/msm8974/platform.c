@@ -7896,14 +7896,19 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_AUDIO_PLAYBACK_MULTI_CH:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
-        needs_event = true;
-        break;
-    /* concurrent playback in low latency allowed */
-    case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
-        break;
-    /* concurrent playback FM needs event */
     case USECASE_AUDIO_PLAYBACK_FM:
         needs_event = true;
+        break;
+    case USECASE_AUDIO_PLAYBACK_ULL:
+    case USECASE_AUDIO_PLAYBACK_MMAP:
+        if (property_get_bool("persist.vendor.audio.ull_playback_bargein",
+            false))
+            needs_event = true;
+        break;
+    case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
+        if (property_get_bool("persist.vendor.audio.ll_playback_bargein",
+            false))
+            needs_event = true;
         break;
 
     /* concurrent capture usecases which needs event */
