@@ -460,6 +460,12 @@ static void enable_gcov()
 }
 #endif
 
+#if ANDROID_PLATFORM_SDK_VERSION >= 29
+static int in_set_microphone_direction(const struct audio_stream_in *stream,
+                                           audio_microphone_direction_t dir);
+static int in_set_microphone_field_dimension(const struct audio_stream_in *stream, float zoom);
+#endif
+
 static bool may_use_noirq_mode(struct audio_device *adev, audio_usecase_t uc_id,
                                int flags __unused)
 {
@@ -4149,6 +4155,25 @@ error:
     return ret;
 }
 
+#if ANDROID_PLATFORM_SDK_VERSION >= 29
+static int in_set_microphone_direction(const struct audio_stream_in *stream,
+                                           audio_microphone_direction_t dir) {
+    int ret_val = -ENOSYS;
+    (void)stream;
+    (void)dir;
+    ALOGV("---- in_set_microphone_direction()");
+    return ret_val;
+}
+
+static int in_set_microphone_field_dimension(const struct audio_stream_in *stream, float zoom) {
+    int ret_val = -ENOSYS;
+    (void)zoom;
+    (void)stream;
+    ALOGV("---- in_set_microphone_field_dimension()");
+    return ret_val;
+}
+#endif
+
 static bool stream_get_parameter_channels(struct str_parms *query,
                                           struct str_parms *reply,
                                           audio_channel_mask_t *supported_channel_masks) {
@@ -7340,6 +7365,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.read = in_read;
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
     in->stream.get_active_microphones = in_get_active_microphones;
+#if ANDROID_PLATFORM_SDK_VERSION >= 29
+    in->stream.set_microphone_direction = in_set_microphone_direction;
+    in->stream.set_microphone_field_dimension = in_set_microphone_field_dimension;
+#endif
 
     in->device = devices;
     in->source = source;
