@@ -4109,8 +4109,6 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
             return out->compr_config.fragment_size;
     } else if(out->usecase == USECASE_COMPRESS_VOIP_CALL)
         return voice_extn_compress_voip_out_get_buffer_size(out);
-    else if(out->usecase == USECASE_AUDIO_PLAYBACK_VOIP)
-        return VOIP_IO_BUF_SIZE(out->config.rate, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE);
     else if (is_offload_usecase(out->usecase) &&
              out->flags == AUDIO_OUTPUT_FLAG_DIRECT)
         return out->hal_fragment_size;
@@ -6169,8 +6167,6 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
 
     if(in->usecase == USECASE_COMPRESS_VOIP_CALL)
         return voice_extn_compress_voip_in_get_buffer_size(in);
-    else if(in->usecase == USECASE_AUDIO_RECORD_VOIP)
-        return VOIP_IO_BUF_SIZE(in->config.rate, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE);
     else if(audio_extn_compr_cap_usecase_supported(in->usecase))
         return audio_extn_compr_cap_get_buffer_size(in->config.format);
     else if(audio_extn_cin_attached_usecase(in->usecase))
@@ -7282,8 +7278,17 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                 out->volume_r = INVALID_OUT_VOLUME;
 
                 out->config = default_pcm_config_voip_copp;
-                out->config.period_size = VOIP_IO_BUF_SIZE(out->sample_rate, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE)/2;
                 out->config.rate = out->sample_rate;
+                uint32_t channel_count =
+                        audio_channel_count_from_out_mask(out->channel_mask);
+                uint32_t buffer_size = get_stream_buffer_size(DEFAULT_VOIP_BUF_DURATION_MS,
+                                                              out->sample_rate, out->format,
+                                                              channel_count, false);
+                uint32_t frame_size = audio_bytes_per_sample(out->format) * channel_count;
+                if (frame_size != 0)
+                    out->config.period_size = buffer_size / frame_size;
+                else
+                    ALOGW("%s: frame size is 0 for format %#x", __func__, out->format);
             }
         } else {
                 if ((out->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
