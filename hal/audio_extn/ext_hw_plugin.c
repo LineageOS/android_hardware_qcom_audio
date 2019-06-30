@@ -265,6 +265,8 @@ static int32_t ext_hw_plugin_check_plugin_usecase(audio_usecase_t hal_usecase,
     case USECASE_AUDIO_PLAYBACK_OFFLOAD8:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD9:
     case USECASE_AUDIO_PLAYBACK_ULL:
+    case USECASE_AUDIO_PLAYBACK_MEDIA:
+    case USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION:
         *plugin_usecase = AUDIO_HAL_PLUGIN_USECASE_DEFAULT_PLAYBACK;
         break;
     case USECASE_AUDIO_RECORD:
@@ -280,6 +282,12 @@ static int32_t ext_hw_plugin_check_plugin_usecase(audio_usecase_t hal_usecase,
     case USECASE_VOICE_CALL:
     case USECASE_VOICEMMODE1_CALL:
         *plugin_usecase = AUDIO_HAL_PLUGIN_USECASE_CS_VOICE_CALL;
+        break;
+    case USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE:
+        *plugin_usecase = AUDIO_HAL_PLUGIN_USECASE_DRIVER_SIDE_PLAYBACK;
+        break;
+    case USECASE_AUDIO_PLAYBACK_PHONE:
+        *plugin_usecase = AUDIO_HAL_PLUGIN_USECASE_PHONE_PLAYBACK;
         break;
     default:
         ret = -EINVAL;

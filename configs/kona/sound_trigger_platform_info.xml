@@ -48,6 +48,7 @@
         <param backend_dai_name="VA_CDC_DMA_TX_0" />
         <!-- Param used to indicate if SVA has dedicated SLIM ports -->
         <param dedicated_sva_path="true" />
+        <param dedicated_headset_path="false" />
         <param platform_lpi_enable="true" />
     </common_config>
     <acdb_ids>
@@ -71,7 +72,7 @@
     <sound_model_config>
         <param vendor_uuid="68ab2d40-e860-11e3-95ef-0002a5d5c51b" />
         <param execution_type="ADSP" />
-        <param library="libsmwrapper.so" />
+        <param merge_first_stage_sound_models="false"/>
         <param max_ape_phrases="20" />
         <param max_ape_users="10" />
         <!-- Profile specific data which the algorithm can support -->
@@ -152,7 +153,6 @@
     <sound_model_config>
         <param vendor_uuid="876c1b46-9d4d-40cc-a4fd-4d5ec7a80e47" />
         <param execution_type="ADSP" />
-        <param library="libsmwrapper.so" />
         <param max_ape_phrases="1" />
         <param max_ape_users="1" />
         <!-- Profile specific data which the algorithm can support -->
@@ -207,7 +207,6 @@
     <sound_model_config>
         <param vendor_uuid="7038ddc8-30f2-11e6-b0ac-40a8f03d3f15" />
         <param execution_type="ADSP" />
-        <param library="none" />
         <param max_ape_phrases="1" />
         <param max_ape_users="1" />
         <!-- Profile specific data which the algorithm can support -->
@@ -260,7 +259,6 @@
     <sound_model_config>
         <param vendor_uuid="9f6ad62a-1f0b-11e7-87c5-40a8f03d3f15" />
         <param execution_type="ADSP" />
-        <param library="none" />
         <param max_ape_phrases="1" />
         <param max_ape_users="1" />
         <!-- Profile specific data which the algorithm can support -->
