@@ -352,7 +352,7 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
 
 static bool find_sup_dev(char *name)
 {
-    char *token;
+    char *token, *saveptr = NULL;
     const char s[2] = ",";
     bool ret = false;
     char sup_devs[128];
@@ -362,7 +362,7 @@ static bool find_sup_dev(char *name)
     // 2. Both string content are equal
 
     strncpy(sup_devs, SUPPORT_DEV, sizeof(sup_devs));
-    token = strtok(sup_devs, s);
+    token = strtok_r(sup_devs, s, &saveptr);
     while (token != NULL) {
         if (strncmp(token, name, strlen(token)) == 0 &&
             strlen(token) == strlen(name)) {
@@ -370,7 +370,7 @@ static bool find_sup_dev(char *name)
             ret = true;
             break;
         }
-        token = strtok(NULL, s);
+        token = strtok_r(NULL, s, &saveptr);
     }
 
     return ret;
@@ -399,6 +399,7 @@ static void ma_support_usb(bool enable, int card)
     int ret = 0;
     int32_t fd = -1;
     char *idd;
+    char *saveptr = NULL;
 
     if (enable) {
         ret = snprintf(path, sizeof(path), "/proc/asound/card%u/usbid", card);
@@ -418,7 +419,7 @@ static void ma_support_usb(bool enable, int card)
             goto done;
         }
         //replace '\n' to '\0'
-        idd = strtok(id, "\n");
+        idd = strtok_r(id, "\n", &saveptr);
 
         if (find_sup_dev(idd)) {
             ALOGV("%s: support usbid is %s", __func__, id);

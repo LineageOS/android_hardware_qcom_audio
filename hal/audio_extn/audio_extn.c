@@ -4262,52 +4262,52 @@ void* audio_extn_ext_hw_plugin_init(struct audio_device *adev)
 int audio_extn_ext_hw_plugin_deinit(void *plugin)
 {
     return ((ext_hw_plugin_deinit) ?
-                            ext_hw_plugin_deinit(plugin): -1);
+                            ext_hw_plugin_deinit(plugin): 0);
 }
 
 int audio_extn_ext_hw_plugin_usecase_start(void *plugin, struct audio_usecase *usecase)
 {
     return ((ext_hw_plugin_usecase_start) ?
-                            ext_hw_plugin_usecase_start(plugin, usecase): -1);
+                            ext_hw_plugin_usecase_start(plugin, usecase): 0);
 }
 
 int audio_extn_ext_hw_plugin_usecase_stop(void *plugin, struct audio_usecase *usecase)
 {
     return ((ext_hw_plugin_usecase_stop) ?
-                            ext_hw_plugin_usecase_stop(plugin, usecase): -1);
+                            ext_hw_plugin_usecase_stop(plugin, usecase): 0);
 }
 
 int audio_extn_ext_hw_plugin_set_parameters(void *plugin,
                                            struct str_parms *parms)
 {
     return ((ext_hw_plugin_set_parameters) ?
-                            ext_hw_plugin_set_parameters(plugin, parms): -1);
+                            ext_hw_plugin_set_parameters(plugin, parms): 0);
 }
 
 int audio_extn_ext_hw_plugin_get_parameters(void *plugin,
                   struct str_parms *query, struct str_parms *reply)
 {
     return ((ext_hw_plugin_get_parameters) ?
-                        ext_hw_plugin_get_parameters(plugin, query, reply): -1);
+                        ext_hw_plugin_get_parameters(plugin, query, reply): 0);
 }
 
 int audio_extn_ext_hw_plugin_set_mic_mute(void *plugin, bool mute)
 {
     return ((ext_hw_plugin_set_mic_mute) ?
-                        ext_hw_plugin_set_mic_mute(plugin, mute): -1);
+                        ext_hw_plugin_set_mic_mute(plugin, mute): 0);
 }
 
 int audio_extn_ext_hw_plugin_get_mic_mute(void *plugin, bool *mute)
 {
     return ((ext_hw_plugin_get_mic_mute) ?
-                        ext_hw_plugin_get_mic_mute(plugin, mute): -1);
+                        ext_hw_plugin_get_mic_mute(plugin, mute): 0);
 }
 
 int audio_extn_ext_hw_plugin_set_audio_gain(void *plugin,
             struct audio_usecase *usecase, uint32_t gain)
 {
     return ((ext_hw_plugin_set_audio_gain) ?
-                        ext_hw_plugin_set_audio_gain(plugin, usecase, gain): -1);
+                        ext_hw_plugin_set_audio_gain(plugin, usecase, gain): 0);
 }
 // END: EXT_HW_PLUGIN ===================================================================
 
@@ -4608,6 +4608,7 @@ void hdmi_passthrough_feature_init(bool is_feature_enabled)
                                                     audio_extn_utils_is_dolby_format;
         passthru_init(init_config);
         ALOGD("%s:: ---- Feature HDMI_PASSTHROUGH is Enabled ----", __func__);
+        return;
     }
 
 feature_disabled:
@@ -4721,7 +4722,6 @@ static batt_prop_is_charging_t batt_prop_is_charging;
 void battery_listener_feature_init(bool is_feature_enabled)
 {
     audio_extn_battery_listener_enabled = is_feature_enabled;
-    ALOGD("%s: ---- Feature BATTERY_LISTENER is %s----", __func__, is_feature_enabled? "ENABLED": "NOT ENABLED");
     if (is_feature_enabled) {
         // dlopen lib
         batt_listener_lib_handle = dlopen(BATTERY_LISTENER_LIB_PATH, RTLD_NOW);
@@ -4741,6 +4741,8 @@ void battery_listener_feature_init(bool is_feature_enabled)
              ALOGE("%s: dlsym failed", __func__);
                 goto feature_disabled;
         }
+        ALOGD("%s: ---- Feature BATTERY_LISTENER is enabled ----", __func__);
+        return;
     }
 
     feature_disabled:

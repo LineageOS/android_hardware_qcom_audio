@@ -157,7 +157,7 @@ typedef int (*fp_platform_get_snd_device_name_extn_t)(void *platform, snd_device
                                       char *device_name);
 typedef int (*fp_platform_get_default_app_type_v2_t)(void *, usecase_type_t);
 typedef int (*fp_platform_send_audio_calibration_t)(void *, struct audio_usecase *,
-                                                   int, int);
+                                                   int);
 typedef int (*fp_platform_get_pcm_device_id_t)(audio_usecase_t, int);
 typedef const char *(*fp_platform_get_snd_device_name_t)(snd_device_t);
 typedef int (*fp_platform_spkr_prot_is_wsa_analog_mode_t)(void *);
@@ -801,6 +801,8 @@ int audio_extn_utils_get_sample_rate_from_string(const char *);
 int audio_extn_utils_get_channels_from_string(const char *);
 void audio_extn_utils_release_snd_device(snd_device_t snd_device);
 int audio_extn_utils_is_vendor_enhanced_fwk();
+int audio_extn_utils_get_app_sample_rate_for_device(struct audio_device *adev,
+                                    struct audio_usecase *usecase, int snd_device);
 
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
@@ -1216,6 +1218,12 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #define audio_extn_auto_hal_create_audio_patch(dev, num_sources,\
     sources, num_sinks, sinks, handle) (0)
 #define audio_extn_auto_hal_release_audio_patch(dev, handle) (0)
+#define audio_extn_auto_hal_get_car_audio_stream_from_address(address) (-1)
+#define audio_extn_auto_hal_open_output_stream(out) (0)
+#define audio_extn_auto_hal_is_bus_device_usecase(uc_id) (0)
+#define audio_extn_auto_hal_get_snd_device_for_car_audio_stream(out) (0)
+#define audio_extn_auto_hal_get_audio_port(dev, config) (0)
+#define audio_extn_auto_hal_set_audio_port_config(dev, config) (0)
 #else
 int32_t audio_extn_auto_hal_init(struct audio_device *adev);
 void audio_extn_auto_hal_deinit(void);
@@ -1229,6 +1237,14 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
                                 audio_patch_handle_t *handle);
 int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
                                 audio_patch_handle_t handle);
+int32_t audio_extn_auto_hal_get_car_audio_stream_from_address(const char *address);
+int32_t audio_extn_auto_hal_open_output_stream(struct stream_out *out);
+bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id);
+snd_device_t audio_extn_auto_hal_get_snd_device_for_car_audio_stream(struct stream_out *out);
+int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
+                                struct audio_port *config);
+int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
+                                const struct audio_port_config *config);
 #endif
 
 bool audio_extn_edid_is_supported_sr(edid_audio_info* info, int sr);
