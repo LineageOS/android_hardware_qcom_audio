@@ -358,9 +358,6 @@ LOCAL_MODULE_OWNER := qti
 
 LOCAL_VENDOR_MODULE := true
 
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 LOCAL_CFLAGS += -Wno-unused-variable
