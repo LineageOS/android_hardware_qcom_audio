@@ -326,11 +326,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libaudioutils \
 	libexpat
 
-ifneq ($(strip $(TARGET_USES_AOSP_FOR_AUDIO)),true)
-    LOCAL_SHARED_LIBRARIES += libtinycompress_vendor
-else
-    LOCAL_SHARED_LIBRARIES += libtinycompress
-endif
+LOCAL_SHARED_LIBRARIES += libtinycompress
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
