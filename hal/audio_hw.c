@@ -9414,6 +9414,8 @@ static void adev_snd_mon_cb(void *cookie, struct str_parms *parms)
             platform_snd_card_update(adev->platform, status);
             audio_extn_fm_set_parameters(adev, parms);
             audio_extn_auto_hal_set_parameters(adev, parms);
+            if (status == CARD_STATUS_OFFLINE)
+                audio_extn_sco_reset_configuration();
         } else if (is_ext_device_status) {
             platform_set_parameters(adev->platform, parms);
         }
