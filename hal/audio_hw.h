@@ -26,6 +26,7 @@
 
 #include <audio_route/audio_route.h>
 #include <audio_utils/ErrorLog.h>
+#include <audio_utils/Statistics.h>
 #include "voice.h"
 
 // dlopen() does not go through default library path search if there is a "/" in the library name.
@@ -82,6 +83,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_TTS,
     USECASE_AUDIO_PLAYBACK_ULL,
     USECASE_AUDIO_PLAYBACK_MMAP,
+    USECASE_AUDIO_PLAYBACK_WITH_HAPTICS,
 
     /* HFP Use case*/
     USECASE_AUDIO_HFP_SCO,
@@ -132,6 +134,7 @@ enum {
     USECASE_AUDIO_RECORD_VOIP,
 
     USECASE_INCALL_MUSIC_UPLINK,
+    USECASE_INCALL_MUSIC_UPLINK2,
 
     USECASE_AUDIO_A2DP_ABR_FEEDBACK,
 
@@ -230,6 +233,8 @@ struct stream_out {
     uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES + 1];
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
+    int64_t mmap_time_offset_nanos; /* fudge factor to correct inaccuracies in DSP */
+    int     mmap_shared_memory_fd; /* file descriptor associated with MMAP NOIRQ shared memory */
     audio_io_handle_t handle;
 
     int non_blocking;
@@ -255,6 +260,16 @@ struct stream_out {
     error_log_t *error_log;
 
     struct stream_app_type_cfg app_type_cfg;
+
+    size_t kernel_buffer_size;  // cached value of the alsa buffer size, const after open().
+
+    // last out_get_presentation_position() cached info.
+    bool         last_fifo_valid;
+    unsigned int last_fifo_frames_remaining;
+    int64_t      last_fifo_time_ns;
+
+    simple_stats_t fifo_underruns;  // TODO: keep a list of the last N fifo underrun times.
+    simple_stats_t start_latency_ms;
 };
 
 struct stream_in {
@@ -272,8 +287,14 @@ struct stream_in {
     audio_usecase_t usecase;
     bool enable_aec;
     bool enable_ns;
+    bool enable_ec_port;
+    bool ec_opened;
+    struct listnode aec_list;
+    struct listnode ns_list;
     int64_t frames_read; /* total frames read, not cleared when entering standby */
     int64_t frames_muted; /* total frames muted, not cleared when entering standby */
+    int64_t mmap_time_offset_nanos; /* fudge factor to correct inaccuracies in DSP */
+    int     mmap_shared_memory_fd; /* file descriptor associated with MMAP NOIRQ shared memory */
 
     audio_io_handle_t capture_handle;
     audio_input_flags_t flags;
@@ -285,6 +306,8 @@ struct stream_in {
     audio_format_t format;
     card_status_t card_status;
     int capture_started;
+    float zoom;
+    audio_microphone_direction_t direction;
 
     struct stream_app_type_cfg app_type_cfg;
 
@@ -295,6 +318,8 @@ struct stream_in {
     uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES + 1];
 
     error_log_t *error_log;
+
+    simple_stats_t start_latency_ms;
 };
 
 typedef enum usecase_type_t {
@@ -340,7 +365,6 @@ struct audio_device {
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     struct mixer *mixer;
     audio_mode_t mode;
-    struct stream_in *active_input;
     struct stream_out *primary_output;
     struct stream_out *voice_tx_output;
     struct stream_out *current_call_output;
@@ -357,6 +381,7 @@ struct audio_device {
     bool enable_voicerx;
     bool enable_hfp;
     bool mic_break_enabled;
+    bool use_voice_device_mute;
 
     int snd_card;
     void *platform;
@@ -381,6 +406,13 @@ struct audio_device {
 
     void *adm_data;
     void *adm_lib;
+
+    struct pcm_config haptics_config;
+    struct pcm *haptic_pcm;
+    int    haptic_pcm_device_id;
+    uint8_t *haptic_buffer;
+    size_t haptic_buffer_size;
+
     adm_init_t adm_init;
     adm_deinit_t adm_deinit;
     adm_register_input_stream_t adm_register_input_stream;
@@ -396,6 +428,7 @@ struct audio_device {
     /* logging */
     snd_device_t last_logged_snd_device[AUDIO_USECASE_MAX][2]; /* [out, in] */
     int camera_orientation; /* CAMERA_BACK_LANDSCAPE ... CAMERA_FRONT_PORTRAIT */
+    bool bt_sco_on;
 };
 
 int select_devices(struct audio_device *adev,

@@ -27,6 +27,20 @@
 #define SAMPLE_RATE_11025 11025
 #define sample_rate_multiple(sr, base) ((sr % base)== 0?true:false)
 
+typedef enum {
+    EFFECT_NONE = 0,
+    EFFECT_AEC,
+    EFFECT_NS,
+    EFFECT_COUNT
+} effect_type_t;
+
+struct audio_effect_config {
+    uint32_t module_id;
+    uint32_t instance_id;
+    uint32_t param_id;
+    uint32_t param_value;
+};
+
 struct amp_db_and_gain_table {
     float amp;
     float db;
@@ -56,6 +70,12 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type);
 int platform_get_snd_device_index(char *snd_device_index_name);
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id);
 int platform_get_snd_device_acdb_id(snd_device_t snd_device);
+int platform_set_effect_config_data(snd_device_t snd_device,
+                                      struct audio_effect_config effect_config,
+                                      effect_type_t effect_type);
+int platform_get_effect_config_data(snd_device_t snd_device,
+                                      struct audio_effect_config *effect_config,
+                                      effect_type_t effect_type);
 int platform_send_audio_calibration(void *platform, snd_device_t snd_device);
 int platform_send_audio_calibration_v2(void *platform, struct audio_usecase *usecase,
                                        int app_type, int sample_rate);
@@ -82,12 +102,17 @@ int platform_set_mic_mute(void *platform, bool state);
 int platform_get_sample_rate(void *platform, uint32_t *rate);
 int platform_set_device_mute(void *platform, bool state, char *dir);
 snd_device_t platform_get_output_snd_device(void *platform, audio_devices_t devices);
-snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device);
+snd_device_t platform_get_input_snd_device(void *platform,
+                                           struct stream_in *in,
+                                           audio_devices_t out_device);
 int platform_set_hdmi_channels(void *platform, int channel_count);
 int platform_edid_get_max_channels(void *platform);
 void platform_add_operator_specific_device(snd_device_t snd_device,
                                            const char *operator,
                                            const char *mixer_path,
+                                           unsigned int acdb_id);
+void platform_add_external_specific_device(snd_device_t snd_device,
+                                           const char *name,
                                            unsigned int acdb_id);
 /* return true if adding entry success
    return false if adding entry fails */
@@ -117,11 +142,11 @@ int platform_set_snd_device_backend(snd_device_t snd_device, const char * backen
 
 bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id);
 
-/* From platform_info.c */
-int platform_info_init(const char *filename, void *);
-
 typedef int (*set_parameters_fn)(void *platform, struct str_parms *parms);
-int snd_card_info_init(const char *filename, void *, set_parameters_fn);
+
+/* From platform_info.c */
+int platform_info_init(const char *filename, void *,
+                       bool do_full_parse, set_parameters_fn);
 
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
@@ -182,4 +207,9 @@ int platform_set_usb_service_interval(void *platform,
 int platform_get_usb_service_interval(void *platform,
                                       bool playback,
                                       unsigned long *service_interval);
+int platform_get_haptics_pcm_device_id();
+
+/* callback functions from platform to common audio HAL */
+struct stream_in *adev_get_active_input(const struct audio_device *adev);
+
 #endif // AUDIO_PLATFORM_API_H

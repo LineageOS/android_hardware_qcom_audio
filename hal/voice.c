@@ -171,6 +171,7 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     uc_info->devices = adev->current_call_output ->devices;
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
+    adev->use_voice_device_mute = false;
 
     list_add_tail(&adev->usecase_list, &uc_info->list);
 
@@ -211,8 +212,13 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     if (adev->mic_break_enabled)
         platform_set_mic_break_det(adev->platform, true);
 
-    pcm_start(session->pcm_tx);
-    pcm_start(session->pcm_rx);
+    ret = pcm_start(session->pcm_tx);
+    if (ret != 0)
+        goto error_start_voice;
+
+    ret = pcm_start(session->pcm_rx);
+    if (ret != 0)
+        goto error_start_voice;
 
     audio_extn_tfa_98xx_enable_speaker();
 
@@ -357,11 +363,19 @@ int voice_check_and_set_incall_music_usecase(struct audio_device *adev,
 int voice_set_mic_mute(struct audio_device *adev, bool state)
 {
     int err = 0;
+    struct audio_usecase *usecase = NULL;
 
     adev->voice.mic_mute = state;
     if (adev->mode == AUDIO_MODE_IN_CALL ||
-        adev->mode == AUDIO_MODE_IN_COMMUNICATION)
-        err = platform_set_mic_mute(adev->platform, state);
+        adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+        /* Use device mute if incall music delivery usecase is in progress */
+        if (adev->use_voice_device_mute)
+            err = platform_set_device_mute(adev->platform, state, "tx");
+        else
+            err = platform_set_mic_mute(adev->platform, state);
+        ALOGV("%s: voice mute status=%d, use_voice_device_mute_flag=%d",
+            __func__, state, adev->use_voice_device_mute);
+    }
 
     return err;
 }
@@ -369,6 +383,25 @@ int voice_set_mic_mute(struct audio_device *adev, bool state)
 bool voice_get_mic_mute(struct audio_device *adev)
 {
     return adev->voice.mic_mute;
+}
+
+// Following function is called when incall music uplink usecase is
+// created or destroyed while mic is muted. If incall music uplink
+// usecase is active, apply voice device mute to mute only voice Tx
+// path and not the mixed voice Tx + inncall-music path. Revert to
+// voice stream mute once incall music uplink usecase is inactive
+void voice_set_device_mute_flag (struct audio_device *adev, bool state)
+{
+    if (adev->voice.mic_mute) {
+        if (state) {
+            platform_set_device_mute(adev->platform, true, "tx");
+            platform_set_mic_mute(adev->platform, false);
+        } else {
+            platform_set_mic_mute(adev->platform, true);
+            platform_set_device_mute(adev->platform, false, "tx");
+        }
+    }
+    adev->use_voice_device_mute = state;
 }
 
 int voice_set_volume(struct audio_device *adev, float volume)
@@ -517,6 +550,8 @@ void voice_init(struct audio_device *adev)
     adev->voice.volume = 1.0f;
     adev->voice.mic_mute = false;
     adev->voice.in_call = false;
+    adev->use_voice_device_mute = false;
+
     for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
         adev->voice.session[i].pcm_rx = NULL;
         adev->voice.session[i].pcm_tx = NULL;
