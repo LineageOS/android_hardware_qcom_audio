@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017,2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -41,6 +41,7 @@ bool kpi_mode;
 bool enable_dump;
 float vol_level;
 uint8_t render_format;
+bool ec_ref;
 
 
 enum {
