@@ -65,6 +65,7 @@
 #include <hardware/audio_alsaops.h>
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
+#include <utils/Timers.h> // systemTime
 #include <audio_effects/effect_aec.h>
 #include <audio_effects/effect_ns.h>
 #include <audio_utils/format.h>
@@ -4542,6 +4543,12 @@ static int out_dump(const struct audio_stream *stream, int fd)
     dprintf(fd, "      Standby: %s\n", out->standby ? "yes" : "no");
     dprintf(fd, "      Frames written: %lld\n", (long long)out->written);
 
+    char buffer[256]; // for statistics formatting
+    if (!is_offload_usecase(out->usecase)) {
+        simple_stats_to_string(&out->fifo_underruns, buffer, sizeof(buffer));
+        dprintf(fd, "      Fifo frame underruns: %s\n", buffer);
+    }
+
     if (locked) {
         pthread_mutex_unlock(&out->lock);
     }
@@ -5710,6 +5717,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             goto exit;
         }
         out->started = 1;
+        out->last_fifo_valid = false; // we're coming out of standby, last_fifo isn't valid.
         if (last_known_cal_step != -1) {
             ALOGD("%s: retry previous failed cal level set", __func__);
             audio_hw_send_gain_dep_calibration(last_known_cal_step);
@@ -5878,6 +5886,30 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                     bytes_to_write /= 2;
                 }
             }
+
+            // Note: since out_get_presentation_position() is called alternating with out_write()
+            // by AudioFlinger, we can check underruns using the prior timestamp read.
+            // (Alternately we could check if the buffer is empty using pcm_get_htimestamp().
+            if (out->last_fifo_valid) {
+                // compute drain to see if there is an underrun.
+                const int64_t current_ns = systemTime(SYSTEM_TIME_MONOTONIC); // sys call
+                const int64_t frames_by_time =
+                        (current_ns - out->last_fifo_time_ns) * out->config.rate / NANOS_PER_SECOND;
+                const int64_t underrun = frames_by_time - out->last_fifo_frames_remaining;
+
+                if (underrun > 0) {
+                    simple_stats_log(&out->fifo_underruns, underrun);
+
+                    ALOGW("%s: underrun(%lld) "
+                            "frames_by_time(%lld) > out->last_fifo_frames_remaining(%lld)",
+                            __func__,
+                            (long long)out->fifo_underruns.n,
+                            (long long)frames_by_time,
+                            (long long)out->last_fifo_frames_remaining);
+                }
+                out->last_fifo_valid = false;  // we're writing below, mark fifo info as stale.
+            }
+
             ALOGVV("%s: writing buffer (%zu bytes) to pcm device", __func__, bytes);
 
             long ns = 0;
@@ -6107,14 +6139,25 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
         if (out->pcm) {
             unsigned int avail;
             if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
-                size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
-
                 uint64_t signed_frames = 0;
                 uint64_t frames_temp = 0;
 
-                frames_temp = (kernel_buffer_size > avail) ? (kernel_buffer_size - avail) : 0;
+                if (out->kernel_buffer_size > avail) {
+                    frames_temp = out->last_fifo_frames_remaining = out->kernel_buffer_size - avail;
+                } else {
+                    ALOGW("%s: avail:%u > kernel_buffer_size:%zu clamping!",
+                            __func__, avail, out->kernel_buffer_size);
+                    avail = out->kernel_buffer_size;
+                    frames_temp = out->last_fifo_frames_remaining = 0;
+                }
+                out->last_fifo_valid = true;
+                out->last_fifo_time_ns = audio_utils_ns_from_timespec(timestamp);
+
                 if (out->written >= frames_temp)
                     signed_frames = out->written - frames_temp;
+
+                ALOGVV("%s: frames:%lld  avail:%u  kernel_buffer_size:%zu",
+                        __func__, (long long)signed_frames, avail, out->kernel_buffer_size);
 
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
@@ -8250,6 +8293,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->af_period_multiplier = af_period_multiplier;
     else
         out->af_period_multiplier = 1;
+
+    out->kernel_buffer_size = out->config.period_size * out->config.period_count;
 
     out->standby = 1;
     /* out->muted = false; by calloc() */

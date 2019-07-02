@@ -48,6 +48,8 @@
 
 #include <audio_route/audio_route.h>
 #include <audio_utils/ErrorLog.h>
+#include <audio_utils/Statistics.h>
+#include <audio_utils/clock.h>
 #include "audio_defs.h"
 #include "voice.h"
 #include "audio_hw_extn_api.h"
@@ -454,6 +456,15 @@ struct stream_out {
             int stream;
         } cs;
     } extconn;
+
+    size_t kernel_buffer_size;  // cached value of the alsa buffer size, const after open().
+
+    // last out_get_presentation_position() cached info.
+    bool         last_fifo_valid;
+    unsigned int last_fifo_frames_remaining;
+    int64_t      last_fifo_time_ns;
+
+    simple_stats_t fifo_underruns;  // TODO: keep a list of the last N fifo underrun times.
 };
 
 struct stream_in {
