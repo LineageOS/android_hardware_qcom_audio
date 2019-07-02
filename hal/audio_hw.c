@@ -4549,6 +4549,11 @@ static int out_dump(const struct audio_stream *stream, int fd)
         dprintf(fd, "      Fifo frame underruns: %s\n", buffer);
     }
 
+    if (out->start_latency_ms.n > 0) {
+        simple_stats_to_string(&out->start_latency_ms, buffer, sizeof(buffer));
+        dprintf(fd, "      Start latency ms: %s\n", buffer);
+    }
+
     if (locked) {
         pthread_mutex_unlock(&out->lock);
     }
@@ -5705,6 +5710,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     if (out->standby) {
         out->standby = false;
+        const int64_t startNs = systemTime(SYSTEM_TIME_MONOTONIC);
+
         pthread_mutex_lock(&adev->lock);
         if (out->usecase == USECASE_COMPRESS_VOIP_CALL)
             ret = voice_extn_compress_voip_start_output_stream(out);
@@ -5732,6 +5739,10 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         }
         if (out->set_dual_mono)
             audio_extn_send_dual_mono_mixing_coefficients(out);
+
+        // log startup time in ms.
+        simple_stats_log(
+                &out->start_latency_ms, (systemTime(SYSTEM_TIME_MONOTONIC) - startNs) * 1e-6);
     }
 
     if (adev->is_channel_status_set == false &&
@@ -6646,6 +6657,12 @@ static int in_dump(const struct audio_stream *stream,
     dprintf(fd, "      Frames read: %lld\n", (long long)in->frames_read);
     dprintf(fd, "      Frames muted: %lld\n", (long long)in->frames_muted);
 
+    char buffer[256]; // for statistics formatting
+    if (in->start_latency_ms.n > 0) {
+        simple_stats_to_string(&in->start_latency_ms, buffer, sizeof(buffer));
+        dprintf(fd, "      Start latency ms: %s\n", buffer);
+    }
+
     if (locked) {
         pthread_mutex_unlock(&in->lock);
     }
@@ -6908,6 +6925,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     }
 
     if (in->standby) {
+        const int64_t startNs = systemTime(SYSTEM_TIME_MONOTONIC);
+
         pthread_mutex_lock(&adev->lock);
         if (in->usecase == USECASE_COMPRESS_VOIP_CALL)
             ret = voice_extn_compress_voip_start_input_stream(in);
@@ -6922,6 +6941,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             goto exit;
         }
         in->standby = 0;
+
+        // log startup time in ms.
+        simple_stats_log(
+                &in->start_latency_ms, (systemTime(SYSTEM_TIME_MONOTONIC) - startNs) * 1e-6);
     }
 
     /* Avoid read if capture_stopped is set */

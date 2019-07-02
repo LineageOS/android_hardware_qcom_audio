@@ -465,6 +465,7 @@ struct stream_out {
     int64_t      last_fifo_time_ns;
 
     simple_stats_t fifo_underruns;  // TODO: keep a list of the last N fifo underrun times.
+    simple_stats_t start_latency_ms;
 };
 
 struct stream_in {
@@ -518,6 +519,8 @@ struct stream_in {
     int64_t frames_muted; /* total frames muted, not cleared when entering standby */
 
     error_log_t *error_log;
+
+    simple_stats_t start_latency_ms;
 };
 
 typedef enum {
