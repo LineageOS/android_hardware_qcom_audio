@@ -360,6 +360,10 @@ audio.volume.headset.gain.depcal=true
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.audio.fluence.voicecomm=true
 
+#enable AAC frame ctl for A2DP sinks
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.aac_frm_ctl.enabled=true
+
 #add dynamic feature flags here
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.feature.a2dp_offload.enable=true \
