@@ -36,6 +36,7 @@
 #include "platform.h"
 #include "platform_api.h"
 #include "audio_extn.h"
+#include <pthread.h>
 #include <stdlib.h>
 #include <cutils/str_parms.h>
 #include <hardware/audio.h>
