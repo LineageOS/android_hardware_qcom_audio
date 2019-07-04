@@ -329,6 +329,8 @@
     <path name="deep-buffer-playback">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
+        <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
     </path>
 
     <path name="deep-buffer-playback speaker-protected">
@@ -525,6 +527,8 @@
     <path name="compress-offload-playback">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia4" value="1" />
+        <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia4" value="1" />
     </path>
 
     <path name="compress-offload-playback speaker-protected">
@@ -600,6 +604,8 @@
     <path name="compress-offload-playback2">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia7" value="1" />
+        <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia7" value="1" />
     </path>
 
     <path name="compress-offload-playback2 display-port">
