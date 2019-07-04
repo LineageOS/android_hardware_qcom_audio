@@ -294,3 +294,16 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     vendor.qti.hardware.automotive.audiocontrol@1.0-service \
     android.hardware.automotive.audiocontrol@1.0
+
+ifeq ($(ENABLE_HYP),true)
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.calfile0=/vendor/etc/acdbdata/adsp_avs_config.acdb\
+persist.vendor.audio.calfile1=/vendor/etc/acdbdata/ADP/Bluetooth_cal.acdb\
+persist.vendor.audio.calfile2=/vendor/etc/acdbdata/ADP/Codec_cal.acdb\
+persist.vendor.audio.calfile3=/vendor/etc/acdbdata/ADP/General_cal.acdb\
+persist.vendor.audio.calfile4=/vendor/etc/acdbdata/ADP/Global_cal.acdb\
+persist.vendor.audio.calfile5=/vendor/etc/acdbdata/ADP/Handset_cal.acdb\
+persist.vendor.audio.calfile6=/vendor/etc/acdbdata/ADP/Hdmi_cal.acdb\
+persist.vendor.audio.calfile7=/vendor/etc/acdbdata/ADP/Headset_cal.acdb\
+persist.vendor.audio.calfile8=/vendor/etc/acdbdata/ADP/Speaker_cal.acdb
+endif
