@@ -38,6 +38,7 @@
 #include "audio_extn.h"
 #include "platform_api.h"
 #include <platform.h>
+#include <pthread.h>
 #include <cutils/properties.h>
 
 #include "sound/compress_params.h"
