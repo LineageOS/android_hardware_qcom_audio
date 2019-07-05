@@ -212,10 +212,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.alac.decoder=true\
 vendor.audio.use.sw.ape.decoder=true
 
-#property for AudioSphere Post processing
-PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.pp.asphere.enabled=false
-
 #Audio voice concurrency related flags
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.voice.playback.conc.disabled=true\

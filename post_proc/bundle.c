@@ -40,6 +40,7 @@
 
 #include <stdlib.h>
 #include <cutils/list.h>
+#include <cutils/str_parms.h>
 #include <log/log.h>
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
@@ -53,7 +54,6 @@
 #include "bass_boost.h"
 #include "virtualizer.h"
 #include "reverb.h"
-#include "asphere.h"
 
 #ifdef DTS_EAGLE
 #include "effect_util.h"
@@ -455,20 +455,16 @@ int offload_effects_bundle_set_hpx_state(bool hpx_state)
 
 /*
  * Effect Bundle Set and get param operations.
- * currently only handles audio sphere scenario,
- * but the interface itself can be utilized for any effect.
  */
 __attribute__ ((visibility ("default")))
-void offload_effects_bundle_get_parameters(struct str_parms *query,
-                                           struct str_parms *reply)
+void offload_effects_bundle_get_parameters(struct str_parms *query __unused,
+                                           struct str_parms *reply __unused)
 {
-    asphere_get_parameters(query, reply);
 }
 
 __attribute__ ((visibility ("default")))
-void offload_effects_bundle_set_parameters(struct str_parms *parms)
+void offload_effects_bundle_set_parameters(struct str_parms *parms __unused)
 {
-    asphere_set_parameters(parms);
 }
 
 /*
@@ -826,7 +822,6 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
             status = -ENOSYS;
             goto exit;
         }
-        handle_asphere_on_effect_enabled(true, context, &created_effects_list);
         context->state = EFFECT_STATE_ACTIVE;
         if (context->ops.enable)
             context->ops.enable(context);
@@ -841,7 +836,6 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
             status = -ENOSYS;
             goto exit;
         }
-        handle_asphere_on_effect_enabled(false, context, &created_effects_list);
         context->state = EFFECT_STATE_INITIALIZED;
         if (context->ops.disable)
             context->ops.disable(context);
