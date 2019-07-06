@@ -9249,6 +9249,8 @@ static int adev_close(hw_device_t *device)
         audio_extn_utils_release_streams_cfg_lists(
                       &adev->streams_output_cfg_list,
                       &adev->streams_input_cfg_list);
+        if (audio_extn_qap_is_enabled())
+            audio_extn_qap_deinit();
         if (audio_extn_qaf_is_enabled())
             audio_extn_qaf_deinit();
         audio_route_free(adev->audio_route);
@@ -9529,6 +9531,20 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     adev->extspk = audio_extn_extspk_init(adev);
+    if (audio_extn_qap_is_enabled()) {
+        ret = audio_extn_qap_init(adev);
+        if (ret < 0) {
+            pthread_mutex_destroy(&adev->lock);
+            free(adev);
+            adev = NULL;
+            ALOGE("%s: Failed to init platform data, aborting.", __func__);
+            *device = NULL;
+            pthread_mutex_unlock(&adev_init_lock);
+            return ret;
+        }
+        adev->device.open_output_stream = audio_extn_qap_open_output_stream;
+        adev->device.close_output_stream = audio_extn_qap_close_output_stream;
+    }
 
     if (audio_extn_qaf_is_enabled()) {
         ret = audio_extn_qaf_init(adev);
