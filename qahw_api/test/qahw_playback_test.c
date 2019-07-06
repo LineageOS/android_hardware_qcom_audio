@@ -2111,6 +2111,7 @@ int main(int argc, char* argv[]) {
         {"intr-strm",    required_argument,    0, 'i'},
         {"device-config", required_argument,    0, 'C'},
         {"play-list",    required_argument,    0, 'g'},
+        {"ec-ref",        no_argument,         0, 'L'},
         {"help",          no_argument,          0, 'h'},
         {"bt-wbs",        no_argument,    0, 'z'},
         {0, 0, 0, 0}
@@ -2135,7 +2136,7 @@ int main(int argc, char* argv[]) {
 
     while ((opt = getopt_long(argc,
                               argv,
-                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQzh:i:h:g:O:",
+                              "-f:r:c:b:d:s:v:V:l:t:a:w:k:PD:KF:Ee:A:u:m:S:C:p::x:y:qQzLh:i:h:g:O:",
                               long_options,
                               &option_index)) != -1) {
 
@@ -2334,6 +2335,9 @@ int main(int argc, char* argv[]) {
             break;
         case 'x':
             render_format = atoi(optarg);
+            break;
+        case 'L':
+            ec_ref = true;
             break;
         case 'y':
             stream_param[i].timestamp_filename = optarg;
