@@ -2352,15 +2352,17 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                     (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         }
+    }
+    enable_audio_route(adev, usecase);
 
-        /* Notify device change info to effect clients registered */
+    /* Notify device change info to effect clients registered */
+    if (usecase->type == PCM_PLAYBACK) {
         audio_extn_gef_notify_device_config(
                 usecase->stream.out->devices,
                 usecase->stream.out->channel_mask,
                 usecase->stream.out->app_type_cfg.sample_rate,
                 platform_get_snd_device_acdb_id(usecase->out_snd_device));
     }
-    enable_audio_route(adev, usecase);
 
     /* If input stream is already running then effect needs to be
        applied on the new input device that's being enabled here.  */
