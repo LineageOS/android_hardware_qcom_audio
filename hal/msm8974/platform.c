@@ -4814,6 +4814,9 @@ int platform_get_backend_index(snd_device_t snd_device)
                 else if (strncmp(backend_tag_table[snd_device], "headphones",
                             sizeof("headphones")) == 0)
                         port = HEADPHONE_BACKEND;
+                else if (strncmp(backend_tag_table[snd_device], "headset",
+                            sizeof("headset")) == 0)
+                        port = HEADPHONE_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "hdmi") == 0)
                         port = HDMI_RX_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "display-port") == 0)
