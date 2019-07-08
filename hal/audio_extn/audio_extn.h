@@ -998,7 +998,8 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
 
 #define audio_extn_gef_init(adev) (0)
 #define audio_extn_gef_deinit(adev) (0)
-#define audio_extn_gef_notify_device_config(devices, cmask, sample_rate, acdb_id) (0)
+#define audio_extn_gef_notify_device_config(devices, cmask, sample_rate, \
+        acdb_id, app_type) (0)
 
 #ifndef INSTANCE_ID_ENABLED
 #define audio_extn_gef_send_audio_cal(dev, acdb_dev_id, acdb_device_type,\
@@ -1030,7 +1031,7 @@ void audio_extn_gef_init(struct audio_device *adev);
 void audio_extn_gef_deinit(struct audio_device *adev);
 
 void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
-    audio_channel_mask_t channel_mask, int sample_rate, int acdb_id);
+    audio_channel_mask_t channel_mask, int sample_rate, int acdb_id, int app_type);
 #ifndef INSTANCE_ID_ENABLED
 int audio_extn_gef_send_audio_cal(void* adev, int acdb_dev_id, int acdb_device_type,
     int app_type, int topology_id, int sample_rate, uint32_t module_id,

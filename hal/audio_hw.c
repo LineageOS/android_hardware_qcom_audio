@@ -2707,7 +2707,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                 usecase->stream.out->devices,
                 usecase->stream.out->channel_mask,
                 usecase->stream.out->app_type_cfg.sample_rate,
-                platform_get_snd_device_acdb_id(usecase->out_snd_device));
+                platform_get_snd_device_acdb_id(usecase->out_snd_device),
+                usecase->stream.out->app_type_cfg.app_type);
     }
 
     audio_extn_qdsp_set_device(usecase);

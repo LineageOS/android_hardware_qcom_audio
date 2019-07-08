@@ -64,7 +64,7 @@
 typedef void* (*gef_init_t)(void*);
 typedef void (*gef_deinit_t)(void*);
 typedef void (*gef_device_config_cb_t)(void*, audio_devices_t,
-    audio_channel_mask_t, int, int);
+    audio_channel_mask_t, int, int, int);
 
 typedef struct {
     void* handle;
@@ -428,14 +428,14 @@ int audio_extn_gef_retrieve_audio_cal(void* dev, int acdb_dev_id,
 
 //this will be called from HAL to notify GEF of new device configuration
 void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
-    audio_channel_mask_t channel_mask, int sample_rate, int acdb_id)
+    audio_channel_mask_t channel_mask, int sample_rate, int acdb_id, int app_type)
 {
     ALOGV("%s: Enter", __func__);
 
     //call into GEF to share channel mask and device info
     if (gef_hal_handle.handle && gef_hal_handle.device_config_cb) {
         gef_hal_handle.device_config_cb(gef_hal_handle.gef_ptr, audio_device, channel_mask,
-            sample_rate, acdb_id);
+            sample_rate, acdb_id, app_type);
     }
 
     ALOGV("%s: Exit", __func__);
