@@ -7380,6 +7380,11 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             ALOGV("non-offload DIRECT_usecase ... usecase selected %d ", out->usecase);
         }
 
+        if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
+            ALOGD("%s: Setting latency mode to true", __func__);
+            out->compr_config.codec->flags |= audio_extn_utils_get_perf_mode_flag();
+        }
+
         if (out->usecase == USECASE_INVALID) {
             if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL &&
                     config->format == 0 && config->sample_rate == 0 &&
@@ -8729,6 +8734,8 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     }
 
     if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
+            (flags & AUDIO_INPUT_FLAG_TIMESTAMP) == 0 &&
+            (flags & AUDIO_INPUT_FLAG_COMPRESS) == 0 &&
             (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
         is_low_latency = true;
 #if LOW_LATENCY_CAPTURE_USE_CASE

@@ -332,6 +332,11 @@ int cin_configure_input_stream(struct stream_in *in, struct audio_config *in_con
     else
         cin_data->compr_config.codec->compr_passthr = PASSTHROUGH_GEN;
 
+    if (in->flags & AUDIO_INPUT_FLAG_FAST) {
+        ALOGD("%s: Setting latency mode to true", __func__);
+        cin_data->compr_config.codec->flags |= audio_extn_utils_get_perf_mode_flag();
+    }
+
     if ((in->flags & AUDIO_INPUT_FLAG_TIMESTAMP) ||
         (in->flags & AUDIO_INPUT_FLAG_PASSTHROUGH)) {
         compress_config_set_timstamp_flag(&cin_data->compr_config);

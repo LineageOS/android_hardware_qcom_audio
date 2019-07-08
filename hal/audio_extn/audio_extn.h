@@ -1151,6 +1151,7 @@ int audio_extn_utils_compress_get_dsp_presentation_pos(struct stream_out *out,
 int audio_extn_utils_pcm_get_dsp_presentation_pos(struct stream_out *out,
             uint64_t *frames, struct timespec *timestamp, int32_t clock_id);
 size_t audio_extn_utils_get_input_buffer_size(uint32_t, audio_format_t, int, int64_t, bool);
+int audio_extn_utils_get_perf_mode_flag(void);
 #ifdef AUDIO_HW_LOOPBACK_ENABLED
 /* API to create audio patch */
 int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,

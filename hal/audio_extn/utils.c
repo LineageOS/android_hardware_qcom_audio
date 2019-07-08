@@ -2949,6 +2949,15 @@ int audio_extn_utils_is_vendor_enhanced_fwk()
     return is_running_with_enhanced_fwk;
 }
 
+int audio_extn_utils_get_perf_mode_flag(void)
+{
+#ifdef COMPRESSED_PERF_MODE_FLAG
+    return COMPRESSED_PERF_MODE_FLAG;
+#else
+    return 0;
+#endif
+}
+
 size_t audio_extn_utils_get_input_buffer_size(uint32_t sample_rate,
                                             audio_format_t format,
                                             int channel_count,
