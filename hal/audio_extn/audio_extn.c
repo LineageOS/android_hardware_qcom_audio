@@ -104,7 +104,7 @@ void cin_close_input_stream(struct stream_in *in);
 void cin_free_input_stream_resources(struct stream_in *in);
 int cin_read(struct stream_in *in, void *buffer,
                         size_t bytes, size_t *bytes_read);
-int cin_configure_input_stream(struct stream_in *in);
+int cin_configure_input_stream(struct stream_in *in, struct audio_config *in_config);
 
 void audio_extn_set_snd_card_split(const char* in_snd_card_name)
 {
@@ -5086,9 +5086,9 @@ int audio_extn_cin_read(struct stream_in *in, void *buffer,
     return (audio_extn_compress_in_enabled?
                             cin_read(in, buffer, bytes, bytes_read): -1);
 }
-int audio_extn_cin_configure_input_stream(struct stream_in *in)
+int audio_extn_cin_configure_input_stream(struct stream_in *in, struct audio_config *in_config)
 {
-    return (audio_extn_compress_in_enabled? cin_configure_input_stream(in): -1);
+    return (audio_extn_compress_in_enabled? cin_configure_input_stream(in, in_config): -1);
 }
 // END: COMPRESS_IN ====================================================
 

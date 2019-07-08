@@ -100,7 +100,7 @@ bool cin_applicable_stream(struct stream_in *in)
  * only after validating that input against cin_attached_usecase
  * except below calls
  * 1. cin_applicable_stream(in)
- * 2. cin_configure_input_stream(in)
+ * 2. cin_configure_input_stream(in, in_config)
  */
 
 bool cin_attached_usecase(audio_usecase_t uc_id)
@@ -276,9 +276,8 @@ int cin_read(struct stream_in *in, void *buffer,
     return ret;
 }
 
-int cin_configure_input_stream(struct stream_in *in)
+int cin_configure_input_stream(struct stream_in *in, struct audio_config *in_config)
 {
-    struct audio_device *adev = in->dev;
     struct audio_config config = {.format = 0};
     int ret = 0, buffer_size = 0, meta_size = sizeof(struct snd_codec_metadata);
     cin_private_data_t *cin_data = NULL;
@@ -315,7 +314,8 @@ int cin_configure_input_stream(struct stream_in *in)
     config.channel_mask = in->channel_mask;
     config.format = in->format;
     in->config.channels = audio_channel_count_from_in_mask(in->channel_mask);
-    buffer_size = adev->device.get_input_buffer_size(&adev->device, &config);
+    buffer_size = audio_extn_utils_get_input_buffer_size(config.sample_rate, config.format,
+                    in->config.channels, in_config->offload_info.duration_us / 1000, false);
 
     cin_data->compr_config.fragment_size = buffer_size;
     cin_data->compr_config.codec->id = get_snd_codec_id(in->format);

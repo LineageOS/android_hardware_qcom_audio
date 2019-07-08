@@ -216,6 +216,9 @@ bool audio_extn_qdsp_supported_usb();
 
 //END: EXTN_QDSP_PLUGIN      ===========================================
 
+#define MIN_OFFLOAD_BUFFER_DURATION_MS 5 /* 5ms */
+#define MAX_OFFLOAD_BUFFER_DURATION_MS (100 * 1000) /* 100s */
+
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms);
 
@@ -1072,7 +1075,7 @@ void audio_extn_cin_close_input_stream(struct stream_in *in);
 void audio_extn_cin_free_input_stream_resources(struct stream_in *in);
 int audio_extn_cin_read(struct stream_in *in, void *buffer,
                         size_t bytes, size_t *bytes_read);
-int audio_extn_cin_configure_input_stream(struct stream_in *in);
+int audio_extn_cin_configure_input_stream(struct stream_in *in, struct audio_config *in_config);
 // END: COMPRESS_INPUT_ENABLED ===============================
 
 //START: SOURCE_TRACKING_FEATURE ==============================================
@@ -1147,6 +1150,7 @@ int audio_extn_utils_compress_get_dsp_presentation_pos(struct stream_out *out,
             uint64_t *frames, struct timespec *timestamp, int32_t clock_id);
 int audio_extn_utils_pcm_get_dsp_presentation_pos(struct stream_out *out,
             uint64_t *frames, struct timespec *timestamp, int32_t clock_id);
+size_t audio_extn_utils_get_input_buffer_size(uint32_t, audio_format_t, int, int64_t, bool);
 #ifdef AUDIO_HW_LOOPBACK_ENABLED
 /* API to create audio patch */
 int audio_extn_hw_loopback_create_audio_patch(struct audio_hw_device *dev,
