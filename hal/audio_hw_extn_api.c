@@ -34,6 +34,7 @@
 #include <inttypes.h>
 #include <errno.h>
 #include <log/log.h>
+#include <cutils/atomic.h>
 
 #include <hardware/audio.h>
 #include "sound/compress_params.h"
@@ -201,9 +202,13 @@ int qahwi_in_stop(struct audio_stream_in* stream) {
     if (!in->standby) {
         if (in->pcm != NULL ) {
             pcm_stop(in->pcm);
-        } else if (audio_extn_cin_format_supported(in->format)) {
+        } else if (audio_extn_cin_attached_usecase(in->usecase)) {
             audio_extn_cin_stop_input_stream(in);
         }
+
+        /* Set the atomic variable when the session is stopped */
+        if (android_atomic_acquire_cas(false, true, &(in->capture_stopped)) == 0)
+            ALOGI("%s: capture_stopped bit set", __func__);
     }
 
     pthread_mutex_unlock(&adev->lock);
