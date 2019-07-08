@@ -2910,7 +2910,7 @@ int start_input_stream(struct stream_in *in)
         ALOGE("%s: failed to start ext hw plugin", __func__);
 
     if (audio_extn_cin_attached_usecase(in->usecase)) {
-       ret = audio_extn_cin_start_input_stream(in);
+       ret = audio_extn_cin_open_input_stream(in);
        if (ret)
            goto error_open;
        else
@@ -6228,7 +6228,7 @@ static int in_standby(struct audio_stream *stream)
             in->capture_started = false;
         } else {
             if (audio_extn_cin_attached_usecase(in->usecase))
-                audio_extn_cin_stop_input_stream(in);
+                audio_extn_cin_close_input_stream(in);
         }
 
         if (in->pcm) {
@@ -9023,7 +9023,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
         audio_extn_compr_cap_deinit();
 
     if (audio_extn_cin_attached_usecase(in->usecase))
-        audio_extn_cin_close_input_stream(in);
+        audio_extn_cin_free_input_stream_resources(in);
 
     if (in->is_st_session) {
         ALOGV("%s: sound trigger pcm stop lab", __func__);

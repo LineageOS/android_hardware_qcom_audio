@@ -1066,9 +1066,10 @@ bool audio_extn_cin_applicable_stream(struct stream_in *in);
 bool audio_extn_cin_attached_usecase(audio_usecase_t uc_id);
 bool audio_extn_cin_format_supported(audio_format_t format);
 size_t audio_extn_cin_get_buffer_size(struct stream_in *in);
-int audio_extn_cin_start_input_stream(struct stream_in *in);
+int audio_extn_cin_open_input_stream(struct stream_in *in);
 void audio_extn_cin_stop_input_stream(struct stream_in *in);
 void audio_extn_cin_close_input_stream(struct stream_in *in);
+void audio_extn_cin_free_input_stream_resources(struct stream_in *in);
 int audio_extn_cin_read(struct stream_in *in, void *buffer,
                         size_t bytes, size_t *bytes_read);
 int audio_extn_cin_configure_input_stream(struct stream_in *in);
