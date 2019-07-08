@@ -186,6 +186,10 @@ persist.vendor.audio.ras.enabled=false
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.buffer.size.kb=32
 
+#Minimum duration for offload playback in secs
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.min.duration.secs=30
+
 #Enable offload audio video playback by default
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.video=true
@@ -362,6 +366,15 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@4.0-impl \
     android.hardware.audio.effect@4.0 \
     android.hardware.audio.effect@4.0-impl
+
+# enable audio hidl hal 5.0
+PRODUCT_PACKAGES += \
+    android.hardware.audio@5.0 \
+    android.hardware.audio.common@5.0 \
+    android.hardware.audio.common@5.0-util \
+    android.hardware.audio@5.0-impl \
+    android.hardware.audio.effect@5.0 \
+    android.hardware.audio.effect@5.0-impl
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \

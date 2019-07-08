@@ -34,6 +34,7 @@
 #define LICENSE_STR_MAX_LEN  (64)
 #define PRODUCT_FFV      "ffv"
 #define PRODUCT_ALLPLAY  "allplay"
+#define MAX_IN_CHANNELS 32
 
 typedef enum {
     PLATFORM,
@@ -104,12 +105,33 @@ struct audio_custom_mtmx_params_info {
     uint32_t op_channels;
     uint32_t usecase_id;
     uint32_t snd_device;
+    char fe_name[128];
 };
 
 struct audio_custom_mtmx_params {
     struct listnode list;
     struct audio_custom_mtmx_params_info info;
     uint32_t coeffs[0];
+};
+
+struct audio_custom_mtmx_in_params_info {
+    uint32_t op_channels;
+    uint32_t usecase_id;
+};
+
+struct audio_custom_mtmx_params_in_ch_info {
+    uint32_t ch_count;
+    char device[128];
+    char hw_interface[128];
+};
+
+struct audio_custom_mtmx_in_params {
+    struct listnode list;
+    struct audio_custom_mtmx_in_params_info in_info;
+    uint32_t ip_channels;
+    uint32_t mic_ch;
+    uint32_t ec_ref_ch;
+    struct audio_custom_mtmx_params_in_ch_info in_ch_info[MAX_IN_CHANNELS];
 };
 
 enum card_status_t;
@@ -361,4 +383,8 @@ int platform_add_custom_mtmx_params(void *platform,
 /* callback functions from platform to common audio HAL */
 struct stream_in *adev_get_active_input(const struct audio_device *adev);
 
+struct audio_custom_mtmx_in_params * platform_get_custom_mtmx_in_params(void *platform,
+                                    struct audio_custom_mtmx_in_params_info *info);
+int platform_add_custom_mtmx_in_params(void *platform,
+                                    struct audio_custom_mtmx_in_params_info *info);
 #endif // AUDIO_PLATFORM_API_H

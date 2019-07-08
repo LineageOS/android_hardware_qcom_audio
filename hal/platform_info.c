@@ -73,6 +73,8 @@ typedef enum {
     CUSTOM_MTMX_PARAMS,
     CUSTOM_MTMX_PARAM_COEFFS,
     EXTERNAL_DEVICE_SPECIFIC,
+    CUSTOM_MTMX_IN_PARAMS,
+    CUSTOM_MTMX_PARAM_IN_CH_INFO,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -97,6 +99,8 @@ static void process_mic_info(const XML_Char **attr);
 static void process_custom_mtmx_params(const XML_Char **attr);
 static void process_custom_mtmx_param_coeffs(const XML_Char **attr);
 static void process_external_dev(const XML_Char **attr);
+static void process_custom_mtmx_in_params(const XML_Char **attr);
+static void process_custom_mtmx_param_in_ch_info(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -118,6 +122,8 @@ static section_process_fn section_table[] = {
     [CUSTOM_MTMX_PARAMS] = process_custom_mtmx_params,
     [CUSTOM_MTMX_PARAM_COEFFS] = process_custom_mtmx_param_coeffs,
     [EXTERNAL_DEVICE_SPECIFIC] = process_external_dev,
+    [CUSTOM_MTMX_IN_PARAMS] = process_custom_mtmx_in_params,
+    [CUSTOM_MTMX_PARAM_IN_CH_INFO] = process_custom_mtmx_param_in_ch_info,
 };
 
 static section_t section;
@@ -224,6 +230,7 @@ static bool find_enum_by_string(const struct audio_string_to_enum * table, const
 }
 
 static struct audio_custom_mtmx_params_info mtmx_params_info;
+static struct audio_custom_mtmx_in_params_info mtmx_in_params_info;
 
 /*
  * <audio_platform_info>
@@ -1003,6 +1010,82 @@ done:
     return;
 }
 
+static void process_custom_mtmx_param_in_ch_info(const XML_Char **attr)
+{
+    uint32_t attr_idx = 0;
+    int32_t in_ch_idx = -1;
+    struct audio_custom_mtmx_in_params *mtmx_in_params = NULL;
+
+    mtmx_in_params = platform_get_custom_mtmx_in_params((void *)my_data.platform,
+                                                  &mtmx_in_params_info);
+    if (mtmx_in_params == NULL) {
+        ALOGE("%s: mtmx in params with given param info, not found", __func__);
+        return;
+    }
+
+    if (strcmp(attr[attr_idx++], "in_channel_index") != 0) {
+        ALOGE("%s: 'in_channel_index' not found", __func__);
+        return;
+    }
+
+    in_ch_idx = atoi((char *)attr[attr_idx++]);
+    if (in_ch_idx < 0 || in_ch_idx >= MAX_IN_CHANNELS) {
+        ALOGE("%s: invalid input channel index(%d)", __func__, in_ch_idx);
+        return;
+    }
+
+    if (strcmp(attr[attr_idx++], "channel_count") != 0) {
+        ALOGE("%s: 'channel_count' not found", __func__);
+        return;
+    }
+    mtmx_in_params->in_ch_info[in_ch_idx].ch_count = atoi((char *)attr[attr_idx++]);
+
+    if (strcmp(attr[attr_idx++], "device") != 0) {
+        ALOGE("%s: 'device' not found", __func__);
+        return;
+    }
+    strlcpy(mtmx_in_params->in_ch_info[in_ch_idx].device, attr[attr_idx++],
+            sizeof(mtmx_in_params->in_ch_info[in_ch_idx].device));
+
+    if (strcmp(attr[attr_idx++], "interface") != 0) {
+        ALOGE("%s: 'interface' not found", __func__);
+        return;
+    }
+    strlcpy(mtmx_in_params->in_ch_info[in_ch_idx].hw_interface, attr[attr_idx++],
+            sizeof(mtmx_in_params->in_ch_info[in_ch_idx].hw_interface));
+
+    if (!strncmp(mtmx_in_params->in_ch_info[in_ch_idx].device,
+                 ENUM_TO_STRING(AUDIO_DEVICE_IN_BUILTIN_MIC),
+                 sizeof(mtmx_in_params->in_ch_info[in_ch_idx].device)))
+        mtmx_in_params->mic_ch = mtmx_in_params->in_ch_info[in_ch_idx].ch_count;
+    else if (!strncmp(mtmx_in_params->in_ch_info[in_ch_idx].device,
+              ENUM_TO_STRING(AUDIO_DEVICE_IN_LOOPBACK),
+              sizeof(mtmx_in_params->in_ch_info[in_ch_idx].device)))
+        mtmx_in_params->ec_ref_ch = mtmx_in_params->in_ch_info[in_ch_idx].ch_count;
+
+    mtmx_in_params->ip_channels += mtmx_in_params->in_ch_info[in_ch_idx].ch_count;
+}
+
+static void process_custom_mtmx_in_params(const XML_Char **attr)
+{
+    int attr_idx = 0;
+
+    if (strcmp(attr[attr_idx++], "usecase") != 0) {
+        ALOGE("%s: 'usecase' not found", __func__);
+        return;
+    }
+    mtmx_in_params_info.usecase_id = platform_get_usecase_index((char *)attr[attr_idx++]);
+
+    if (strcmp(attr[attr_idx++], "out_channel_count") != 0) {
+        ALOGE("%s: 'out_channel_count' not found", __func__);
+        return;
+    }
+    mtmx_in_params_info.op_channels = atoi((char *)attr[attr_idx++]);
+
+    platform_add_custom_mtmx_in_params((void *)my_data.platform, &mtmx_in_params_info);
+
+}
+
 static void process_custom_mtmx_param_coeffs(const XML_Char **attr)
 {
     uint32_t attr_idx = 0, out_ch_idx = -1, ch_coeff_count = 0;
@@ -1034,7 +1117,7 @@ static void process_custom_mtmx_param_coeffs(const XML_Char **attr)
     ch_coeff_value = strtok_r((char *)attr[attr_idx++], " ", &context);
     ip_channels = mtmx_params->info.ip_channels;
     op_channels = mtmx_params->info.op_channels;
-    while(ch_coeff_value && ch_coeff_count < op_channels) {
+    while(ch_coeff_value && ch_coeff_count < ip_channels) {
         mtmx_params->coeffs[ip_channels * out_ch_idx + ch_coeff_count++]
                            = atoi(ch_coeff_value);
         ch_coeff_value = strtok_r(NULL, " ", &context);
@@ -1077,6 +1160,15 @@ static void process_custom_mtmx_params(const XML_Char **attr)
         return;
     }
     mtmx_params_info.snd_device = platform_get_snd_device_index((char *)attr[attr_idx++]);
+
+    if ((attr[attr_idx] != NULL) && (strcmp(attr[attr_idx++], "fe_name") == 0)) {
+        strlcpy(mtmx_params_info.fe_name, (char *)attr[attr_idx++],
+                sizeof(mtmx_params_info.fe_name));
+    } else {
+        ALOGD("%s: 'fe_name' not found", __func__);
+        mtmx_params_info.fe_name[0] = '\0';
+    }
+
     platform_add_custom_mtmx_params((void *)my_data.platform, &mtmx_params_info);
 
 }
@@ -1244,6 +1336,22 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         } else if (strcmp(tag_name, "ext_device") == 0) {
             section_process_fn fn = section_table[section];
             fn(attr);
+        } else if (strcmp(tag_name, "custom_mtmx_in_params") == 0) {
+            if (section != ROOT) {
+                ALOGE("custom_mtmx_in_params tag supported only in ROOT section");
+                return;
+            }
+            section = CUSTOM_MTMX_IN_PARAMS;
+            section_process_fn fn = section_table[section];
+            fn(attr);
+        } else if (strcmp(tag_name, "custom_mtmx_param_in_chs") == 0) {
+            if (section != CUSTOM_MTMX_IN_PARAMS) {
+                ALOGE("custom_mtmx_param_in_chs tag supported only with CUSTOM_MTMX_IN_PARAMS section");
+                return;
+            }
+            section = CUSTOM_MTMX_PARAM_IN_CH_INFO;
+            section_process_fn fn = section_table[section];
+            fn(attr);
         }
     } else {
         if(strcmp(tag_name, "config_params") == 0) {
@@ -1306,6 +1414,10 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
         section = ROOT;
     } else if (strcmp(tag_name, "custom_mtmx_param_coeffs") == 0) {
         section = CUSTOM_MTMX_PARAMS;
+    } else if (strcmp(tag_name, "custom_mtmx_in_params") == 0) {
+        section = ROOT;
+    } else if (strcmp(tag_name, "custom_mtmx_param_in_chs") == 0) {
+        section = CUSTOM_MTMX_IN_PARAMS;
     }
 }
 
