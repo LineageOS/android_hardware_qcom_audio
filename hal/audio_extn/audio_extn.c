@@ -1185,6 +1185,8 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_passthru_set_parameters(adev, parms);
    audio_extn_ext_disp_set_parameters(adev, parms);
    audio_extn_qaf_set_parameters(adev, parms);
+   if (audio_extn_qap_is_enabled())
+       audio_extn_qap_set_parameters(adev, parms);
    if (adev->offload_effects_set_parameters != NULL)
        adev->offload_effects_set_parameters(parms);
    audio_extn_set_aptx_dec_bt_addr(adev, parms);
