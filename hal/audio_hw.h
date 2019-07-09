@@ -230,6 +230,7 @@ struct stream_out {
     uint32_t supported_sample_rates[MAX_SUPPORTED_SAMPLE_RATES + 1];
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
+    int64_t mmap_time_offset_nanos; /* fudge factor to correct inaccuracies in DSP */
     audio_io_handle_t handle;
 
     int non_blocking;
@@ -274,6 +275,7 @@ struct stream_in {
     bool enable_ns;
     int64_t frames_read; /* total frames read, not cleared when entering standby */
     int64_t frames_muted; /* total frames muted, not cleared when entering standby */
+    int64_t mmap_time_offset_nanos; /* fudge factor to correct inaccuracies in DSP */
 
     audio_io_handle_t capture_handle;
     audio_input_flags_t flags;
