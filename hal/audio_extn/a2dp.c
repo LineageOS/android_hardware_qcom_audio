@@ -1303,6 +1303,14 @@ fail:
     return is_configured;
 }
 
+bool a2dp_set_source_backend_cfg()
+{
+    if (a2dp.a2dp_source_started && !a2dp.a2dp_source_suspended)
+        return a2dp_set_backend_cfg(SOURCE);
+
+    return false;
+}
+
 bool configure_aac_dec_format(audio_aac_dec_config_t *aac_bt_cfg)
 {
     struct mixer_ctl *ctl_dec_data = NULL, *ctrl_bit_format = NULL;
