@@ -445,7 +445,7 @@ int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev __unused,
  */
 #define MIN_VOLUME_VALUE_MB -6000
 #define MAX_VOLUME_VALUE_MB 600
-
+#define STEP_VALUE_MB 100
 int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                         const struct audio_port_config *config)
 {
@@ -498,7 +498,10 @@ int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                     /* millibel = 1/100 dB = 1/1000 bel
                      * q13 = (10^(mdb/100/20))*(2^13)
                      */
-                    volume = powf(10.0, ((float)config->gain.values[0] / 2000));
+                    if(config->gain.values[0] <= (MIN_VOLUME_VALUE_MB + STEP_VALUE_MB))
+                        volume = 0.0 ;
+                    else
+                        volume = powf(10.0, ((float)config->gain.values[0] / 2000));
                     ALOGV("%s: set volume to stream: %p", __func__,
                         &out_ctxt->output->stream);
                     /* set gain if output stream is active */
