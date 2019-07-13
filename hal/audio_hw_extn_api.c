@@ -34,6 +34,7 @@
 #include <inttypes.h>
 #include <errno.h>
 #include <log/log.h>
+#include <cutils/atomic.h>
 
 #include <hardware/audio.h>
 #include "sound/compress_params.h"
@@ -188,6 +189,31 @@ int qahwi_set_param_data(struct audio_hw_device *adev,
              break;
     }
     return ret;
+}
+
+int qahwi_in_stop(struct audio_stream_in* stream) {
+    struct stream_in *in = (struct stream_in *)stream;
+    struct audio_device *adev = in->dev;
+
+    ALOGD("%s processing, in %p", __func__, in);
+
+    pthread_mutex_lock(&adev->lock);
+
+    if (!in->standby) {
+        if (in->pcm != NULL ) {
+            pcm_stop(in->pcm);
+        } else if (audio_extn_cin_attached_usecase(in->usecase)) {
+            audio_extn_cin_stop_input_stream(in);
+        }
+
+        /* Set the atomic variable when the session is stopped */
+        if (android_atomic_acquire_cas(false, true, &(in->capture_stopped)) == 0)
+            ALOGI("%s: capture_stopped bit set", __func__);
+    }
+
+    pthread_mutex_unlock(&adev->lock);
+
+    return 0;
 }
 
 ssize_t qahwi_in_read_v2(struct audio_stream_in *stream, void* buffer,

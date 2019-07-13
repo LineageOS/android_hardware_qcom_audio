@@ -81,6 +81,8 @@ AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := true
 ##AUDIO_FEATURE_FLAGS
 
+BOARD_SUPPORTS_OPENSOURCE_STHAL := true
+
 AUDIO_HARDWARE := audio.a2dp.default
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
@@ -177,7 +179,8 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_configs_stock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs_stock.xml \
-    frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml
+    frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
+    frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
@@ -282,7 +285,7 @@ vendor.audio.offload.gapless.enabled=true
 
 #enable pbe effects
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.safx.pbe.enabled=true
+vendor.audio.safx.pbe.enabled=false
 
 #parser input buffer size(256kb) in byte stream mode
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -382,7 +385,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.feature.a2dp_offload.enable=true \
 vendor.audio.feature.afe_proxy.enable=true \
 vendor.audio.feature.anc_headset.enable=true \
-vendor.audio.feature.audio_sphere.enable=true \
 vendor.audio.feature.battery_listener.enable=true \
 vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.compress_in.enable=true \
@@ -393,7 +395,7 @@ vendor.audio.feature.custom_stereo.enable=true \
 vendor.audio.feature.display_port.enable=true \
 vendor.audio.feature.dsm_feedback.enable=false \
 vendor.audio.feature.dynamic_ecns.enable=true \
-vendor.audio.feature.ext_hw_plugin.enable=true \
+vendor.audio.feature.ext_hw_plugin.enable=false \
 vendor.audio.feature.external_dsp.enable=false \
 vendor.audio.feature.external_speaker.enable=false \
 vendor.audio.feature.external_speaker_tfa.enable=false \

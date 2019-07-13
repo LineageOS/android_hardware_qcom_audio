@@ -100,7 +100,7 @@ bool cin_applicable_stream(struct stream_in *in)
  * only after validating that input against cin_attached_usecase
  * except below calls
  * 1. cin_applicable_stream(in)
- * 2. cin_configure_input_stream(in)
+ * 2. cin_configure_input_stream(in, in_config)
  */
 
 bool cin_attached_usecase(audio_usecase_t uc_id)
@@ -179,7 +179,7 @@ size_t cin_get_buffer_size(struct stream_in *in)
     return sz;
 }
 
-int cin_start_input_stream(struct stream_in *in)
+int cin_open_input_stream(struct stream_in *in)
 {
     int ret = -EINVAL;
     struct audio_device *adev = in->dev;
@@ -208,12 +208,23 @@ void cin_stop_input_stream(struct stream_in *in)
 
     ALOGV("%s: in %p, cin_data %p", __func__, in, cin_data);
     if (cin_data->compr) {
+        compress_stop(cin_data->compr);
+    }
+}
+
+
+void cin_close_input_stream(struct stream_in *in)
+{
+    cin_private_data_t *cin_data = (cin_private_data_t *) in->cin_extn;
+
+    ALOGV("%s: in %p, cin_data %p", __func__, in, cin_data);
+    if (cin_data->compr) {
         compress_close(cin_data->compr);
         cin_data->compr = NULL;
     }
 }
 
-void cin_close_input_stream(struct stream_in *in)
+void cin_free_input_stream_resources(struct stream_in *in)
 {
     cin_private_data_t *cin_data = (cin_private_data_t *) in->cin_extn;
 
@@ -265,9 +276,8 @@ int cin_read(struct stream_in *in, void *buffer,
     return ret;
 }
 
-int cin_configure_input_stream(struct stream_in *in)
+int cin_configure_input_stream(struct stream_in *in, struct audio_config *in_config)
 {
-    struct audio_device *adev = in->dev;
     struct audio_config config = {.format = 0};
     int ret = 0, buffer_size = 0, meta_size = sizeof(struct snd_codec_metadata);
     cin_private_data_t *cin_data = NULL;
@@ -304,7 +314,8 @@ int cin_configure_input_stream(struct stream_in *in)
     config.channel_mask = in->channel_mask;
     config.format = in->format;
     in->config.channels = audio_channel_count_from_in_mask(in->channel_mask);
-    buffer_size = adev->device.get_input_buffer_size(&adev->device, &config);
+    buffer_size = audio_extn_utils_get_input_buffer_size(config.sample_rate, config.format,
+                    in->config.channels, in_config->offload_info.duration_us / 1000, false);
 
     cin_data->compr_config.fragment_size = buffer_size;
     cin_data->compr_config.codec->id = get_snd_codec_id(in->format);
@@ -321,6 +332,11 @@ int cin_configure_input_stream(struct stream_in *in)
     else
         cin_data->compr_config.codec->compr_passthr = PASSTHROUGH_GEN;
 
+    if (in->flags & AUDIO_INPUT_FLAG_FAST) {
+        ALOGD("%s: Setting latency mode to true", __func__);
+        cin_data->compr_config.codec->flags |= audio_extn_utils_get_perf_mode_flag();
+    }
+
     if ((in->flags & AUDIO_INPUT_FLAG_TIMESTAMP) ||
         (in->flags & AUDIO_INPUT_FLAG_PASSTHROUGH)) {
         compress_config_set_timstamp_flag(&cin_data->compr_config);
@@ -332,6 +348,6 @@ int cin_configure_input_stream(struct stream_in *in)
     return ret;
 
 err_config:
-    cin_close_input_stream(in);
+    cin_free_input_stream_resources(in);
     return ret;
 }

@@ -41,6 +41,7 @@ bool kpi_mode;
 bool enable_dump;
 float vol_level;
 uint8_t render_format;
+bool ec_ref;
 
 
 enum {

@@ -399,6 +399,7 @@ struct stream_out {
     card_status_t card_status;
 
     void* qaf_stream_handle;
+    void* qap_stream_handle;
     pthread_cond_t qaf_offload_cond;
     pthread_t qaf_offload_thread;
     struct listnode qaf_offload_cmd_list;
@@ -471,6 +472,8 @@ struct stream_in {
     int capture_started;
     float zoom;
     audio_microphone_direction_t direction;
+
+    volatile int32_t capture_stopped;
 
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
@@ -728,6 +731,14 @@ size_t get_output_period_size(uint32_t sample_rate,
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
             __FILE__ ":" LITERAL_TO_STRING(__LINE__)\
             " ASSERT_FATAL(" #condition ") failed.")
+
+static inline bool is_loopback_input_device(audio_devices_t device) {
+    if (!audio_is_output_device(device) &&
+         ((device & AUDIO_DEVICE_IN_LOOPBACK) == AUDIO_DEVICE_IN_LOOPBACK))
+        return true;
+    else
+        return false;
+}
 
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the

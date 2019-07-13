@@ -296,7 +296,7 @@ vendor.audio.offload.gapless.enabled=true
 
 #enable pbe effects
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.safx.pbe.enabled=true
+vendor.audio.safx.pbe.enabled=false
 
 #parser input buffer size(256kb) in byte stream mode
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -365,7 +365,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.feature.a2dp_offload.enable=true \
 vendor.audio.feature.afe_proxy.enable=true \
 vendor.audio.feature.anc_headset.enable=true \
-vendor.audio.feature.audio_sphere.enable=true \
 vendor.audio.feature.battery_listener.enable=false \
 vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.compress_in.enable=false \
@@ -417,6 +416,15 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@4.0-impl \
     android.hardware.audio.effect@4.0 \
     android.hardware.audio.effect@4.0-impl
+
+# enable audio hidl hal 5.0
+PRODUCT_PACKAGES += \
+    android.hardware.audio@5.0 \
+    android.hardware.audio.common@5.0 \
+    android.hardware.audio.common@5.0-util \
+    android.hardware.audio@5.0-impl \
+    android.hardware.audio.effect@5.0 \
+    android.hardware.audio.effect@5.0-impl
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \

@@ -54,6 +54,7 @@ struct hostless_config {
 
 typedef struct auto_hal_module {
     struct audio_device *adev;
+    card_status_t card_status;
     struct hostless_config hostless;
 } auto_hal_module_t;
 
@@ -558,6 +559,31 @@ int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
 
     ALOGV("%s: exit", __func__);
     return ret;
+}
+
+void audio_extn_auto_hal_set_parameters(struct audio_device *adev __unused,
+                                        struct str_parms *parms)
+{
+    int ret = 0;
+    char value[32]={0};
+
+    ALOGV("%s: enter", __func__);
+
+    ret = str_parms_get_str(parms, "SND_CARD_STATUS", value, sizeof(value));
+    if (ret >= 0) {
+        char *snd_card_status = value+2;
+        ALOGV("%s: snd card status %s", __func__, snd_card_status);
+        if (strstr(snd_card_status, "OFFLINE")) {
+            auto_hal->card_status = CARD_STATUS_OFFLINE;
+            audio_extn_auto_hal_disable_hostless();
+        }
+        else if (strstr(snd_card_status, "ONLINE")) {
+            auto_hal->card_status = CARD_STATUS_ONLINE;
+            audio_extn_auto_hal_enable_hostless();
+        }
+    }
+
+    ALOGV("%s: exit", __func__);
 }
 
 int32_t audio_extn_auto_hal_init(struct audio_device *adev)

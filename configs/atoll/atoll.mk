@@ -69,6 +69,8 @@ AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := true
 ##AUDIO_FEATURE_FLAGS
 
+BOARD_SUPPORTS_OPENSOURCE_STHAL := true
+
 AUDIO_HARDWARE := audio.a2dp.default
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
@@ -167,6 +169,8 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/atoll/mixer_paths_wcd9375.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9375.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/atoll/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/atoll/mixer_paths_wcd9375qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9375qrd.xml \
+    frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
+    frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)

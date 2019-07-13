@@ -84,6 +84,7 @@ typedef enum {
     AUDIO_EVENT_CAPTURE_STREAM_INACTIVE,
     AUDIO_EVENT_CAPTURE_STREAM_ACTIVE,
     AUDIO_EVENT_BATTERY_STATUS_CHANGED,
+    AUDIO_EVENT_SCREEN_STATUS_CHANGED,
     AUDIO_EVENT_GET_PARAM,
     AUDIO_EVENT_UPDATE_ECHO_REF
 } audio_event_type_t;
@@ -603,6 +604,17 @@ void audio_extn_sound_trigger_update_battery_status(bool charging)
 
     ev_info.u.value = charging;
     st_dev->st_callback(AUDIO_EVENT_BATTERY_STATUS_CHANGED, &ev_info);
+}
+
+void audio_extn_sound_trigger_update_screen_status(bool screen_off)
+{
+    struct audio_event_info ev_info = {{0}, {0}};
+
+    if (!st_dev)
+        return;
+
+    ev_info.u.value = screen_off;
+    st_dev->st_callback(AUDIO_EVENT_SCREEN_STATUS_CHANGED, &ev_info);
 }
 
 
