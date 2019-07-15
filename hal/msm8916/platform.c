@@ -5766,9 +5766,18 @@ unsigned char* platform_get_license(void *platform __unused, int *size __unused)
     return NULL;
 }
 
+void platform_set_snd_device_delay(snd_device_t snd_device __unused, int delay_ms __unused)
+{
+}
+
+int64_t platform_capture_latency(struct audio_device *adev __unused,
+                                 audio_usecase_t usecase)
+{
+}
 
 /* Delay in Us, only to be used for PCM formats */
-int64_t platform_render_latency(audio_usecase_t usecase)
+int64_t platform_render_latency(struct audio_device *adev __unused,
+                                audio_usecase_t usecase)
 {
     switch (usecase) {
         case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:

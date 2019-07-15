@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -77,6 +77,7 @@ typedef enum {
     CUSTOM_MTMX_IN_PARAMS,
     CUSTOM_MTMX_PARAM_IN_CH_INFO,
     MMSECNS,
+    SND_DEV_DELAY,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -104,6 +105,7 @@ static void process_external_dev(const XML_Char **attr);
 static void process_custom_mtmx_in_params(const XML_Char **attr);
 static void process_custom_mtmx_param_in_ch_info(const XML_Char **attr);
 static void process_fluence_mmsecns(const XML_Char **attr);
+static void process_snd_device_delay(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -128,6 +130,7 @@ static section_process_fn section_table[] = {
     [CUSTOM_MTMX_IN_PARAMS] = process_custom_mtmx_in_params,
     [CUSTOM_MTMX_PARAM_IN_CH_INFO] = process_custom_mtmx_param_in_ch_info,
     [MMSECNS] = process_fluence_mmsecns,
+    [SND_DEV_DELAY] = process_snd_device_delay,
 };
 
 static section_t section;
@@ -696,6 +699,34 @@ static void process_interface_name(const XML_Char **attr)
         ALOGE("%s: Audio Interface not set!", __func__);
         goto done;
     }
+
+done:
+    return;
+}
+
+
+static void process_snd_device_delay(const XML_Char **attr)
+{
+    snd_device_t snd_device = SND_DEVICE_NONE;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found", __func__);
+        goto done;
+    }
+
+    snd_device = platform_get_snd_device_index((char *)attr[1]);
+    if (snd_device < 0) {
+        ALOGE("%s: Device %s in %s not found, no ACDB ID set!",
+              __func__, (char *)attr[3], PLATFORM_INFO_XML_PATH);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "delay") != 0) {
+        ALOGE("%s: 'delay' not found", __func__);
+        goto done;
+    }
+
+    platform_set_snd_device_delay(snd_device, atoi((char *)attr[3]));
 
 done:
     return;
@@ -1437,6 +1468,9 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                 return;
             }
             section = CUSTOM_MTMX_PARAM_IN_CH_INFO;
+        } else if (strcmp(tag_name, "snd_device_delay") == 0) {
+            section = SND_DEV_DELAY;
+        } else if (strcmp(tag_name, "device_delay") == 0) {
             section_process_fn fn = section_table[section];
             fn(attr);
         }
