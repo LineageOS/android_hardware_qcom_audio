@@ -333,6 +333,7 @@ struct platform_data {
     char ec_ref_mixer_path[MIXER_PATH_MAX_LENGTH];
     codec_backend_cfg_t current_backend_cfg[MAX_CODEC_BACKENDS];
     char codec_version[CODEC_VERSION_MAX_LENGTH];
+    char codec_variant[CODEC_VARIANT_MAX_LENGTH];
     int hw_dep_fd;
     char cvd_version[MAX_CVD_VERSION_STRING_SIZE];
     char snd_card_name[MAX_SND_CARD_STRING_SIZE];
@@ -3643,6 +3644,8 @@ acdb_init_fail:
         }
     }
 
+    ret = audio_extn_utils_get_codec_variant(my_data->adev->snd_card,
+                                             my_data->codec_variant);
     ret = audio_extn_utils_get_codec_version(snd_card_name,
                                              my_data->adev->snd_card,
                                              my_data->codec_version);
@@ -8532,6 +8535,21 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                         (curr_out->sample_rate % OUTPUT_SAMPLING_RATE_44100 == 0)) {
                         ALOGD("%s:napb:native stream detected %d sampling rate", __func__, curr_out->sample_rate);
                         sample_rate = curr_out->sample_rate;
+                    }
+                }
+
+                /* WCD9380 support SR upto 192Khz only, hence reset
+                 * SR > 192Khz to 192Khz.
+                 */
+                if (strstr(my_data->codec_variant, "WCD9380")) {
+                    switch (sample_rate) {
+                        case 352800:
+                        case 384000:
+                            sample_rate = 192000;
+                            ALOGD("%s:Reset Sampling rate to %d",  __func__, sample_rate);
+                            break;
+                        default:
+                            break;
                     }
                 }
             }
