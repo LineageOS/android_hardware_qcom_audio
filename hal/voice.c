@@ -330,7 +330,7 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     }
 #endif
 
-    if(adev->mic_break_enabled)
+    if (adev->mic_break_enabled)
         platform_set_mic_break_det(adev->platform, true);
 
     ret = pcm_start(session->pcm_tx);
@@ -786,6 +786,10 @@ done:
 void voice_init(struct audio_device *adev)
 {
     int i = 0;
+    int max_voice_sessions = MAX_VOICE_SESSIONS;
+
+    if (!voice_extn_is_multi_session_supported())
+        max_voice_sessions = 1;
 
     memset(&adev->voice, 0, sizeof(adev->voice));
     adev->voice.tty_mode = TTY_MODE_OFF;
@@ -793,7 +797,7 @@ void voice_init(struct audio_device *adev)
     adev->voice.volume = 1.0f;
     adev->voice.mic_mute = false;
     adev->voice.in_call = false;
-    for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
+    for (i = 0; i < max_voice_sessions; i++) {
         adev->voice.session[i].pcm_rx = NULL;
         adev->voice.session[i].pcm_tx = NULL;
         adev->voice.session[i].state.current = CALL_INACTIVE;
