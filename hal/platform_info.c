@@ -653,6 +653,8 @@ static void process_config_params(const XML_Char **attr)
     }
 
     str_parms_add_str(my_data.kvpairs, (char*)attr[1], (char*)attr[3]);
+    if (my_data.caller == PLATFORM)
+        platform_set_parameters(my_data.platform, my_data.kvpairs);
 done:
     return;
 }
@@ -1387,9 +1389,6 @@ static void end_tag(void *userdata __unused, const XML_Char *tag_name)
         section = ROOT;
     } else if (strcmp(tag_name, "config_params") == 0) {
         section = ROOT;
-        if (my_data.caller == PLATFORM) {
-            platform_set_parameters(my_data.platform, my_data.kvpairs);
-        }
     } else if (strcmp(tag_name, "operator_specific") == 0) {
         section = ROOT;
     } else if (strcmp(tag_name, "interface_names") == 0) {
