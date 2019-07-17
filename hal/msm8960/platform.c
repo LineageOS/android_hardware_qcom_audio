@@ -357,7 +357,8 @@ struct audio_custom_mtmx_params *
     platform_get_custom_mtmx_params
     (
         void *platform __unused,
-        struct audio_custom_mtmx_params_info *info __unused
+        struct audio_custom_mtmx_params_info *info __unused,
+        uint32_t *idx __unused
     )
 {
     ALOGW("%s: not implemented!", __func__);
