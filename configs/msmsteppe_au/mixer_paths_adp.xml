@@ -755,6 +755,11 @@
         <path name="compress-offload-playback4" />
     </path>
 
+    <path name="voice-call">
+        <!-- Added AFE loopback ctrl path for CS-Voice call-->
+        <ctl name="TERT_TDM_RX_0 Port Mixer AUX_PCM_UL_TX" value="1" />
+        <ctl name="AUX_PCM_RX Port Mixer TERT_TDM_TX_0" value="1" />
+    </path>
 
     <path name="compress-offload-playback4 afe-proxy">
         <ctl name="AFE_PCM_RX Audio Mixer MultiMedia11" value="1" />
