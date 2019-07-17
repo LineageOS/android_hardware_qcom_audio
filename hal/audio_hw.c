@@ -505,6 +505,10 @@ static int out_set_mmap_volume(struct audio_stream_out *stream, float left, floa
 static int out_set_voip_volume(struct audio_stream_out *stream, float left, float right);
 static int out_set_pcm_volume(struct audio_stream_out *stream, float left, float right);
 
+static void adev_snd_mon_cb(void *cookie, struct str_parms *parms);
+static void in_snd_mon_cb(void * stream, struct str_parms * parms);
+static void out_snd_mon_cb(void * stream, struct str_parms * parms);
+
 #ifdef AUDIO_FEATURE_ENABLED_GCOV
 extern void  __gcov_flush();
 static void enable_gcov()
@@ -8069,6 +8073,23 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 
     if (!parms)
         goto error;
+
+    /* notify adev and input/output streams on the snd card status */
+    adev_snd_mon_cb((void *)adev, parms);
+
+    list_for_each(node, &adev->active_outputs_list) {
+        streams_output_ctxt_t *out_ctxt = node_to_item(node,
+                                            streams_output_ctxt_t,
+                                            list);
+        out_snd_mon_cb((void *)out_ctxt->output, parms);
+    }
+
+    list_for_each(node, &adev->active_inputs_list) {
+        streams_input_ctxt_t *in_ctxt = node_to_item(node,
+                                            streams_input_ctxt_t,
+                                            list);
+        in_snd_mon_cb((void *)in_ctxt->input, parms);
+    }
 
     pthread_mutex_lock(&adev->lock);
     ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
