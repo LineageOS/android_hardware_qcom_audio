@@ -323,7 +323,7 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
                                  pcm_dev_loopback_tx_id,
                                  PCM_IN, &voice_config);
     if (voice_loopback_tx < 0 || !pcm_is_ready(voice_loopback_tx)) {
-         ALOGE("%s: Either could not open pcm_dev_loopback_tx_id or %s",
+         ALOGE("%s: Either could not open pcm_dev_loopback_tx_id %d or %s",
                __func__, pcm_dev_loopback_tx_id, pcm_get_error(voice_loopback_tx));
          ret = -EIO;
          goto error_start_voice;
