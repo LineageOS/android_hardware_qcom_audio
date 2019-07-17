@@ -1532,14 +1532,11 @@ static snd_device_t derive_playback_snd_device(void * platform,
             goto end;
         }
 
-        // NB: case 7 is hypothetical and isn't a practical usecase yet.
-        // But if it does happen, we need to give priority to d2 if
-        // the combo devices active on the existing usecase share a backend.
-        // This is because we cannot have a usecase active on a combo device
-        // and a new usecase requests one device in this combo pair.
         if (platform_check_backends_match(d3[0], d3[1])) {
             return d2; // case 5
         } else {
+            if (popcount(a1) > 1)
+                return d1; //case 7
             // check if d1 is related to any of d3's
             if (d1 == d3[0] || d1 == d3[1])
                 return d1; // case 1
