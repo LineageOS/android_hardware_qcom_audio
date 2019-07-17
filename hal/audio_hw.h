@@ -466,6 +466,7 @@ typedef void (*adm_on_routing_change_t)(void *, audio_io_handle_t);
 struct audio_device {
     struct audio_hw_device device;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
+    pthread_mutex_t cal_lock;
     struct mixer *mixer;
     audio_mode_t mode;
     audio_devices_t out_device;

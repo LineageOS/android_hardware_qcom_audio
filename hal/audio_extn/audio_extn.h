@@ -895,7 +895,7 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
 #ifndef AUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED
 
 #define audio_extn_gef_init(adev) (0)
-#define audio_extn_gef_deinit() (0)
+#define audio_extn_gef_deinit(adev) (0)
 #define audio_extn_gef_notify_device_config(devices, cmask, sample_rate, acdb_id) (0)
 
 #ifndef INSTANCE_ID_ENABLED
@@ -925,7 +925,7 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
 #else
 
 void audio_extn_gef_init(struct audio_device *adev);
-void audio_extn_gef_deinit();
+void audio_extn_gef_deinit(struct audio_device *adev);
 
 void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
     audio_channel_mask_t channel_mask, int sample_rate, int acdb_id);
