@@ -93,6 +93,10 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
 #define AUDIO_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
 #endif
 
+#ifndef ENABLE_EXTENDED_COMPRESS_FORMAT
+#define compress_set_next_track_param(compress, codec_options) (0)
+#endif
+
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
 
 void audio_extn_set_parameters(struct audio_device *adev,
