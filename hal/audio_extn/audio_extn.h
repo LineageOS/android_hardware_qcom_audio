@@ -138,12 +138,12 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
                                    :config->offload_info.bit_width)
 #else
 #define AUDIO_OUTPUT_BIT_WIDTH (CODEC_BACKEND_DEFAULT_BIT_WIDTH)
-#define compress_set_next_track_param(compress, codec_options) (0)
 #endif
 
-#ifndef AUDIO_HW_EXTN_API_ENABLED
+#ifndef ENABLE_EXTENDED_COMPRESS_FORMAT
 #define compress_set_metadata(compress, metadata) (0)
 #define compress_get_metadata(compress, metadata) (0)
+#define compress_set_next_track_param(compress, codec_options) (0)
 #endif
 
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
