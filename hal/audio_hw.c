@@ -2705,16 +2705,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
     enable_audio_route(adev, usecase);
 
-    /* Notify device change info to effect clients registered */
-    if (usecase->type == PCM_PLAYBACK) {
-        audio_extn_gef_notify_device_config(
-                usecase->stream.out->devices,
-                usecase->stream.out->channel_mask,
-                usecase->stream.out->app_type_cfg.sample_rate,
-                platform_get_snd_device_acdb_id(usecase->out_snd_device),
-                usecase->stream.out->app_type_cfg.app_type);
-    }
-
     audio_extn_qdsp_set_device(usecase);
 
     /* If input stream is already running then effect needs to be

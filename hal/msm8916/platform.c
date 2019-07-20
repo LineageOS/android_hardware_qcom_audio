@@ -3719,6 +3719,17 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
                   __func__, new_snd_device[i]);
             return -EINVAL;
         }
+
+        /* Notify device change info to effect clients registered */
+        if (usecase->type == PCM_PLAYBACK) {
+            audio_extn_gef_notify_device_config(
+                    usecase->stream.out->devices,
+                    usecase->stream.out->channel_mask,
+                    sample_rate,
+                    acdb_dev_id,
+                    usecase->stream.out->app_type_cfg.app_type);
+        }
+
         ALOGV("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
               __func__, new_snd_device[i], acdb_dev_id);
         if (new_snd_device[i] >= SND_DEVICE_OUT_BEGIN &&
