@@ -253,7 +253,11 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
     int ret = 0;
     uint32_t session_id;
     int usecase_id;
+#ifdef FUSION3_PLATFORM
+    int rec_mode = INCALL_REC_MONO;
+#else
     int rec_mode = INCALL_REC_NONE;
+#endif
 
     if (voice_is_call_state_active(adev)) {
         switch (in->source) {
@@ -262,8 +266,13 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
                 audio_extn_compr_cap_format_supported(in->config.format)) {
                 in->usecase = USECASE_INCALL_REC_UPLINK_COMPRESS;
             } else
+#ifdef FUSION3_PLATFORM
+                in->usecase = USECASE_AUDIO_RECORD;
+            rec_mode = INCALL_REC_MONO;
+#else
                 in->usecase = USECASE_INCALL_REC_UPLINK;
             rec_mode = INCALL_REC_UPLINK;
+#endif
             break;
         case AUDIO_SOURCE_VOICE_DOWNLINK:
             if (audio_extn_compr_cap_enabled() &&
@@ -271,7 +280,12 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
                 in->usecase = USECASE_INCALL_REC_DOWNLINK_COMPRESS;
             } else
                 in->usecase = USECASE_INCALL_REC_DOWNLINK;
+#ifdef FUSION3_PLATFORM
+            rec_mode = INCALL_REC_MONO;
+            setVocRecMode(rec_mode);
+#else
             rec_mode = INCALL_REC_DOWNLINK;
+#endif
             break;
         case AUDIO_SOURCE_VOICE_CALL:
             if (audio_extn_compr_cap_enabled() &&
@@ -279,7 +293,12 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
                 in->usecase = USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS;
             } else
                 in->usecase = USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
+#ifdef FUSION3_PLATFORM
+            rec_mode = INCALL_REC_STEREO;
+            setVocRecMode(rec_mode);
+#else
             rec_mode = INCALL_REC_UPLINK_AND_DOWNLINK;
+#endif
             break;
         default:
             ALOGV("%s: Source type %d doesnt match incall recording criteria",
