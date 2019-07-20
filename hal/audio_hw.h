@@ -284,6 +284,10 @@ struct audio_usecase *get_usecase_from_list(struct audio_device *adev,
 int pcm_ioctl(struct pcm *pcm, int request, ...);
 int get_snd_card_state(struct audio_device *adev);
 
+#ifdef FUSION3_PLATFORM
+void setVocRecMode(int rec_mode);
+#endif
+
 #define LITERAL_TO_STRING(x) #x
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
             __FILE__ ":" LITERAL_TO_STRING(__LINE__)\

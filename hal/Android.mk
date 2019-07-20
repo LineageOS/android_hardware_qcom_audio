@@ -147,6 +147,10 @@ ifeq ($(strip $(BOARD_HAVE_SAMSUNG_AUDIO)),true)
     LOCAL_CFLAGS += -DDOCK_SUPPORT
 endif
 
+ifeq ($(strip $(BOARD_FUSION3_PLATFORM)),true)
+    LOCAL_CFLAGS += -DFUSION3_PLATFORM
+endif
+
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
