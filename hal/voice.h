@@ -65,12 +65,19 @@ struct voice {
     bool in_call;
 };
 
+#ifdef FUSION3_PLATFORM
+enum {
+    INCALL_REC_MONO,
+    INCALL_REC_STEREO,
+};
+#else
 enum {
     INCALL_REC_NONE = -1,
     INCALL_REC_UPLINK,
     INCALL_REC_DOWNLINK,
     INCALL_REC_UPLINK_AND_DOWNLINK,
 };
+#endif
 
 int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id);
 int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id);

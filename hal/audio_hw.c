@@ -320,6 +320,26 @@ static int amplifier_close(void)
     return 0;
 }
 
+#ifdef FUSION3_PLATFORM
+void setVocRecMode(int rec_mode) {
+    const char *mixer_ctl_name = "Incall Rec Mode";
+    struct mixer_ctl *ctl;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                               __func__, mixer_ctl_name);
+        return;
+    }
+
+    if (mixer_ctl_set_value(ctl, 0, rec_mode) < 0) {
+        ALOGE("%s: Could not set Incall Rec Mode %d",
+                       __func__, rec_mode);
+         return;
+    }
+}
+#endif
+
 static int check_and_set_gapless_mode(struct audio_device *adev) {
 
 
@@ -974,6 +994,9 @@ static int stop_input_stream(struct stream_in *in)
 
     /* 1. Disable stream specific mixer controls */
     disable_audio_route(adev, uc_info);
+#ifdef FUSION3_PLATFORM
+    setVocRecMode(INCALL_REC_MONO);
+#endif
 
     /* 2. Disable the tx device */
     disable_snd_device(adev, uc_info->in_snd_device);
