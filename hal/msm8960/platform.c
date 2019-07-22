@@ -357,7 +357,8 @@ struct audio_custom_mtmx_params *
     platform_get_custom_mtmx_params
     (
         void *platform __unused,
-        struct audio_custom_mtmx_params_info *info __unused
+        struct audio_custom_mtmx_params_info *info __unused,
+        uint32_t *idx __unused
     )
 {
     ALOGW("%s: not implemented!", __func__);
@@ -558,6 +559,17 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
               __func__, snd_device);
         return -EINVAL;
     }
+
+    /* Notify device change info to effect clients registered */
+    if (usecase->type == PCM_PLAYBACK) {
+        audio_extn_gef_notify_device_config(
+                usecase->stream.out->devices,
+                usecase->stream.out->channel_mask,
+                usecase->stream.out->app_type_cfg.sample_rate,
+                acdb_dev_id,
+                usecase->stream.out->app_type_cfg.app_type);
+    }
+
     if (my_data->acdb_send_audio_cal) {
         ("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
               __func__, snd_device, acdb_dev_id);

@@ -71,14 +71,14 @@
     <sound_model_config>
         <param vendor_uuid="68ab2d40-e860-11e3-95ef-0002a5d5c51b" />
         <param execution_type="ADSP" />
-        <param library="libsmwrapper.so" />
+        <param merge_first_stage_sound_models="false" />
         <param max_ape_phrases="20" />
         <param max_ape_users="10" />
         <!-- Profile specific data which the algorithm can support -->
         <param sample_rate="16000" />
         <param bit_width="16" />
         <param out_channels="1"/> <!-- Module output channels -->
-
+        <param dam_token_id="1"/>
         <arm_ss_usecase>
             <!-- Options are "KEYWORD_DETECTION", "USER_VERIFICATION", "CUSTOM_DETECTION"  -->
             <param sm_detection_type= "KEYWORD_DETECTION" />
@@ -112,7 +112,7 @@
             <param execution_mode="ADSP" />
             <param app_type="2" /> <!-- app type used in ACDB -->
             <param in_channels="5"/> <!-- Module input channels -->
-            <param in_channels_lpi="3"/>
+            <param in_channels_lpi="1"/>
             <param load_sound_model_ids="0x00012C1C, 0x0, 0x00012C14" />
             <param unload_sound_model_ids="0x00012C1C, 0x0, 0x00012C15" />
             <param confidence_levels_ids="0x00012C1C, 0x0, 0x00012C07" />
@@ -120,6 +120,7 @@
             <param polling_enable_ids="0x00012C1C, 0x0, 0x00012C1B" />
             <param custom_config_ids="0x00012C1C, 0x0, 0x00012C20" />
             <param det_event_type_ids="0x00012C1C, 0x0, 0x00012C2C" />
+            <param lab_dam_cfg_ids="0x00012C08, 0x0, 0x000102C4" />
         </lsm_usecase>
         <lsm_usecase>
             <param capture_device="HEADSET" />
@@ -135,6 +136,7 @@
             <param polling_enable_ids="0x00012C1C, 0x0, 0x00012C1B" />
             <param custom_config_ids="0x00012C1C, 0x0, 0x00012C20" />
             <param det_event_type_ids="0x00012C1C, 0x0, 0x00012C2C" />
+            <param lab_dam_cfg_ids="0x00012C08, 0x0, 0x000102C4" />
         </lsm_usecase>
 
         <!-- format: "ADPCM_packet" or "PCM_packet" !-->
@@ -149,7 +151,6 @@
     <sound_model_config>
         <param vendor_uuid="876c1b46-9d4d-40cc-a4fd-4d5ec7a80e47" />
         <param execution_type="ADSP" />
-        <param library="libsmwrapper.so" />
         <param max_ape_phrases="1" />
         <param max_ape_users="1" />
         <!-- Profile specific data which the algorithm can support -->
@@ -204,7 +205,6 @@
     <sound_model_config>
         <param vendor_uuid="7038ddc8-30f2-11e6-b0ac-40a8f03d3f15" />
         <param execution_type="ADSP" />
-        <param library="none" />
         <param max_ape_phrases="1" />
         <param max_ape_users="1" />
         <!-- Profile specific data which the algorithm can support -->
@@ -257,7 +257,6 @@
     <sound_model_config>
         <param vendor_uuid="9f6ad62a-1f0b-11e7-87c5-40a8f03d3f15" />
         <param execution_type="ADSP" />
-        <param library="none" />
         <param max_ape_phrases="1" />
         <param max_ape_users="1" />
         <!-- Profile specific data which the algorithm can support -->

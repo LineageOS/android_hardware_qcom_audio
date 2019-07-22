@@ -92,6 +92,8 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/trinket/mixer_paths_tavil.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tavil.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/trinket/mixer_paths_tasha.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tasha.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/trinket/mixer_paths_tashalite.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tashalite.xml \
+    frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
+    frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
@@ -185,7 +187,7 @@ vendor.audio.offload.gapless.enabled=true
 
 #enable pbe effects
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.safx.pbe.enabled=true
+vendor.audio.safx.pbe.enabled=false
 
 #parser input buffer size(256kb) in byte stream mode
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -242,7 +244,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.feature.a2dp_offload.enable=true \
 vendor.audio.feature.afe_proxy.enable=true \
 vendor.audio.feature.anc_headset.enable=true \
-vendor.audio.feature.audio_sphere.enable=true \
 vendor.audio.feature.battery_listener.enable=false \
 vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.compress_in.enable=false \
