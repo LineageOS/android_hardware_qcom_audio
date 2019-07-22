@@ -5680,7 +5680,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 int16_t *src = (int16_t *)buffer;
                 int16_t *dst = (int16_t *)buffer;
 
-                LOG_ALWAYS_FATAL_IF(out->config.channels != 1 || channel_count != 2 ||
+                LOG_ALWAYS_FATAL_IF(channel_count > 2 ||
                                     out->format != AUDIO_FORMAT_PCM_16_BIT,
                                     "out_write called for %s use case with wrong properties",
                                     use_case_table[out->usecase]);
@@ -5694,12 +5694,13 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                  * Code below goes over each frame in the buffer and adds both
                  * L and R samples and then divides by 2 to convert to mono
                  */
-                for (size_t i = 0; i < frames ; i++, dst++, src += 2) {
-                    *dst = (int16_t)(((int32_t)src[0] + (int32_t)src[1]) >> 1);
+                if (channel_count == 2) {
+                    for (size_t i = 0; i < frames ; i++, dst++, src += 2) {
+                        *dst = (int16_t)(((int32_t)src[0] + (int32_t)src[1]) >> 1);
+                    }
+                    bytes_to_write /= 2;
                 }
-                bytes_to_write /= 2;
             }
-
             ALOGVV("%s: writing buffer (%zu bytes) to pcm device", __func__, bytes);
 
             long ns = 0;
