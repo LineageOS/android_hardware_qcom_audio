@@ -89,7 +89,9 @@
     defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || \
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
-    defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON)
+    defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
+    defined (PLATFORM_ATOLL)
+
 #include <sound/devdep_params.h>
 #endif
 
@@ -333,6 +335,7 @@ struct platform_data {
     char ec_ref_mixer_path[MIXER_PATH_MAX_LENGTH];
     codec_backend_cfg_t current_backend_cfg[MAX_CODEC_BACKENDS];
     char codec_version[CODEC_VERSION_MAX_LENGTH];
+    char codec_variant[CODEC_VARIANT_MAX_LENGTH];
     int hw_dep_fd;
     char cvd_version[MAX_CVD_VERSION_STRING_SIZE];
     char snd_card_name[MAX_SND_CARD_STRING_SIZE];
@@ -2017,13 +2020,29 @@ static bool platform_is_i2s_ext_modem(const char *snd_card_name,
         !strncmp(snd_card_name, "sdx-tavil-i2s-snd-card",
                  sizeof("sdx-tavil-i2s-snd-card")) ||
         !strncmp(snd_card_name, "sda845-tavil-i2s-snd-card",
-                 sizeof("sda845-tavil-i2s-snd-card"))) {
+                 sizeof("sda845-tavil-i2s-snd-card")) ||
+        !strncmp(snd_card_name, "sa6155-adp-star-snd-card",
+                 sizeof("sa6155-adp-star-snd-card"))) {
         plat_data->is_i2s_ext_modem = true;
     }
     ALOGV("%s, is_i2s_ext_modem:%d soundcard name is %s",__func__,
            plat_data->is_i2s_ext_modem, snd_card_name);
 
     return plat_data->is_i2s_ext_modem;
+}
+
+static bool is_auto_snd_card(const char *snd_card_name)
+{
+    bool is_auto_snd_card = false;
+
+    if (!strncmp(snd_card_name, "sa6155-adp-star-snd-card",
+                 sizeof("sa6155-adp-star-snd-card"))) {
+        is_auto_snd_card = true;
+        ALOGV("%s : Auto snd card detected: soundcard name is %s",__func__,
+               snd_card_name);
+    }
+
+    return is_auto_snd_card;
 }
 
 static void set_platform_defaults(struct platform_data * my_data)
@@ -2923,7 +2942,8 @@ void *platform_init(struct audio_device *adev)
         return NULL;
     }
 
-    if (platform_is_i2s_ext_modem(snd_card_name, my_data)) {
+    if (platform_is_i2s_ext_modem(snd_card_name, my_data) &&
+        !is_auto_snd_card(snd_card_name)) {
         ALOGD("%s: Call MIXER_XML_PATH_I2S", __func__);
 
         adev->audio_route = audio_route_init(adev->snd_card,
@@ -3161,7 +3181,7 @@ void *platform_init(struct audio_device *adev)
 
 
     /* Initialize ACDB ID's */
-    if (my_data->is_i2s_ext_modem)
+    if (my_data->is_i2s_ext_modem && !is_auto_snd_card(snd_card_name))
         platform_info_init(PLATFORM_INFO_XML_PATH_I2S, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "sdm660-snd-card-skush",
                sizeof("sdm660-snd-card-skush")))
@@ -3360,6 +3380,7 @@ acdb_init_fail:
     property_get("ro.baseband", baseband, "");
     if ((!strncmp("apq8084", platform, sizeof("apq8084")) ||
         !strncmp("msm8996", platform, sizeof("msm8996")) ||
+        !strncmp("sm6150", platform, sizeof("sm6150")) ||
         !strncmp("sdx", platform, sizeof("sdx")) ||
         !strncmp("sdm845", platform, sizeof("sdm845"))) &&
         ( !strncmp("mdm", baseband, (sizeof("mdm")-1)) ||
@@ -3643,6 +3664,8 @@ acdb_init_fail:
         }
     }
 
+    ret = audio_extn_utils_get_codec_variant(my_data->adev->snd_card,
+                                             my_data->codec_variant);
     ret = audio_extn_utils_get_codec_version(snd_card_name,
                                              my_data->adev->snd_card,
                                              my_data->codec_version);
@@ -3680,11 +3703,18 @@ acdb_init_fail:
 
 struct audio_custom_mtmx_params *
     platform_get_custom_mtmx_params(void *platform,
-                                    struct audio_custom_mtmx_params_info *info)
+                                    struct audio_custom_mtmx_params_info *info,
+                                    uint32_t *idx)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct listnode *node = NULL;
     struct audio_custom_mtmx_params *params = NULL;
+    int i = 0;
+
+    if (!info || !idx) {
+        ALOGE("%s: Invalid params", __func__);
+        return NULL;
+    }
 
     list_for_each(node, &my_data->custom_mtmx_params_list) {
         params = node_to_item(node, struct audio_custom_mtmx_params, list);
@@ -3692,17 +3722,22 @@ struct audio_custom_mtmx_params *
             params->info.id == info->id &&
             params->info.ip_channels == info->ip_channels &&
             params->info.op_channels == info->op_channels &&
-            params->info.usecase_id == info->usecase_id &&
             params->info.snd_device == info->snd_device) {
-            ALOGV("%s: found params with ip_ch %d op_ch %d uc_id %d snd_dev %d",
-                  __func__, info->ip_channels, info->op_channels,
-                  info->usecase_id, info->snd_device);
-            return params;
+            while (params->info.usecase_id[i] != 0) {
+                if (params->info.usecase_id[i] == info->usecase_id[0]) {
+                    ALOGV("%s: found params with ip_ch %d op_ch %d uc_id %d snd_dev %d",
+                           __func__, info->ip_channels, info->op_channels,
+                           info->usecase_id[0], info->snd_device);
+                    *idx = i;
+                    return params;
+                }
+                i++;
+            }
         }
     }
     ALOGI("%s: no matching param with id %d ip_ch %d op_ch %d uc_id %d snd_dev %d",
           __func__, info->id, info->ip_channels, info->op_channels,
-          info->usecase_id, info->snd_device);
+          info->usecase_id[0], info->snd_device);
     return NULL;
 }
 
@@ -3712,6 +3747,12 @@ int platform_add_custom_mtmx_params(void *platform,
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_custom_mtmx_params *params = NULL;
     uint32_t size = sizeof(*params);
+    int i = 0;
+
+    if (!info) {
+        ALOGE("%s: Invalid params", __func__);
+        return -EINVAL;
+    }
 
     if (info->ip_channels > AUDIO_CHANNEL_COUNT_MAX ||
         info->op_channels > AUDIO_CHANNEL_COUNT_MAX) {
@@ -3727,9 +3768,14 @@ int platform_add_custom_mtmx_params(void *platform,
         return -ENOMEM;
     }
 
-    ALOGI("%s: adding mtmx params with id %d ip_ch %d op_ch %d uc_id %d snd_dev %d",
+    ALOGI("%s: adding mtmx params with id %d ip_ch %d op_ch %d snd_dev %d",
           __func__, info->id, info->ip_channels, info->op_channels,
-          info->usecase_id, info->snd_device);
+          info->snd_device);
+    while (info->usecase_id[i] != 0) {
+        ALOGI("%s: supported usecase ids for added mtmx params %d",
+              __func__, info->usecase_id[i]);
+        i++;
+    }
 
     params->info = *info;
     list_add_tail(&my_data->custom_mtmx_params_list, &params->list);
@@ -3753,20 +3799,30 @@ struct audio_custom_mtmx_in_params *platform_get_custom_mtmx_in_params(void *pla
     struct platform_data *my_data = (struct platform_data *)platform;
     struct listnode *node = NULL;
     struct audio_custom_mtmx_in_params *params = NULL;
+    int i = 0;
+
+    if (!info) {
+        ALOGE("%s: Invalid params", __func__);
+        return NULL;
+    }
 
     list_for_each(node, &my_data->custom_mtmx_in_params_list) {
         params = node_to_item(node, struct audio_custom_mtmx_in_params, list);
         if (params &&
-            params->in_info.op_channels == info->op_channels &&
-            params->in_info.usecase_id == info->usecase_id) {
-            ALOGV("%s: found params with op_ch %d uc_id %d",
-                  __func__, info->op_channels, info->usecase_id);
-            return params;
+            params->in_info.op_channels == info->op_channels) {
+            while (params->in_info.usecase_id[i] != 0) {
+                if (params->in_info.usecase_id[i] == info->usecase_id[0]) {
+                    ALOGV("%s: found params with op_ch %d uc_id %d",
+                          __func__, info->op_channels, info->usecase_id[0]);
+                    return params;
+                }
+                i++;
+            }
         }
     }
 
     ALOGI("%s: no matching param with op_ch %d uc_id %d",
-           __func__, info->op_channels, info->usecase_id);
+           __func__, info->op_channels, info->usecase_id[0]);
     return NULL;
 }
 
@@ -3776,6 +3832,12 @@ int platform_add_custom_mtmx_in_params(void *platform,
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_custom_mtmx_in_params *params = NULL;
     uint32_t size = sizeof(*params);
+    int i = 0;
+
+    if (!info) {
+        ALOGE("%s: Invalid params", __func__);
+        return -EINVAL;
+    }
 
     if (info->op_channels > AUDIO_CHANNEL_COUNT_MAX) {
         ALOGE("%s: unusupported channels in %d", __func__, info->op_channels);
@@ -3788,8 +3850,14 @@ int platform_add_custom_mtmx_in_params(void *platform,
         return -ENOMEM;
     }
 
-    ALOGI("%s: adding mtmx in params with op_ch %d uc_id %d",
-          __func__, info->op_channels, info->usecase_id);
+    ALOGI("%s: adding mtmx in params with op_ch %d",
+          __func__, info->op_channels);
+
+    while (info->usecase_id[i] != 0) {
+        ALOGI("%s: supported usecase ids for added mtmx in params %d",
+              __func__, info->usecase_id[i]);
+        i++;
+    }
 
     params->in_info = *info;
     list_add_tail(&my_data->custom_mtmx_in_params_list, &params->list);
@@ -4814,6 +4882,9 @@ int platform_get_backend_index(snd_device_t snd_device)
                 else if (strncmp(backend_tag_table[snd_device], "headphones",
                             sizeof("headphones")) == 0)
                         port = HEADPHONE_BACKEND;
+                else if (strncmp(backend_tag_table[snd_device], "headset",
+                            sizeof("headset")) == 0)
+                        port = HEADPHONE_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "hdmi") == 0)
                         port = HDMI_RX_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "display-port") == 0)
@@ -4913,6 +4984,17 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
                   __func__, new_snd_device[i]);
             return -EINVAL;
         }
+
+        /* Notify device change info to effect clients registered */
+        if (usecase->type == PCM_PLAYBACK) {
+            audio_extn_gef_notify_device_config(
+                    usecase->stream.out->devices,
+                    usecase->stream.out->channel_mask,
+                    sample_rate,
+                    acdb_dev_id,
+                    usecase->stream.out->app_type_cfg.app_type);
+        }
+
         ALOGV("%s: sending audio calibration for snd_device(%d) acdb_id(%d)",
               __func__, new_snd_device[i], acdb_dev_id);
         if (new_snd_device[i] >= SND_DEVICE_OUT_BEGIN &&
@@ -5591,7 +5673,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         * enforced audible (e.g. Camera shutter sound).
         */
         if ((mode == AUDIO_MODE_IN_CALL) ||
-            voice_is_in_call(adev) ||
+            voice_check_voicecall_usecases_active(adev) ||
             voice_extn_compress_voip_is_active(adev))
                 is_active_voice_call = true;
 
@@ -5715,7 +5797,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     }
 
     if ((mode == AUDIO_MODE_IN_CALL) ||
-        voice_is_in_call(adev) ||
+        voice_check_voicecall_usecases_active(adev) ||
         voice_extn_compress_voip_is_active(adev) ||
         adev->enable_voicerx ||
         audio_extn_hfp_is_active(adev)) {
@@ -6208,12 +6290,15 @@ snd_device_t platform_get_input_snd_device(void *platform,
     int str_bitwidth = (in == NULL) ? CODEC_BACKEND_DEFAULT_BIT_WIDTH : in->bit_width;
     int sample_rate = (in == NULL) ? 8000 : in->sample_rate;
     struct audio_usecase *usecase = NULL;
+    audio_usecase_t uc_id = (in == NULL) ? USECASE_AUDIO_RECORD : in->usecase;
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
           __func__, out_device, in_device, channel_count, channel_mask);
     if (my_data->external_mic) {
-        if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) || voice_is_in_call(adev) ||
-            voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev))) {
+        if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) ||
+            voice_check_voicecall_usecases_active(adev) ||
+            voice_extn_compress_voip_is_active(adev) ||
+            audio_extn_hfp_is_active(adev))) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
                out_device & AUDIO_DEVICE_OUT_EARPIECE ||
                out_device & AUDIO_DEVICE_OUT_SPEAKER )
@@ -6227,8 +6312,10 @@ snd_device_t platform_get_input_snd_device(void *platform,
     if (snd_device != AUDIO_DEVICE_NONE)
         goto exit;
 
-    if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) || voice_is_in_call(adev) ||
-        voice_extn_compress_voip_is_active(adev) || audio_extn_hfp_is_active(adev))) {
+    if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) ||
+        voice_check_voicecall_usecases_active(adev) ||
+        voice_extn_compress_voip_is_active(adev) ||
+        audio_extn_hfp_is_active(adev))) {
         if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
             !voice_extn_compress_voip_is_active(adev)) {
             if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
@@ -6613,7 +6700,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
             }
         } else if (in_device & AUDIO_DEVICE_IN_LOOPBACK) {
             if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
-                usecase = get_usecase_from_list(adev, USECASE_AUDIO_RECORD);
+                usecase = get_usecase_from_list(adev, uc_id);
                 if (usecase == NULL) {
                     ALOGE("%s: Could not find the record usecase", __func__);
                     snd_device = SND_DEVICE_NONE;
@@ -7896,14 +7983,19 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_AUDIO_PLAYBACK_MULTI_CH:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD:
     case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
-        needs_event = true;
-        break;
-    /* concurrent playback in low latency allowed */
-    case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
-        break;
-    /* concurrent playback FM needs event */
     case USECASE_AUDIO_PLAYBACK_FM:
         needs_event = true;
+        break;
+    case USECASE_AUDIO_PLAYBACK_ULL:
+    case USECASE_AUDIO_PLAYBACK_MMAP:
+        if (property_get_bool("persist.vendor.audio.ull_playback_bargein",
+            false))
+            needs_event = true;
+        break;
+    case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
+        if (property_get_bool("persist.vendor.audio.ll_playback_bargein",
+            false))
+            needs_event = true;
         break;
 
     /* concurrent capture usecases which needs event */
@@ -7948,6 +8040,9 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
 {
     char value[PROPERTY_VALUE_MAX] = {0};
     uint32_t fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    uint32_t new_fragment_size = 0;
+    int32_t duration_ms = 0;
+    int channel_count = 0;
     if((property_get("vendor.audio.offload.buffer.size.kb", value, "")) &&
             atoi(value)) {
         fragment_size =  atoi(value) * 1024;
@@ -7959,6 +8054,17 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
               fragment_size,
               info->offload_buffer_size);
         fragment_size = info->offload_buffer_size;
+    }
+
+    /* Use client specified buffer size if mentioned */
+    if ((info != NULL) && (info->duration_us > 0)) {
+        duration_ms = info->duration_us / 1000;
+        channel_count = audio_channel_count_from_in_mask(info->channel_mask);
+
+        new_fragment_size = (duration_ms * info->sample_rate * channel_count * audio_bytes_per_sample(info->format)) / 1000;
+        ALOGI("%s:: Overwriting offload buffer size with client requested size old:%d new:%d", __func__, fragment_size, new_fragment_size);
+
+        fragment_size = new_fragment_size;
     }
 
     if (info != NULL) {
@@ -8532,6 +8638,21 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                         (curr_out->sample_rate % OUTPUT_SAMPLING_RATE_44100 == 0)) {
                         ALOGD("%s:napb:native stream detected %d sampling rate", __func__, curr_out->sample_rate);
                         sample_rate = curr_out->sample_rate;
+                    }
+                }
+
+                /* WCD9380 support SR upto 192Khz only, hence reset
+                 * SR > 192Khz to 192Khz.
+                 */
+                if (strstr(my_data->codec_variant, "WCD9380")) {
+                    switch (sample_rate) {
+                        case 352800:
+                        case 384000:
+                            sample_rate = 192000;
+                            ALOGD("%s:Reset Sampling rate to %d",  __func__, sample_rate);
+                            break;
+                        default:
+                            break;
                     }
                 }
             }
@@ -10591,7 +10712,8 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
     defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || \
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
-    defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON)
+    defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
+    defined (PLATFORM_ATOLL)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {

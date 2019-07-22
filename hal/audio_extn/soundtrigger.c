@@ -84,6 +84,7 @@ typedef enum {
     AUDIO_EVENT_CAPTURE_STREAM_INACTIVE,
     AUDIO_EVENT_CAPTURE_STREAM_ACTIVE,
     AUDIO_EVENT_BATTERY_STATUS_CHANGED,
+    AUDIO_EVENT_SCREEN_STATUS_CHANGED,
     AUDIO_EVENT_GET_PARAM,
     AUDIO_EVENT_UPDATE_ECHO_REF
 } audio_event_type_t;
@@ -273,10 +274,42 @@ static int populate_usecase(struct audio_hal_usecase *usecase,
 
 static void stdev_snd_mon_cb(void * stream __unused, struct str_parms * parms)
 {
+    audio_event_info_t event;
+    char value[32];
+    int ret = 0;
+
     if (!parms)
         return;
 
-    audio_extn_sound_trigger_set_parameters(NULL, parms);
+    ret = str_parms_get_str(parms, "SND_CARD_STATUS", value,
+                            sizeof(value));
+    if (ret > 0) {
+        if (strstr(value, "OFFLINE")) {
+            event.u.status = SND_CARD_STATUS_OFFLINE;
+            st_dev->st_callback(AUDIO_EVENT_SSR, &event);
+        }
+        else if (strstr(value, "ONLINE")) {
+            event.u.status = SND_CARD_STATUS_ONLINE;
+            st_dev->st_callback(AUDIO_EVENT_SSR, &event);
+        }
+        else
+            ALOGE("%s: unknown snd_card_status", __func__);
+    }
+
+    ret = str_parms_get_str(parms, "CPE_STATUS", value, sizeof(value));
+    if (ret > 0) {
+        if (strstr(value, "OFFLINE")) {
+            event.u.status = CPE_STATUS_OFFLINE;
+            st_dev->st_callback(AUDIO_EVENT_SSR, &event);
+        }
+        else if (strstr(value, "ONLINE")) {
+            event.u.status = CPE_STATUS_ONLINE;
+            st_dev->st_callback(AUDIO_EVENT_SSR, &event);
+        }
+        else
+            ALOGE("%s: unknown CPE status", __func__);
+    }
+
     return;
 }
 
@@ -605,6 +638,17 @@ void audio_extn_sound_trigger_update_battery_status(bool charging)
     st_dev->st_callback(AUDIO_EVENT_BATTERY_STATUS_CHANGED, &ev_info);
 }
 
+void audio_extn_sound_trigger_update_screen_status(bool screen_off)
+{
+    struct audio_event_info ev_info = {{0}, {0}};
+
+    if (!st_dev)
+        return;
+
+    ev_info.u.value = screen_off;
+    st_dev->st_callback(AUDIO_EVENT_SCREEN_STATUS_CHANGED, &ev_info);
+}
+
 
 void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
                                struct str_parms *params)
@@ -618,34 +662,7 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
         return;
     }
 
-    ret = str_parms_get_str(params, "SND_CARD_STATUS", value,
-                            sizeof(value));
-    if (ret > 0) {
-        if (strstr(value, "OFFLINE")) {
-            event.u.status = SND_CARD_STATUS_OFFLINE;
-            st_dev->st_callback(AUDIO_EVENT_SSR, &event);
-        }
-        else if (strstr(value, "ONLINE")) {
-            event.u.status = SND_CARD_STATUS_ONLINE;
-            st_dev->st_callback(AUDIO_EVENT_SSR, &event);
-        }
-        else
-            ALOGE("%s: unknown snd_card_status", __func__);
-    }
-
-    ret = str_parms_get_str(params, "CPE_STATUS", value, sizeof(value));
-    if (ret > 0) {
-        if (strstr(value, "OFFLINE")) {
-            event.u.status = CPE_STATUS_OFFLINE;
-            st_dev->st_callback(AUDIO_EVENT_SSR, &event);
-        }
-        else if (strstr(value, "ONLINE")) {
-            event.u.status = CPE_STATUS_ONLINE;
-            st_dev->st_callback(AUDIO_EVENT_SSR, &event);
-        }
-        else
-            ALOGE("%s: unknown CPE status", __func__);
-    }
+    stdev_snd_mon_cb(NULL, params);
 
     ret = str_parms_get_int(params, "SVA_NUM_SESSIONS", &val);
     if (ret >= 0) {

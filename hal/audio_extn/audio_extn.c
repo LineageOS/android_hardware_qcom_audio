@@ -98,12 +98,13 @@ bool cin_applicable_stream(struct stream_in *in);
 bool cin_attached_usecase(audio_usecase_t uc_id);
 bool cin_format_supported(audio_format_t format);
 size_t cin_get_buffer_size(struct stream_in *in);
-int cin_start_input_stream(struct stream_in *in);
+int cin_open_input_stream(struct stream_in *in);
 void cin_stop_input_stream(struct stream_in *in);
 void cin_close_input_stream(struct stream_in *in);
+void cin_free_input_stream_resources(struct stream_in *in);
 int cin_read(struct stream_in *in, void *buffer,
                         size_t bytes, size_t *bytes_read);
-int cin_configure_input_stream(struct stream_in *in);
+int cin_configure_input_stream(struct stream_in *in, struct audio_config *in_config);
 
 void audio_extn_set_snd_card_split(const char* in_snd_card_name)
 {
@@ -474,7 +475,7 @@ void audio_extn_set_custom_mtmx_params_v2(struct audio_device *adev,
     int num_devices = 0, pcm_device_id = -1, i = 0, ret = 0;
     snd_device_t new_snd_devices[SND_DEVICE_OUT_END] = {0};
     struct audio_backend_cfg backend_cfg = {0};
-    uint32_t feature_id = 0;
+    uint32_t feature_id = 0, idx = 0;
 
     switch(usecase->type) {
     case PCM_PLAYBACK:
@@ -519,7 +520,7 @@ void audio_extn_set_custom_mtmx_params_v2(struct audio_device *adev,
      * if features like dual_mono is enabled and overrides the default(i.e. 0).
      */
     info.id = feature_id;
-    info.usecase_id = usecase->id;
+    info.usecase_id[0] = usecase->id;
     for (i = 0, ret = 0; i < num_devices; i++) {
         info.snd_device = new_snd_devices[i];
         platform_get_codec_backend_cfg(adev, info.snd_device, &backend_cfg);
@@ -532,7 +533,7 @@ void audio_extn_set_custom_mtmx_params_v2(struct audio_device *adev,
             info.op_channels = audio_channel_count_from_in_mask(
                                    usecase->stream.in->channel_mask);
         }
-        params = platform_get_custom_mtmx_params(adev->platform, &info);
+        params = platform_get_custom_mtmx_params(adev->platform, &info, &idx);
         if (params) {
             if (enable)
                 ret = update_custom_mtmx_coefficients_v2(adev, params,
@@ -677,7 +678,8 @@ static int update_custom_mtmx_coefficients_v1(struct audio_device *adev,
                                            struct audio_custom_mtmx_in_params *in_params,
                                            int pcm_device_id,
                                            usecase_type_t type,
-                                           bool enable)
+                                           bool enable,
+                                           uint32_t idx)
 {
     struct mixer_ctl *ctl = NULL;
     char mixer_ctl_name[128] = {0};
@@ -691,13 +693,13 @@ static int update_custom_mtmx_coefficients_v1(struct audio_device *adev,
           __func__, pinfo->ip_channels, pinfo->op_channels, pcm_device_id,
           type, enable);
 
-    if (!strcmp(pinfo->fe_name, "")) {
+    if (pinfo->fe_id[idx] == 0) {
         ALOGE("%s: Error. no front end defined", __func__);
         return -EINVAL;
     }
 
-    strlcpy(mixer_name_prefix, pinfo->fe_name, sizeof(mixer_name_prefix));
-
+    snprintf(mixer_name_prefix, sizeof(mixer_name_prefix), "%s%d",
+             "MultiMedia", pinfo->fe_id[idx]);
     /*
      * Enable/Disable channel mixer.
      * If enable, use params and in_params to configure mixer.
@@ -839,7 +841,7 @@ void audio_extn_set_custom_mtmx_params_v1(struct audio_device *adev,
     struct audio_custom_mtmx_in_params_info in_info = {0};
     struct audio_custom_mtmx_in_params *in_params = NULL;
     int pcm_device_id = -1, ret = 0;
-    uint32_t feature_id = 0;
+    uint32_t feature_id = 0, idx = 0;
 
     switch(usecase->type) {
     case PCM_CAPTURE:
@@ -861,26 +863,26 @@ void audio_extn_set_custom_mtmx_params_v1(struct audio_device *adev,
 
     ALOGD("%s: snd device %d", __func__, info.snd_device);
     info.id = feature_id;
-    info.usecase_id = usecase->id;
+    info.usecase_id[0] = usecase->id;
     info.op_channels = audio_channel_count_from_in_mask(
                                 usecase->stream.in->channel_mask);
 
-    in_info.usecase_id = info.usecase_id;
+    in_info.usecase_id[0] = info.usecase_id[0];
     in_info.op_channels = info.op_channels;
     in_params = platform_get_custom_mtmx_in_params(adev->platform, &in_info);
     if (!in_params) {
         ALOGE("%s: Could not get in params for usecase %d, channels %d",
-               __func__, in_info.usecase_id, in_info.op_channels);
+               __func__, in_info.usecase_id[0], in_info.op_channels);
         return;
     }
 
     info.ip_channels = in_params->ip_channels;
     ALOGD("%s: ip channels %d, op channels %d", __func__, info.ip_channels, info.op_channels);
 
-    params = platform_get_custom_mtmx_params(adev->platform, &info);
+    params = platform_get_custom_mtmx_params(adev->platform, &info, &idx);
     if (params) {
         ret = update_custom_mtmx_coefficients_v1(adev, params, in_params,
-                             pcm_device_id, usecase->type, enable);
+                             pcm_device_id, usecase->type, enable, idx);
         if (ret < 0)
             ALOGE("%s: error updating mtmx coeffs err:%d", __func__, ret);
     }
@@ -899,12 +901,12 @@ snd_device_t audio_extn_get_loopback_snd_device(struct audio_device *adev,
         return snd_device;
     }
 
-    in_info.usecase_id = usecase->id;
+    in_info.usecase_id[0] = usecase->id;
     in_info.op_channels = channel_count;
     in_params = platform_get_custom_mtmx_in_params(adev->platform, &in_info);
     if (!in_params) {
         ALOGE("%s: Could not get in params for usecase %d, channels %d",
-               __func__, in_info.usecase_id, in_info.op_channels);
+               __func__, in_info.usecase_id[0], in_info.op_channels);
         return snd_device;
     }
 
@@ -5063,9 +5065,9 @@ size_t audio_extn_cin_get_buffer_size(struct stream_in *in)
 {
     return (audio_extn_compress_in_enabled? cin_get_buffer_size(in): 0);
 }
-int audio_extn_cin_start_input_stream(struct stream_in *in)
+int audio_extn_cin_open_input_stream(struct stream_in *in)
 {
-    return (audio_extn_compress_in_enabled? cin_start_input_stream(in): -1);
+    return (audio_extn_compress_in_enabled? cin_open_input_stream(in): -1);
 }
 void audio_extn_cin_stop_input_stream(struct stream_in *in)
 {
@@ -5075,15 +5077,19 @@ void audio_extn_cin_close_input_stream(struct stream_in *in)
 {
     (audio_extn_compress_in_enabled? cin_close_input_stream(in): NULL);
 }
+void audio_extn_cin_free_input_stream_resources(struct stream_in *in)
+{
+    return (audio_extn_compress_in_enabled? cin_free_input_stream_resources(in): NULL);
+}
 int audio_extn_cin_read(struct stream_in *in, void *buffer,
                         size_t bytes, size_t *bytes_read)
 {
     return (audio_extn_compress_in_enabled?
                             cin_read(in, buffer, bytes, bytes_read): -1);
 }
-int audio_extn_cin_configure_input_stream(struct stream_in *in)
+int audio_extn_cin_configure_input_stream(struct stream_in *in, struct audio_config *in_config)
 {
-    return (audio_extn_compress_in_enabled? cin_configure_input_stream(in): -1);
+    return (audio_extn_compress_in_enabled? cin_configure_input_stream(in, in_config): -1);
 }
 // END: COMPRESS_IN ====================================================
 
@@ -5529,6 +5535,8 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_passthru_set_parameters(adev, parms);
    audio_extn_ext_disp_set_parameters(adev, parms);
    audio_extn_qaf_set_parameters(adev, parms);
+   if (audio_extn_qap_is_enabled())
+       audio_extn_qap_set_parameters(adev, parms);
    if (adev->offload_effects_set_parameters != NULL)
        adev->offload_effects_set_parameters(parms);
    audio_extn_set_aptx_dec_bt_addr(adev, parms);

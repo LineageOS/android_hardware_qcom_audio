@@ -106,6 +106,10 @@ vendor.audio.hw.aac.encoder=true
 PRODUCT_PRODUCT_PROPERTIES += \
 audio.sys.noisy.broadcast.delay=600
 
+#offload minimum duration set to 30sec
+PRODUCT_PRODUCT_PROPERTIES += \
+audio.offload.min.duration.secs=30
+
 #offload pausetime out duration to 3 secs to inline with other outputs
 PRODUCT_PRODUCT_PROPERTIES += \
 audio.sys.offload.pstimeout.secs=3

@@ -399,6 +399,7 @@ struct stream_out {
     card_status_t card_status;
 
     void* qaf_stream_handle;
+    void* qap_stream_handle;
     pthread_cond_t qaf_offload_cond;
     pthread_t qaf_offload_thread;
     struct listnode qaf_offload_cmd_list;
@@ -471,6 +472,8 @@ struct stream_in {
     int capture_started;
     float zoom;
     audio_microphone_direction_t direction;
+
+    volatile int32_t capture_stopped;
 
     /* Array of supported channel mask configurations. +1 so that the last entry is always 0 */
     audio_channel_mask_t supported_channel_masks[MAX_SUPPORTED_CHANNEL_MASKS + 1];
