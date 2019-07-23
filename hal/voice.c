@@ -363,6 +363,22 @@ uint32_t voice_get_active_session_id(struct audio_device *adev)
     return session_id;
 }
 
+bool voice_check_voicecall_usecases_active(struct audio_device *adev)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase = NULL;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == VOICE_CALL) {
+            ALOGV("%s: voice usecase:%s is active", __func__,
+                   use_case_table[usecase->id]);
+            return true;
+        }
+    }
+    return false;
+}
+
 int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
                                            struct stream_in *in)
 {
