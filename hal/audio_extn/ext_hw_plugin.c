@@ -40,22 +40,9 @@
 #include "platform.h"
 #include "audio_hal_plugin.h"
 
-
-// - external function dependency -
-static fp_read_line_from_file_t fp_read_line_from_file;
-static fp_get_usecase_from_list_t fp_get_usecase_from_list;
-static fp_enable_disable_snd_device_t fp_disable_snd_device;
-static fp_enable_disable_snd_device_t  fp_enable_snd_device;
-static fp_enable_disable_audio_route_t fp_disable_audio_route;
-static fp_enable_disable_audio_route_t fp_enable_audio_route;
-static fp_platform_set_snd_device_backend_t fp_platform_set_snd_device_backend;
-static fp_platform_get_snd_device_name_extn_t fp_platform_get_snd_device_name_extn;
-static fp_platform_get_default_app_type_v2_t fp_platform_get_default_app_type_v2;
-static fp_platform_send_audio_calibration_t fp_platform_send_audio_calibration;
-
-fp_audio_route_apply_and_update_path_t fp_audio_route_apply_and_update_path;
-
-#ifdef EXT_HW_PLUGIN_ENABLED
+//external feature dependency
+static fp_b64decode_t fp_b64decode;
+static fp_b64encode_t fp_b64encode;
 
 typedef int32_t (*audio_hal_plugin_init_t)(void);
 typedef int32_t (*audio_hal_plugin_deinit_t)(void);
@@ -90,7 +77,9 @@ void* ext_hw_plugin_init(struct audio_device *adev, ext_hw_plugin_init_config_t 
     }
 
     my_plugin->adev = adev;
-    fp_audio_route_apply_and_update_path = init_config.fp_audio_route_apply_and_update_path;
+
+    fp_b64decode = init_config.fp_b64decode;
+    fp_b64encode = init_config.fp_b64encode;
 
     my_plugin->plugin_handle = dlopen(LIB_PLUGIN_DRIVER, RTLD_NOW);
     if (my_plugin->plugin_handle == NULL) {
@@ -469,7 +458,7 @@ static int32_t ext_hw_plugin_string_to_dword(char *string_value, void **dword_pt
         ALOGE("%s: memory allocation failed", __func__);
         return -ENOMEM;
     }
-    dlen = b64decode(string_value, strlen(string_value), dptr);
+    dlen = fp_b64decode(string_value, strlen(string_value), dptr);
     if ((dlen <= 0) || ((uint32_t)dlen != 4*dword_len)){
         ALOGE("%s: data decoding failed", __func__);
         ret = -EINVAL;
@@ -536,7 +525,7 @@ static int32_t ext_hw_plugin_dword_to_string(uint32_t *dword_ptr, uint32_t dword
         goto done_dword_to_string;
     }
 
-    ret = b64encode(dptr, dlen, outptr);
+    ret = fp_b64encode(dptr, dlen, outptr);
     if(ret < 0) {
         ALOGE("[%s] failed to convert data to string ret = %d", __func__, ret);
         free(outptr);
@@ -1568,4 +1557,3 @@ int ext_hw_plugin_set_audio_gain(void *plugin,
     }
     return ret;
 }
-#endif /* EXT_HW_PLUGIN_ENABLED */
