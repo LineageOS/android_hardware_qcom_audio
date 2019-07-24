@@ -8059,7 +8059,9 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
     }
 
     /* Use client specified buffer size if mentioned */
-    if ((info != NULL) && (info->duration_us > 0)) {
+    if ((info != NULL) &&
+        (info->duration_us >= MIN_OFFLOAD_BUFFER_DURATION_MS) &&
+        (info->duration_us <= MAX_OFFLOAD_BUFFER_DURATION_MS)) {
         duration_ms = info->duration_us / 1000;
         channel_count = audio_channel_count_from_in_mask(info->channel_mask);
 
