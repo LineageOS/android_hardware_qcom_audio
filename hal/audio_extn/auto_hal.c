@@ -446,11 +446,16 @@ int32_t audio_extn_auto_hal_open_output_stream(struct stream_out *out)
             ret = -EINVAL;
             goto error;
         }
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE ||
+            out->flags == AUDIO_OUTPUT_FLAG_PRIMARY)
+            out->flags |= AUDIO_OUTPUT_FLAG_MEDIA;
         break;
     case CAR_AUDIO_STREAM_SYS_NOTIFICATION:
         /* sys notification bus stream shares pcm device with low-latency */
         out->usecase = USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION;
         out->config = pcm_config_low_latency;
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
+            out->flags |= AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION;
         break;
     case CAR_AUDIO_STREAM_NAV_GUIDANCE:
         out->usecase = USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE;
@@ -462,10 +467,14 @@ int32_t audio_extn_auto_hal_open_output_stream(struct stream_out *out)
             ret = -EINVAL;
             goto error;
         }
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
+            out->flags |= AUDIO_OUTPUT_FLAG_NAV_GUIDANCE;
         break;
     case CAR_AUDIO_STREAM_PHONE:
         out->usecase = USECASE_AUDIO_PLAYBACK_PHONE;
         out->config = pcm_config_low_latency;
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
+            out->flags |= AUDIO_OUTPUT_FLAG_PHONE;
         break;
     default:
         ALOGE("%s: Car audio stream %x not supported", __func__,
