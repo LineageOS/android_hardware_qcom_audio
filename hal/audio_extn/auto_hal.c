@@ -65,6 +65,19 @@ static const audio_usecase_t bus_device_usecases[] = {
     USECASE_AUDIO_PLAYBACK_PHONE,
 };
 
+static struct audio_patch_record *get_patch_from_list(struct audio_device *adev,
+                                                    audio_patch_handle_t patch_id)
+{
+    struct audio_patch_record *patch;
+    struct listnode *node;
+    list_for_each(node, &adev->audio_patch_record_list) {
+        patch = node_to_item(node, struct audio_patch_record, list);
+        if (patch->handle == patch_id)
+            return patch;
+    }
+    return NULL;
+}
+
 #define MAX_SOURCE_PORTS_PER_PATCH 1
 #define MAX_SINK_PORTS_PER_PATCH 1
 
@@ -80,6 +93,11 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
     char *str = NULL;
     struct str_parms *parms = NULL;
     char *address = NULL;
+    struct audio_usecase *uc_info = NULL;
+    struct audio_patch_record *patch_record = NULL;
+    audio_usecase_t usecase = USECASE_INVALID;
+    audio_io_handle_t input_io_handle = AUDIO_IO_HANDLE_NONE;
+    audio_io_handle_t output_io_handle = AUDIO_IO_HANDLE_NONE;
 
     ALOGV("%s: enter", __func__);
 
@@ -132,6 +150,7 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
         pthread_mutex_unlock(&adev->lock);
         if(ret)
             return ret;
+        input_io_handle = sinks->ext.mix.handle;
 
         if (strcmp(sources->ext.device.address, "") != 0) {
             address = audio_device_address_to_parameter(
@@ -144,7 +163,7 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
         if (!parms) {
             ALOGE("%s: failed to allocate mem for parms", __func__);
             ret = -ENOMEM;
-            goto error;
+            goto exit;
         }
         str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_ROUTING,
                         (int)sources->ext.device.type);
@@ -165,6 +184,7 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
         pthread_mutex_unlock(&adev->lock);
         if(ret)
             return ret;
+        output_io_handle = sources->ext.mix.handle;
 
         if (strcmp(sinks->ext.device.address, "") != 0) {
             address = audio_device_address_to_parameter(
@@ -177,20 +197,89 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
         if (!parms) {
             ALOGE("%s: failed to allocate mem for parms", __func__);
             ret = -ENOMEM;
-            goto error;
+            goto exit;
         }
         str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_ROUTING,
                         (int)sinks->ext.device.type);
         str = str_parms_to_str(parms);
         out_ctxt->output->stream.common.set_parameters(
                         (struct audio_stream *)out_ctxt->output, str);
+    } else if ((sources->type == AUDIO_PORT_TYPE_DEVICE) &&
+            (sinks->type == AUDIO_PORT_TYPE_DEVICE)) {
+        /* allocate use case and call to plugin driver*/
+        uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
+        if (!uc_info) {
+            ALOGE("%s fail to allocate uc_info", __func__);
+            return -ENOMEM;
+        }
+        /* TODO - add sink type check and printout for non speaker sink */
+        switch(sources->ext.device.type) {
+#ifdef FM_TUNER_EXT_ENABLED
+            case AUDIO_DEVICE_IN_FM_TUNER:
+                ALOGV("Creating audio patch for external FM tuner");
+                uc_info->id = USECASE_AUDIO_FM_TUNER_EXT;
+                uc_info->type = PCM_PASSTHROUGH;
+                uc_info->devices = AUDIO_DEVICE_IN_FM_TUNER;
+                uc_info->in_snd_device = SND_DEVICE_IN_CAPTURE_FM;
+                uc_info->out_snd_device = SND_DEVICE_OUT_BUS_MEDIA;
+                break;
+#endif
+            default:
+                ALOGE("%s: Unsupported audio source type %x", __func__,
+                            sources->ext.device.type);
+                goto error;
+        }
+
+        ALOGD("%s: Starting ext hw plugin use case (%d) in_snd_device (%d) out_snd_device (%d)",
+              __func__, uc_info->id, uc_info->in_snd_device, uc_info->out_snd_device);
+
+        ret = audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info);
+        if (ret) {
+            ALOGE("%s: failed to start ext hw plugin use case (%d)",
+                __func__, uc_info->id);
+            goto error;
+        }
+        /* TODO: apply audio port gain to codec if applicable */
+        usecase = uc_info->id;
+        pthread_mutex_lock(&adev->lock);
+        list_add_tail(&adev->usecase_list, &uc_info->list);
+        pthread_mutex_unlock(&adev->lock);
     } else {
-        ALOGW("%s: create device -> device audio patch", __func__);
+        ALOGW("%s: audio patch not supported",__func__);
+        return -EINVAL;
     }
 
+    /* patch created success, add to patch record list */
+    patch_record = (struct audio_patch_record *)calloc(1,
+                    sizeof(struct audio_patch_record));
+    if (!patch_record) {
+        ALOGE("%s fail to allocate patch_record", __func__);
+        ret = -ENOMEM;
+        if (uc_info)
+            list_remove(&uc_info->list);
+        goto error;
+    }
+
+    pthread_mutex_lock(&adev->lock);
+    adev->audio_patch_index++;
+    patch_record->handle = adev->audio_patch_index;
+    patch_record->usecase = usecase;
+    patch_record->input_io_handle = input_io_handle;
+    patch_record->output_io_handle = output_io_handle;
+    list_add_tail(&adev->audio_patch_record_list, &patch_record->list);
+    pthread_mutex_unlock(&adev->lock);
+
+    *handle = patch_record->handle;
+    goto exit;
+
 error:
+    if(uc_info)
+        free(uc_info);
+exit:
     if (parms)
         str_parms_destroy(parms);
+    if (str)
+        free(str);
     if (address)
         free(address);
     ALOGV("%s: exit: handle 0x%x", __func__, *handle);
@@ -201,6 +290,13 @@ int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
                                 audio_patch_handle_t handle)
 {
     int ret = 0;
+    struct audio_device *adev = (struct audio_device *)dev;
+    struct audio_usecase *uc_info = NULL;
+    struct audio_patch_record *patch_record = NULL;
+    streams_input_ctxt_t *in_ctxt = NULL;
+    streams_output_ctxt_t *out_ctxt = NULL;
+    char *str = NULL;
+    struct str_parms *parms = NULL;
 
     ALOGV("%s: enter: handle 0x%x", __func__, handle);
 
@@ -209,10 +305,92 @@ int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
         return -EINVAL;
     }
 
-    if (handle != AUDIO_PATCH_HANDLE_NONE) {
-        ALOGW("%s: release device -> device audio patch", __func__);
+    if (handle == AUDIO_PATCH_HANDLE_NONE) {
+        ALOGW("%s: null audio patch handle", __func__);
+        return -EINVAL;
     }
 
+    /* get the patch record from handle */
+    pthread_mutex_lock(&adev->lock);
+    patch_record = get_patch_from_list(adev, handle);
+    if(!patch_record) {
+        ALOGE("%s: failed to find the patch record with handle (%d) in the list",
+                __func__, handle);
+        ret = -EINVAL;
+    }
+    pthread_mutex_unlock(&adev->lock);
+    if(ret)
+        goto exit;
+
+    if (patch_record->input_io_handle) {
+        pthread_mutex_lock(&adev->lock);
+        in_ctxt = in_get_stream(adev, patch_record->input_io_handle);
+        if (!in_ctxt) {
+            ALOGE("%s, Could not find input stream", __func__);
+            ret = -EINVAL;
+        }
+        pthread_mutex_unlock(&adev->lock);
+        if(ret)
+            goto exit;
+
+        parms = str_parms_create();
+        str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_ROUTING, 0);
+        str = str_parms_to_str(parms);
+        in_ctxt->input->stream.common.set_parameters(
+                        (struct audio_stream *)in_ctxt->input, str);
+    }
+
+    if (patch_record->output_io_handle) {
+        pthread_mutex_lock(&adev->lock);
+        out_ctxt = out_get_stream(adev, patch_record->output_io_handle);
+        if (!out_ctxt) {
+            ALOGE("%s, Could not find output stream", __func__);
+            ret = -EINVAL;
+        }
+        pthread_mutex_unlock(&adev->lock);
+        if(ret)
+            goto exit;
+
+        parms = str_parms_create();
+        str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_ROUTING, 0);
+        str = str_parms_to_str(parms);
+        out_ctxt->output->stream.common.set_parameters(
+                        (struct audio_stream *)out_ctxt->output, str);
+    }
+
+    if (patch_record->usecase != USECASE_INVALID) {
+        pthread_mutex_lock(&adev->lock);
+        uc_info = get_usecase_from_list(adev, patch_record->usecase);
+        if (!uc_info) {
+            ALOGE("%s: failed to find the usecase (%d)",
+                    __func__, patch_record->usecase);
+            ret = -EINVAL;
+        } else {
+            /* call to plugin to stop the usecase */
+            ret = audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info);
+            if (ret) {
+                ALOGE("%s: failed to stop ext hw plugin use case (%d)",
+                        __func__, uc_info->id);
+            }
+
+            /* remove usecase from list and free it */
+            list_remove(&uc_info->list);
+            free(uc_info);
+        }
+        pthread_mutex_unlock(&adev->lock);
+    }
+
+    /* remove the patch record from list and free it */
+    pthread_mutex_lock(&adev->lock);
+    list_remove(&patch_record->list);
+    pthread_mutex_unlock(&adev->lock);
+    free(patch_record);
+    if (parms)
+        str_parms_destroy(parms);
+    if (str)
+        free(str);
+
+exit:
     ALOGV("%s: exit", __func__);
     return ret;
 }
