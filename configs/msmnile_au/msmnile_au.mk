@@ -69,14 +69,19 @@ AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := false
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := false
 ##AUDIO_FEATURE_FLAGS
 
+AUDIO_FEATURE_ENABLED_AUTO_HAL := true
 AUDIO_FEATURE_ENABLED_EXT_HW_PLUGIN := true
-AUDIO_FEATURE_ENABLED_BUS_ADDRESS := true
 AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL := true
 ##AUTOMOTIVE_AUDIO_FEATURE_FLAGS
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
+endif
+
+#Automotive audio specific device overlays
+ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
+DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/msmnile_au/overlay
 endif
 
 PRODUCT_COPY_FILES += \
@@ -104,11 +109,16 @@ PRODUCT_COPY_FILES += \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/r_submix_audio_policy_configuration.xml \
-    $(TOPDIR)frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usb_audio_policy_configuration.xml
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usb_audio_policy_configuration.xml \
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_qti_audio_policy_configuration.xml
 
 # Listen configuration file
 PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/listen_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/listen_platform_info.xml
+
+#Audio HAL version
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.hal.maj.version=3
 
 # Reduce client buffer size for fast audio output tracks
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -186,6 +196,14 @@ vendor.audio.safx.pbe.enabled=true
 #parser input buffer size(256kb) in byte stream mode
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.parser.ip.buffer.size=262144
+
+#Enable 16 bit PCM offload by default
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.pcm.16bit.enable=true
+
+#Enable 24 bit PCM offload by default
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.pcm.24bit.enable=true
 
 #flac sw decoder 24 bit decode capability
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -273,3 +291,21 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@4.0-impl \
     android.hardware.audio.effect@4.0 \
     android.hardware.audio.effect@4.0-impl
+
+# for HIDL related audiocontrol packages
+PRODUCT_PACKAGES += \
+    vendor.qti.hardware.automotive.audiocontrol@1.0-service \
+    android.hardware.automotive.audiocontrol@1.0
+
+ifeq ($(ENABLE_HYP),true)
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.calfile0=/vendor/etc/acdbdata/adsp_avs_config.acdb\
+persist.vendor.audio.calfile1=/vendor/etc/acdbdata/ADP/Bluetooth_cal.acdb\
+persist.vendor.audio.calfile2=/vendor/etc/acdbdata/ADP/Codec_cal.acdb\
+persist.vendor.audio.calfile3=/vendor/etc/acdbdata/ADP/General_cal.acdb\
+persist.vendor.audio.calfile4=/vendor/etc/acdbdata/ADP/Global_cal.acdb\
+persist.vendor.audio.calfile5=/vendor/etc/acdbdata/ADP/Handset_cal.acdb\
+persist.vendor.audio.calfile6=/vendor/etc/acdbdata/ADP/Hdmi_cal.acdb\
+persist.vendor.audio.calfile7=/vendor/etc/acdbdata/ADP/Headset_cal.acdb\
+persist.vendor.audio.calfile8=/vendor/etc/acdbdata/ADP/Speaker_cal.acdb
+endif

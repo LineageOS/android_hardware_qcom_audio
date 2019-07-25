@@ -103,11 +103,15 @@ PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
 
 #audio becoming noisy intent broadcast delay
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_PRODUCT_PROPERTIES += \
 audio.sys.noisy.broadcast.delay=600
 
+#offload minimum duration set to 30sec
+PRODUCT_PRODUCT_PROPERTIES += \
+audio.offload.min.duration.secs=30
+
 #offload pausetime out duration to 3 secs to inline with other outputs
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_PRODUCT_PROPERTIES += \
 audio.sys.offload.pstimeout.secs=3
 
 #Set AudioFlinger client heap size
@@ -128,4 +132,20 @@ vendor.audio.enable.mirrorlink=false
 #enable deep buffer
 PRODUCT_PROPERTY_OVERRIDES += \
 media.stagefright.audio.deep=false
+
+# for HIDL related packages
+PRODUCT_PACKAGES += \
+    android.hardware.audio@4.0 \
+    android.hardware.audio.common@4.0 \
+    android.hardware.audio.common@4.0-util \
+    android.hardware.audio.effect@4.0 \
+    vendor.qti.hardware.audiohalext@1.0 \
+    vendor.qti.hardware.audiohalext-utils
+
+PRODUCT_PACKAGES_ENG += \
+    VoicePrintTest \
+    VoicePrintDemo
+
+PRODUCT_PACKAGES_DEBUG += \
+    AudioSettings
 

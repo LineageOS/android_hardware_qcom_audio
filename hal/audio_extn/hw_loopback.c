@@ -329,8 +329,6 @@ int32_t release_loopback_session(loopback_patch_t *active_loopback_patch)
     list_remove(&uc_info_rx->list);
     free(uc_info_rx);
 
-    adev->active_input = get_next_active_input(adev);
-
     if (inout->ip_hdlr_handle) {
         ret = audio_extn_ip_hdlr_intf_close(inout->ip_hdlr_handle, true, inout);
         if (ret < 0)
@@ -522,7 +520,6 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
 
     memcpy(&loopback_source_stream.usecase, uc_info_rx,
            sizeof(struct audio_usecase));
-    adev->active_input = &loopback_source_stream;
     select_devices(adev, uc_info_rx->id);
     select_devices(adev, uc_info_tx->id);
 

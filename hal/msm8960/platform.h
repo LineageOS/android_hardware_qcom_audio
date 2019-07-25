@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2019 The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -104,6 +104,11 @@ enum {
     SND_DEVICE_IN_VOICE_REC_DMIC,
     SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE,
     SND_DEVICE_IN_USB_HEADSET_MIC,
+    SND_DEVICE_IN_EC_REF_LOOPBACK,
+    SND_DEVICE_IN_HANDSET_DMIC_AND_EC_REF_LOOPBACK,
+    SND_DEVICE_IN_HANDSET_QMIC_AND_EC_REF_LOOPBACK,
+    SND_DEVICE_IN_HANDSET_6MIC_AND_EC_REF_LOOPBACK,
+    SND_DEVICE_IN_HANDSET_8MIC_AND_EC_REF_LOOPBACK,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,

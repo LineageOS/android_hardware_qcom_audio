@@ -30,8 +30,7 @@ LOCAL_SRC_FILES:= \
         virtualizer.c \
         reverb.c \
         effect_api.c \
-        effect_util.c \
-        asphere.c
+        effect_util.c
 
 # HW_ACCELERATED has been disabled by default since msm8996. File doesn't
 # compile cleanly on tip so don't want to include it, but keeping this

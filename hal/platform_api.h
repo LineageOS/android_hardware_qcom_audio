@@ -34,6 +34,8 @@
 #define LICENSE_STR_MAX_LEN  (64)
 #define PRODUCT_FFV      "ffv"
 #define PRODUCT_ALLPLAY  "allplay"
+#define MAX_IN_CHANNELS 32
+#define CUSTOM_MTRX_PARAMS_MAX_USECASE 8
 
 typedef enum {
     PLATFORM,
@@ -102,14 +104,35 @@ struct audio_custom_mtmx_params_info {
     uint32_t id;
     uint32_t ip_channels;
     uint32_t op_channels;
-    uint32_t usecase_id;
+    uint32_t usecase_id[CUSTOM_MTRX_PARAMS_MAX_USECASE];
     uint32_t snd_device;
+    uint32_t fe_id[CUSTOM_MTRX_PARAMS_MAX_USECASE];
 };
 
 struct audio_custom_mtmx_params {
     struct listnode list;
     struct audio_custom_mtmx_params_info info;
     uint32_t coeffs[0];
+};
+
+struct audio_custom_mtmx_in_params_info {
+    uint32_t op_channels;
+    uint32_t usecase_id[CUSTOM_MTRX_PARAMS_MAX_USECASE];
+};
+
+struct audio_custom_mtmx_params_in_ch_info {
+    uint32_t ch_count;
+    char device[128];
+    char hw_interface[128];
+};
+
+struct audio_custom_mtmx_in_params {
+    struct listnode list;
+    struct audio_custom_mtmx_in_params_info in_info;
+    uint32_t ip_channels;
+    uint32_t mic_ch;
+    uint32_t ec_ref_ch;
+    struct audio_custom_mtmx_params_in_ch_info in_ch_info[MAX_IN_CHANNELS];
 };
 
 enum card_status_t;
@@ -179,7 +202,9 @@ int platform_set_mic_mute(void *platform, bool state);
 int platform_get_sample_rate(void *platform, uint32_t *rate);
 int platform_set_device_mute(void *platform, bool state, char *dir);
 snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *out);
-snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_device);
+snd_device_t platform_get_input_snd_device(void *platform,
+                                           struct stream_in *in,
+                                           audio_devices_t out_device);
 int platform_set_hdmi_channels(void *platform, int channel_count);
 int platform_edid_get_max_channels(void *platform);
 void platform_add_operator_specific_device(snd_device_t snd_device,
@@ -353,7 +378,15 @@ int platform_set_qtime(void *platform, int audio_pcm_device_id,
 int platform_get_delay(void *platform, int pcm_device_id);
 struct audio_custom_mtmx_params *
     platform_get_custom_mtmx_params(void *platform,
-                                    struct audio_custom_mtmx_params_info *info);
+                                    struct audio_custom_mtmx_params_info *info,
+                                    uint32_t *idx);
 int platform_add_custom_mtmx_params(void *platform,
                                     struct audio_custom_mtmx_params_info *info);
+/* callback functions from platform to common audio HAL */
+struct stream_in *adev_get_active_input(const struct audio_device *adev);
+
+struct audio_custom_mtmx_in_params * platform_get_custom_mtmx_in_params(void *platform,
+                                    struct audio_custom_mtmx_in_params_info *info);
+int platform_add_custom_mtmx_in_params(void *platform,
+                                    struct audio_custom_mtmx_in_params_info *info);
 #endif // AUDIO_PLATFORM_API_H

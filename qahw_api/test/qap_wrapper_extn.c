@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017,2019 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 The Android Open Source Project *
@@ -88,6 +88,7 @@ FILE *fp_output_writer_spk = NULL;
 FILE *fp_output_writer_hp = NULL;
 FILE *fp_output_writer_hdmi = NULL;
 FILE *fp_output_timestamp_file = NULL;
+FILE *fp_ecref = NULL;
 unsigned char data_buf[MAX_BUFFER_SIZE];
 uint32_t output_device_id = 0;
 uint16_t input_streams_count = 0;
@@ -207,6 +208,7 @@ static void update_session_outputs_config(int hdmi_render_format, int in_channel
     bool enable_hdmi = false;
     bool combo_enabled = false;
     char dev_kv_pair[16] = {0};
+    bool enable_ecref = false;
 
     ALOGV("%s:%d output device id %d render format = %d", __func__, __LINE__, output_device_id, hdmi_render_format);
 
@@ -217,6 +219,8 @@ static void update_session_outputs_config(int hdmi_render_format, int in_channel
         enable_hp = true;
     if (output_device_id & AUDIO_DEVICE_OUT_SPEAKER)
         enable_spk = true;
+    if (ec_ref)
+        enable_ecref = true;
 
     if (enable_hdmi) {
         session_output_config.output_config[session_output_config.num_output].id = AUDIO_DEVICE_OUT_HDMI;
@@ -259,6 +263,20 @@ static void update_session_outputs_config(int hdmi_render_format, int in_channel
     if (enable_spk) {
         session_output_config.output_config[session_output_config.num_output].channels = popcount(AUDIO_CHANNEL_OUT_STEREO);
         session_output_config.output_config[session_output_config.num_output].id = AUDIO_DEVICE_OUT_SPEAKER;
+        session_output_config.output_config[session_output_config.num_output].sample_rate = smpl_rate;
+        if (bitwidth == PCM_24_BITWIDTH) {
+            session_output_config.output_config[session_output_config.num_output].format = QAP_AUDIO_FORMAT_PCM_24_BIT_PACKED;
+            session_output_config.output_config[session_output_config.num_output].bit_width = PCM_24_BITWIDTH;
+        } else {
+            session_output_config.output_config[session_output_config.num_output].format = QAP_AUDIO_FORMAT_PCM_16_BIT;
+            session_output_config.output_config[session_output_config.num_output].bit_width = PCM_16_BITWIDTH;
+        }
+        session_output_config.num_output++;
+    }
+
+    if (enable_ecref) {
+        session_output_config.output_config[session_output_config.num_output].channels = popcount(AUDIO_CHANNEL_OUT_STEREO);
+        session_output_config.output_config[session_output_config.num_output].id = AUDIO_DEVICE_OUT_PROXY;
         session_output_config.output_config[session_output_config.num_output].sample_rate = smpl_rate;
         if (bitwidth == PCM_24_BITWIDTH) {
             session_output_config.output_config[session_output_config.num_output].format = QAP_AUDIO_FORMAT_PCM_24_BIT_PACKED;
@@ -1234,6 +1252,20 @@ void qap_wrapper_session_callback(qap_session_handle_t session_handle __unused, 
                              cold_stop = (tcold_stop.tv_sec) * 1000 + (tcold_stop.tv_usec) / 1000;
                              ALOGD("%s::%d Measuring Kpi cold stop %lf", __func__, __LINE__, cold_stop);
                         }
+                    }
+                    if (buffer->buffer_parms.output_buf_params.output_id == AUDIO_DEVICE_OUT_PROXY) {
+
+                        if (fp_ecref == NULL) {
+                            fp_ecref = fopen("/data/vendor/misc/audio/ecref", "w+");
+                        }
+
+                        if (fp_ecref) {
+                            ALOGD("%s: write %d bytes to ecref dump",__func__,buffer->common_params.size);
+                            fwrite((unsigned char *)buffer->common_params.data, 1, buffer->common_params.size, fp_ecref);
+                        } else {
+                            ALOGE("%s: failed to open ecref dump file",__func__);
+                        }
+
                     }
                 }
             }

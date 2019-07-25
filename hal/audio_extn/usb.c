@@ -395,6 +395,7 @@ static int get_usb_service_interval(const char *interval_str_start,
         return -1;
     }
     memcpy(tmp, interval_str_start, eol-interval_str_start);
+    tmp[eol-interval_str_start] = '\0';
     sscanf(tmp, "%lu %2s", &interval, &time_unit[0]);
     if (!strcmp(time_unit, "us")) {
         multiplier = 1;
@@ -628,6 +629,7 @@ static int usb_get_usbid(struct usb_card_config *usb_card_info,
     int32_t fd=-1;
     char path[128];
     int ret = 0;
+    char *saveptr = NULL;
 
     memset(usb_card_info->usbid, 0, sizeof(usb_card_info->usbid));
 
@@ -655,7 +657,7 @@ static int usb_get_usbid(struct usb_card_config *usb_card_info,
         goto done;
     }
 
-    strtok(usb_card_info->usbid, "\n");
+    strtok_r(usb_card_info->usbid, "\n", &saveptr);
 
 done:
     if (fd >= 0)
