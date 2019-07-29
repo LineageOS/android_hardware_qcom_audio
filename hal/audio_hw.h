@@ -368,6 +368,7 @@ struct stream_out {
     bool muted;
     uint64_t written; /* total frames written, not cleared when entering standby */
     int64_t mmap_time_offset_nanos; /* fudge factor to correct inaccuracies in DSP */
+    int     mmap_shared_memory_fd; /* file descriptor associated with MMAP NOIRQ shared memory */
     audio_io_handle_t handle;
     struct stream_app_type_cfg app_type_cfg;
 
@@ -456,6 +457,7 @@ struct stream_in {
     struct listnode aec_list;
     struct listnode ns_list;
     int64_t mmap_time_offset_nanos; /* fudge factor to correct inaccuracies in DSP */
+    int     mmap_shared_memory_fd; /* file descriptor associated with MMAP NOIRQ shared memory */
     audio_io_handle_t capture_handle;
     audio_input_flags_t flags;
     char profile[MAX_STREAM_PROFILE_STR_LEN];
