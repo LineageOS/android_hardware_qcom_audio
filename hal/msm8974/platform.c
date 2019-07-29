@@ -8023,9 +8023,6 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_INCALL_MUSIC_UPLINK:
     case USECASE_INCALL_MUSIC_UPLINK2:
     case USECASE_AUDIO_RECORD_VOIP:
-    case USECASE_AUDIO_RECORD_FM_VIRTUAL:
-    case USECASE_AUDIO_SPKR_CALIB_RX:
-    case USECASE_AUDIO_SPKR_CALIB_TX:
         needs_event = true;
         break;
     default:
