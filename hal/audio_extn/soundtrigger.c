@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -54,7 +54,8 @@
 
 /* Proprietary interface version used for compatibility with STHAL */
 #define STHAL_PROP_API_VERSION_1_0 MAKE_HAL_VERSION(1, 0)
-#define STHAL_PROP_API_CURRENT_VERSION STHAL_PROP_API_VERSION_1_0
+#define STHAL_PROP_API_VERSION_1_1 MAKE_HAL_VERSION(1, 1)
+#define STHAL_PROP_API_CURRENT_VERSION STHAL_PROP_API_VERSION_1_1
 
 #define ST_EVENT_CONFIG_MAX_STR_VALUE 32
 #define ST_DEVICE_HANDSET_MIC 1
@@ -64,6 +65,7 @@ typedef enum {
     ST_EVENT_SESSION_DEREGISTER,
     ST_EVENT_START_KEEP_ALIVE,
     ST_EVENT_STOP_KEEP_ALIVE,
+    ST_EVENT_UPDATE_ECHO_REF
 } sound_trigger_event_type_t;
 
 typedef enum {
@@ -82,6 +84,8 @@ typedef enum {
     AUDIO_EVENT_CAPTURE_STREAM_INACTIVE,
     AUDIO_EVENT_CAPTURE_STREAM_ACTIVE,
     AUDIO_EVENT_BATTERY_STATUS_CHANGED,
+    AUDIO_EVENT_GET_PARAM,
+    AUDIO_EVENT_UPDATE_ECHO_REF
 } audio_event_type_t;
 
 typedef enum {
@@ -117,12 +121,20 @@ struct audio_hal_usecase {
 
 struct sound_trigger_event_info {
     struct sound_trigger_session_info st_ses;
+    bool st_ec_ref_enabled;
 };
 typedef struct sound_trigger_event_info sound_trigger_event_info_t;
 
 struct sound_trigger_device_info {
     int device;
 };
+
+struct sound_trigger_get_param_data {
+    char *param;
+    int sm_handle;
+    struct str_parms *reply;
+};
+
 
 struct audio_event_info {
     union {
@@ -132,6 +144,8 @@ struct audio_event_info {
         struct audio_read_samples_info aud_info;
         char str_value[ST_EVENT_CONFIG_MAX_STR_VALUE];
         struct audio_hal_usecase usecase;
+        bool audio_ec_ref_enabled;
+        struct sound_trigger_get_param_data st_get_param_data;
     } u;
     struct sound_trigger_device_info device_info;
 };
@@ -167,6 +181,11 @@ do {\
 #define SOUND_TRIGGER_LIBRARY_PATH "/vendor/lib/hw/sound_trigger.primary.%s.so"
 #endif
 
+#define SVA_PARAM_DIRECTION_OF_ARRIVAL "st_direction_of_arrival"
+#define SVA_PARAM_CHANNEL_INDEX "st_channel_index"
+
+#define MAX_STR_LENGTH_FFV_PARAMS 30
+#define MAX_FFV_SESSION_ID 100
 /*
  * Current proprietary API version used by AHAL. Queried by STHAL
  * for compatibility check with AHAL
@@ -186,6 +205,7 @@ struct sound_trigger_audio_device {
     struct listnode st_ses_list;
     pthread_mutex_t lock;
     unsigned int sthal_prop_api_version;
+    bool st_ec_ref_enabled;
 };
 
 static struct sound_trigger_audio_device *st_dev;
@@ -321,6 +341,15 @@ int audio_hw_call_back(sound_trigger_event_type_t event,
         pthread_mutex_unlock(&st_dev->adev->lock);
         goto done;
 
+    case ST_EVENT_UPDATE_ECHO_REF:
+        if (!config) {
+            ALOGE("%s: NULL config", __func__);
+            status = -EINVAL;
+            break;
+        }
+        st_dev->st_ec_ref_enabled = config->st_ec_ref_enabled;
+        break;
+
     default:
         ALOGW("%s: Unknown event %d", __func__, event);
         break;
@@ -413,6 +442,42 @@ void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
     pthread_mutex_unlock(&st_dev->lock);
 }
 
+
+bool audio_extn_sound_trigger_check_ec_ref_enable()
+{
+    bool ret = false;
+
+    if (!st_dev) {
+        ALOGE("%s: st_dev NULL", __func__);
+        return ret;
+    }
+
+    pthread_mutex_lock(&st_dev->lock);
+    if (st_dev->st_ec_ref_enabled) {
+        ret = true;
+        ALOGD("%s: EC Reference is enabled", __func__);
+    } else {
+        ALOGD("%s: EC Reference is disabled", __func__);
+    }
+    pthread_mutex_unlock(&st_dev->lock);
+
+    return ret;
+}
+
+void audio_extn_sound_trigger_update_ec_ref_status(bool on)
+{
+    struct audio_event_info ev_info;
+
+    if (!st_dev) {
+        ALOGE("%s: st_dev NULL", __func__);
+        return;
+    }
+
+    ev_info.u.audio_ec_ref_enabled = on;
+    st_dev->st_callback(AUDIO_EVENT_UPDATE_ECHO_REF, &ev_info);
+    ALOGD("%s: update audio echo ref status %s",__func__,
+                ev_info.u.audio_ec_ref_enabled == true ? "true" : "false");
+}
 
 void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
                                      st_event_type_t event)
@@ -568,13 +633,15 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
     }
 
     ret = str_parms_get_int(params, AUDIO_PARAMETER_DEVICE_CONNECT, &val);
-    if ((ret >= 0) && audio_is_input_device(val)) {
+    if ((ret >= 0) && (audio_is_input_device(val) ||
+           (val == AUDIO_DEVICE_OUT_LINE))) {
         event.u.value = val;
         st_dev->st_callback(AUDIO_EVENT_DEVICE_CONNECT, &event);
     }
 
     ret = str_parms_get_int(params, AUDIO_PARAMETER_DEVICE_DISCONNECT, &val);
-    if ((ret >= 0) && audio_is_input_device(val)) {
+    if ((ret >= 0) && (audio_is_input_device(val) ||
+           (val == AUDIO_DEVICE_OUT_LINE))) {
         event.u.value = val;
         st_dev->st_callback(AUDIO_EVENT_DEVICE_DISCONNECT, &event);
     }
@@ -586,12 +653,46 @@ void audio_extn_sound_trigger_set_parameters(struct audio_device *adev __unused,
     }
 }
 
+static int extract_sm_handle(const char *keys, char *paramstr) {
+    char *tmpstr, *token;
+    char *inputstr = NULL;
+    int value = -EINVAL;
+
+    if (keys == NULL || paramstr == NULL)
+        goto exit;
+
+    inputstr = strdup(keys);
+    token =strtok_r(inputstr,":",&tmpstr);
+
+    if (token == NULL)
+        goto exit;
+
+    ALOGD("%s input string <%s> param string <%s>", __func__, keys,token);
+    strlcpy(paramstr, token, MAX_STR_LENGTH_FFV_PARAMS);
+    token =strtok_r(NULL,":=",&tmpstr);
+
+    if (token == NULL)
+        goto exit;
+
+    value = atoi(token);
+    if (value > 0 && value < MAX_FFV_SESSION_ID)
+        ALOGD(" %s SVA sm handle<=%d>",__func__, value);
+
+exit:
+    if (inputstr != NULL)
+        free(inputstr);
+
+    return value;
+}
 void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev __unused,
-                       struct str_parms *query, struct str_parms *reply)
+                                             struct str_parms *query,
+                                             struct str_parms *reply)
 {
     audio_event_info_t event;
     int ret;
-    char value[32];
+    char value[32], paramstr[MAX_STR_LENGTH_FFV_PARAMS];
+
+    ALOGD("%s input string<%s>", __func__, str_parms_to_str(query));
 
     ret = str_parms_get_str(query, "SVA_EXEC_MODE_STATUS", value,
                                                   sizeof(value));
@@ -599,6 +700,23 @@ void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev __u
         st_dev->st_callback(AUDIO_EVENT_SVA_EXEC_MODE_STATUS, &event);
         str_parms_add_int(reply, "SVA_EXEC_MODE_STATUS", event.u.value);
     }
+
+    ret = extract_sm_handle(str_parms_to_str(query), paramstr);
+
+    if ((ret >= 0) && !strncmp(paramstr, SVA_PARAM_DIRECTION_OF_ARRIVAL,
+            MAX_STR_LENGTH_FFV_PARAMS)) {
+        event.u.st_get_param_data.sm_handle = ret;
+        event.u.st_get_param_data.param = SVA_PARAM_DIRECTION_OF_ARRIVAL;
+        event.u.st_get_param_data.reply = reply;
+        st_dev->st_callback(AUDIO_EVENT_GET_PARAM, &event);
+    } else if ((ret >=0) && !strncmp(paramstr, SVA_PARAM_CHANNEL_INDEX,
+            MAX_STR_LENGTH_FFV_PARAMS)) {
+        event.u.st_get_param_data.sm_handle = ret;
+        event.u.st_get_param_data.param = SVA_PARAM_CHANNEL_INDEX;
+        event.u.st_get_param_data.reply = reply;
+        st_dev->st_callback(AUDIO_EVENT_GET_PARAM, &event);
+    }
+
 }
 
 int audio_extn_sound_trigger_init(struct audio_device *adev)
@@ -650,6 +768,7 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
     }
 
     st_dev->adev = adev;
+    st_dev->st_ec_ref_enabled = false;
     list_init(&st_dev->st_ses_list);
     audio_extn_snd_mon_register_listener(st_dev, stdev_snd_mon_cb);
 

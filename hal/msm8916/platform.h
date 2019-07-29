@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -244,6 +244,7 @@ enum {
     SND_DEVICE_IN_INCALL_REC_RX,
     SND_DEVICE_IN_INCALL_REC_TX,
     SND_DEVICE_IN_INCALL_REC_RX_TX,
+    SND_DEVICE_IN_EC_REF_LOOPBACK_QUAD,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,

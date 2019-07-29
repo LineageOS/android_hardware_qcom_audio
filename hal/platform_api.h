@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -93,6 +93,21 @@ typedef struct acdb_audio_cal_cfg {
     uint32_t             param_id;
 } acdb_audio_cal_cfg_t;
 
+
+struct audio_custom_mtmx_params_info {
+    uint32_t id;
+    uint32_t ip_channels;
+    uint32_t op_channels;
+    uint32_t usecase_id;
+    uint32_t snd_device;
+};
+
+struct audio_custom_mtmx_params {
+    struct listnode list;
+    struct audio_custom_mtmx_params_info info;
+    uint32_t coeffs[0];
+};
+
 enum card_status_t;
 
 void *platform_init(struct audio_device *adev);
@@ -135,7 +150,7 @@ int platform_get_meta_info_key_from_list(void *platform, char *mod_name);
 int platform_set_native_support(int na_mode);
 int platform_get_native_support();
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
-                                    int app_type, int sample_rate);
+                                    int app_type);
 int platform_get_default_app_type(void *platform);
 int platform_get_default_app_type_v2(void *platform, usecase_type_t  type);
 int platform_switch_voice_call_device_pre(void *platform);
@@ -211,7 +226,7 @@ int platform_set_channel_allocation(void *platform, int channel_alloc);
 int platform_get_edid_info(void *platform);
 int platform_get_supported_copp_sampling_rate(uint32_t stream_sr);
 int platform_set_channel_map(void *platform, int ch_count, char *ch_map,
-                             int snd_id);
+                             int snd_id, int be_idx);
 int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask,
                                    int snd_id, uint8_t *input_channel_map);
 int platform_set_stream_pan_scale_params(void *platform,
@@ -221,7 +236,8 @@ int platform_set_stream_downmix_params(void *platform,
                                        int snd_id,
                                        snd_device_t snd_device,
                                        struct mix_matrix_params mm_params);
-int platform_set_edid_channels_configuration(void *platform, int channels, int backend_idx);
+int platform_set_edid_channels_configuration(void *platform, int channels,
+                                             int backend_idx, snd_device_t snd_device);
 unsigned char platform_map_to_edid_format(int format);
 bool platform_is_edid_supported_format(void *platform, int format);
 bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate);
@@ -305,4 +321,9 @@ int platform_get_active_microphones(void *platform, unsigned int channels,
                                     audio_usecase_t usecase,
                                     struct audio_microphone_characteristic_t *mic_array,
                                     size_t *mic_count);
+struct audio_custom_mtmx_params *
+    platform_get_custom_mtmx_params(void *platform,
+                                    struct audio_custom_mtmx_params_info *info);
+int platform_add_custom_mtmx_params(void *platform,
+                                    struct audio_custom_mtmx_params_info *info);
 #endif // AUDIO_PLATFORM_API_H

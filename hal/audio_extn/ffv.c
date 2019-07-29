@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -45,6 +45,8 @@
 #include <cutils/log.h>
 #include <pthread.h>
 #include <sys/resource.h>
+#include <unistd.h>
+#include <system/thread_defs.h>
 
 #include "audio_hw.h"
 #include "audio_extn.h"
@@ -58,15 +60,31 @@
 #define AUDIO_PARAMETER_FFV_EC_REF_CHANNEL_COUNT "ffv_ec_ref_channel_count"
 #define AUDIO_PARAMETER_FFV_EC_REF_DEVICE "ffv_ec_ref_dev"
 #define AUDIO_PARAMETER_FFV_CHANNEL_INDEX "ffv_channel_index"
+#define AUDIO_PARAMETER_FFV_CHANNEL_COUNT "ffv_channel_count"
 
-#define FFV_LIB "libffv.so"
+#if LINUX_ENABLED
 #define FFV_CONFIG_FILE_PATH "/etc/BF_1out.cfg"
+#ifdef __LP64__
+#define FFV_LIB "/usr/lib64/libffv.so"
+#else
+#define FFV_LIB "/usr/lib/libffv.so"
+#endif
+#else
+#define FFV_CONFIG_FILE_PATH "/vendor/etc/BF_1out.cfg"
+#ifdef __LP64__
+#define FFV_LIB "/vendor/lib64/libffv.so"
+#else
+#define FFV_LIB "/vendor/lib/libffv.so"
+#endif
+#endif
+
 #define FFV_SAMPLING_RATE_16000 16000
 #define FFV_EC_REF_LOOPBACK_DEVICE_MONO "ec-ref-loopback-mono"
 #define FFV_EC_REF_LOOPBACK_DEVICE_STEREO "ec-ref-loopback-stereo"
 
 #define FFV_CHANNEL_MODE_MONO 1
 #define FFV_CHANNEL_MODE_STEREO 2
+#define FFV_CHANNEL_MODE_QUAD 4
 #define FFV_CHANNEL_MODE_HEX 6
 #define FFV_CHANNEL_MODE_OCT 8
 
@@ -142,6 +160,7 @@ struct ffvmodule {
     pthread_mutex_t init_lock;
     bool capture_started;
     int target_ch_idx;
+    int ch_count;
 
 #ifdef FFV_PCM_DUMP
     FILE *fp_input;
@@ -172,6 +191,7 @@ static struct ffvmodule ffvmod = {
     .handle = NULL,
     .capture_started = false,
     .target_ch_idx = -1,
+    .ch_count = 6,
 };
 
 static struct pcm_config ffv_pcm_config = {
@@ -392,7 +412,7 @@ void audio_extn_ffv_update_pcm_config(struct pcm_config *config)
     config->period_size = ffvmod.capture_config.period_size;
 }
 
-int32_t audio_extn_ffv_init(struct audio_device *adev)
+int32_t audio_extn_ffv_init(struct audio_device *adev __unused)
 {
     int ret = 0;
 
@@ -442,9 +462,9 @@ int32_t audio_extn_ffv_stream_init(struct stream_in *in)
     ffvmod.capture_config = ffv_pcm_config;
     ffvmod.ec_ref_config = ffv_pcm_config;
     ffvmod.out_config = ffv_pcm_config;
-    /* configure capture session with 6/8 channels */
+    /* configure capture session with 6/8/4 channels */
     ffvmod.capture_config.channels = ffvmod.split_ec_ref_data ?
-        FFV_CHANNEL_MODE_OCT : FFV_CHANNEL_MODE_HEX;
+                   FFV_CHANNEL_MODE_OCT : ffvmod.ch_count;
     ffvmod.capture_config.period_size =
                    CALCULATE_PERIOD_SIZE(FFV_PCM_BUFFER_DURATION_MS,
                                          ffvmod.capture_config.rate,
@@ -472,7 +492,7 @@ int32_t audio_extn_ffv_stream_init(struct stream_in *in)
            __func__, num_ec_ref_ch, num_tx_in_ch, num_out_ch, frame_len, sample_rate);
     ALOGD("%s: config file path %s", __func__, config_file_path);
     status_type = ffv_init_fn(&ffvmod.handle, num_tx_in_ch, num_out_ch, num_ec_ref_ch,
-                      frame_len, sample_rate, config_file_path, sm_buffer, 0,
+                      frame_len, sample_rate, config_file_path, (char *)sm_buffer, 0,
                       &total_mem_size);
     if (status_type) {
         ALOGE("%s: ERROR. ffv_init returned %d", __func__, status_type);
@@ -565,6 +585,8 @@ snd_device_t audio_extn_ffv_get_capture_snd_device()
         return SND_DEVICE_IN_HANDSET_8MIC;
     } else if (ffvmod.capture_config.channels == FFV_CHANNEL_MODE_HEX) {
         return SND_DEVICE_IN_HANDSET_6MIC;
+    } else if (ffvmod.capture_config.channels == FFV_CHANNEL_MODE_QUAD) {
+        return SND_DEVICE_IN_HANDSET_QMIC;
     } else {
         ALOGE("%s: Invalid channels configured for capture", __func__);
         return SND_DEVICE_NONE;
@@ -572,7 +594,7 @@ snd_device_t audio_extn_ffv_get_capture_snd_device()
 }
 
 int audio_extn_ffv_init_ec_ref_loopback(struct audio_device *adev,
-                                        snd_device_t snd_device)
+                                        snd_device_t snd_device __unused)
 {
     struct audio_usecase *uc_info_tx = NULL;
     snd_device_t in_snd_device;
@@ -581,6 +603,7 @@ int audio_extn_ffv_init_ec_ref_loopback(struct audio_device *adev,
     int param_size = 0;
     FfvStatusType status_type;
     int ret = 0;
+    ffv_quadrx_use_dwnmix_param_t quad_downmix;
 
     ALOGV("%s: entry", __func__);
     /* notify library to reset AEC during each start */
@@ -600,6 +623,20 @@ int audio_extn_ffv_init_ec_ref_loopback(struct audio_device *adev,
     uc_info_tx = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     if (!uc_info_tx) {
         return -ENOMEM;
+    }
+
+    if (in_snd_device == SND_DEVICE_IN_EC_REF_LOOPBACK_QUAD) {
+        quad_downmix.quadrx_dwnmix_enable = true;
+        ALOGD("%s: set param for 4 ch ec, handle %p", __func__, ffvmod.handle);
+        status_type = ffv_set_param_fn(ffvmod.handle,
+            (char *)&quad_downmix,
+            FFV_QUADRX_USE_DWNMIX_PARAM,
+            sizeof(ffv_quadrx_use_dwnmix_param_t));
+        if (status_type) {
+            ALOGE("%s: ERROR. ffv_set_param_fn for quad channel ec ref %d",
+                __func__, status_type);
+            return -EINVAL;
+        }
     }
 
     pthread_mutex_lock(&ffvmod.init_lock);
@@ -664,7 +701,7 @@ void audio_extn_ffv_append_ec_ref_dev_name(char *device_name)
 }
 
 int audio_extn_ffv_deinit_ec_ref_loopback(struct audio_device *adev,
-                                          snd_device_t snd_device)
+                                          snd_device_t snd_device __unused)
 {
     struct audio_usecase *uc_info_tx = NULL;
     snd_device_t in_snd_device;
@@ -694,7 +731,7 @@ int audio_extn_ffv_deinit_ec_ref_loopback(struct audio_device *adev,
     return ret;
 }
 
-int32_t audio_extn_ffv_read(struct audio_stream_in *stream,
+int32_t audio_extn_ffv_read(struct audio_stream_in *stream __unused,
                        void *buffer, size_t bytes)
 {
     int status = 0;
@@ -702,7 +739,7 @@ int32_t audio_extn_ffv_read(struct audio_stream_in *stream,
     int16_t *process_ec_ref_ptr = NULL;
     size_t in_buf_size, out_buf_size, bytes_to_copy;
     int retry_num = 0;
-    int i, j, ch;
+    int i, ch;
     int total_in_ch, in_ch, ec_ref_ch;
 
     if (!ffvmod.ffv_lib_handle) {
@@ -757,6 +794,8 @@ int32_t audio_extn_ffv_read(struct audio_stream_in *stream,
                 return status;
             }
         }
+        audio_extn_set_cpu_affinity();
+        setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_AUDIO);
         ffvmod.capture_started = true;
     }
 
@@ -790,7 +829,7 @@ int32_t audio_extn_ffv_read(struct audio_stream_in *stream,
         total_in_ch = ffvmod.capture_config.channels;
         ec_ref_ch = ffvmod.ec_ref_config.channels;
         in_ch = total_in_ch - ec_ref_ch;
-        for (i = 0; i < ffvmod.capture_config.period_size; i++) {
+        for (i = 0; i < (int)ffvmod.capture_config.period_size; i++) {
             for (ch = 0; ch < in_ch; ch++) {
                 process_in_ptr[i*in_ch+ch] =
                           in_ptr[i*total_in_ch+ch];
@@ -810,7 +849,7 @@ int32_t audio_extn_ffv_read(struct audio_stream_in *stream,
     bytes_to_copy = (bytes <= out_buf_size) ? bytes : out_buf_size;
     memcpy(buffer, process_out_ptr, bytes_to_copy);
     if (bytes_to_copy != out_buf_size)
-        ALOGD("%s: out buffer data dropped, copied %d bytes",
+        ALOGD("%s: out buffer data dropped, copied %zu bytes",
                __func__, bytes_to_copy);
 
 #ifdef FFV_PCM_DUMP
@@ -831,7 +870,6 @@ exit:
 void audio_extn_ffv_set_parameters(struct audio_device *adev __unused,
                                    struct str_parms *parms)
 {
-    int err;
     int val;
     int ret = 0;
     char value[128];
@@ -872,14 +910,21 @@ void audio_extn_ffv_set_parameters(struct audio_device *adev __unused,
             } else if (val == 2) {
                 ALOGD("%s: stereo ec ref", __func__);
                 ffvmod.ec_ref_ch_cnt = FFV_CHANNEL_MODE_STEREO;
+            } else if (val == 4) {
+                ALOGD("%s: quad ec ref", __func__);
+                ffvmod.ec_ref_ch_cnt = FFV_CHANNEL_MODE_QUAD;
             } else {
                 ALOGE("%s: Invalid ec ref", __func__);
             }
         }
-
-        ret = str_parms_get_int(parms, AUDIO_PARAMETER_FFV_EC_REF_DEVICE, &val);
-        if (ret >= 0) {
+        ret = -1;
+        if (str_parms_get_int(parms, AUDIO_PARAMETER_FFV_EC_REF_DEVICE, &val) >= 0) {
+            ret = 1;
             str_parms_del(parms, AUDIO_PARAMETER_FFV_EC_REF_DEVICE);
+        } else if (str_parms_get_int(parms, AUDIO_PARAMETER_DEVICE_CONNECT, &val) >= 0) {
+            ret = 1;
+        }
+        if (ret == 1) {
             if (val & AUDIO_DEVICE_OUT_SPEAKER) {
                 ALOGD("%s: capture ec ref from speaker", __func__);
                 ffvmod.ec_ref_dev = AUDIO_DEVICE_OUT_SPEAKER;
@@ -891,11 +936,26 @@ void audio_extn_ffv_set_parameters(struct audio_device *adev __unused,
             }
         }
 
+        ret = str_parms_get_int(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, &val);
+        if (ret >= 0) {
+            if (val & AUDIO_DEVICE_OUT_LINE) {
+                ALOGD("%s: capture ec ref from speaker", __func__);
+                ffvmod.ec_ref_dev = AUDIO_DEVICE_OUT_SPEAKER;
+            }
+        }
+
         ret = str_parms_get_int(parms, AUDIO_PARAMETER_FFV_CHANNEL_INDEX, &val);
         if (ret >= 0) {
             str_parms_del(parms, AUDIO_PARAMETER_FFV_CHANNEL_INDEX);
             ALOGD("%s: set target chan index %d", __func__, val);
             ffvmod.target_ch_idx = val;
+        }
+
+        ret = str_parms_get_int(parms, AUDIO_PARAMETER_FFV_CHANNEL_COUNT, &val);
+        if (ret >= 0) {
+            str_parms_del(parms, AUDIO_PARAMETER_FFV_CHANNEL_COUNT);
+            ALOGD("%s: set ffv channel count %d", __func__, val);
+            ffvmod.ch_count = val;
         }
     }
 }

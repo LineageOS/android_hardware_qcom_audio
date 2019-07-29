@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -353,6 +353,27 @@ void *platform_init(struct audio_device *adev)
     return my_data;
 }
 
+struct audio_custom_mtmx_params *
+    platform_get_custom_mtmx_params
+    (
+        void *platform __unused,
+        struct audio_custom_mtmx_params_info *info __unused
+    )
+{
+    ALOGW("%s: not implemented!", __func__);
+    return NULL;
+}
+
+int platform_add_custom_mtmx_params
+    (
+        void *platform __unused,
+        struct audio_custom_mtmx_params_info *info __unused
+    )
+{
+    ALOGW("%s: not implemented!", __func__);
+    return -ENOSYS;
+}
+
 void platform_deinit(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -489,7 +510,7 @@ int platform_get_default_app_type(void *platform __unused)
 }
 
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
-                                    int app_type __unused, int sample_rate __unused)
+                                    int app_type __unused)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     int acdb_dev_id, acdb_dev_type;

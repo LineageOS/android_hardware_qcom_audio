@@ -63,6 +63,18 @@
 #define AHAL_GAIN_DEPENDENT_INTERFACE_FUNCTION "audio_hw_send_gain_dep_calibration"
 #define AHAL_GAIN_GET_MAPPING_TABLE "audio_hw_get_gain_level_mapping"
 
+#ifdef AUDIO_FEATURE_ENABLED_GCOV
+extern void  __gcov_flush();
+static void enable_gcov()
+{
+    __gcov_flush();
+}
+#else
+static void enable_gcov()
+{
+}
+#endif
+
 enum {
     VOL_LISTENER_STATE_UNINITIALIZED,
     VOL_LISTENER_STATE_INITIALIZED,
@@ -755,6 +767,7 @@ static int vol_prc_lib_create(const effect_uuid_t *uuid,
     pthread_mutex_unlock(&vol_listner_init_lock);
 
     *p_handle = (effect_handle_t)context;
+    enable_gcov();
     return 0;
 }
 
@@ -766,9 +779,6 @@ static int vol_prc_lib_release(effect_handle_t handle)
     int status = -EINVAL;
     bool recompute_flag = false;
     int active_stream_count = 0;
-    uint32_t session_id;
-    uint32_t stream_type;
-    effect_uuid_t uuid;
 
     ALOGV("%s context %p", __func__, handle);
 
@@ -776,18 +786,12 @@ static int vol_prc_lib_release(effect_handle_t handle)
         return status;
     }
     pthread_mutex_lock(&vol_listner_init_lock);
-    session_id = recv_contex->session_id;
-    stream_type = recv_contex->stream_type;
-    uuid = recv_contex->desc->uuid;
 
     // check if the handle/context provided is valid
     list_for_each(node, &vol_effect_list) {
         context = node_to_item(node, struct vol_listener_context_s, effect_list_node);
-        if ((memcmp(&(context->desc->uuid), &uuid, sizeof(effect_uuid_t)) == 0)
-            && (context->session_id == session_id)
-            && (context->stream_type == stream_type)) {
+        if (context == recv_contex) {
             ALOGV("--- Found something to remove ---");
-            list_remove(node);
             PRINT_STREAM_TYPE(context->stream_type);
             if (verify_context(context)) {
                 recompute_flag = true;
@@ -821,6 +825,7 @@ static int vol_prc_lib_release(effect_handle_t handle)
         dump_list_l();
     }
     pthread_mutex_unlock(&vol_listner_init_lock);
+    enable_gcov();
     return status;
 }
 

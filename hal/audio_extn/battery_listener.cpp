@@ -140,6 +140,7 @@ status_t BatteryListenerImpl::init()
                         if (mStatusnot_ncharging()) // i.e event changed
                             break;
                     }
+                    [[fallthrough]];
                     default:
                         bool c = statusToBool(local_status);
                         ALOGI("healthInfo cb thread: cb %s", c ? "CHARGING" : "NOT CHARGING");
