@@ -1287,6 +1287,10 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #define audio_extn_auto_hal_set_audio_port_config(dev, config) (0)
 #define audio_extn_auto_hal_set_parameters(adev, parms) (0)
 #else
+#define AUDIO_OUTPUT_FLAG_MEDIA 0x100000
+#define AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION 0x200000
+#define AUDIO_OUTPUT_FLAG_NAV_GUIDANCE 0x400000
+#define AUDIO_OUTPUT_FLAG_PHONE 0x800000
 int32_t audio_extn_auto_hal_init(struct audio_device *adev);
 void audio_extn_auto_hal_deinit(void);
 int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,

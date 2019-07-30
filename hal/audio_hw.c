@@ -406,6 +406,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = "sys-notification-playback",
     [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = "nav-guidance-playback",
     [USECASE_AUDIO_PLAYBACK_PHONE] = "phone-playback",
+    [USECASE_AUDIO_FM_TUNER_EXT] = "fm-tuner-ext",
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -1532,14 +1533,11 @@ static snd_device_t derive_playback_snd_device(void * platform,
             goto end;
         }
 
-        // NB: case 7 is hypothetical and isn't a practical usecase yet.
-        // But if it does happen, we need to give priority to d2 if
-        // the combo devices active on the existing usecase share a backend.
-        // This is because we cannot have a usecase active on a combo device
-        // and a new usecase requests one device in this combo pair.
         if (platform_check_backends_match(d3[0], d3[1])) {
             return d2; // case 5
         } else {
+            if (popcount(a1) > 1)
+                return d1; //case 7
             // check if d1 is related to any of d3's
             if (d1 == d3[0] || d1 == d3[1])
                 return d1; // case 1
@@ -1615,7 +1613,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
               platform_get_snd_device_name(snd_device),
               platform_get_snd_device_name(usecase->out_snd_device),
               platform_check_backends_match(snd_device, usecase->out_snd_device));
-        if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info)) {
+        if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info) &&
+                (usecase->type != PCM_PASSTHROUGH)) {
             uc_derive_snd_device = derive_playback_snd_device(adev->platform,
                                                usecase, uc_info, snd_device);
             if (((uc_derive_snd_device != usecase->out_snd_device) || force_routing) &&
@@ -7159,6 +7158,15 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
     *stream_out = NULL;
 
+    pthread_mutex_lock(&adev->lock);
+    if (out_get_stream(adev, handle) != NULL) {
+        ALOGW("%s, output stream already opened", __func__);
+        ret = -EEXIST;
+    }
+    pthread_mutex_unlock(&adev->lock);
+    if (ret)
+        return ret;
+
     out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
 
     ALOGD("%s: enter: format(%#x) sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)\
@@ -8662,6 +8670,15 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             return -EINVAL;
     }
 
+    pthread_mutex_lock(&adev->lock);
+    if (in_get_stream(adev, handle) != NULL) {
+        ALOGW("%s, input stream already opened", __func__);
+        ret = -EEXIST;
+    }
+    pthread_mutex_unlock(&adev->lock);
+    if (ret)
+        return ret;
+
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
 
     if (!in) {
@@ -9575,6 +9592,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     list_init(&adev->usecase_list);
     list_init(&adev->active_inputs_list);
     list_init(&adev->active_outputs_list);
+    list_init(&adev->audio_patch_record_list);
+    adev->audio_patch_index = 0;
     adev->cur_wfd_channels = 2;
     adev->offload_usecases_state = 0;
     adev->pcm_record_uc_state = 0;

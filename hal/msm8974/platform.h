@@ -445,7 +445,12 @@ enum {
 #define MULTIMEDIA9_PCM_DEVICE 32
 #define FM_PLAYBACK_PCM_DEVICE 5
 #define FM_CAPTURE_PCM_DEVICE  6
+
+#ifdef PLATFORM_AUTO
+#define HFP_PCM_RX 36
+#else
 #define HFP_PCM_RX 5
+#endif
 
 #define INCALL_MUSIC_UPLINK_PCM_DEVICE 1
 
