@@ -1140,6 +1140,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         goto exit_send_app_type_cfg;
     }
     if ((usecase->id != USECASE_AUDIO_PLAYBACK_DEEP_BUFFER) &&
+        (usecase->id != USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_MULTI_CH) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_ULL) &&
