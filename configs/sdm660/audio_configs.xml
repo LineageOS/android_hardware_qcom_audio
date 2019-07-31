@@ -49,6 +49,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="audio_extn_hdmi_spk_enabled" value="true" />
         <flag name="use_xml_audio_policy_conf" value="true" />
         <flag name="voice_concurrency" value="false" />
+        <flag name="afe_proxy_enabled" value="true" />
+        <flag name="compress_voip_enabled" value="true" />
+        <flag name="fm_power_opt" value="true" />
+        <flag name="record_play_concurrency" value="false" />
 
         <!-- AV Configs -->
         <property name="vendor.audio.use.sw.alac.decoder" value="true"/>
@@ -65,49 +69,4 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <flag name="qti_flac_decoder" value="true" />
         <flag name="vorbis_offload_enabled" value="true" />
         <flag name="wma_offload_enabled" value="true" />
-
-        <!-- AHAL Configs -->
-        <flag name="a2dp_offload_enabled" value="true" />
-        <flag name="anc_headset_enabled" value="true" />
-        <flag name="audiosphere_enabled" value="true" />
-        <flag name="battery_listener_enabled" value="false" />
-        <flag name="compress_capture_enabled" value="false" />
-        <flag name="compress_in_enabled" value="false" />
-        <flag name="compress_metadata_needed" value="true" />
-        <flag name="concurrent_capture_enabled" value="false" />
-        <flag name="custom_stereo_enabled" value="true" />
-        <flag name="display_port_enabled" value="true" />
-        <flag name="dsm_feedback_enabled" value="false" />
-        <flag name="dynamic_ecns_enabled" value="false" />
-        <flag name="ext_hw_plugin_enabled" value="false" />
-        <flag name="ext_qdsp_enabled" value="false" />
-        <flag name="ext_spkr_enabled" value="false" />
-        <flag name="ext_spkr_tfa_enabled" value="false" />
-        <flag name="fluence_enabled" value="true" />
-        <flag name="hdmi_edid_enabled" value="true" />
-        <flag name="hdmi_passthrough_enabled" value="true" />
-        <flag name="hfp_enabled" value="true" />
-        <flag name="hifi_audio_enabled" value="true" />
-        <flag name="hwdep_cal_enabled" value="false" />
-        <flag name="incall_music_enabled" value="false" />
-        <flag name="keep_alive_enabled" value="false" />
-        <flag name="kpi_optimize_enabled" value="true" />
-        <flag name="maxx_audio_enabled" value="false" />
-        <flag name="receiver_aided_stereo" value="true" />
-        <flag name="snd_monitor_enabled" value="true" />
-        <flag name="source_track_enabled" value="true" />
-        <flag name="spkr_prot_enabled" value="true" />
-        <flag name="ssrec_enabled" value="true" />
-        <flag name="usb_offload_burst_mode" value="false" />
-        <flag name="usb_offload_enabled" value="true" />
-        <flag name="usb_offload_sidetone_vol_enabled" value="false" />
-        <flag name="use_deep_buffer_as_primary_output" value="false" />
-        <flag name="vbat_enabled" value="true" />
-        <flag name="wsa_enabled" value="false" />
-
-        <!-- Common configs between APM and AHAL -->
-        <flag name="afe_proxy_enabled" value="true" />
-        <flag name="compress_voip_enabled" value="true" />
-        <flag name="fm_power_opt" value="true" />
-        <flag name="record_play_concurrency" value="false" />
 </configs>
