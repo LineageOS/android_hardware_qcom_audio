@@ -2752,6 +2752,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
               !(usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
               (usecase->type != TRANSCODE_LOOPBACK_TX) &&
               (usecase->type != TRANSCODE_LOOPBACK_RX) &&
+              (usecase->type != PCM_CAPTURE) &&
               usecase->stream.out->started) {
               if (is_bt_soc_on(adev) == false) {
                   ALOGD("BT SCO/A2dp disconnected while in connection");
