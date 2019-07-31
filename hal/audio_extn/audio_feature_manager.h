@@ -73,6 +73,7 @@ enum audio_ext_feature_t {
     COMPRESS_METADATA_NEEDED,
     MAXX_AUDIO,
     AUDIO_ZOOM,
+    AUTO_HAL,
     // End Audio feature flags
     // Start Voice feature flags
     COMPRESS_VOIP,

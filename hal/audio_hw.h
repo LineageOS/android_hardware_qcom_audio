@@ -298,7 +298,6 @@ typedef enum render_mode {
     RENDER_MODE_AUDIO_STC_MASTER,
 } render_mode_t;
 
-#ifdef AUDIO_EXTN_AUTO_HAL_ENABLED
 /* This defines the physical car streams supported in audio HAL,
  * limited by the available frontend PCM driver.
  * Max number of physical streams supported is currently 8 and is
@@ -311,7 +310,6 @@ enum {
     CAR_AUDIO_STREAM_NAV_GUIDANCE     = 0x4,
     CAR_AUDIO_STREAM_PHONE            = 0x8,
 };
-#endif
 
 struct stream_app_type_cfg {
     int sample_rate;

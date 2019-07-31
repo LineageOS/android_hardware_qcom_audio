@@ -150,6 +150,8 @@ bool audio_feature_manager_is_feature_enabled(audio_ext_feature feature)
             return confValues->dynamic_ecns_enabled;
         case AUDIO_ZOOM:
             return confValues->audio_zoom_enabled;
+        case AUTO_HAL:
+            return confValues->auto_hal_enabled;
         default:
             return false;
     }
