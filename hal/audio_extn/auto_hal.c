@@ -89,6 +89,7 @@ static const audio_usecase_t bus_device_usecases[] = {
     USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
     USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
     USECASE_AUDIO_PLAYBACK_PHONE,
+    USECASE_AUDIO_PLAYBACK_REAR_SEAT,
 };
 
 int auto_hal_release_audio_patch(struct audio_hw_device *dev,
@@ -505,6 +506,19 @@ int auto_hal_open_output_stream(struct stream_out *out)
         if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
             out->flags |= AUDIO_OUTPUT_FLAG_PHONE;
         break;
+    case CAR_AUDIO_STREAM_REAR_SEAT:
+        out->usecase = USECASE_AUDIO_PLAYBACK_REAR_SEAT;
+        out->config = pcm_config_deep_buffer;
+        out->config.period_size = fp_get_output_period_size(out->sample_rate, out->format,
+                                        channels, DEEP_BUFFER_OUTPUT_PERIOD_DURATION);
+        if (out->config.period_size <= 0) {
+            ALOGE("Invalid configuration period size is not valid");
+            ret = -EINVAL;
+            goto error;
+        }
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
+            out->flags |= AUDIO_OUTPUT_FLAG_REAR_SEAT;
+        break;
     default:
         ALOGE("%s: Car audio stream %x not supported", __func__,
             out->car_audio_stream);
@@ -542,6 +556,9 @@ snd_device_t auto_hal_get_snd_device_for_car_audio_stream(struct stream_out *out
         break;
     case CAR_AUDIO_STREAM_PHONE:
         snd_device = SND_DEVICE_OUT_BUS_PHN;
+        break;
+    case CAR_AUDIO_STREAM_REAR_SEAT:
+        snd_device = SND_DEVICE_OUT_BUS_RSE;
         break;
     default:
         ALOGE("%s: Unknown car audio stream (%x)",
