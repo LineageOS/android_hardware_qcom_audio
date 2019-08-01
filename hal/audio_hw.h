@@ -435,6 +435,14 @@ struct stream_out {
 
     char address[AUDIO_DEVICE_MAX_ADDRESS_LEN];
     int car_audio_stream;
+
+    union {
+        char *addr;
+        struct {
+            int controller;
+            int stream;
+        } cs;
+    } extconn;
 };
 
 struct stream_in {

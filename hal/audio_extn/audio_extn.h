@@ -594,6 +594,12 @@ enum {
     EXT_DISPLAY_TYPE_HDMI,
     EXT_DISPLAY_TYPE_DP
 };
+
+// START: MST ==================================================
+#define MAX_CONTROLLERS 1
+#define MAX_STREAMS_PER_CONTROLLER 2
+// END: MST ==================================================
+
 // START: HDMI_PASSTHROUGH ==================================================
 /* Used to limit sample rate for TrueHD & EC3 */
 #define HDMI_PASSTHROUGH_MAX_SAMPLE_RATE 192000
