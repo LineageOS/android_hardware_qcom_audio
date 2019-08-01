@@ -35,6 +35,7 @@
 #define PRODUCT_FFV      "ffv"
 #define PRODUCT_ALLPLAY  "allplay"
 #define MAX_IN_CHANNELS 32
+#define CUSTOM_MTRX_PARAMS_MAX_USECASE 8
 
 typedef enum {
     PLATFORM,
@@ -103,9 +104,9 @@ struct audio_custom_mtmx_params_info {
     uint32_t id;
     uint32_t ip_channels;
     uint32_t op_channels;
-    uint32_t usecase_id;
+    uint32_t usecase_id[CUSTOM_MTRX_PARAMS_MAX_USECASE];
     uint32_t snd_device;
-    char fe_name[128];
+    uint32_t fe_id[CUSTOM_MTRX_PARAMS_MAX_USECASE];
 };
 
 struct audio_custom_mtmx_params {
@@ -116,7 +117,7 @@ struct audio_custom_mtmx_params {
 
 struct audio_custom_mtmx_in_params_info {
     uint32_t op_channels;
-    uint32_t usecase_id;
+    uint32_t usecase_id[CUSTOM_MTRX_PARAMS_MAX_USECASE];
 };
 
 struct audio_custom_mtmx_params_in_ch_info {
@@ -377,7 +378,8 @@ int platform_set_qtime(void *platform, int audio_pcm_device_id,
 int platform_get_delay(void *platform, int pcm_device_id);
 struct audio_custom_mtmx_params *
     platform_get_custom_mtmx_params(void *platform,
-                                    struct audio_custom_mtmx_params_info *info);
+                                    struct audio_custom_mtmx_params_info *info,
+                                    uint32_t *idx);
 int platform_add_custom_mtmx_params(void *platform,
                                     struct audio_custom_mtmx_params_info *info);
 /* callback functions from platform to common audio HAL */

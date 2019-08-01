@@ -47,15 +47,9 @@
 
 #ifdef AUDIO_EXTN_AUTO_HAL_ENABLED
 
-struct hostless_config {
-    struct pcm *pcm_tx;
-    struct pcm *pcm_rx;
-};
-
 typedef struct auto_hal_module {
     struct audio_device *adev;
     card_status_t card_status;
-    struct hostless_config hostless;
 } auto_hal_module_t;
 
 /* Auto hal module struct */
@@ -71,102 +65,17 @@ static const audio_usecase_t bus_device_usecases[] = {
     USECASE_AUDIO_PLAYBACK_PHONE,
 };
 
-/* Note: Due to ADP H/W design, SoC TERT/SEC TDM CLK and FSYNC lines are
- * both connected with CODEC and a single master is needed to provide
- * consistent CLK and FSYNC to slaves, hence configuring SoC TERT TDM as
- * single master and bring up a dummy hostless from TERT to SEC to ensure
- * both slave SoC SEC TDM and CODEC are driven upon system boot. */
-int32_t audio_extn_auto_hal_enable_hostless(void)
+static struct audio_patch_record *get_patch_from_list(struct audio_device *adev,
+                                                    audio_patch_handle_t patch_id)
 {
-    int32_t ret = 0;
-    char mixer_path[MIXER_PATH_MAX_LENGTH];
-
-    ALOGD("%s: Enable TERT -> SEC Hostless", __func__);
-
-    if (auto_hal == NULL) {
-        ALOGE("%s: Invalid device", __func__);
-        return -EINVAL;
+    struct audio_patch_record *patch;
+    struct listnode *node;
+    list_for_each(node, &adev->audio_patch_record_list) {
+        patch = node_to_item(node, struct audio_patch_record, list);
+        if (patch->handle == patch_id)
+            return patch;
     }
-
-    strlcpy(mixer_path, "dummy-hostless", MIXER_PATH_MAX_LENGTH);
-    ALOGD("%s: apply mixer and update path: %s", __func__, mixer_path);
-    if (audio_route_apply_and_update_path(auto_hal->adev->audio_route,
-            mixer_path)) {
-        ALOGD("%s: %s not supported, continue", __func__, mixer_path);
-        return ret;
-    }
-
-    /* TERT TDM TX 7 HOSTLESS to SEC TDM RX 7 HOSTLESS */
-    int pcm_dev_rx = 48, pcm_dev_tx = 49;
-    struct pcm_config pcm_config_lb = {
-        .channels = 1,
-        .rate = 48000,
-        .period_size = 240,
-        .period_count = 2,
-        .format = PCM_FORMAT_S16_LE,
-        .start_threshold = 0,
-        .stop_threshold = INT_MAX,
-        .avail_min = 0,
-    };
-
-    auto_hal->hostless.pcm_tx = pcm_open(auto_hal->adev->snd_card,
-                                   pcm_dev_tx,
-                                   PCM_IN, &pcm_config_lb);
-    if (auto_hal->hostless.pcm_tx &&
-        !pcm_is_ready(auto_hal->hostless.pcm_tx)) {
-        ALOGE("%s: %s", __func__,
-            pcm_get_error(auto_hal->hostless.pcm_tx));
-        ret = -EIO;
-        goto error;
-    }
-    auto_hal->hostless.pcm_rx = pcm_open(auto_hal->adev->snd_card,
-                                   pcm_dev_rx,
-                                   PCM_OUT, &pcm_config_lb);
-    if (auto_hal->hostless.pcm_rx &&
-        !pcm_is_ready(auto_hal->hostless.pcm_rx)) {
-        ALOGE("%s: %s", __func__,
-            pcm_get_error(auto_hal->hostless.pcm_rx));
-        ret = -EIO;
-        goto error;
-    }
-
-    if (pcm_start(auto_hal->hostless.pcm_tx) < 0) {
-        ALOGE("%s: pcm start for pcm tx failed", __func__);
-        ret = -EIO;
-        goto error;
-    }
-    if (pcm_start(auto_hal->hostless.pcm_rx) < 0) {
-        ALOGE("%s: pcm start for pcm rx failed", __func__);
-        ret = -EIO;
-        goto error;
-    }
-    return ret;
-
-error:
-    if (auto_hal->hostless.pcm_rx)
-        pcm_close(auto_hal->hostless.pcm_rx);
-    if (auto_hal->hostless.pcm_tx)
-        pcm_close(auto_hal->hostless.pcm_tx);
-    return ret;
-}
-
-void audio_extn_auto_hal_disable_hostless(void)
-{
-    ALOGD("%s: Disable TERT -> SEC Hostless", __func__);
-
-    if (auto_hal == NULL) {
-        ALOGE("%s: Invalid device", __func__);
-        return;
-    }
-
-    if (auto_hal->hostless.pcm_tx) {
-        pcm_close(auto_hal->hostless.pcm_tx);
-        auto_hal->hostless.pcm_tx = NULL;
-    }
-    if (auto_hal->hostless.pcm_rx) {
-        pcm_close(auto_hal->hostless.pcm_rx);
-        auto_hal->hostless.pcm_rx = NULL;
-    }
+    return NULL;
 }
 
 #define MAX_SOURCE_PORTS_PER_PATCH 1
@@ -184,6 +93,11 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
     char *str = NULL;
     struct str_parms *parms = NULL;
     char *address = NULL;
+    struct audio_usecase *uc_info = NULL;
+    struct audio_patch_record *patch_record = NULL;
+    audio_usecase_t usecase = USECASE_INVALID;
+    audio_io_handle_t input_io_handle = AUDIO_IO_HANDLE_NONE;
+    audio_io_handle_t output_io_handle = AUDIO_IO_HANDLE_NONE;
 
     ALOGV("%s: enter", __func__);
 
@@ -236,6 +150,7 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
         pthread_mutex_unlock(&adev->lock);
         if(ret)
             return ret;
+        input_io_handle = sinks->ext.mix.handle;
 
         if (strcmp(sources->ext.device.address, "") != 0) {
             address = audio_device_address_to_parameter(
@@ -248,7 +163,7 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
         if (!parms) {
             ALOGE("%s: failed to allocate mem for parms", __func__);
             ret = -ENOMEM;
-            goto error;
+            goto exit;
         }
         str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_ROUTING,
                         (int)sources->ext.device.type);
@@ -269,6 +184,7 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
         pthread_mutex_unlock(&adev->lock);
         if(ret)
             return ret;
+        output_io_handle = sources->ext.mix.handle;
 
         if (strcmp(sinks->ext.device.address, "") != 0) {
             address = audio_device_address_to_parameter(
@@ -281,20 +197,93 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
         if (!parms) {
             ALOGE("%s: failed to allocate mem for parms", __func__);
             ret = -ENOMEM;
-            goto error;
+            goto exit;
         }
         str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_ROUTING,
                         (int)sinks->ext.device.type);
         str = str_parms_to_str(parms);
         out_ctxt->output->stream.common.set_parameters(
                         (struct audio_stream *)out_ctxt->output, str);
+    } else if ((sources->type == AUDIO_PORT_TYPE_DEVICE) &&
+            (sinks->type == AUDIO_PORT_TYPE_DEVICE)) {
+        /* allocate use case and call to plugin driver*/
+        uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
+        if (!uc_info) {
+            ALOGE("%s fail to allocate uc_info", __func__);
+            return -ENOMEM;
+        }
+        /* TODO - add sink type check and printout for non speaker sink */
+        switch(sources->ext.device.type) {
+#ifdef FM_TUNER_EXT_ENABLED
+            case AUDIO_DEVICE_IN_FM_TUNER:
+                ALOGV("Creating audio patch for external FM tuner");
+                uc_info->id = USECASE_AUDIO_FM_TUNER_EXT;
+                uc_info->type = PCM_PASSTHROUGH;
+                uc_info->devices = AUDIO_DEVICE_IN_FM_TUNER;
+                uc_info->in_snd_device = SND_DEVICE_IN_CAPTURE_FM;
+                uc_info->out_snd_device = SND_DEVICE_OUT_BUS_MEDIA;
+                break;
+#endif
+            default:
+                ALOGE("%s: Unsupported audio source type %x", __func__,
+                            sources->ext.device.type);
+                goto error;
+        }
+
+        ALOGD("%s: Starting ext hw plugin use case (%d) in_snd_device (%d) out_snd_device (%d)",
+              __func__, uc_info->id, uc_info->in_snd_device, uc_info->out_snd_device);
+
+        ret = audio_extn_ext_hw_plugin_usecase_start(adev->ext_hw_plugin, uc_info);
+        if (ret) {
+            ALOGE("%s: failed to start ext hw plugin use case (%d)",
+                __func__, uc_info->id);
+            goto error;
+        }
+        /* TODO: apply audio port gain to codec if applicable */
+        usecase = uc_info->id;
+        pthread_mutex_lock(&adev->lock);
+        list_add_tail(&adev->usecase_list, &uc_info->list);
+        pthread_mutex_unlock(&adev->lock);
     } else {
-        ALOGW("%s: create device -> device audio patch", __func__);
+        ALOGW("%s: audio patch not supported",__func__);
+        return -EINVAL;
     }
 
+    /* patch created success, add to patch record list */
+    patch_record = (struct audio_patch_record *)calloc(1,
+                    sizeof(struct audio_patch_record));
+    if (!patch_record) {
+        ALOGE("%s fail to allocate patch_record", __func__);
+        ret = -ENOMEM;
+        if (uc_info)
+            list_remove(&uc_info->list);
+        goto error;
+    }
+
+    pthread_mutex_lock(&adev->lock);
+    adev->audio_patch_index++;
+    patch_record->handle = adev->audio_patch_index;
+    patch_record->usecase = usecase;
+    patch_record->input_io_handle = input_io_handle;
+    patch_record->output_io_handle = output_io_handle;
+    memcpy((void *)&patch_record->source, (void *)sources,
+        sizeof(struct audio_port_config));
+    memcpy((void *)&patch_record->sink, (void *)sinks,
+        sizeof(struct audio_port_config));
+    list_add_tail(&adev->audio_patch_record_list, &patch_record->list);
+    pthread_mutex_unlock(&adev->lock);
+
+    *handle = patch_record->handle;
+    goto exit;
+
 error:
+    if(uc_info)
+        free(uc_info);
+exit:
     if (parms)
         str_parms_destroy(parms);
+    if (str)
+        free(str);
     if (address)
         free(address);
     ALOGV("%s: exit: handle 0x%x", __func__, *handle);
@@ -305,6 +294,13 @@ int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
                                 audio_patch_handle_t handle)
 {
     int ret = 0;
+    struct audio_device *adev = (struct audio_device *)dev;
+    struct audio_usecase *uc_info = NULL;
+    struct audio_patch_record *patch_record = NULL;
+    streams_input_ctxt_t *in_ctxt = NULL;
+    streams_output_ctxt_t *out_ctxt = NULL;
+    char *str = NULL;
+    struct str_parms *parms = NULL;
 
     ALOGV("%s: enter: handle 0x%x", __func__, handle);
 
@@ -313,10 +309,92 @@ int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
         return -EINVAL;
     }
 
-    if (handle != AUDIO_PATCH_HANDLE_NONE) {
-        ALOGW("%s: release device -> device audio patch", __func__);
+    if (handle == AUDIO_PATCH_HANDLE_NONE) {
+        ALOGW("%s: null audio patch handle", __func__);
+        return -EINVAL;
     }
 
+    /* get the patch record from handle */
+    pthread_mutex_lock(&adev->lock);
+    patch_record = get_patch_from_list(adev, handle);
+    if(!patch_record) {
+        ALOGE("%s: failed to find the patch record with handle (%d) in the list",
+                __func__, handle);
+        ret = -EINVAL;
+    }
+    pthread_mutex_unlock(&adev->lock);
+    if(ret)
+        goto exit;
+
+    if (patch_record->input_io_handle) {
+        pthread_mutex_lock(&adev->lock);
+        in_ctxt = in_get_stream(adev, patch_record->input_io_handle);
+        if (!in_ctxt) {
+            ALOGE("%s, Could not find input stream", __func__);
+            ret = -EINVAL;
+        }
+        pthread_mutex_unlock(&adev->lock);
+        if(ret)
+            goto exit;
+
+        parms = str_parms_create();
+        str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_ROUTING, 0);
+        str = str_parms_to_str(parms);
+        in_ctxt->input->stream.common.set_parameters(
+                        (struct audio_stream *)in_ctxt->input, str);
+    }
+
+    if (patch_record->output_io_handle) {
+        pthread_mutex_lock(&adev->lock);
+        out_ctxt = out_get_stream(adev, patch_record->output_io_handle);
+        if (!out_ctxt) {
+            ALOGE("%s, Could not find output stream", __func__);
+            ret = -EINVAL;
+        }
+        pthread_mutex_unlock(&adev->lock);
+        if(ret)
+            goto exit;
+
+        parms = str_parms_create();
+        str_parms_add_int(parms, AUDIO_PARAMETER_STREAM_ROUTING, 0);
+        str = str_parms_to_str(parms);
+        out_ctxt->output->stream.common.set_parameters(
+                        (struct audio_stream *)out_ctxt->output, str);
+    }
+
+    if (patch_record->usecase != USECASE_INVALID) {
+        pthread_mutex_lock(&adev->lock);
+        uc_info = get_usecase_from_list(adev, patch_record->usecase);
+        if (!uc_info) {
+            ALOGE("%s: failed to find the usecase (%d)",
+                    __func__, patch_record->usecase);
+            ret = -EINVAL;
+        } else {
+            /* call to plugin to stop the usecase */
+            ret = audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info);
+            if (ret) {
+                ALOGE("%s: failed to stop ext hw plugin use case (%d)",
+                        __func__, uc_info->id);
+            }
+
+            /* remove usecase from list and free it */
+            list_remove(&uc_info->list);
+            free(uc_info);
+        }
+        pthread_mutex_unlock(&adev->lock);
+    }
+
+    /* remove the patch record from list and free it */
+    pthread_mutex_lock(&adev->lock);
+    list_remove(&patch_record->list);
+    pthread_mutex_unlock(&adev->lock);
+    free(patch_record);
+    if (parms)
+        str_parms_destroy(parms);
+    if (str)
+        free(str);
+
+exit:
     ALOGV("%s: exit", __func__);
     return ret;
 }
@@ -368,11 +446,16 @@ int32_t audio_extn_auto_hal_open_output_stream(struct stream_out *out)
             ret = -EINVAL;
             goto error;
         }
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE ||
+            out->flags == AUDIO_OUTPUT_FLAG_PRIMARY)
+            out->flags |= AUDIO_OUTPUT_FLAG_MEDIA;
         break;
     case CAR_AUDIO_STREAM_SYS_NOTIFICATION:
         /* sys notification bus stream shares pcm device with low-latency */
         out->usecase = USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION;
         out->config = pcm_config_low_latency;
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
+            out->flags |= AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION;
         break;
     case CAR_AUDIO_STREAM_NAV_GUIDANCE:
         out->usecase = USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE;
@@ -384,10 +467,14 @@ int32_t audio_extn_auto_hal_open_output_stream(struct stream_out *out)
             ret = -EINVAL;
             goto error;
         }
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
+            out->flags |= AUDIO_OUTPUT_FLAG_NAV_GUIDANCE;
         break;
     case CAR_AUDIO_STREAM_PHONE:
         out->usecase = USECASE_AUDIO_PLAYBACK_PHONE;
         out->config = pcm_config_low_latency;
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
+            out->flags |= AUDIO_OUTPUT_FLAG_PHONE;
         break;
     default:
         ALOGE("%s: Car audio stream %x not supported", __func__,
@@ -445,7 +532,7 @@ int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev __unused,
  */
 #define MIN_VOLUME_VALUE_MB -6000
 #define MAX_VOLUME_VALUE_MB 600
-
+#define STEP_VALUE_MB 100
 int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                         const struct audio_port_config *config)
 {
@@ -498,7 +585,10 @@ int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                     /* millibel = 1/100 dB = 1/1000 bel
                      * q13 = (10^(mdb/100/20))*(2^13)
                      */
-                    volume = powf(10.0, ((float)config->gain.values[0] / 2000));
+                    if(config->gain.values[0] <= (MIN_VOLUME_VALUE_MB + STEP_VALUE_MB))
+                        volume = 0.0 ;
+                    else
+                        volume = powf(10.0, ((float)config->gain.values[0] / 2000));
                     ALOGV("%s: set volume to stream: %p", __func__,
                         &out_ctxt->output->stream);
                     /* set gain if output stream is active */
@@ -515,20 +605,21 @@ int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
              *        to be part of port config upon audio patch creation. If not, need
              *        to create a list of audio port configs in adev context.
              */
-#if 0
             list_for_each(node, &adev->audio_patch_record_list) {
                 struct audio_patch_record *patch_record = node_to_item(node,
                                                     struct audio_patch_record,
                                                     list);
-                /* limit audio gain support for bus device only */
-                if (patch_record->sink.type == AUDIO_PORT_TYPE_DEVICE &&
+                /* limit audio gain support for device -> bus device patch */
+                if (patch_record->source.type == AUDIO_PORT_TYPE_DEVICE &&
+                    patch_record->sink.type == AUDIO_PORT_TYPE_DEVICE &&
                     patch_record->sink.role == AUDIO_PORT_ROLE_SINK &&
                     patch_record->sink.ext.device.type == AUDIO_DEVICE_OUT_BUS &&
                     patch_record->sink.ext.device.type == config->ext.device.type &&
                     strcmp(patch_record->sink.ext.device.address,
                         config->ext.device.address) == 0) {
-                    /* cache / update gain per audio patch sink */
-                    patch_record->sink.gain = config->gain;
+                    /* cache audio port configuration for sink */
+                    memcpy((void *)&patch_record->sink, (void *)config,
+                        sizeof(struct audio_port_config));
 
                     struct audio_usecase *uc_info = get_usecase_from_list(adev,
                                                         patch_record->usecase);
@@ -537,18 +628,17 @@ int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                             __func__, patch_record->usecase);
                         ret = -EINVAL;
                     } else {
-                        volume = config->gain->values[0];
+                        volume = config->gain.values[0];
                         /* linear interpolation from millibel to level */
                         int vol_level = lrint(((volume + (0 - MIN_VOLUME_VALUE_MB)) /
                                                (MAX_VOLUME_VALUE_MB - MIN_VOLUME_VALUE_MB)) * 40);
-                        ALOGV("%s: set volume to patch: %p", __func__,
+                        ALOGV("%s: set volume to patch %x", __func__,
                             patch_record->handle);
                         ret = audio_extn_ext_hw_plugin_set_audio_gain(adev,
                                 uc_info, vol_level);
                     }
                 }
             }
-#endif
             pthread_mutex_unlock(&adev->lock);
         } else if (config->role == AUDIO_PORT_ROLE_SOURCE) {
             // FIXME: handle input devices.
@@ -575,11 +665,9 @@ void audio_extn_auto_hal_set_parameters(struct audio_device *adev __unused,
         ALOGV("%s: snd card status %s", __func__, snd_card_status);
         if (strstr(snd_card_status, "OFFLINE")) {
             auto_hal->card_status = CARD_STATUS_OFFLINE;
-            audio_extn_auto_hal_disable_hostless();
         }
         else if (strstr(snd_card_status, "ONLINE")) {
             auto_hal->card_status = CARD_STATUS_ONLINE;
-            audio_extn_auto_hal_enable_hostless();
         }
     }
 

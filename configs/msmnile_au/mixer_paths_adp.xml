@@ -286,10 +286,6 @@
     <ctl name="SEC_TDM_RX_0 Audio Mixer MultiMedia9" value="0" />
     <ctl name="MultiMedia9 Mixer TERT_TDM_TX_0" value="0" />
 
-    <path name="dummy-hostless">
-        <ctl name="SEC_TDM_RX_7 Port Mixer TERT_TDM_TX_7" value="1" />
-    </path>
-
     <!-- These are audio route (FE to BE) specific mixer settings -->
 
     <!-- EC Reference -->
@@ -329,8 +325,6 @@
     <path name="deep-buffer-playback">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
-        <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
-        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
     </path>
 
     <path name="deep-buffer-playback speaker-protected">
@@ -529,6 +523,8 @@
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia4" value="1" />
         <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
         <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia4" value="1" />
+        <ctl name="QUIN_TDM_RX_0 Channels" value="Two" />
+        <ctl name="QUIN_TDM_RX_0 Audio Mixer MultiMedia4" value="1" />
     </path>
 
     <path name="compress-offload-playback speaker-protected">
@@ -606,6 +602,8 @@
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia7" value="1" />
         <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
         <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia7" value="1" />
+        <ctl name="QUIN_TDM_RX_0 Channels" value="Two" />
+        <ctl name="QUIN_TDM_RX_0 Audio Mixer MultiMedia7" value="1" />
     </path>
 
     <path name="compress-offload-playback2 display-port">
@@ -1144,6 +1142,10 @@
     <path name="media-playback">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
+        <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
+        <ctl name="QUIN_TDM_RX_0 Channels" value="Two" />
+        <ctl name="QUIN_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
     </path>
 
     <path name="sys-notification-playback">

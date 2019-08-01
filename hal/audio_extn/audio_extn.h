@@ -859,6 +859,7 @@ int b64decode(char *inp, int ilen, uint8_t* outp);
 int b64encode(uint8_t *inp, int ilen, char* outp);
 int read_line_from_file(const char *path, char *buf, size_t count);
 int audio_extn_utils_get_codec_version(const char *snd_card_name, int card_num, char *codec_version);
+int audio_extn_utils_get_codec_variant(int card_num, char *codec_variant);
 audio_format_t alsa_format_to_hal(uint32_t alsa_format);
 uint32_t hal_format_to_alsa(audio_format_t hal_format);
 audio_format_t pcm_format_to_hal(uint32_t pcm_format);
@@ -1001,7 +1002,8 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
 
 #define audio_extn_gef_init(adev) (0)
 #define audio_extn_gef_deinit(adev) (0)
-#define audio_extn_gef_notify_device_config(devices, cmask, sample_rate, acdb_id) (0)
+#define audio_extn_gef_notify_device_config(devices, cmask, sample_rate, \
+        acdb_id, app_type) (0)
 
 #ifndef INSTANCE_ID_ENABLED
 #define audio_extn_gef_send_audio_cal(dev, acdb_dev_id, acdb_device_type,\
@@ -1033,7 +1035,7 @@ void audio_extn_gef_init(struct audio_device *adev);
 void audio_extn_gef_deinit(struct audio_device *adev);
 
 void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
-    audio_channel_mask_t channel_mask, int sample_rate, int acdb_id);
+    audio_channel_mask_t channel_mask, int sample_rate, int acdb_id, int app_type);
 #ifndef INSTANCE_ID_ENABLED
 int audio_extn_gef_send_audio_cal(void* adev, int acdb_dev_id, int acdb_device_type,
     int app_type, int topology_id, int sample_rate, uint32_t module_id,
@@ -1274,8 +1276,6 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #ifndef AUDIO_EXTN_AUTO_HAL_ENABLED
 #define audio_extn_auto_hal_init(adev)                (0)
 #define audio_extn_auto_hal_deinit()                  (0)
-#define audio_extn_auto_hal_enable_hostless()         (0)
-#define audio_extn_auto_hal_disable_hostless()        (0)
 #define audio_extn_auto_hal_create_audio_patch(dev, num_sources,\
     sources, num_sinks, sinks, handle) (0)
 #define audio_extn_auto_hal_release_audio_patch(dev, handle) (0)
@@ -1287,10 +1287,12 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #define audio_extn_auto_hal_set_audio_port_config(dev, config) (0)
 #define audio_extn_auto_hal_set_parameters(adev, parms) (0)
 #else
+#define AUDIO_OUTPUT_FLAG_MEDIA 0x100000
+#define AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION 0x200000
+#define AUDIO_OUTPUT_FLAG_NAV_GUIDANCE 0x400000
+#define AUDIO_OUTPUT_FLAG_PHONE 0x800000
 int32_t audio_extn_auto_hal_init(struct audio_device *adev);
 void audio_extn_auto_hal_deinit(void);
-int32_t audio_extn_auto_hal_enable_hostless(void);
-void audio_extn_auto_hal_disable_hostless(void);
 int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
                                 unsigned int num_sources,
                                 const struct audio_port_config *sources,
