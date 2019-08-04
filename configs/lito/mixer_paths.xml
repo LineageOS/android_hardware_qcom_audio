@@ -238,6 +238,7 @@
     <ctl name="WSA_CDC_DMA_RX_0_Voice Mixer Voip" value="0" />
     <ctl name="RX_CDC_DMA_RX_0_Voice Mixer Voip" value="0" />
     <ctl name="Voip_Tx Mixer TX_CDC_DMA_TX_3_Voip" value="0" />
+    <ctl name="Voip_Tx Mixer TX_CDC_DMA_TX_4_Voip" value="0" />
     <ctl name="SLIM_7_RX_Voice Mixer Voip" value="0" />
     <ctl name="Voip_Tx Mixer SLIM_7_TX_Voip" value="0" />
     <ctl name="AFE_PCM_RX_Voice Mixer Voip" value="0" />
@@ -1758,6 +1759,10 @@
         <ctl name="Voip_Tx Mixer TX_CDC_DMA_TX_3_Voip" value="1" />
     </path>
 
+    <path name="compress-voip-call headset">
+        <ctl name="RX_CDC_DMA_RX_0_Voice Mixer Voip" value="1" />
+        <ctl name="Voip_Tx Mixer TX_CDC_DMA_TX_4_Voip" value="1" />
+    </path>
 
     <path name="compress-voip-call bt-sco">
         <ctl name="SLIM_7_RX_Voice Mixer Voip" value="1" />
@@ -1903,6 +1908,10 @@
 
     <path name="audio-playback-voip headphones">
         <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip headset">
+        <path name="audio-playback-voip headphones" />
     </path>
 
     <path name="audio-playback-voip bt-sco">
@@ -2512,7 +2521,17 @@
         <path name="tty-headphones" />
     </path>
 
+    <path name="voice-tty-full-headset">
+        <ctl name="TTY Mode" value="FULL" />
+        <path name="tty-headphones" />
+    </path>
+
     <path name="voice-tty-vco-headphones">
+        <ctl name="TTY Mode" value="VCO" />
+        <path name="tty-headphones" />
+    </path>
+
+    <path name="voice-tty-vco-headset">
         <ctl name="TTY Mode" value="VCO" />
         <path name="tty-headphones" />
     </path>
@@ -2531,11 +2550,16 @@
     <path name="voice-tty-full-headset-mic">
         <path name="amic2" />
         <ctl name="ADC2 Volume" value="0" />
-        <ctl name="TX_DEC0 Volume" value="84" />
+        <ctl name="TX_DEC5 Volume" value="84" />
     </path>
 
     <path name="voice-tty-hco-headset-mic">
-        <path name="voice-tty-full-headset-mic" />
+        <ctl name="TX DEC6 MUX" value="SWR_MIC" />
+        <ctl name="TX SMIC MUX6" value="ADC1" />
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
+        <ctl name="TX_AIF1_CAP Mixer DEC6" value="1" />
+        <ctl name="ADC2_MIXER Switch" value="1" />
+        <ctl name="ADC2 MUX" value="INP2" />
     </path>
 
     <path name="voice-tty-vco-handset-mic">
@@ -2719,6 +2743,10 @@
 
     <path name="mmap-playback headphones">
         <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback headset">
+        <path name="mmap-playback headphones" />
     </path>
 
     <path name="mmap-playback speaker-and-headphones">
