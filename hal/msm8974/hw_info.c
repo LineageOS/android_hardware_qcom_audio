@@ -525,6 +525,12 @@ static void update_hardware_info_kona(
     } else if (!strncmp(snd_card_name, "lito-mtp-snd-card",
                  sizeof("lito-mtp-snd-card"))) {
         strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "atoll-idp-snd-card",
+                 sizeof("atoll-idp-snd-card"))) {
+        strlcpy(hw_info->name, "atoll", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "atoll-wcd937x-snd-card",
+                 sizeof("atoll-wcd937x-snd-card"))) {
+        strlcpy(hw_info->name, "atoll", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
                  sizeof("kona-qrd-snd-card"))) {
         strlcpy(hw_info->name, "kona", sizeof(hw_info->name));
@@ -803,7 +809,8 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "sda845")) {
         ALOGV("SDA845 - variant soundcard");
         update_hardware_info_sda845(hw_info, snd_card_name);
-    } else if (strstr(snd_card_name, "kona") || strstr(snd_card_name, "lito")) {
+    } else if (strstr(snd_card_name, "kona") || strstr(snd_card_name, "lito")
+               || strstr(snd_card_name, "atoll")) {
         ALOGV("KONA - variant soundcard");
         update_hardware_info_kona(hw_info, snd_card_name);
     } else if(strstr(snd_card_name, "sdm439")) {
