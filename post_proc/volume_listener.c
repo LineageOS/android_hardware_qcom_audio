@@ -714,13 +714,9 @@ static void init_once()
     property_get("vendor.audio.volume.listener.dump", check_dump_val, "0");
     if (atoi(check_dump_val))
         dumping_enabled = true;
-    else {
-        property_get("audio.volume.listener.dump", check_dump_val, "0");
-        if (atoi(check_dump_val))
-            dumping_enabled = true;
-    }
+
     headset_cal_enabled = property_get_bool(
-                            "audio.volume.headset.gain.depcal", false);
+                            "vendor.audio.volume.headset.gain.depcal", false);
 
     init_status = 0;
     list_init(&vol_effect_list);
