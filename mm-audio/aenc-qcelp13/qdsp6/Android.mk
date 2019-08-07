@@ -57,6 +57,9 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
 endif
 
 
+ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 
@@ -81,6 +84,9 @@ LOCAL_SHARED_LIBRARIES  += libOmxQcelp13Enc
 LOCAL_VENDOR_MODULE     := true
 LOCAL_SRC_FILES         := test/omx_qcelp13_enc_test.c
 
+ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_EXECUTABLE)
 
 endif
