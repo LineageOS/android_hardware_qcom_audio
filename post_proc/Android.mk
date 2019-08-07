@@ -98,6 +98,9 @@ ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
         LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 endif
 
+ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 
@@ -139,6 +142,9 @@ endif
 LOCAL_MODULE:= libhwacceffectswrapper
 LOCAL_VENDOR_MODULE := true
 
+ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := unsigned-integer-overflow signed-integer-overflow
+endif
 include $(BUILD_STATIC_LIBRARY)
 endif
 
@@ -209,6 +215,9 @@ ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
         LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 endif
 
+ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 endif
@@ -242,6 +251,9 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 endif

@@ -31,6 +31,9 @@ LOCAL_32_BIT_ONLY := true
 LOCAL_C_INCLUDES += $(hal-play-inc)
 LOCAL_VENDOR_MODULE := true
 
+ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_EXECUTABLE)
 
 # audio_hal_multi_record_test
@@ -51,4 +54,7 @@ hal-rec-inc     = $(TARGET_OUT_HEADERS)/mm-audio/qahw_api/inc
 LOCAL_C_INCLUDES += $(hal-rec-inc)
 LOCAL_VENDOR_MODULE := true
 
+ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_EXECUTABLE)

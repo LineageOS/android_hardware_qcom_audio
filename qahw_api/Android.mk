@@ -43,6 +43,9 @@ LOCAL_COPY_HEADERS      += inc/qahw_effect_visualizer.h
 
 LOCAL_VENDOR_MODULE     := true
 
+ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #test app compilation
