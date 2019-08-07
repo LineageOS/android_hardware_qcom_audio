@@ -2256,9 +2256,11 @@ bool is_btsco_device(snd_device_t out_snd_device, snd_device_t in_snd_device)
 {
    bool ret=false;
    if ((out_snd_device == SND_DEVICE_OUT_BT_SCO ||
-        out_snd_device == SND_DEVICE_OUT_BT_SCO_WB) ||
+        out_snd_device == SND_DEVICE_OUT_BT_SCO_WB ||
+        out_snd_device == SND_DEVICE_OUT_BT_SCO_SWB) ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB_NREC ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB ||
+        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_NREC ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC)
         ret = true;
