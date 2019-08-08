@@ -500,6 +500,10 @@
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-safe">
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="deep-buffer-playback display-port">
         <ctl name="DISPLAY_PORT Mixer MultiMedia1" value="1" />
     </path>
@@ -539,6 +543,11 @@
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-safe-and-usb-headphones">
+        <path name="deep-buffer-playback usb-headphones" />
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="deep-buffer-playback headphones">
         <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia1" value="1" />
     </path>
@@ -552,12 +561,27 @@
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-safe-and-headphones">
+        <path name="deep-buffer-playback headphones" />
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="deep-buffer-playback speaker-and-bt-sco">
         <path name="deep-buffer-playback bt-sco" />
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-safe-and-bt-sco">
+        <path name="deep-buffer-playback bt-sco" />
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="deep-buffer-playback speaker-and-bt-sco-wb">
+        <path name="deep-buffer-playback bt-sco-wb" />
+        <path name="deep-buffer-playback" />
+    </path>
+
+    <path name="deep-buffer-playback speaker-safe-and-bt-sco-wb">
         <path name="deep-buffer-playback bt-sco-wb" />
         <path name="deep-buffer-playback" />
     </path>
@@ -576,6 +600,10 @@
     </path>
 
     <path name="low-latency-playback speaker-protected">
+        <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback speaker-safe">
         <path name="low-latency-playback" />
     </path>
 
@@ -618,6 +646,11 @@
         <path name="low-latency-playback" />
     </path>
 
+    <path name="low-latency-playback speaker-safe-and-usb-headphones">
+        <path name="low-latency-playback usb-headphones" />
+        <path name="low-latency-playback" />
+    </path>
+
     <path name="low-latency-playback headphones">
         <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia5" value="1" />
     </path>
@@ -631,12 +664,26 @@
         <path name="low-latency-playback" />
     </path>
 
+    <path name="low-latency-playback speaker-safe-and-headphones">
+        <path name="low-latency-playback headphones" />
+        <path name="low-latency-playback" />
+    </path>
     <path name="low-latency-playback speaker-and-bt-sco">
         <path name="low-latency-playback bt-sco" />
         <path name="low-latency-playback" />
     </path>
 
+    <path name="low-latency-playback speaker-safe-and-bt-sco">
+        <path name="low-latency-playback bt-sco" />
+        <path name="low-latency-playback" />
+    </path>
+
     <path name="low-latency-playback speaker-and-bt-sco-wb">
+        <path name="low-latency-playback bt-sco-wb" />
+        <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback speaker-safe-and-bt-sco-wb">
         <path name="low-latency-playback bt-sco-wb" />
         <path name="low-latency-playback" />
     </path>
@@ -658,6 +705,10 @@
         <path name="audio-ull-playback" />
     </path>
 
+    <path name="audio-ull-playback speaker-safe">
+        <path name="audio-ull-playback" />
+    </path>
+
     <path name="audio-ull-playback headphones">
         <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia8" value="1" />
     </path>
@@ -667,6 +718,11 @@
     </path>
 
     <path name="audio-ull-playback speaker-and-headphones">
+        <path name="audio-ull-playback" />
+        <path name="audio-ull-playback headphones" />
+    </path>
+
+    <path name="audio-ull-playback speaker-safe-and-headphones">
         <path name="audio-ull-playback" />
         <path name="audio-ull-playback headphones" />
     </path>
@@ -710,7 +766,17 @@
         <path name="audio-ull-playback" />
     </path>
 
+    <path name="audio-ull-playback speaker-safe-and-bt-sco">
+        <path name="audio-ull-playback bt-sco" />
+        <path name="audio-ull-playback" />
+    </path>
+
     <path name="audio-ull-playback speaker-and-bt-sco-wb">
+        <path name="audio-ull-playback bt-sco-wb" />
+        <path name="audio-ull-playback" />
+    </path>
+
+    <path name="audio-ull-playback speaker-safe-and-bt-sco-wb">
         <path name="audio-ull-playback bt-sco-wb" />
         <path name="audio-ull-playback" />
     </path>
@@ -737,6 +803,10 @@
     </path>
 
     <path name="compress-offload-playback speaker-protected">
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback speaker-safe">
         <path name="compress-offload-playback" />
     </path>
 
@@ -783,6 +853,11 @@
         <path name="compress-offload-playback" />
     </path>
 
+    <path name="compress-offload-playback speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback usb-headphones" />
+        <path name="compress-offload-playback" />
+    </path>
+
     <path name="compress-offload-playback headphones">
         <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia4" value="1" />
     </path>
@@ -800,12 +875,27 @@
         <path name="compress-offload-playback" />
     </path>
 
+    <path name="compress-offload-playback speaker-safe-and-headphones">
+        <path name="compress-offload-playback headphones" />
+        <path name="compress-offload-playback" />
+    </path>
+
     <path name="compress-offload-playback speaker-and-bt-sco">
         <path name="compress-offload-playback bt-sco" />
         <path name="compress-offload-playback" />
     </path>
 
+    <path name="compress-offload-playback speaker-safe-and-bt-sco">
+        <path name="compress-offload-playback bt-sco" />
+        <path name="compress-offload-playback" />
+    </path>
+
     <path name="compress-offload-playback speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback bt-sco-wb" />
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback speaker-safe-and-bt-sco-wb">
         <path name="compress-offload-playback bt-sco-wb" />
         <path name="compress-offload-playback" />
     </path>
@@ -862,6 +952,11 @@
         <path name="compress-offload-playback2" />
     </path>
 
+    <path name="compress-offload-playback2 speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback2 usb-headphones" />
+        <path name="compress-offload-playback2" />
+    </path>
+
     <path name="compress-offload-playback2 headphones">
         <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia7" value="1" />
     </path>
@@ -879,12 +974,27 @@
         <path name="compress-offload-playback2" />
     </path>
 
+    <path name="compress-offload-playback2 speaker-safe-and-headphones">
+        <path name="compress-offload-playback2 headphones" />
+        <path name="compress-offload-playback2" />
+    </path>
+
     <path name="compress-offload-playback2 speaker-and-bt-sco">
         <path name="compress-offload-playback2 bt-sco" />
         <path name="compress-offload-playback2" />
     </path>
 
+    <path name="compress-offload-playback2 speaker-safe-and-bt-sco">
+        <path name="compress-offload-playback2 bt-sco" />
+        <path name="compress-offload-playback2" />
+    </path>
+
     <path name="compress-offload-playback2 speaker-and-bt-sco-wb">
+        <path name="compress-offload-playback2 bt-sco-wb" />
+        <path name="compress-offload-playback2" />
+    </path>
+
+    <path name="compress-offload-playback2 speaker-safe-and-bt-sco-wb">
         <path name="compress-offload-playback2 bt-sco-wb" />
         <path name="compress-offload-playback2" />
     </path>
@@ -2014,6 +2124,11 @@
         <path name="bt-a2dp" />
     </path>
 
+    <path name="speaker-safe-and-bt-a2dp">
+        <path name="speaker-safe" />
+        <path name="bt-a2dp" />
+    </path>
+
     <path name="deep-buffer-playback bt-a2dp">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia1" value="1" />
     </path>
@@ -2067,7 +2182,17 @@
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-safe-and-bt-a2dp">
+        <path name="deep-buffer-playback bt-a2dp" />
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="compress-offload-playback speaker-and-bt-a2dp">
+        <path name="compress-offload-playback bt-a2dp" />
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback speaker-safe-and-bt-a2dp">
         <path name="compress-offload-playback bt-a2dp" />
         <path name="compress-offload-playback" />
     </path>
@@ -2077,7 +2202,17 @@
         <path name="low-latency-playback" />
     </path>
 
+    <path name="low-latency-playback speaker-safe-and-bt-a2dp">
+        <path name="low-latency-playback bt-a2dp" />
+        <path name="low-latency-playback" />
+    </path>
+
     <path name="compress-offload-playback2 speaker-and-bt-a2dp">
+        <path name="compress-offload-playback2 bt-a2dp" />
+        <path name="compress-offload-playback2" />
+    </path>
+
+    <path name="compress-offload-playback2 speaker-safe-and-bt-a2dp">
         <path name="compress-offload-playback2 bt-a2dp" />
         <path name="compress-offload-playback2" />
     </path>
@@ -2122,6 +2257,11 @@
         <path name="audio-ull-playback" />
     </path>
 
+    <path name="audio-ull-playback speaker-safe-and-bt-a2dp">
+        <path name="audio-ull-playback bt-a2dp" />
+        <path name="audio-ull-playback" />
+    </path>
+
     <path name="mmap-playback">
         <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia16" value="1" />
     </path>
@@ -2139,6 +2279,11 @@
     </path>
 
     <path name="mmap-playback speaker-and-headphones">
+        <path name="mmap-playback" />
+        <path name="mmap-playback headphones" />
+    </path>
+
+    <path name="mmap-playback speaker-safe-and-headphones">
         <path name="mmap-playback" />
         <path name="mmap-playback headphones" />
     </path>
@@ -2187,6 +2332,11 @@
     </path>
 
     <path name="mmap-playback speaker-and-usb-headphones">
+        <path name="mmap-playback usb-headphones" />
+        <path name="mmap-playback" />
+    </path>
+
+    <path name="mmap-playback speaker-safe-and-usb-headphones">
         <path name="mmap-playback usb-headphones" />
         <path name="mmap-playback" />
     </path>
@@ -2296,6 +2446,10 @@
         <path name="incall_music_uplink" />
     </path>
 
+    <path name="incall_music_uplink speaker-safe-and-usb-headphones">
+        <path name="incall_music_uplink" />
+    </path>
+
     <path name="incall_music_uplink headphones">
         <path name="incall_music_uplink" />
     </path>
@@ -2308,7 +2462,15 @@
         <path name="incall_music_uplink" />
     </path>
 
+    <path name="incall_music_uplink speaker-safe-and-headphones">
+        <path name="incall_music_uplink" />
+    </path>
+
     <path name="incall_music_uplink speaker-and-bt-sco">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink speaker-safe-and-bt-sco">
         <path name="incall_music_uplink" />
     </path>
 
@@ -2317,6 +2479,10 @@
     </path>
 
     <path name="incall_music_uplink speaker-and-bt-a2dp">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink speaker-safe-and-bt-a2dp">
         <path name="incall_music_uplink" />
     </path>
 
@@ -2503,23 +2669,27 @@
         <path name="speaker-mono" />
     </path>
 
-   <path name="speaker-vbat-mono">
+    <path name="speaker-vbat-mono">
        <path name="speaker-mono" />
        <ctl name="WSA_RX INT0 VBAT WSA RX0 VBAT Enable" value="1" />
-   </path>
+    </path>
 
-   <path name="speaker-vbat-mono-2">
+    <path name="speaker-vbat-mono-2">
        <path name="speaker-mono-2" />
        <ctl name="WSA_RX INT1 VBAT WSA RX1 VBAT Enable" value="1" />
-   </path>
+    </path>
 
-   <path name="speaker-vbat">
+    <path name="speaker-vbat">
        <path name="speaker" />
        <ctl name="WSA_RX INT0 VBAT WSA RX0 VBAT Enable" value="1" />
        <ctl name="WSA_RX INT1 VBAT WSA RX1 VBAT Enable" value="1" />
-   </path>
+    </path>
 
-   <path name="sidetone-iir">
+    <path name="speaker-safe">
+        <path name="speaker-mono"/>
+    </path>
+
+    <path name="sidetone-iir">
         <ctl name="IIR0 Enable Band1" value="1" />
         <ctl name="IIR0 Enable Band2" value="1" />
         <ctl name="IIR0 Enable Band3" value="1" />
@@ -2703,6 +2873,11 @@
         <path name="speaker" />
     </path>
 
+    <path name="speaker-safe-and-headphones">
+        <path name="headphones" />
+        <path name="speaker-safe" />
+    </path>
+
     <path name="speaker-and-line">
         <path name="speaker-and-headphones" />
     </path>
@@ -2721,6 +2896,11 @@
 
     <path name="speaker-and-usb-headphones">
         <path name="speaker" />
+        <path name="usb-headphones" />
+    </path>
+
+    <path name="speaker-safe-and-usb-headphones">
+        <path name="speaker-safe" />
         <path name="usb-headphones" />
     </path>
 
