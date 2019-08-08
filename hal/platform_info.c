@@ -78,6 +78,7 @@ typedef enum {
     CUSTOM_MTMX_PARAM_IN_CH_INFO,
     MMSECNS,
     SND_DEV_DELAY,
+    AUDIO_SOURCE_DELAY,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -106,6 +107,7 @@ static void process_custom_mtmx_in_params(const XML_Char **attr);
 static void process_custom_mtmx_param_in_ch_info(const XML_Char **attr);
 static void process_fluence_mmsecns(const XML_Char **attr);
 static void process_snd_device_delay(const XML_Char **attr);
+static void process_audio_source_delay(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -131,6 +133,7 @@ static section_process_fn section_table[] = {
     [CUSTOM_MTMX_PARAM_IN_CH_INFO] = process_custom_mtmx_param_in_ch_info,
     [MMSECNS] = process_fluence_mmsecns,
     [SND_DEV_DELAY] = process_snd_device_delay,
+    [AUDIO_SOURCE_DELAY] = process_audio_source_delay,
 };
 
 static section_t section;
@@ -704,7 +707,6 @@ done:
     return;
 }
 
-
 static void process_snd_device_delay(const XML_Char **attr)
 {
     snd_device_t snd_device = SND_DEVICE_NONE;
@@ -727,6 +729,33 @@ static void process_snd_device_delay(const XML_Char **attr)
     }
 
     platform_set_snd_device_delay(snd_device, atoi((char *)attr[3]));
+
+done:
+    return;
+}
+
+static void process_audio_source_delay(const XML_Char **attr)
+{
+    audio_source_t audio_source = -1;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found", __func__);
+        goto done;
+    }
+    audio_source = platform_get_audio_source_index((const char *)attr[1]);
+
+    if (audio_source < 0) {
+        ALOGE("%s: audio_source %s is not defined",
+              __func__, (char *)attr[1]);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "delay") != 0) {
+        ALOGE("%s: 'delay' not found", __func__);
+        goto done;
+    }
+
+    platform_set_audio_source_delay(audio_source, atoi((char *)attr[3]));
 
 done:
     return;
@@ -1471,6 +1500,9 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
         } else if (strcmp(tag_name, "snd_device_delay") == 0) {
             section = SND_DEV_DELAY;
         } else if (strcmp(tag_name, "device_delay") == 0) {
+        } else if (strcmp(tag_name, "audio_input_source_delay") == 0) {
+            section = AUDIO_SOURCE_DELAY;
+        } else if (strcmp(tag_name, "audio_source_delay") == 0) {
             section_process_fn fn = section_table[section];
             fn(attr);
         }

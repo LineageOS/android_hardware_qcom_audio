@@ -1527,6 +1527,22 @@ static int snd_device_delay_ms[SND_DEVICE_MAX] = {0};
 #define ULL_PLATFORM_DELAY         (3*1000LL)
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
 
+static int audio_source_delay_ms[AUDIO_SOURCE_CNT] = {0};
+
+static struct name_to_index audio_source_index[AUDIO_SOURCE_CNT] = {
+    {TO_NAME_INDEX(AUDIO_SOURCE_DEFAULT)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_MIC)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_UPLINK)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_DOWNLINK)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_CALL)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_CAMCORDER)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_RECOGNITION)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_COMMUNICATION)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_REMOTE_SUBMIX)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_UNPROCESSED)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_PERFORMANCE)},
+};
+
 static bool is_usb_snd_dev(snd_device_t snd_device)
 {
     if (snd_device < SND_DEVICE_IN_BEGIN) {
@@ -4631,6 +4647,11 @@ int platform_get_snd_device_index(char *device_name)
 int platform_get_usecase_index(const char *usecase_name)
 {
     return find_index(usecase_name_index, AUDIO_USECASE_MAX, usecase_name);
+}
+
+int platform_get_audio_source_index(const char *audio_source_name)
+{
+    return find_index(audio_source_index, AUDIO_SOURCE_CNT, audio_source_name);
 }
 
 void platform_add_operator_specific_device(snd_device_t snd_device,
@@ -8589,6 +8610,29 @@ int64_t platform_get_snd_device_delay(snd_device_t snd_device)
         return 0;
     }
     return 1000LL * (int64_t)snd_device_delay_ms[snd_device];
+}
+
+void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms)
+{
+    if ((audio_source < AUDIO_SOURCE_DEFAULT) ||
+           (audio_source > AUDIO_SOURCE_MAX)) {
+        ALOGE("%s: Invalid audio_source = %d", __func__, audio_source);
+        return;
+    }
+
+    audio_source_delay_ms[audio_source] = delay_ms;
+}
+
+/* Delay in Us */
+int64_t platform_get_audio_source_delay(audio_source_t audio_source)
+{
+    if ((audio_source < AUDIO_SOURCE_DEFAULT) ||
+            (audio_source > AUDIO_SOURCE_MAX)) {
+        ALOGE("%s: Invalid audio_source = %d", __func__, audio_source);
+        return 0;
+    }
+
+    return 1000LL * audio_source_delay_ms[audio_source];
 }
 
 /* Delay in Us */

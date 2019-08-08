@@ -421,4 +421,8 @@ int platform_set_hdmi_channels_v2(void *platform, int channel_count,
 int platform_get_display_port_ctl_index(int controller, int stream);
 bool platform_is_call_proxy_snd_device(snd_device_t snd_device);
 void platform_set_snd_device_delay(snd_device_t snd_device, int delay_ms);
+void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms);
+
+int platform_get_audio_source_index(const char *audio_source_name);
+
 #endif // AUDIO_PLATFORM_API_H
