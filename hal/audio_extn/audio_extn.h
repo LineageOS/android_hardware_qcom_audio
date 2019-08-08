@@ -116,6 +116,8 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
 #define HW_INFO_ARRAY_MAX_SIZE 32
 
+#define AUDIO_PARAMETER_KEY_HIFI_AUDIO_FILTER "hifi_filter"
+
 struct snd_card_split {
     char device[HW_INFO_ARRAY_MAX_SIZE];
     char snd_card[HW_INFO_ARRAY_MAX_SIZE];
@@ -260,6 +262,14 @@ int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev,
 int32_t audio_extn_read_afe_proxy_channel_masks(struct stream_out *out);
 int32_t audio_extn_get_afe_proxy_channel_count();
 //END: AFE_PROXY_FEATURE
+
+//START: HIFI FILTER
+void audio_extn_enable_hifi_filter(struct audio_device *adev, bool value);
+void audio_extn_hifi_filter_set_params(struct str_parms *parms, char *value, int len);
+bool audio_extn_is_hifi_filter_enabled(struct audio_device* adev,struct stream_out *out,
+                                   snd_device_t snd_device, char *codec_variant,
+                                   int channels, int usecase_init);
+//END: HIFI FILTER
 
 /// ---- USB feature ---------------------------------------------------------------
 void audio_extn_usb_init(void *adev);
