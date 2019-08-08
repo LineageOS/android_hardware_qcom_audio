@@ -541,7 +541,9 @@ int audio_extn_utils_get_snd_card_num()
     struct acdb_platform_data *my_data = calloc(1, sizeof(struct acdb_platform_data));
 
     bool card_verifed[MAX_SND_CARD] = {0};
-    const int retry_limit = property_get_int32("audio.snd_card.open.retries", RETRY_NUMBER);
+    const int retry_limit = property_get_int32(
+        "vendor.audio.snd_card.open.retries",
+        property_get_int32("audio.snd_card.open.retries", RETRY_NUMBER));
 
     for (;;) {
         if (snd_card_num >= MAX_SND_CARD) {
