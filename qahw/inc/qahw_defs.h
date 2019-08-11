@@ -217,6 +217,9 @@ __BEGIN_DECLS
 #define QAHW_PCM_CHANNEL_RW   32  /* Right wide channel.                           */
 #define QAHW_PCM_CHANNEL_RSD  34  /* Right side direct channel.                    */
 
+#define QAHW_AUDIO_DEVICE_OUT_SPEAKER2 0x10000000
+#define QAHW_AUDIO_DEVICE_OUT_SPEAKER3 0x20000000
+
 /* type of asynchronous write callback events. Mutually exclusive */
 typedef enum {
     QAHW_STREAM_CBK_EVENT_WRITE_READY, /* non blocking write completed */
