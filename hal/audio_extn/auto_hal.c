@@ -38,6 +38,7 @@
 #include "platform_api.h"
 #include "platform.h"
 #include "audio_hal_plugin.h"
+#include "auto_hal.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -54,43 +55,8 @@ static fp_get_usecase_from_list_t                   fp_get_usecase_from_list;
 static fp_get_output_period_size_t                  fp_get_output_period_size;
 static fp_audio_extn_ext_hw_plugin_set_audio_gain_t fp_audio_extn_ext_hw_plugin_set_audio_gain;
 
-typedef struct auto_hal_module {
-    struct audio_device *adev;
-    card_status_t card_status;
-} auto_hal_module_t;
-
 /* Auto hal module struct */
 static struct auto_hal_module *auto_hal = NULL;
-
-struct pcm_config pcm_config_deep_buffer = {
-    .channels = 2,
-    .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
-    .period_size = DEEP_BUFFER_OUTPUT_PERIOD_SIZE,
-    .period_count = DEEP_BUFFER_OUTPUT_PERIOD_COUNT,
-    .format = PCM_FORMAT_S16_LE,
-    .start_threshold = DEEP_BUFFER_OUTPUT_PERIOD_SIZE / 4,
-    .stop_threshold = INT_MAX,
-    .avail_min = DEEP_BUFFER_OUTPUT_PERIOD_SIZE / 4,
-};
-
-struct pcm_config pcm_config_low_latency = {
-    .channels = 2,
-    .rate = DEFAULT_OUTPUT_SAMPLING_RATE,
-    .period_size = LOW_LATENCY_OUTPUT_PERIOD_SIZE,
-    .period_count = LOW_LATENCY_OUTPUT_PERIOD_COUNT,
-    .format = PCM_FORMAT_S16_LE,
-    .start_threshold = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
-    .stop_threshold = INT_MAX,
-    .avail_min = LOW_LATENCY_OUTPUT_PERIOD_SIZE / 4,
-};
-
-static const audio_usecase_t bus_device_usecases[] = {
-    USECASE_AUDIO_PLAYBACK_MEDIA,
-    USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
-    USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
-    USECASE_AUDIO_PLAYBACK_PHONE,
-    USECASE_AUDIO_PLAYBACK_REAR_SEAT,
-};
 
 int auto_hal_release_audio_patch(struct audio_hw_device *dev,
                                 audio_patch_handle_t handle);
@@ -107,9 +73,6 @@ static struct audio_patch_record *get_patch_from_list(struct audio_device *adev,
     }
     return NULL;
 }
-
-#define MAX_SOURCE_PORTS_PER_PATCH 1
-#define MAX_SINK_PORTS_PER_PATCH 1
 
 int auto_hal_create_audio_patch(struct audio_hw_device *dev,
                                 unsigned int num_sources,
@@ -468,7 +431,7 @@ int auto_hal_open_output_stream(struct stream_out *out)
     case CAR_AUDIO_STREAM_MEDIA:
         /* media bus stream shares pcm device with deep-buffer */
         out->usecase = USECASE_AUDIO_PLAYBACK_MEDIA;
-        out->config = pcm_config_deep_buffer;
+        out->config = pcm_config_media;
         out->config.period_size = fp_get_output_period_size(out->sample_rate, out->format,
                                         channels, DEEP_BUFFER_OUTPUT_PERIOD_DURATION);
         if (out->config.period_size <= 0) {
@@ -483,13 +446,13 @@ int auto_hal_open_output_stream(struct stream_out *out)
     case CAR_AUDIO_STREAM_SYS_NOTIFICATION:
         /* sys notification bus stream shares pcm device with low-latency */
         out->usecase = USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION;
-        out->config = pcm_config_low_latency;
+        out->config = pcm_config_system;
         if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
             out->flags |= AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION;
         break;
     case CAR_AUDIO_STREAM_NAV_GUIDANCE:
         out->usecase = USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE;
-        out->config = pcm_config_deep_buffer;
+        out->config = pcm_config_media;
         out->config.period_size = fp_get_output_period_size(out->sample_rate, out->format,
                                         channels, DEEP_BUFFER_OUTPUT_PERIOD_DURATION);
         if (out->config.period_size <= 0) {
@@ -502,13 +465,13 @@ int auto_hal_open_output_stream(struct stream_out *out)
         break;
     case CAR_AUDIO_STREAM_PHONE:
         out->usecase = USECASE_AUDIO_PLAYBACK_PHONE;
-        out->config = pcm_config_low_latency;
+        out->config = pcm_config_system;
         if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
             out->flags |= AUDIO_OUTPUT_FLAG_PHONE;
         break;
     case CAR_AUDIO_STREAM_REAR_SEAT:
         out->usecase = USECASE_AUDIO_PLAYBACK_REAR_SEAT;
-        out->config = pcm_config_deep_buffer;
+        out->config = pcm_config_media;
         out->config.period_size = fp_get_output_period_size(out->sample_rate, out->format,
                                         channels, DEEP_BUFFER_OUTPUT_PERIOD_DURATION);
         if (out->config.period_size <= 0) {
@@ -573,12 +536,6 @@ int auto_hal_get_audio_port(struct audio_hw_device *dev __unused,
     return -ENOSYS;
 }
 
-/* Volume min/max defined by audio policy configuration in millibel.
- * Support a range of -60dB to 6dB.
- */
-#define MIN_VOLUME_VALUE_MB -6000
-#define MAX_VOLUME_VALUE_MB 600
-#define STEP_VALUE_MB 100
 int auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                         const struct audio_port_config *config)
 {
