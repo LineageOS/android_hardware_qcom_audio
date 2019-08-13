@@ -287,10 +287,6 @@
     <ctl name="SEC_TDM_RX_0 Audio Mixer MultiMedia9" value="0" />
     <ctl name="MultiMedia9 Mixer TERT_TDM_TX_0" value="0" />
 
-    <path name="dummy-hostless">
-        <ctl name="SEC_TDM_RX_7 Port Mixer TERT_TDM_TX_7" value="1" />
-    </path>
-
     <!-- These are audio route (FE to BE) specific mixer settings -->
 
     <!-- EC Reference -->
@@ -1487,13 +1483,13 @@
     </path>
 
     <path name="voicemmode2-call">
-        <ctl name="SLIM_0_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
+        <ctl name="TERT_TDM_RX_2_Voice Mixer VoiceMMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer TERT_TDM_TX_0_MMode2" value="1" />
     </path>
 
     <path name="voicemmode2-call headphones">
         <ctl name="SLIM_6_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer TERT_TDM_TX_0_MMode2" value="1" />
     </path>
 
     <path name="voicemmode2-call bt-sco">
@@ -1513,7 +1509,7 @@
 
     <path name="voicemmode2-call usb-headphones">
         <ctl name="USB_AUDIO_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer TERT_TDM_TX_0_MMode2" value="1" />
     </path>
 
     <path name="voicemmode2-call usb-headset">
@@ -1528,7 +1524,7 @@
 
     <path name="voicemmode2-call display-port">
         <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer TERT_TDM_TX_0_MMode2" value="1" />
     </path>
 
     <!-- VoIP Rx settings -->
@@ -1675,22 +1671,38 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="dmic2" />
+        <path name="dmic3" />
     </path>
 
     <path name="speaker-mic-liquid">
-        <path name="dmic2" />
+        <path name="dmic3" />
     </path>
 
     <path name="speaker-mic-sbc">
+    </path>
+
+    <path name="speaker-mic-qrd">
+        <path name="dmic1" />
     </path>
 
     <path name="speaker-protected">
         <path name="speaker" />
     </path>
 
+    <path name="speaker-protected-qrd">
+        <path name="speaker-qrd" />
+    </path>
+
     <path name="voice-speaker-protected">
         <path name="speaker-mono" />
+    </path>
+
+    <path name="voice-speaker-protected-qrd">
+        <path name="speaker-protected-qrd" />
+    </path>
+
+    <path name="voice-speaker-stereo-protected">
+        <path name="speaker-protected" />
     </path>
 
     <path name="voice-speaker-2-protected">
@@ -1726,13 +1738,10 @@
     <path name="handset-mic-sbc">
     </path>
 
-    <path name="handset-mic-adp">
-    </path>
-
-    <path name="handset-mic-custom">
-    </path>
-
     <path name="three-mic">
+    </path>
+
+    <path name="three-mic-qrd">
     </path>
 
     <path name="anc-handset">
@@ -1799,6 +1808,10 @@
         <path name="speaker-mono" />
     </path>
 
+    <path name="voice-speaker-stereo">
+        <path name="speaker" />
+    </path>
+
     <path name="voice-speaker-qrd">
         <path name="speaker-mono-2" />
     </path>
@@ -1817,6 +1830,10 @@
 
     <path name="voice-speaker-mic">
         <path name="speaker-mic" />
+    </path>
+
+    <path name="voice-speaker-mic-qrd">
+        <path name="speaker-mic-qrd" />
     </path>
 
     <path name="voice-headphones">
@@ -1932,11 +1949,20 @@
     <path name="aanc-handset-mic">
     </path>
 
+    <path name="aanc-handset-mic-qrd">
+    </path>
+
     <!-- Dual MIC devices -->
     <path name="handset-dmic-endfire">
     </path>
 
     <path name="speaker-dmic-endfire">
+    </path>
+
+    <path name="handset-dmic-endfire-qrd">
+    </path>
+
+    <path name="speaker-dmic-endfire-qrd">
     </path>
 
     <path name="dmic-endfire">
@@ -1945,6 +1971,10 @@
 
     <path name="dmic-endfire-liquid">
         <path name="handset-dmic-endfire" />
+    </path>
+
+    <path name="dmic-endfire-qrd">
+        <path name="handset-dmic-endfire-qrd" />
     </path>
 
     <path name="handset-stereo-dmic-ef">
@@ -1999,6 +2029,22 @@
         <path name="dmic-endfire-liquid" />
     </path>
 
+    <path name="handset-stereo-dmic-ef-qrd">
+        <path name="handset-dmic-endfire-qrd" />
+    </path>
+
+    <path name="speaker-stereo-dmic-ef-qrd">
+        <path name="speaker-dmic-endfire-qrd" />
+    </path>
+
+    <path name="voice-dmic-ef-qrd">
+        <path name="dmic-endfire-qrd" />
+    </path>
+
+    <path name="voice-speaker-dmic-ef-qrd">
+        <path name="speaker-dmic-endfire-qrd" />
+    </path>
+
     <path name="speaker-dmic-broadside">
     </path>
 
@@ -2010,10 +2056,28 @@
         <path name="dmic-broadside" />
     </path>
 
+    <!-- Tri MIC devices -->
+    <path name="speaker-tmic">
+    </path>
+
+    <path name="speaker-tmic-qrd">
+    </path>
+
+    <path name="voice-speaker-tmic">
+        <path name="speaker-tmic" />
+    </path>
+
+    <path name="voice-speaker-tmic-qrd">
+        <path name="speaker-tmic-qrd" />
+    </path>
+
     <!-- Quad MIC devices -->
     <path name="speaker-qmic">
         <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
         <ctl name="MultiMedia1 Mixer TERT_TDM_TX_0" value="1" />
+    </path>
+
+    <path name="speaker-qmic-qrd">
     </path>
 
     <path name="speaker-qmic-liquid">
@@ -2033,6 +2097,14 @@
 
     <path name="quad-mic-liquid">
         <path name="speaker-qmic-liquid" />
+    </path>
+
+    <path name="quad-mic-qrd">
+        <path name="speaker-qmic-qrd" />
+    </path>
+
+    <path name="voice-speaker-qmic-qrd">
+        <path name="speaker-qmic-qrd" />
     </path>
 
     <!-- TTY devices -->
@@ -2344,6 +2416,81 @@
 
     <path name="hifi-record usb-headset-mic">
         <ctl name="MultiMedia2 Mixer USB_AUDIO_TX" value="1" />
+    </path>
+
+    <path name="incall_music_uplink">
+        <ctl name="Incall_Music Audio Mixer MultiMedia9" value="1" />
+    </path>
+
+    <path name="incall_music_uplink speaker">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink handset">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink handset-hac">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink display-port">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink bt-sco">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink bt-sco-wb">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink speaker-and-display-port">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink afe-proxy">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink usb-headphones">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink usb-headset">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink speaker-and-usb-headphones">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink headphones">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink speaker-and-headphones">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink speaker-and-bt-sco">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink voice-tty-hco-handset">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink speaker-and-bt-a2dp">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink bt-a2dp">
+        <path name="incall_music_uplink" />
+    </path>
+    <path name="incall_music_uplink afe-proxy">
+        <path name="incall_music_uplink" />
     </path>
 
 </mixer>

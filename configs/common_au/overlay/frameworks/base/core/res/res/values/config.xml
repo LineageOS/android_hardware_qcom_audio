@@ -23,7 +23,7 @@
 
 <resources>
      <!-- Car uses hardware amplifier for volume. -->
-    <bool name="config_useFixedVolume">false</bool>
+    <bool name="config_useFixedVolume">true</bool>
     <!--
       Handle volume keys directly in CarAudioService without passing them to the foreground app
     -->

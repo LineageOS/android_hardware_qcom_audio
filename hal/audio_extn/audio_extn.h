@@ -108,9 +108,10 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
 #define AUDIO_OUTPUT_BIT_WIDTH ((config->offload_info.bit_width == 32) ? 24\
                                    :config->offload_info.bit_width)
 
-#ifndef AUDIO_HW_EXTN_API_ENABLED
+#ifndef ENABLE_EXTENDED_COMPRESS_FORMAT
 #define compress_set_metadata(compress, metadata) (0)
 #define compress_get_metadata(compress, metadata) (0)
+#define compress_set_next_track_param(compress, codec_options) (0)
 #endif
 
 #define MAX_LENGTH_MIXER_CONTROL_IN_INT                  (128)
@@ -706,10 +707,12 @@ int audio_extn_ext_hw_plugin_get_mic_mute(void *plugin, bool *mute);
 int audio_extn_ext_hw_plugin_set_audio_gain(void *plugin,
             struct audio_usecase *usecase, uint32_t gain);
 
-typedef int   (*fp_audio_route_apply_and_update_path_t)(struct audio_route*, const char*);
+typedef int (*fp_b64decode_t)(char *inp, int ilen, uint8_t* outp);
+typedef int (*fp_b64encode_t)(uint8_t *inp, int ilen, char* outp);
 
 typedef struct ext_hw_plugin_init_config {
-    fp_audio_route_apply_and_update_path_t    fp_audio_route_apply_and_update_path;
+    fp_b64decode_t fp_b64decode;
+    fp_b64encode_t fp_b64encode;
 } ext_hw_plugin_init_config_t;
 // END: EXT_HW_PLUGIN FEATURE ==================================================
 
@@ -1097,6 +1100,7 @@ void audio_extn_source_track_get_parameters(const struct audio_device *adev,
 void audio_extn_fm_set_parameters(struct audio_device *adev,
                                    struct str_parms *parms);
 void audio_extn_fm_get_parameters(struct str_parms *query, struct str_parms *reply);
+void audio_extn_fm_route_on_selected_device(struct audio_device *adev, audio_devices_t device);
 
 #ifndef APTX_DECODER_ENABLED
 #define audio_extn_aptx_dec_set_license(adev); (0)
@@ -1270,24 +1274,20 @@ void audio_extn_ffv_append_ec_ref_dev_name(char *device_name);
 
 int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct audio_license_params *lic_params);
 
-/*
- * TODO: AUTO TEAM to convert following feature flag to runtime flag enable
-*/
-#ifndef AUDIO_EXTN_AUTO_HAL_ENABLED
-#define audio_extn_auto_hal_init(adev)                (0)
-#define audio_extn_auto_hal_deinit()                  (0)
-#define audio_extn_auto_hal_create_audio_patch(dev, num_sources,\
-    sources, num_sinks, sinks, handle) (0)
-#define audio_extn_auto_hal_release_audio_patch(dev, handle) (0)
-#define audio_extn_auto_hal_get_car_audio_stream_from_address(address) (-1)
-#define audio_extn_auto_hal_open_output_stream(out) (0)
-#define audio_extn_auto_hal_is_bus_device_usecase(uc_id) (0)
-#define audio_extn_auto_hal_get_snd_device_for_car_audio_stream(out) (0)
-#define audio_extn_auto_hal_get_audio_port(dev, config) (0)
-#define audio_extn_auto_hal_set_audio_port_config(dev, config) (0)
-#define audio_extn_auto_hal_set_parameters(adev, parms) (0)
-#else
-int32_t audio_extn_auto_hal_init(struct audio_device *adev);
+// START: AUTO_HAL FEATURE ==================================================
+#ifndef AUDIO_OUTPUT_FLAG_MEDIA
+#define AUDIO_OUTPUT_FLAG_MEDIA 0x100000
+#endif
+#ifndef AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION
+#define AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION 0x200000
+#endif
+#ifndef AUDIO_OUTPUT_FLAG_NAV_GUIDANCE
+#define AUDIO_OUTPUT_FLAG_NAV_GUIDANCE 0x400000
+#endif
+#ifndef AUDIO_OUTPUT_FLAG_PHONE
+#define AUDIO_OUTPUT_FLAG_PHONE 0x800000
+#endif
+int audio_extn_auto_hal_init(struct audio_device *adev);
 void audio_extn_auto_hal_deinit(void);
 int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
                                 unsigned int num_sources,
@@ -1297,8 +1297,8 @@ int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
                                 audio_patch_handle_t *handle);
 int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
                                 audio_patch_handle_t handle);
-int32_t audio_extn_auto_hal_get_car_audio_stream_from_address(const char *address);
-int32_t audio_extn_auto_hal_open_output_stream(struct stream_out *out);
+int audio_extn_auto_hal_get_car_audio_stream_from_address(const char *address);
+int audio_extn_auto_hal_open_output_stream(struct stream_out *out);
 bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id);
 snd_device_t audio_extn_auto_hal_get_snd_device_for_car_audio_stream(struct stream_out *out);
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
@@ -1306,8 +1306,23 @@ int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
 int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                                 const struct audio_port_config *config);
 void audio_extn_auto_hal_set_parameters(struct audio_device *adev,
-                                        struct str_parms *parms);
-#endif
+                                struct str_parms *parms);
+
+typedef streams_input_ctxt_t* (*fp_in_get_stream_t)(struct audio_device*, audio_io_handle_t);
+typedef streams_output_ctxt_t* (*fp_out_get_stream_t)(struct audio_device*, audio_io_handle_t);
+typedef size_t (*fp_get_output_period_size_t)(uint32_t, audio_format_t, int, int);
+typedef int (*fp_audio_extn_ext_hw_plugin_set_audio_gain_t)(void*, struct audio_usecase*, uint32_t);
+
+typedef struct auto_hal_init_config {
+    fp_in_get_stream_t                           fp_in_get_stream;
+    fp_out_get_stream_t                          fp_out_get_stream;
+    fp_audio_extn_ext_hw_plugin_usecase_start_t  fp_audio_extn_ext_hw_plugin_usecase_start;
+    fp_audio_extn_ext_hw_plugin_usecase_stop_t   fp_audio_extn_ext_hw_plugin_usecase_stop;
+    fp_get_usecase_from_list_t                   fp_get_usecase_from_list;
+    fp_get_output_period_size_t                  fp_get_output_period_size;
+    fp_audio_extn_ext_hw_plugin_set_audio_gain_t fp_audio_extn_ext_hw_plugin_set_audio_gain;
+} auto_hal_init_config_t;
+// END: AUTO_HAL FEATURE ==================================================
 
 bool audio_extn_edid_is_supported_sr(edid_audio_info* info, int sr);
 bool audio_extn_edid_is_supported_bps(edid_audio_info* info, int bps);

@@ -481,7 +481,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                              NAV_GUIDANCE_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_PHONE] = {PHONE_PCM_DEVICE,
                                       PHONE_PCM_DEVICE},
-
+    [USECASE_AUDIO_FM_TUNER_EXT] = {-1, -1},
 };
 
 /* Array to store sound devices */
@@ -5880,7 +5880,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_BT_SCO_WB;
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
-        } else if (devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
+        } else if ((devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) ||
+                   (devices & AUDIO_DEVICE_OUT_BUS)) {
             if (my_data->is_vbat_speaker || my_data->is_bcl_speaker) {
                 if (hw_info_is_stereo_spkr(my_data->hw_info)) {
                     if (my_data->mono_speaker == SPKR_1)
@@ -6432,7 +6433,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER ||
                    out_device & AUDIO_DEVICE_OUT_SPEAKER_SAFE ||
                    out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                   out_device & AUDIO_DEVICE_OUT_LINE) {
+                   out_device & AUDIO_DEVICE_OUT_LINE ||
+                   out_device & AUDIO_DEVICE_OUT_BUS) {
             if (my_data->fluence_type != FLUENCE_NONE &&
                 (my_data->fluence_in_voice_call ||
                  my_data->fluence_in_hfp_call) &&
@@ -8021,9 +8023,6 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_INCALL_MUSIC_UPLINK:
     case USECASE_INCALL_MUSIC_UPLINK2:
     case USECASE_AUDIO_RECORD_VOIP:
-    case USECASE_AUDIO_RECORD_FM_VIRTUAL:
-    case USECASE_AUDIO_SPKR_CALIB_RX:
-    case USECASE_AUDIO_SPKR_CALIB_TX:
         needs_event = true;
         break;
     default:
@@ -8057,7 +8056,9 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
     }
 
     /* Use client specified buffer size if mentioned */
-    if ((info != NULL) && (info->duration_us > 0)) {
+    if ((info != NULL) &&
+        (info->duration_us >= MIN_OFFLOAD_BUFFER_DURATION_MS) &&
+        (info->duration_us <= MAX_OFFLOAD_BUFFER_DURATION_MS)) {
         duration_ms = info->duration_us / 1000;
         channel_count = audio_channel_count_from_in_mask(info->channel_mask);
 

@@ -146,6 +146,10 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_VOIP_RX),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_BD),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_INTERACTIVE),
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_MEDIA),
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION),
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_NAV_GUIDANCE),
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_PHONE),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_NONE),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_FAST),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_HW_HOTWORD),
@@ -1134,6 +1138,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
         goto exit_send_app_type_cfg;
     }
     if ((usecase->id != USECASE_AUDIO_PLAYBACK_DEEP_BUFFER) &&
+        (usecase->id != USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_MULTI_CH) &&
         (usecase->id != USECASE_AUDIO_PLAYBACK_ULL) &&

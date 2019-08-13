@@ -1031,12 +1031,10 @@ static void a2dp_source_init()
     a2dp.audio_is_tws_mono_mode_enable = (audio_is_tws_mono_mode_enable_t)
                    dlsym(a2dp.bt_lib_source_handle,"isTwsMonomodeEnable");
 
-    if (is_running_with_enhanced_fwk == UNINITIALIZED)
-        is_running_with_enhanced_fwk = check_if_enhanced_fwk();
-    if (a2dp.bt_lib_source_handle && is_running_with_enhanced_fwk
-        && a2dp.bt_audio_pre_init) {
-            ALOGD("calling BT module preinit");
-            a2dp.bt_audio_pre_init();
+    if (a2dp.bt_lib_source_handle && a2dp.bt_audio_pre_init) {
+        ALOGD("calling BT module preinit");
+        // fwk related check's will be done in the BT layer
+        a2dp.bt_audio_pre_init();
     }
 }
 
@@ -2604,19 +2602,17 @@ static int reset_a2dp_source_dec_config_params()
     struct abr_dec_cfg_t dummy_reset_cfg;
     int ret = 0;
 
-    if (a2dp.abr_config.is_abr_enabled) {
-        ctl_dec_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_SOURCE_DEC_CONFIG_BLOCK);
-        if (!ctl_dec_data) {
-            ALOGE("%s: ERROR A2DP decoder config mixer control not identifed", __func__);
-            return -EINVAL;
-        }
-        memset(&dummy_reset_cfg, 0x0, sizeof(dummy_reset_cfg));
-        ret = mixer_ctl_set_array(ctl_dec_data, (void *)&dummy_reset_cfg,
-                                  sizeof(dummy_reset_cfg));
-        if (ret != 0) {
-            ALOGE("%s: Failed to set dummy decoder config", __func__);
-            return ret;
-        }
+    ctl_dec_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_SOURCE_DEC_CONFIG_BLOCK);
+    if (!ctl_dec_data) {
+        ALOGE("%s: ERROR A2DP decoder config mixer control not identifed", __func__);
+        return -EINVAL;
+    }
+    memset(&dummy_reset_cfg, 0x0, sizeof(dummy_reset_cfg));
+    ret = mixer_ctl_set_array(ctl_dec_data, (void *)&dummy_reset_cfg,
+                              sizeof(dummy_reset_cfg));
+    if (ret != 0) {
+        ALOGE("%s: Failed to set dummy decoder config", __func__);
+        return ret;
     }
 
     return ret;
