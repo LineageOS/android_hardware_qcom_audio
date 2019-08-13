@@ -82,6 +82,21 @@ AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := true
 ##AUDIO_FEATURE_FLAGS
 
+#AGM
+AUDIO_AGM := libclient_ipc
+AUDIO_AGM += libagmservice
+AUDIO_AGM += vendor.qti.hardware.AGMIPC@1.0-impl
+AUDIO_AGM += vendor.qti.hardware.AGMIPC@1.0-service
+AUDIO_AGM += vendor.qti.hardware.AGMIPC@1.0-service.rc
+AUDIO_AGM += libagm
+AUDIO_AGM += agmplay
+AUDIO_AGM += agmcap
+AUDIO_AGM += libagmmixer
+AUDIO_AGM += agmcompressplay
+AUDIO_AGM += libagm_mixer_plugin
+AUDIO_AGM += libagm_pcm_plugin
+AUDIO_AGM += libagm_compress_plugin
+
 AUDIO_HARDWARE := audio.a2dp.default
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
@@ -161,6 +176,7 @@ ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
 endif
+PRODUCT_PACKAGES += $(AUDIO_AGM)
 
 PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
@@ -171,6 +187,7 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile/sound_trigger_mixer_paths_wcd9340.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile/sound_trigger_mixer_paths_wcd9340_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9340_qrd.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile/graphite_ipc_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/graphite_ipc_platform_info.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
