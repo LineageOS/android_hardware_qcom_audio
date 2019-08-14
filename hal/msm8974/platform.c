@@ -3063,7 +3063,7 @@ void *platform_init(struct audio_device *adev)
 
     be_dai_name_table = NULL;
 
-    property_get("persist.audio.dualmic.config",value,"");
+    property_get("persist.vendor.audio.dualmic.config",value,"");
     if (!strcmp("endfire", value)) {
         dual_mic_config = true;
     }
