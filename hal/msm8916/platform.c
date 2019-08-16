@@ -1118,7 +1118,9 @@ void *platform_init(struct audio_device *adev)
     my_data->fluence_type = FLUENCE_NONE;
     my_data->fluence_mode = FLUENCE_ENDFIRE;
 
-    property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
+    if (property_get("ro.vendor.audio.sdk.fluencetype", my_data->fluence_cap, NULL) == 0) {
+        property_get("ro.qc.sdk.audio.fluencetype", my_data->fluence_cap, "");
+    }
     if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
         my_data->fluence_type = FLUENCE_QUAD_MIC | FLUENCE_DUAL_MIC;
     } else if (!strncmp("fluence", my_data->fluence_cap, sizeof("fluence"))) {
