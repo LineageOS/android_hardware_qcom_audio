@@ -674,8 +674,12 @@ static void init_once()
         }
     }
 
-    dumping_enabled = property_get_bool("audio.volume.listener.dump", false);
-    headset_cal_enabled = property_get_bool("audio.volume.headset.gain.depcal", false);
+    dumping_enabled = property_get_bool(
+        "vendor.audio.volume.listener.dump",
+        property_get_bool("audio.volume.listener.dump", false));
+    headset_cal_enabled = property_get_bool(
+        "vendor.audio.volume.headset.gain.depcal",
+        property_get_bool("audio.volume.headset.gain.depcal", false));
     init_status = 0;
     list_init(&vol_effect_list);
     initialized = true;
