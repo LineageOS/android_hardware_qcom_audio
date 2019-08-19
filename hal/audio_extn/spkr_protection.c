@@ -1021,17 +1021,6 @@ exit:
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);
         handle.pcm_tx = NULL;
-        /* Clear TX calibration to handset mic */
-        if (uc_info_tx != NULL) {
-            ALOGD("%s: UC Info TX is not NULL, updating and sending calibration",
-                  __func__);
-            uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
-            uc_info_tx->out_snd_device = SND_DEVICE_NONE;
-            app_type = fp_platform_get_default_app_type_v2(adev->platform,
-                                                PCM_CAPTURE);
-            fp_platform_send_audio_calibration(adev->platform, uc_info_tx,
-                                                    app_type);
-        }
         if (!v_validation) {
             if (!status.status) {
                 protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
@@ -2322,17 +2311,6 @@ int spkr_prot_start_processing(snd_device_t snd_device)
     }
 
 exit:
-    /* Clear VI feedback cal and replace with handset MIC  */
-    if (uc_info_tx != NULL) {
-        ALOGD("%s: UC Info TX is not NULL, updating and sending calibration",
-              __func__);
-        uc_info_tx->in_snd_device = SND_DEVICE_IN_HANDSET_MIC;
-        uc_info_tx->out_snd_device = SND_DEVICE_NONE;
-        app_type = fp_platform_get_default_app_type_v2(adev->platform,
-                                            PCM_CAPTURE);
-        fp_platform_send_audio_calibration(adev->platform, uc_info_tx,
-                                                app_type);
-    }
     if (ret) {
         if (handle.pcm_tx)
             pcm_close(handle.pcm_tx);
