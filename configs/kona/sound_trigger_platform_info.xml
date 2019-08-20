@@ -50,6 +50,7 @@
         <param dedicated_sva_path="true" />
         <param dedicated_headset_path="false" />
         <param platform_lpi_enable="true" />
+        <param enable_debug_dumps="false" />
     </common_config>
     <acdb_ids>
         <param DEVICE_HANDSET_MIC_APE="100" />
@@ -120,9 +121,33 @@
             <!-- is FFECNS -->
             <param fluence_type="FLUENCE_TMIC" />
             <param execution_mode="ADSP" />
+            <!-- lpi_mode: "NON_LPI", "LPI" -->
+            <param lpi_mode="NON_LPI" />
             <param app_type="2" /> <!-- app type used in ACDB -->
             <param in_channels="5"/> <!-- Module input channels -->
-            <param in_channels_lpi="3"/>
+            <param load_sound_model_ids="0x00012C1C, 0x0, 0x00012C14" />
+            <param unload_sound_model_ids="0x00012C1C, 0x0, 0x00012C15" />
+            <param confidence_levels_ids="0x00012C1C, 0x0, 0x00012C07" />
+            <param operation_mode_ids="0x00012C1C, 0x0, 0x00012C02" />
+            <param polling_enable_ids="0x00012C1C, 0x0, 0x00012C1B" />
+            <param custom_config_ids="0x00012C1C, 0x0, 0x00012C20" />
+            <param det_event_type_ids="0x00012C1C, 0x0, 0x00012C2C" />
+            <param lab_dam_cfg_ids="0x00012C08, 0x0, 0x000102C4" />
+        </lsm_usecase>
+        <lsm_usecase>
+            <param capture_device="HANDSET" />
+            <!-- adm_cfg_profile should match with the one defined under adm_config -->
+            <!-- Set it to NONE if LSM directly connects to AFE -->
+            <param adm_cfg_profile="FFECNS" />
+            <!-- fluence_type: "FLUENCE_MIC", "FLUENCE_DMIC", "FLUENCE_TMIC"   -->
+            <!-- "FLUENCE_QMIC". Param value is valid when adm_cfg_profile -->
+            <!-- is FFECNS -->
+            <param fluence_type="FLUENCE_TMIC" />
+            <param execution_mode="ADSP" />
+            <!-- lpi_mode: "NON_LPI", "LPI" -->
+            <param lpi_mode="LPI" />
+            <param app_type="2" /> <!-- app type used in ACDB -->
+            <param in_channels="3"/> <!-- Module input channels -->
             <param load_sound_model_ids="0x00012C1C, 0x0, 0x00012C14" />
             <param unload_sound_model_ids="0x00012C1C, 0x0, 0x00012C15" />
             <param confidence_levels_ids="0x00012C1C, 0x0, 0x00012C07" />
