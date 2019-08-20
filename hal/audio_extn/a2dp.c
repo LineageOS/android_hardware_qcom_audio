@@ -1031,12 +1031,10 @@ static void a2dp_source_init()
     a2dp.audio_is_tws_mono_mode_enable = (audio_is_tws_mono_mode_enable_t)
                    dlsym(a2dp.bt_lib_source_handle,"isTwsMonomodeEnable");
 
-    if (is_running_with_enhanced_fwk == UNINITIALIZED)
-        is_running_with_enhanced_fwk = check_if_enhanced_fwk();
-    if (a2dp.bt_lib_source_handle && is_running_with_enhanced_fwk
-        && a2dp.bt_audio_pre_init) {
-            ALOGD("calling BT module preinit");
-            a2dp.bt_audio_pre_init();
+    if (a2dp.bt_lib_source_handle && a2dp.bt_audio_pre_init) {
+        ALOGD("calling BT module preinit");
+        // fwk related check's will be done in the BT layer
+        a2dp.bt_audio_pre_init();
     }
 }
 
