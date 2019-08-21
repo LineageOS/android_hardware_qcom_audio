@@ -104,4 +104,5 @@ void voice_check_and_update_aanc_path(struct audio_device *adev,
 bool voice_is_call_state_active(struct audio_device *adev);
 void voice_set_device_mute_flag (struct audio_device *adev, bool state);
 snd_device_t voice_get_incall_rec_backend_device(struct stream_in *in);
+bool voice_check_voicecall_usecases_active(struct audio_device *adev);
 #endif //VOICE_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -64,7 +64,7 @@
 typedef void* (*gef_init_t)(void*);
 typedef void (*gef_deinit_t)(void*);
 typedef void (*gef_device_config_cb_t)(void*, audio_devices_t,
-    audio_channel_mask_t, int, int);
+    audio_channel_mask_t, int, int, int);
 
 typedef struct {
     void* handle;
@@ -113,6 +113,7 @@ void audio_extn_gef_init(struct audio_device *adev)
 
     ALOGV("%s: Enter with error", __func__);
 
+    pthread_mutex_init(&adev->cal_lock, (const pthread_mutexattr_t *) NULL);
     memset(&gef_hal_handle, 0, sizeof(gef_data));
 
     //: check error for dlopen
@@ -186,8 +187,8 @@ int audio_extn_gef_send_audio_cal(void* dev, int acdb_dev_id,
     ALOGV("%s: Enter", __func__);
     memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
-    //lock adev
-    pthread_mutex_lock(&adev->lock);
+    //lock adev->cal_lock
+    pthread_mutex_lock(&adev->cal_lock);
 
     //pack cal
     platform_make_cal_cfg(&cal, acdb_dev_id,
@@ -196,7 +197,7 @@ int audio_extn_gef_send_audio_cal(void* dev, int acdb_dev_id,
 
     ret = platform_send_audio_cal(adev->platform, &cal, data, length, persist);
 
-    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&adev->cal_lock);
 
     ALOGV("%s: Exit with error %d", __func__, ret);
 
@@ -218,8 +219,8 @@ int audio_extn_gef_get_audio_cal(void* dev, int acdb_dev_id,
     ALOGV("%s: Enter", __func__);
     memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
-    //lock adev
-    pthread_mutex_lock(&adev->lock);
+    //lock adev->cal_lock
+    pthread_mutex_lock(&adev->cal_lock);
 
     //pack cal
     platform_make_cal_cfg(&cal, acdb_dev_id,
@@ -228,7 +229,7 @@ int audio_extn_gef_get_audio_cal(void* dev, int acdb_dev_id,
 
     ret = platform_get_audio_cal(adev->platform, &cal, data, length, persist);
 
-    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&adev->cal_lock);
 
     ALOGV("%s: Exit with error %d", __func__, ret);
 
@@ -250,8 +251,8 @@ int audio_extn_gef_store_audio_cal(void* dev, int acdb_dev_id,
     ALOGV("%s: Enter", __func__);
     memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
-    //lock adev
-    pthread_mutex_lock(&adev->lock);
+    //lock adev->cal_lock
+    pthread_mutex_lock(&adev->cal_lock);
 
     //pack cal
     platform_make_cal_cfg(&cal, acdb_dev_id,
@@ -260,7 +261,7 @@ int audio_extn_gef_store_audio_cal(void* dev, int acdb_dev_id,
 
     ret = platform_store_audio_cal(adev->platform, &cal, data, length);
 
-    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&adev->cal_lock);
 
     ALOGV("%s: Exit with error %d", __func__, ret);
 
@@ -281,8 +282,8 @@ int audio_extn_gef_retrieve_audio_cal(void* dev, int acdb_dev_id,
     ALOGV("%s: Enter", __func__);
     memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
-    //lock adev
-    pthread_mutex_lock(&adev->lock);
+    //lock adev->cal_lock
+    pthread_mutex_lock(&adev->cal_lock);
 
     //pack cal
     platform_make_cal_cfg(&cal, acdb_dev_id,
@@ -291,7 +292,7 @@ int audio_extn_gef_retrieve_audio_cal(void* dev, int acdb_dev_id,
 
     ret = platform_retrieve_audio_cal(adev->platform, &cal, data, length);
 
-    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&adev->cal_lock);
 
     ALOGV("%s: Exit with error %d", __func__, ret);
 
@@ -313,8 +314,8 @@ int audio_extn_gef_send_audio_cal(void* dev, int acdb_dev_id,
     ALOGV("%s: Enter", __func__);
     memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
-    //lock adev
-    pthread_mutex_lock(&adev->lock);
+    //lock adev->cal_lock
+    pthread_mutex_lock(&adev->cal_lock);
 
     //pack cal
     platform_make_cal_cfg(&cal, acdb_dev_id,
@@ -323,7 +324,7 @@ int audio_extn_gef_send_audio_cal(void* dev, int acdb_dev_id,
 
     ret = platform_send_audio_cal(adev->platform, &cal, data, length, persist);
 
-    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&adev->cal_lock);
 
     ALOGV("%s: Exit with error %d", __func__, ret);
 
@@ -345,8 +346,8 @@ int audio_extn_gef_get_audio_cal(void* dev, int acdb_dev_id,
     ALOGV("%s: Enter", __func__);
     memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
-    //lock adev
-    pthread_mutex_lock(&adev->lock);
+    //lock adev->cal_lock
+    pthread_mutex_lock(&adev->cal_lock);
 
     //pack cal
     platform_make_cal_cfg(&cal, acdb_dev_id,
@@ -355,7 +356,7 @@ int audio_extn_gef_get_audio_cal(void* dev, int acdb_dev_id,
 
     ret = platform_get_audio_cal(adev->platform, &cal, data, length, persist);
 
-    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&adev->cal_lock);
 
     ALOGV("%s: Exit with error %d", __func__, ret);
 
@@ -376,8 +377,8 @@ int audio_extn_gef_store_audio_cal(void* dev, int acdb_dev_id,
     ALOGV("%s: Enter", __func__);
     memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
-    //lock adev
-    pthread_mutex_lock(&adev->lock);
+    //lock adev->cal_lock
+    pthread_mutex_lock(&adev->cal_lock);
 
     //pack cal
     platform_make_cal_cfg(&cal, acdb_dev_id,
@@ -386,7 +387,7 @@ int audio_extn_gef_store_audio_cal(void* dev, int acdb_dev_id,
 
     ret = platform_store_audio_cal(adev->platform, &cal, data, length);
 
-    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&adev->cal_lock);
 
     ALOGV("%s: Exit with error %d", __func__, ret);
 
@@ -407,8 +408,8 @@ int audio_extn_gef_retrieve_audio_cal(void* dev, int acdb_dev_id,
     ALOGV("%s: Enter", __func__);
     memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
 
-    //lock adev
-    pthread_mutex_lock(&adev->lock);
+    //lock adev->cal_lock
+    pthread_mutex_lock(&adev->cal_lock);
 
     //pack cal
     platform_make_cal_cfg(&cal, acdb_dev_id,
@@ -417,7 +418,7 @@ int audio_extn_gef_retrieve_audio_cal(void* dev, int acdb_dev_id,
 
     ret = platform_retrieve_audio_cal(adev->platform, &cal, data, length);
 
-    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&adev->cal_lock);
 
     ALOGV("%s: Exit with error %d", __func__, ret);
 
@@ -427,14 +428,14 @@ int audio_extn_gef_retrieve_audio_cal(void* dev, int acdb_dev_id,
 
 //this will be called from HAL to notify GEF of new device configuration
 void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
-    audio_channel_mask_t channel_mask, int sample_rate, int acdb_id)
+    audio_channel_mask_t channel_mask, int sample_rate, int acdb_id, int app_type)
 {
     ALOGV("%s: Enter", __func__);
 
     //call into GEF to share channel mask and device info
     if (gef_hal_handle.handle && gef_hal_handle.device_config_cb) {
         gef_hal_handle.device_config_cb(gef_hal_handle.gef_ptr, audio_device, channel_mask,
-            sample_rate, acdb_id);
+            sample_rate, acdb_id, app_type);
     }
 
     ALOGV("%s: Exit", __func__);
@@ -442,7 +443,7 @@ void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
     return;
 }
 
-void audio_extn_gef_deinit()
+void audio_extn_gef_deinit(struct audio_device *adev)
 {
     ALOGV("%s: Enter", __func__);
 
@@ -452,6 +453,7 @@ void audio_extn_gef_deinit()
         dlclose(gef_hal_handle.handle);
     }
 
+    pthread_mutex_destroy(&adev->cal_lock);
     memset(&gef_hal_handle, 0, sizeof(gef_data));
 
     ALOGV("%s: Exit", __func__);

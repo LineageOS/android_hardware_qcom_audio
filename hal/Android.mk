@@ -182,6 +182,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FORMATS)),true)
 LOCAL_CFLAGS += -DAUDIO_EXTN_FORMATS_ENABLED
 endif
 
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SPKR_PROTECTION)),true)
     LOCAL_CFLAGS += -DSPKR_PROT_ENABLED
     LOCAL_SRC_FILES += audio_extn/spkr_protection.c
@@ -340,6 +341,14 @@ LOCAL_SHARED_LIBRARIES := \
 	libexpat
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAP)),true)
+LOCAL_CFLAGS += -DQAP_EXTN_ENABLED -Wno-tautological-pointer-compare
+LOCAL_SRC_FILES += audio_extn/qap.c
+LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/qap_wrapper/
+LOCAL_HEADER_LIBRARIES += audio_qaf_headers
+LOCAL_SHARED_LIBRARIES += libqap_wrapper liblog
+endif
+
 ifneq ($(strip $(TARGET_USES_AOSP_FOR_AUDIO)),true)
     LOCAL_SHARED_LIBRARIES += libtinycompress_vendor
 else
@@ -486,6 +495,7 @@ LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_VENDOR_MODULE := true
+LOCAL_CFLAGS += -DANDROID_PLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION)
 
 include $(BUILD_SHARED_LIBRARY)
 

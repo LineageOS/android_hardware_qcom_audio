@@ -689,6 +689,8 @@ int audio_extn_utils_get_bit_width_from_string(const char *);
 int audio_extn_utils_get_sample_rate_from_string(const char *);
 int audio_extn_utils_get_channels_from_string(const char *);
 void audio_extn_utils_release_snd_device(snd_device_t snd_device);
+int audio_extn_utils_get_app_sample_rate_for_device(struct audio_device *adev,
+                                    struct audio_usecase *usecase, int snd_device);
 
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
@@ -800,6 +802,59 @@ bool audio_extn_is_qaf_stream(struct stream_out *out);
 #define audio_extn_is_qaf_stream(out)                                   (0)
 #endif
 
+
+#ifdef QAP_EXTN_ENABLED
+/*
+ * Helper funtion to know if HAL QAP extention is enabled or not.
+ */
+bool audio_extn_qap_is_enabled();
+/*
+ * QAP HAL extention init, called during bootup/HAL device open.
+ * QAP library will be loaded in this funtion.
+ */
+int audio_extn_qap_init(struct audio_device *adev);
+void audio_extn_qap_deinit();
+/*
+ * if HAL QAP is enabled and inited succesfully then all then this funtion
+ * gets called for all the open_output_stream requests, in other words
+ * the core audio_hw->open_output_stream is overridden by this funtion
+ */
+int audio_extn_qap_open_output_stream(struct audio_hw_device *dev,
+                                   audio_io_handle_t handle,
+                                   audio_devices_t devices,
+                                   audio_output_flags_t flags,
+                                   struct audio_config *config,
+                                   struct audio_stream_out **stream_out,
+                                   const char *address __unused);
+void audio_extn_qap_close_output_stream(struct audio_hw_device *dev __unused,
+                                        struct audio_stream_out *stream);
+/*
+ * this funtion is how HAL QAP extention gets to know the device connection/disconnection
+ */
+int audio_extn_qap_set_parameters(struct audio_device *adev, struct str_parms *parms);
+int audio_extn_qap_out_set_param_data(struct stream_out *out,
+                           audio_extn_param_id param_id,
+                           audio_extn_param_payload *payload);
+int audio_extn_qap_out_get_param_data(struct stream_out *out,
+                             audio_extn_param_id param_id,
+                             audio_extn_param_payload *payload);
+/*
+ * helper funtion.
+ */
+bool audio_extn_is_qap_stream(struct stream_out *out);
+#else
+#define audio_extn_qap_is_enabled()                                     (0)
+#define audio_extn_qap_deinit()                                         (0)
+#define audio_extn_qap_close_output_stream         adev_close_output_stream
+#define audio_extn_qap_open_output_stream           adev_open_output_stream
+#define audio_extn_qap_init(adev)                                       (0)
+#define audio_extn_qap_set_parameters(adev, parms)                      (0)
+#define audio_extn_qap_out_set_param_data(out, param_id, payload)       (0)
+#define audio_extn_qap_out_get_param_data(out, param_id, payload)       (0)
+#define audio_extn_is_qap_stream(out)                                   (0)
+#endif
+
+
 #ifdef AUDIO_EXTN_BT_HAL_ENABLED
 int audio_extn_bt_hal_load(void **handle);
 int audio_extn_bt_hal_open_output_stream(void *handle, int in_rate, audio_channel_mask_t channel_mask, int bit_width);
@@ -840,8 +895,9 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
 #ifndef AUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED
 
 #define audio_extn_gef_init(adev) (0)
-#define audio_extn_gef_deinit() (0)
-#define audio_extn_gef_notify_device_config(devices, cmask, sample_rate, acdb_id) (0)
+#define audio_extn_gef_deinit(adev) (0)
+#define audio_extn_gef_notify_device_config(devices, cmask, sample_rate, \
+        acdb_id, app_type) (0)
 
 #ifndef INSTANCE_ID_ENABLED
 #define audio_extn_gef_send_audio_cal(dev, acdb_dev_id, acdb_device_type,\
@@ -870,10 +926,10 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
 #else
 
 void audio_extn_gef_init(struct audio_device *adev);
-void audio_extn_gef_deinit();
+void audio_extn_gef_deinit(struct audio_device *adev);
 
 void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
-    audio_channel_mask_t channel_mask, int sample_rate, int acdb_id);
+    audio_channel_mask_t channel_mask, int sample_rate, int acdb_id, int app_type);
 #ifndef INSTANCE_ID_ENABLED
 int audio_extn_gef_send_audio_cal(void* adev, int acdb_dev_id, int acdb_device_type,
     int app_type, int topology_id, int sample_rate, uint32_t module_id,

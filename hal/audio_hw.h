@@ -331,6 +331,7 @@ struct stream_out {
     card_status_t card_status;
 
     void* qaf_stream_handle;
+    void* qap_stream_handle;
     pthread_cond_t qaf_offload_cond;
     pthread_t qaf_offload_thread;
     struct listnode qaf_offload_cmd_list;
@@ -465,6 +466,7 @@ typedef void (*adm_on_routing_change_t)(void *, audio_io_handle_t);
 struct audio_device {
     struct audio_hw_device device;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
+    pthread_mutex_t cal_lock;
     struct mixer *mixer;
     audio_mode_t mode;
     audio_devices_t out_device;
