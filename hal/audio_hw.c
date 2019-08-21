@@ -8992,8 +8992,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             }
         }
     }
+    if (audio_extn_ssr_get_stream() != in)
+        in->config.channels = channel_count;
 
-    in->config.channels = channel_count;
     in->sample_rate  = in->config.rate;
 
     audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
