@@ -481,7 +481,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                              NAV_GUIDANCE_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_PHONE] = {PHONE_PCM_DEVICE,
                                       PHONE_PCM_DEVICE},
-
+    [USECASE_AUDIO_FM_TUNER_EXT] = {-1, -1},
 };
 
 /* Array to store sound devices */
@@ -1670,7 +1670,11 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
          !strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
                    sizeof("sm6150-wcd9375qrd-snd-card")) ||
          !strncmp(snd_card_name, "sm6150-wcd9375-snd-card",
-                   sizeof("sm6150-wcd9375-snd-card"))) {
+                   sizeof("sm6150-wcd9375-snd-card")) ||
+         !strncmp(snd_card_name, "atoll-wcd937x-snd-card",
+                   sizeof("atoll-wcd937x-snd-card")) ||
+         !strncmp(snd_card_name, "atoll-idp-snd-card",
+                   sizeof("atoll-idp-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -3454,6 +3458,7 @@ acdb_init_fail:
         if (!strncmp(snd_card_name, "sm6150", strlen("sm6150")) ||
             !strncmp(snd_card_name, "kona", strlen("kona")) ||
             !strncmp(snd_card_name, "lito", strlen("lito")) ||
+            !strncmp(snd_card_name, "atoll", strlen("atoll")) ||
             !strncmp(snd_card_name, "trinket", strlen("trinket"))) {
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 Format");
@@ -5880,7 +5885,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_BT_SCO_WB;
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
-        } else if (devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
+        } else if ((devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) ||
+                   (devices & AUDIO_DEVICE_OUT_BUS)) {
             if (my_data->is_vbat_speaker || my_data->is_bcl_speaker) {
                 if (hw_info_is_stereo_spkr(my_data->hw_info)) {
                     if (my_data->mono_speaker == SPKR_1)
@@ -6432,7 +6438,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
         } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER ||
                    out_device & AUDIO_DEVICE_OUT_SPEAKER_SAFE ||
                    out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                   out_device & AUDIO_DEVICE_OUT_LINE) {
+                   out_device & AUDIO_DEVICE_OUT_LINE ||
+                   out_device & AUDIO_DEVICE_OUT_BUS) {
             if (my_data->fluence_type != FLUENCE_NONE &&
                 (my_data->fluence_in_voice_call ||
                  my_data->fluence_in_hfp_call) &&

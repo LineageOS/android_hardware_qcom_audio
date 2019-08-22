@@ -444,6 +444,15 @@ PRODUCT_PACKAGES += \
     vendor.qti.hardware.audiohalext@1.0-impl \
     vendor.qti.hardware.audiohalext-utils
 
+# enable audio hidl hal 5.0
+PRODUCT_PACKAGES += \
+    android.hardware.audio@5.0 \
+    android.hardware.audio.common@5.0 \
+    android.hardware.audio.common@5.0-util \
+    android.hardware.audio@5.0-impl \
+    android.hardware.audio.effect@5.0 \
+    android.hardware.audio.effect@5.0-impl
+
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \
     VoicePrintDemo

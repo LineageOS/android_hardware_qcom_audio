@@ -445,7 +445,12 @@ enum {
 #define MULTIMEDIA9_PCM_DEVICE 32
 #define FM_PLAYBACK_PCM_DEVICE 5
 #define FM_CAPTURE_PCM_DEVICE  6
+
+#ifdef PLATFORM_AUTO
+#define HFP_PCM_RX 36
+#else
 #define HFP_PCM_RX 5
+#endif
 
 #define INCALL_MUSIC_UPLINK_PCM_DEVICE 1
 
@@ -662,7 +667,7 @@ enum {
 #define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
 #elif defined (PLATFORM_MSM8996) || defined (PLATFORM_KONA)
 #define FM_RX_VOLUME "Tert MI2S LOOPBACK Volume"
-#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO)
+#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || defined (PLATFORM_ATOLL)
 #define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
 #else
 #define FM_RX_VOLUME "Internal FM RX Volume"

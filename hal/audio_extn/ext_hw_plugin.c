@@ -205,6 +205,9 @@ static int32_t ext_hw_plugin_check_plugin_usecase(audio_usecase_t hal_usecase,
     case USECASE_AUDIO_PLAYBACK_PHONE:
         *plugin_usecase = AUDIO_HAL_PLUGIN_USECASE_PHONE_PLAYBACK;
         break;
+    case USECASE_AUDIO_FM_TUNER_EXT:
+       *plugin_usecase = AUDIO_HAL_PLUGIN_USECASE_FM_TUNER;
+        break;
     default:
         ret = -EINVAL;
     }
@@ -247,7 +250,8 @@ int32_t ext_hw_plugin_usecase_start(void *plugin, struct audio_usecase *usecase)
         }
 
         if (((usecase->type == PCM_CAPTURE) || (usecase->type == VOICE_CALL) ||
-                (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL)) &&
+              (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL) ||
+              (usecase->type == PCM_PASSTHROUGH)) &&
             (usecase->in_snd_device != SND_DEVICE_NONE)) {
             codec_enable.snd_dev = usecase->in_snd_device;
             /* TODO - below should be related with in_snd_dev */
@@ -402,7 +406,8 @@ int32_t ext_hw_plugin_usecase_stop(void *plugin, struct audio_usecase *usecase)
             my_plugin->out_snd_dev[codec_disable.usecase] = 0;
         }
         if (((usecase->type == PCM_CAPTURE) || (usecase->type == VOICE_CALL) ||
-                (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL)) &&
+             (usecase->type == VOIP_CALL) || (usecase->type == PCM_HFP_CALL) ||
+             (usecase->type == PCM_PASSTHROUGH)) &&
             (usecase->in_snd_device != SND_DEVICE_NONE)) {
             codec_disable.snd_dev = usecase->in_snd_device;
 
