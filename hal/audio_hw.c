@@ -8607,6 +8607,7 @@ static int adev_update_voice_comm_input_stream(struct stream_in *in,
         //XXX needed for voice_extn_compress_voip_open_input_stream
         in->config.rate = config->sample_rate;
         if ((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
+             in->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
              voice_extn_compress_voip_is_active(in->dev)) &&
             (voice_extn_compress_voip_is_format_supported(in->format)) &&
             valid_rate && valid_ch) {
