@@ -1836,12 +1836,16 @@ static void reset_hdmi_sink_caps(struct stream_out *out) {
 static int read_hdmi_sink_caps(struct stream_out *out)
 {
     int ret = 0, i = 0, j = 0;
-    int channels = platform_edid_get_max_channels(out->dev->platform);
+    int channels = platform_edid_get_max_channels_v2(out->dev->platform,
+                                                     out->extconn.cs.controller,
+                                                     out->extconn.cs.stream);
 
     reset_hdmi_sink_caps(out);
 
     /* Cache ext disp type */
-    if (platform_get_ext_disp_type(adev->platform) <= 0) {
+    if (platform_get_ext_disp_type_v2(adev->platform,
+                                      out->extconn.cs.controller,
+                                      out->extconn.cs.stream <= 0)) {
         ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
         return -EINVAL;
     }
@@ -1867,7 +1871,9 @@ static int read_hdmi_sink_caps(struct stream_out *out)
 
     // check channel format caps
     i = 0;
-    if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_AC3)) {
+    if (platform_is_edid_supported_format_v2(out->dev->platform, AUDIO_FORMAT_AC3,
+                                             out->extconn.cs.controller,
+                                             out->extconn.cs.stream)) {
         ALOGV(":%s HDMI supports AC3/EAC3 formats", __func__);
         out->supported_formats[i++] = AUDIO_FORMAT_AC3;
         //Adding EAC3/EAC3_JOC formats if AC3 is supported by the sink.
@@ -1876,22 +1882,30 @@ static int read_hdmi_sink_caps(struct stream_out *out)
         out->supported_formats[i++] = AUDIO_FORMAT_E_AC3_JOC;
     }
 
-    if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_DOLBY_TRUEHD)) {
+    if (platform_is_edid_supported_format_v2(out->dev->platform, AUDIO_FORMAT_DOLBY_TRUEHD,
+                                             out->extconn.cs.controller,
+                                             out->extconn.cs.stream)) {
         ALOGV(":%s HDMI supports TRUE HD format", __func__);
         out->supported_formats[i++] = AUDIO_FORMAT_DOLBY_TRUEHD;
     }
 
-    if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_DTS)) {
+    if (platform_is_edid_supported_format_v2(out->dev->platform, AUDIO_FORMAT_DTS,
+                                             out->extconn.cs.controller,
+                                             out->extconn.cs.stream)) {
         ALOGV(":%s HDMI supports DTS format", __func__);
         out->supported_formats[i++] = AUDIO_FORMAT_DTS;
     }
 
-    if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_DTS_HD)) {
+    if (platform_is_edid_supported_format_v2(out->dev->platform, AUDIO_FORMAT_DTS_HD,
+                                             out->extconn.cs.controller,
+                                             out->extconn.cs.stream)) {
         ALOGV(":%s HDMI supports DTS HD format", __func__);
         out->supported_formats[i++] = AUDIO_FORMAT_DTS_HD;
     }
 
-    if (platform_is_edid_supported_format(out->dev->platform, AUDIO_FORMAT_IEC61937)) {
+    if (platform_is_edid_supported_format_v2(out->dev->platform, AUDIO_FORMAT_IEC61937,
+                                             out->extconn.cs.controller,
+                                             out->extconn.cs.stream)) {
         ALOGV(":%s HDMI supports IEC61937 format", __func__);
         out->supported_formats[i++] = AUDIO_FORMAT_IEC61937;
     }
@@ -1900,7 +1914,9 @@ static int read_hdmi_sink_caps(struct stream_out *out)
     // check sample rate caps
     i = 0;
     for (j = 0; j < MAX_SUPPORTED_SAMPLE_RATES; j++) {
-        if (platform_is_edid_supported_sample_rate(out->dev->platform, out_hdmi_sample_rates[j])) {
+        if (platform_is_edid_supported_sample_rate_v2(out->dev->platform, out_hdmi_sample_rates[j],
+                                                      out->extconn.cs.controller,
+                                                      out->extconn.cs.stream)) {
             ALOGV(":%s HDMI supports sample rate:%d", __func__, out_hdmi_sample_rates[j]);
             out->supported_sample_rates[i++] = out_hdmi_sample_rates[j];
         }
@@ -4431,6 +4447,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     struct str_parms *parms;
     char value[32];
     int ret = 0, val = 0, err;
+    int ext_controller = -1;
+    int ext_stream = -1;
     bool bypass_a2dp = false;
     bool reconfig = false;
     unsigned long service_interval = 0;
@@ -4440,6 +4458,17 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     parms = str_parms_create_str(kvpairs);
     if (!parms)
         goto error;
+
+    err = platform_get_controller_stream_from_params(parms, &ext_controller,
+                                                       &ext_stream);
+    if (err >= 0) {
+        out->extconn.cs.controller = ext_controller;
+        out->extconn.cs.stream = ext_stream;
+        ALOGD("%s: usecase(%s) new controller/stream (%d/%d)", __func__,
+              use_case_table[out->usecase], out->extconn.cs.controller,
+              out->extconn.cs.stream);
+    }
+
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (err >= 0) {
         val = atoi(value);
@@ -4456,7 +4485,10 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
                 (val == AUDIO_DEVICE_NONE) &&
                 !audio_extn_passthru_is_passthrough_stream(out) &&
-                (platform_get_edid_info(adev->platform) != 0) /* HDMI disconnected */) {
+                (platform_get_edid_info_v2(adev->platform,
+                                           out->extconn.cs.controller,
+                                           out->extconn.cs.stream) != 0)) {
+            out->extconn.cs.controller = out->extconn.cs.stream = -1;
             val = AUDIO_DEVICE_OUT_SPEAKER;
         }
         /*
@@ -4683,6 +4715,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             pthread_mutex_unlock(&out->lock);
         }
     }
+
     //end suspend, resume handling block
     str_parms_destroy(parms);
 error:
@@ -8116,6 +8149,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     bool a2dp_reconfig = false;
     struct listnode *node;
     struct audio_usecase *usecase = NULL;
+    int controller = -1, stream = -1;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -8243,11 +8277,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         if (audio_is_output_device(val) &&
             (val & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
             ALOGV("cache new ext disp type and edid");
-            ret = platform_get_ext_disp_type(adev->platform);
+            platform_get_controller_stream_from_params(parms, &controller, &stream);
+            platform_set_ext_display_device_v2(adev->platform, controller, stream);
+            ret = platform_get_ext_disp_type_v2(adev->platform, controller, stream);
             if (ret < 0) {
                 ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
             } else {
-                platform_cache_edid(adev->platform);
+                platform_cache_edid_v2(adev->platform, controller, stream);
             }
         } else if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
             /*
