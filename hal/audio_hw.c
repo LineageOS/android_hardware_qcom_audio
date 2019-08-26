@@ -406,6 +406,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = "sys-notification-playback",
     [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = "nav-guidance-playback",
     [USECASE_AUDIO_PLAYBACK_PHONE] = "phone-playback",
+    [USECASE_AUDIO_PLAYBACK_REAR_SEAT] = "rear-seat-playback",
     [USECASE_AUDIO_FM_TUNER_EXT] = "fm-tuner-ext",
 };
 
@@ -2255,9 +2256,11 @@ bool is_btsco_device(snd_device_t out_snd_device, snd_device_t in_snd_device)
 {
    bool ret=false;
    if ((out_snd_device == SND_DEVICE_OUT_BT_SCO ||
-        out_snd_device == SND_DEVICE_OUT_BT_SCO_WB) ||
+        out_snd_device == SND_DEVICE_OUT_BT_SCO_WB ||
+        out_snd_device == SND_DEVICE_OUT_BT_SCO_SWB) ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB_NREC ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB ||
+        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_NREC ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC)
         ret = true;
@@ -4074,9 +4077,13 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out, struct ti
      * which then needs protection, this causes delay in TS query for pcm_offload usecase
      * hence only estimate.
      */
-    int64_t signed_frames = out->written - kernel_buffer_size;
+    uint64_t signed_frames = 0;
+    if (out->written >= kernel_buffer_size)
+        signed_frames = out->written - kernel_buffer_size;
 
-    signed_frames = signed_frames / (audio_bytes_per_sample(out->format) * popcount(out->channel_mask)) - platform_latency;
+    signed_frames = signed_frames / (audio_bytes_per_sample(out->format) * popcount(out->channel_mask));
+    if (signed_frames >= platform_latency)
+        signed_frames = signed_frames - platform_latency;
 
     if (signed_frames > 0) {
         actual_frames_rendered = signed_frames;
@@ -4088,7 +4095,7 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out, struct ti
     pthread_mutex_unlock(&out->position_query_lock);
 
     ALOGVV("%s signed frames %lld out_written %lld kernel_buffer_size %d"
-            "bytes/sample %zu channel count %d", __func__,(long long int)signed_frames,
+            "bytes/sample %zu channel count %d", __func__, signed_frames,
              (long long int)out->written, (int)kernel_buffer_size,
              audio_bytes_per_sample(out->compr_config.codec->format),
              popcount(out->channel_mask));
@@ -5140,8 +5147,7 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
             mixer_ctl_set_array(ctl, volume, sizeof(volume)/sizeof(volume[0]));
             return 0;
         } else if ((out->devices & AUDIO_DEVICE_OUT_BUS) &&
-                (audio_extn_auto_hal_get_snd_device_for_car_audio_stream(out) ==
-                    SND_DEVICE_OUT_BUS_MEDIA)) {
+                (out->car_audio_stream == CAR_AUDIO_STREAM_MEDIA)) {
             ALOGD("%s: Overriding offload set volume for media bus stream", __func__);
             struct listnode *node = NULL;
             list_for_each(node, &adev->active_outputs_list) {
@@ -5831,24 +5837,32 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
             unsigned int avail;
             if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
                 size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
-                int64_t signed_frames = out->written - kernel_buffer_size + avail;
+
+                uint64_t signed_frames = 0;
+
+                if (avail > kernel_buffer_size)
+                    avail = kernel_buffer_size;
+
+                if (out->written >= (kernel_buffer_size - avail))
+                    signed_frames = out->written - kernel_buffer_size + avail;
+
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
-                signed_frames -=
+                if (signed_frames >= (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL))
+                    signed_frames -=
                         (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
 
                 // Adjustment accounts for A2dp encoder latency with non offload usecases
                 // Note: Encoder latency is returned in ms, while platform_render_latency in us.
                 if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) {
-                    signed_frames -=
+                    if (signed_frames >= (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000))
+                        signed_frames -=
                             (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000);
                 }
 
                 // It would be unusual for this value to be negative, but check just in case ...
-                if (signed_frames >= 0) {
-                    *frames = signed_frames;
-                    ret = 0;
-                }
+                *frames = signed_frames;
+                ret = 0;
             }
         } else if (out->card_status == CARD_STATUS_OFFLINE) {
             *frames = out->written;

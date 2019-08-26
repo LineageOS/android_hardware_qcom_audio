@@ -481,6 +481,8 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                              NAV_GUIDANCE_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_PHONE] = {PHONE_PCM_DEVICE,
                                       PHONE_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_REAR_SEAT] = {REAR_SEAT_PCM_DEVICE,
+                                          REAR_SEAT_PCM_DEVICE},
     [USECASE_AUDIO_FM_TUNER_EXT] = {-1, -1},
 };
 
@@ -584,6 +586,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_BUS_SYS] = "bus-speaker",
     [SND_DEVICE_OUT_BUS_NAV] = "bus-speaker",
     [SND_DEVICE_OUT_BUS_PHN] = "bus-speaker",
+    [SND_DEVICE_OUT_BUS_RSE] = "bus-speaker",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -846,10 +849,11 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_PROTECTED_RAS] = 134,
     [SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT_RAS] = 134,
     [SND_DEVICE_OUT_VOICE_HEARING_AID] = 45,
-    [SND_DEVICE_OUT_BUS_MEDIA] = 78,
-    [SND_DEVICE_OUT_BUS_SYS] = 78,
+    [SND_DEVICE_OUT_BUS_MEDIA] = 60,
+    [SND_DEVICE_OUT_BUS_SYS] = 60,
     [SND_DEVICE_OUT_BUS_NAV] = 14,
     [SND_DEVICE_OUT_BUS_PHN] = 94,
+    [SND_DEVICE_OUT_BUS_RSE] = 60,
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_HANDSET_MIC_SB] = 163,
     [SND_DEVICE_IN_HANDSET_MIC_EXTERNAL] = 4,
@@ -1081,6 +1085,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_SYS)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_NAV)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_PHN)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_RSE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_SB)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_MIC_EXTERNAL)},
@@ -1281,6 +1286,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_PHONE)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_REAR_SEAT)},
 };
 
 static const struct name_to_index usecase_type_index[USECASE_TYPE_MAX] = {
@@ -1670,7 +1676,11 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
          !strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
                    sizeof("sm6150-wcd9375qrd-snd-card")) ||
          !strncmp(snd_card_name, "sm6150-wcd9375-snd-card",
-                   sizeof("sm6150-wcd9375-snd-card"))) {
+                   sizeof("sm6150-wcd9375-snd-card")) ||
+         !strncmp(snd_card_name, "atoll-wcd937x-snd-card",
+                   sizeof("atoll-wcd937x-snd-card")) ||
+         !strncmp(snd_card_name, "atoll-idp-snd-card",
+                   sizeof("atoll-idp-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -2224,6 +2234,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_BUS_SYS] = strdup("TERT_TDM_RX_0");
     hw_interface_table[SND_DEVICE_OUT_BUS_NAV] = strdup("TERT_TDM_RX_1");
     hw_interface_table[SND_DEVICE_OUT_BUS_PHN] = strdup("TERT_TDM_RX_2");
+    hw_interface_table[SND_DEVICE_OUT_BUS_RSE] = strdup("QUAT_TDM_RX_0");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC_SB] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC_EXTERNAL] = strdup("SLIMBUS_0_TX");
@@ -3052,7 +3063,7 @@ void *platform_init(struct audio_device *adev)
 
     be_dai_name_table = NULL;
 
-    property_get("persist.audio.dualmic.config",value,"");
+    property_get("persist.vendor.audio.dualmic.config",value,"");
     if (!strcmp("endfire", value)) {
         dual_mic_config = true;
     }
@@ -3454,6 +3465,7 @@ acdb_init_fail:
         if (!strncmp(snd_card_name, "sm6150", strlen("sm6150")) ||
             !strncmp(snd_card_name, "kona", strlen("kona")) ||
             !strncmp(snd_card_name, "lito", strlen("lito")) ||
+            !strncmp(snd_card_name, "atoll", strlen("atoll")) ||
             !strncmp(snd_card_name, "trinket", strlen("trinket"))) {
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 Format");
@@ -7914,6 +7926,7 @@ int64_t platform_render_latency(audio_usecase_t usecase)
         case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
         case USECASE_AUDIO_PLAYBACK_MEDIA:
         case USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE:
+        case USECASE_AUDIO_PLAYBACK_REAR_SEAT:
             return DEEP_BUFFER_PLATFORM_DELAY;
         case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
         case USECASE_AUDIO_PLAYBACK_WITH_HAPTICS:

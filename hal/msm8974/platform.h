@@ -181,6 +181,7 @@ enum {
     SND_DEVICE_OUT_BUS_SYS,
     SND_DEVICE_OUT_BUS_NAV,
     SND_DEVICE_OUT_BUS_PHN,
+    SND_DEVICE_OUT_BUS_RSE,
     SND_DEVICE_OUT_END,
 
     /*
@@ -660,6 +661,7 @@ enum {
 #define SYS_NOTIFICATION_PCM_DEVICE 9
 #define NAV_GUIDANCE_PCM_DEVICE MULTIMEDIA2_PCM_DEVICE
 #define PHONE_PCM_DEVICE 12
+#define REAR_SEAT_PCM_DEVICE 54
 
 #ifdef PLATFORM_APQ8084
 #define FM_RX_VOLUME "Quat MI2S FM RX Volume"
@@ -667,7 +669,7 @@ enum {
 #define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
 #elif defined (PLATFORM_MSM8996) || defined (PLATFORM_KONA)
 #define FM_RX_VOLUME "Tert MI2S LOOPBACK Volume"
-#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO)
+#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || defined (PLATFORM_ATOLL)
 #define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
 #else
 #define FM_RX_VOLUME "Internal FM RX Volume"

@@ -34,6 +34,7 @@
         <device name="SND_DEVICE_OUT_BUS_SYS" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BUS_NAV" acdb_id="14"/>
         <device name="SND_DEVICE_OUT_BUS_PHN" acdb_id="94"/>
+        <device name="SND_DEVICE_OUT_BUS_RSE" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BT_SCO" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_BT_SCO_WB" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_BT_A2DP" acdb_id="60"/>
@@ -90,6 +91,11 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD6" type="out" id="23"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD7" type="out" id="24"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD8" type="out" id="25"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_MEDIA" type="out" id="0"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION" type="out" id="9"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE" type="out" id="1"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_PHONE" type="out" id="12"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_REAR_SEAT" type="out" id="54"/>
         <usecase name="USECASE_VOICEMMODE1_CALL" type="in" id="2"/>
         <usecase name="USECASE_VOICEMMODE1_CALL" type="out" id="2"/>
         <usecase name="USECASE_VOICEMMODE2_CALL" type="in" id="15"/>
@@ -146,6 +152,11 @@
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER" interface="TERT_TDM_RX_2"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_HFP" interface="TERT_TDM_RX_2"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_STEREO" interface="TERT_TDM_RX_2"/>
+        <device name="SND_DEVICE_OUT_BUS_MEDIA" interface="TERT_TDM_RX_0"/>
+        <device name="SND_DEVICE_OUT_BUS_SYS" interface="TERT_TDM_RX_0"/>
+        <device name="SND_DEVICE_OUT_BUS_NAV" interface="TERT_TDM_RX_1"/>
+        <device name="SND_DEVICE_OUT_BUS_PHN" interface="TERT_TDM_RX_2"/>
+        <device name="SND_DEVICE_OUT_BUS_RSE" interface="QUAT_TDM_RX_0"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_SPEAKER_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_HEADSET_MIC" interface="TERT_TDM_TX_0"/>
