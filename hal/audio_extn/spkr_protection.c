@@ -2049,8 +2049,6 @@ void spkr_prot_init(void *adev, spkr_prot_init_config_t spkr_prot_init_config_va
     handle.thread_exit = false;
     handle.cal_thrd_created = false;
     if ((property_get("persist.vendor.audio.speaker.prot.enable",
-                      value, NULL) > 0) ||
-        (property_get("persist.speaker.prot.enable",
                       value, NULL) > 0)) {
         if (!strncmp("true", value, 4))
              handle.spkr_prot_enable = true;
