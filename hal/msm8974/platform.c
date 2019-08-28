@@ -3205,6 +3205,9 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "lito-qrd-snd-card",
                sizeof("lito-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "atoll-qrd-snd-card",
+               sizeof("atoll-qrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_WSA, my_data, PLATFORM);
