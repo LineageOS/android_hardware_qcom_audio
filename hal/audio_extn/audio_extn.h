@@ -1093,8 +1093,9 @@ int audio_extn_gef_retrieve_audio_cal(void* adev, int acdb_dev_id, int acdb_devi
 
 // START: COMPRESS_INPUT_ENABLED ===============================
 bool audio_extn_cin_applicable_stream(struct stream_in *in);
-bool audio_extn_cin_attached_usecase(audio_usecase_t uc_id);
+bool audio_extn_cin_attached_usecase(struct stream_in *in);
 bool audio_extn_cin_format_supported(audio_format_t format);
+int audio_extn_cin_acquire_usecase(struct stream_in *in);
 size_t audio_extn_cin_get_buffer_size(struct stream_in *in);
 int audio_extn_cin_open_input_stream(struct stream_in *in);
 void audio_extn_cin_stop_input_stream(struct stream_in *in);
