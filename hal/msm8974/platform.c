@@ -317,7 +317,6 @@ struct platform_data {
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_audio_cal_v3_t   acdb_send_audio_cal_v3;
-    acdb_send_audio_cal_v4_t   acdb_send_audio_cal_v4;
     acdb_set_audio_cal_t       acdb_set_audio_cal;
     acdb_get_audio_cal_t       acdb_get_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
@@ -3260,12 +3259,6 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: Could not find the symbol acdb_send_audio_cal_v3 from %s",
                   __func__, LIB_ACDB_LOADER);
 
-        my_data->acdb_send_audio_cal_v4 = (acdb_send_audio_cal_v4_t)dlsym(my_data->acdb_handle,
-                                                    "acdb_loader_send_audio_cal_v4");
-        if (!my_data->acdb_send_audio_cal_v4)
-            ALOGE("%s: Could not find the symbol acdb_send_audio_cal_v4 from %s",
-                  __func__, LIB_ACDB_LOADER);
-
         my_data->acdb_set_audio_cal = (acdb_set_audio_cal_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_set_audio_cal_v2");
         if (!my_data->acdb_set_audio_cal)
@@ -4947,7 +4940,6 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     bool is_incall_rec_usecase = false;
     snd_device_t incall_rec_device;
     int sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-    struct audio_backend_cfg backend_cfg = {0};
 
     if (voice_is_in_call(my_data->adev))
         is_incall_rec_usecase = voice_is_in_call_rec_stream(usecase->stream.in);
@@ -4986,25 +4978,17 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
             acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(new_snd_device[i])];
             sample_rate = audio_extn_utils_get_app_sample_rate_for_device(my_data->adev, usecase,
                                                           new_snd_device[i]);
-            platform_get_codec_backend_cfg(my_data->adev, new_snd_device[i], &backend_cfg);
         } else {
             // Use in_call_rec snd_device to extract the ACDB device ID instead of split snd devices
             acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(snd_device)];
             sample_rate = audio_extn_utils_get_app_sample_rate_for_device(my_data->adev, usecase,
                                                           snd_device);
-            platform_get_codec_backend_cfg(my_data->adev, snd_device, &backend_cfg);
         }
 
         // Do not use Rx path default app type for TX path
         if ((usecase->type == PCM_CAPTURE) && (app_type == DEFAULT_APP_TYPE_RX_PATH)) {
             ALOGD("Resetting app type for Tx path to default");
             app_type  = DEFAULT_APP_TYPE_TX_PATH;
-        }
-
-        /* Override backend cfg sample rate in calibration for vi feedback usecase */
-        if (usecase->id == USECASE_AUDIO_SPKR_CALIB_TX) {
-            ALOGV("Reset backend cfg sample rate to 8KHz for spkr calib Tx use case");
-            backend_cfg.sample_rate = sample_rate;
         }
 
         if (acdb_dev_id < 0) {
@@ -5031,11 +5015,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         else
             acdb_dev_type = ACDB_DEV_TYPE_IN;
 
-        if (my_data->acdb_send_audio_cal_v4) {
-            my_data->acdb_send_audio_cal_v4(acdb_dev_id, acdb_dev_type,
-                                            app_type, sample_rate, i,
-                                            backend_cfg.sample_rate);
-        } else if (my_data->acdb_send_audio_cal_v3) {
+        if (my_data->acdb_send_audio_cal_v3) {
             my_data->acdb_send_audio_cal_v3(acdb_dev_id, acdb_dev_type,
                                             app_type, sample_rate, i);
         } else if (my_data->acdb_send_audio_cal) {
