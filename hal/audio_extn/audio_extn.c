@@ -1125,8 +1125,10 @@ void anc_headset_feature_init(bool is_feature_enabled)
 
 bool audio_extn_get_anc_enabled(void)
 {
-    ALOGD("%s: anc_enabled:%d", __func__, aextnmod.anc_enabled);
-    return (aextnmod.anc_enabled ? true: false);
+    ALOGD("%s: anc_enabled:%d", __func__,
+        (aextnmod.anc_enabled && audio_extn_anc_headset_feature_enabled));
+    return (aextnmod.anc_enabled &&
+        audio_extn_anc_headset_feature_enabled);
 }
 
 bool audio_extn_should_use_handset_anc(int in_channels)
