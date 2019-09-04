@@ -34,6 +34,7 @@
 
 #ifdef A2DP_OFFLOAD_ENABLED
 #define BT_IPC_LIB_NAME  "libbthost_if.so"
+#define BTAUDIO_OFFLOAD_LIB_NAME  "btaudio_offload_if.so"
 
 // Media format definitions
 #define ENC_MEDIA_FMT_AAC                                  0x00010DA6
@@ -78,6 +79,7 @@
 // System properties used for A2DP Offload
 #define SYSPROP_A2DP_OFFLOAD_SUPPORTED "ro.bluetooth.a2dp_offload.supported"
 #define SYSPROP_A2DP_OFFLOAD_DISABLED  "persist.bluetooth.a2dp_offload.disabled"
+#define SYSPROP_BLUETOOTH_AUDIO_HAL_DISABLED  "persist.bluetooth.bluetooth_audio_hal.disabled"
 #define SYSPROP_A2DP_CODEC_LATENCIES   "vendor.audio.a2dp.codec.latency"
 
 // Default encoder bit width
@@ -141,6 +143,7 @@ typedef void * (*audio_get_codec_config_t)(uint8_t *multicast_status, uint8_t *n
                                enc_codec_t *codec_type);
 typedef int (*audio_check_a2dp_ready_t)(void);
 typedef int (*audio_is_scrambling_enabled_t)(void);
+typedef uint16_t (*audio_get_a2dp_sink_latency_t)(void);
 
 enum A2DP_STATE {
     A2DP_STATE_CONNECTED,
@@ -221,6 +224,8 @@ struct a2dp_data {
     audio_check_a2dp_ready_t audio_check_a2dp_ready;
     /* Check if scrambling is enabled on BTSoC */
     audio_is_scrambling_enabled_t audio_is_scrambling_enabled;
+    /* Get sink latency from Bluetooth stack */
+    audio_get_a2dp_sink_latency_t audio_get_a2dp_sink_latency;
     /* Internal A2DP state identifier */
     enum A2DP_STATE bt_state;
     /* A2DP codec type configured */
@@ -673,8 +678,9 @@ fail:
 static int open_a2dp_output()
 {
     int ret = 0;
-
     ALOGD("%s: Open A2DP output start", __func__);
+    bool hal_v2_enabled =
+              !property_get_bool(SYSPROP_BLUETOOTH_AUDIO_HAL_DISABLED, false);
 
     if (a2dp.bt_state != A2DP_STATE_DISCONNECTED) {
         ALOGD("%s: Called A2DP open with improper state, Ignoring request state %d",
@@ -683,9 +689,13 @@ static int open_a2dp_output()
     }
 
     if (a2dp.bt_lib_handle == NULL) {
-        ALOGD("%s: Requesting for Bluetooth IPC lib handle", __func__);
-        a2dp.bt_lib_handle = dlopen(BT_IPC_LIB_NAME, RTLD_NOW);
-
+        ALOGD("%s: Requesting for Bluetooth IPC lib handle [%s]", __func__,
+              hal_v2_enabled ? BTAUDIO_OFFLOAD_LIB_NAME : BT_IPC_LIB_NAME);
+        if (hal_v2_enabled) {
+           a2dp.bt_lib_handle = dlopen(BTAUDIO_OFFLOAD_LIB_NAME, RTLD_NOW);
+        } else {
+           a2dp.bt_lib_handle = dlopen(BT_IPC_LIB_NAME, RTLD_NOW);
+        }
         if (a2dp.bt_lib_handle == NULL) {
             ret = -errno;
             ALOGE("%s: DLOPEN failed for %s errno %d strerror %s", __func__,
@@ -713,6 +723,8 @@ static int open_a2dp_output()
                         dlsym(a2dp.bt_lib_handle,"audio_check_a2dp_ready");
             a2dp.audio_is_scrambling_enabled = (audio_is_scrambling_enabled_t)
                         dlsym(a2dp.bt_lib_handle,"audio_is_scrambling_enabled");
+            a2dp.audio_get_a2dp_sink_latency = (audio_get_a2dp_sink_latency_t)
+                        dlsym(a2dp.bt_lib_handle,"audio_get_a2dp_sink_latency");
         }
     }
 
@@ -1714,7 +1726,7 @@ void audio_extn_a2dp_init(void *adev)
 
 uint32_t audio_extn_a2dp_get_encoder_latency()
 {
-    uint32_t latency = 0;
+    uint32_t latency_ms = 0;
     int avsync_runtime_prop = 0;
     int sbc_offset = 0, aptx_offset = 0, aptxhd_offset = 0,
         aac_offset = 0, ldac_offset = 0;
@@ -1731,36 +1743,41 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
         }
     }
 
+    uint32_t slatency_ms = 0;
+    if (a2dp.audio_get_a2dp_sink_latency && a2dp.bt_state != A2DP_STATE_DISCONNECTED) {
+        slatency_ms = a2dp.audio_get_a2dp_sink_latency();
+    }
+
     switch (a2dp.bt_encoder_format) {
         case ENC_CODEC_TYPE_SBC:
-            latency = (avsync_runtime_prop > 0) ? sbc_offset : ENCODER_LATENCY_SBC;
-            latency += DEFAULT_SINK_LATENCY_SBC;
+            latency_ms = (avsync_runtime_prop > 0) ? sbc_offset : ENCODER_LATENCY_SBC;
+            latency_ms += (slatency_ms == 0) ? DEFAULT_SINK_LATENCY_SBC : slatency_ms;
             break;
         case ENC_CODEC_TYPE_APTX:
-            latency = (avsync_runtime_prop > 0) ? aptx_offset : ENCODER_LATENCY_APTX;
-            latency += DEFAULT_SINK_LATENCY_APTX;
+            latency_ms = (avsync_runtime_prop > 0) ? aptx_offset : ENCODER_LATENCY_APTX;
+            latency_ms += (slatency_ms == 0) ? DEFAULT_SINK_LATENCY_APTX : slatency_ms;
             break;
         case ENC_CODEC_TYPE_APTX_HD:
-            latency = (avsync_runtime_prop > 0) ? aptxhd_offset : ENCODER_LATENCY_APTX_HD;
-            latency += DEFAULT_SINK_LATENCY_APTX_HD;
+            latency_ms = (avsync_runtime_prop > 0) ? aptxhd_offset : ENCODER_LATENCY_APTX_HD;
+            latency_ms += (slatency_ms == 0) ? DEFAULT_SINK_LATENCY_APTX_HD : slatency_ms;
             break;
         case ENC_CODEC_TYPE_AAC:
-            latency = (avsync_runtime_prop > 0) ? aac_offset : ENCODER_LATENCY_AAC;
-            latency += DEFAULT_SINK_LATENCY_AAC;
+            latency_ms = (avsync_runtime_prop > 0) ? aac_offset : ENCODER_LATENCY_AAC;
+            latency_ms += (slatency_ms == 0) ? DEFAULT_SINK_LATENCY_AAC : slatency_ms;
             break;
         case ENC_CODEC_TYPE_LDAC:
-            latency = (avsync_runtime_prop > 0) ? ldac_offset : ENCODER_LATENCY_LDAC;
-            latency += DEFAULT_SINK_LATENCY_LDAC;
+            latency_ms = (avsync_runtime_prop > 0) ? ldac_offset : ENCODER_LATENCY_LDAC;
+            latency_ms += (slatency_ms == 0) ? DEFAULT_SINK_LATENCY_LDAC : slatency_ms;
             break;
         case ENC_CODEC_TYPE_PCM:
-            latency = ENCODER_LATENCY_PCM;
-            latency += DEFAULT_SINK_LATENCY_PCM;
+            latency_ms = ENCODER_LATENCY_PCM;
+            latency_ms += DEFAULT_SINK_LATENCY_PCM;
             break;
         default:
-            latency = DEFAULT_ENCODER_LATENCY;
+            latency_ms = DEFAULT_ENCODER_LATENCY;
             break;
     }
-    return latency;
+    return latency_ms;
 }
 
 int audio_extn_a2dp_get_parameters(struct str_parms *query,
