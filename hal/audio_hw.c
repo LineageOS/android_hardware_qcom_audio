@@ -5872,25 +5872,24 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                 size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
 
                 uint64_t signed_frames = 0;
+                uint64_t frames_temp = 0;
 
-                if (avail > kernel_buffer_size)
-                    avail = kernel_buffer_size;
-
-                if (out->written >= (kernel_buffer_size - avail))
-                    signed_frames = out->written - kernel_buffer_size + avail;
+                frames_temp = (kernel_buffer_size > avail) ? (kernel_buffer_size - avail) : 0;
+                if (out->written >= frames_temp)
+                    signed_frames = out->written - frames_temp;
 
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
-                if (signed_frames >= (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL))
-                    signed_frames -=
-                        (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
+                frames_temp = platform_render_latency(out->usecase) * out->sample_rate / 1000000LL;
+                if (signed_frames >= frames_temp)
+                    signed_frames -= frames_temp;
 
                 // Adjustment accounts for A2dp encoder latency with non offload usecases
                 // Note: Encoder latency is returned in ms, while platform_render_latency in us.
                 if (AUDIO_DEVICE_OUT_ALL_A2DP & out->devices) {
-                    if (signed_frames >= (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000))
-                        signed_frames -=
-                            (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000);
+                    frames_temp = audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000;
+                    if (signed_frames >= frames_temp)
+                        signed_frames -= frames_temp;
                 }
 
                 // It would be unusual for this value to be negative, but check just in case ...
