@@ -2479,11 +2479,18 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             ALOGE("%s: stream.out is NULL", __func__);
             return -EINVAL;
         }
-        out_snd_device = platform_get_output_snd_device(adev->platform,
-                                                        usecase->stream.out);
-        in_snd_device = platform_get_input_snd_device(adev->platform,
-                                                      NULL,
-                                                      usecase->stream.out->devices);
+        if (usecase->devices & AUDIO_DEVICE_OUT_BUS) {
+            out_snd_device = audio_extn_auto_hal_get_output_snd_device(adev,
+                                                                       uc_id);
+            in_snd_device = audio_extn_auto_hal_get_input_snd_device(adev,
+                                                                     uc_id);
+        } else {
+            out_snd_device = platform_get_output_snd_device(adev->platform,
+                                                            usecase->stream.out);
+            in_snd_device = platform_get_input_snd_device(adev->platform,
+                                                          NULL,
+                                                          usecase->stream.out->devices);
+        }
         usecase->devices = usecase->stream.out->devices;
     } else if (usecase->type == TRANSCODE_LOOPBACK_RX) {
         if (usecase->stream.inout == NULL) {
@@ -2564,8 +2571,11 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             if (out_snd_device == SND_DEVICE_NONE) {
                 struct stream_out *voip_out = adev->primary_output;
                 struct stream_in *voip_in = get_voice_communication_input(adev);
-                out_snd_device = platform_get_output_snd_device(adev->platform,
-                                                                usecase->stream.out);
+                if (usecase->devices & AUDIO_DEVICE_OUT_BUS)
+                    out_snd_device = audio_extn_auto_hal_get_output_snd_device(adev, uc_id);
+                else
+                    out_snd_device = platform_get_output_snd_device(adev->platform,
+                                                                    usecase->stream.out);
                 voip_usecase = get_usecase_from_list(adev, USECASE_AUDIO_PLAYBACK_VOIP);
 
                 if (voip_usecase)
@@ -2627,10 +2637,11 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             return 0;
     }
 
-    if ((is_btsco_device(out_snd_device,in_snd_device) && !adev->bt_sco_on) ||
-         (is_a2dp_device(out_snd_device) && !audio_extn_a2dp_source_is_ready())) {
-          ALOGD("SCO/A2DP is selected but they are not connected/ready hence dont route");
-          return 0;
+    if (!(usecase->devices & AUDIO_DEVICE_OUT_BUS) &&
+        ((is_btsco_device(out_snd_device,in_snd_device) && !adev->bt_sco_on) ||
+            (is_a2dp_device(out_snd_device) && !audio_extn_a2dp_source_is_ready()))) {
+        ALOGD("SCO/A2DP is selected but they are not connected/ready hence dont route");
+        return 0;
     }
 
     if (out_snd_device != SND_DEVICE_NONE &&

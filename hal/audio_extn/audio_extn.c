@@ -5467,10 +5467,6 @@ static auto_hal_open_output_stream_t auto_hal_open_output_stream;
 typedef bool (*auto_hal_is_bus_device_usecase_t)(audio_usecase_t);
 static auto_hal_is_bus_device_usecase_t auto_hal_is_bus_device_usecase;
 
-typedef snd_device_t (*auto_hal_get_snd_device_for_car_audio_stream_t)(
-                                struct stream_out*);
-static auto_hal_get_snd_device_for_car_audio_stream_t auto_hal_get_snd_device_for_car_audio_stream;
-
 typedef int (*auto_hal_get_audio_port_t)(struct audio_hw_device*,
                                 struct audio_port*);
 static auto_hal_get_audio_port_t auto_hal_get_audio_port;
@@ -5490,6 +5486,14 @@ static auto_hal_start_hfp_downlink_t auto_hal_start_hfp_downlink;
 typedef int (*auto_hal_stop_hfp_downlink_t)(struct audio_device*,
                                 struct audio_usecase*);
 static auto_hal_stop_hfp_downlink_t auto_hal_stop_hfp_downlink;
+
+typedef snd_device_t (*auto_hal_get_input_snd_device_t)(struct audio_device*,
+                                audio_usecase_t);
+static auto_hal_get_input_snd_device_t auto_hal_get_input_snd_device;
+
+typedef snd_device_t (*auto_hal_get_output_snd_device_t)(struct audio_device*,
+                                audio_usecase_t);
+static auto_hal_get_output_snd_device_t auto_hal_get_output_snd_device;
 
 int auto_hal_feature_init(bool is_feature_enabled)
 {
@@ -5523,9 +5527,6 @@ int auto_hal_feature_init(bool is_feature_enabled)
             !(auto_hal_is_bus_device_usecase =
                  (auto_hal_is_bus_device_usecase_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_is_bus_device_usecase")) ||
-            !(auto_hal_get_snd_device_for_car_audio_stream =
-                 (auto_hal_get_snd_device_for_car_audio_stream_t)dlsym(
-                            auto_hal_lib_handle, "auto_hal_get_snd_device_for_car_audio_stream")) ||
             !(auto_hal_get_audio_port =
                  (auto_hal_get_audio_port_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_get_audio_port")) ||
@@ -5540,7 +5541,13 @@ int auto_hal_feature_init(bool is_feature_enabled)
                             auto_hal_lib_handle, "auto_hal_start_hfp_downlink")) ||
             !(auto_hal_stop_hfp_downlink =
                  (auto_hal_stop_hfp_downlink_t)dlsym(
-                            auto_hal_lib_handle, "auto_hal_stop_hfp_downlink"))) {
+                            auto_hal_lib_handle, "auto_hal_stop_hfp_downlink")) ||
+            !(auto_hal_get_input_snd_device =
+                 (auto_hal_get_input_snd_device_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_get_input_snd_device")) ||
+            !(auto_hal_get_output_snd_device =
+                 (auto_hal_get_output_snd_device_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_get_output_snd_device"))) {
             ALOGE("%s: dlsym failed", __func__);
             goto feature_disabled;
         }
@@ -5561,12 +5568,13 @@ feature_disabled:
     auto_hal_get_car_audio_stream_from_address = NULL;
     auto_hal_open_output_stream = NULL;
     auto_hal_is_bus_device_usecase = NULL;
-    auto_hal_get_snd_device_for_car_audio_stream = NULL;
     auto_hal_get_audio_port = NULL;
     auto_hal_set_audio_port_config = NULL;
     auto_hal_set_parameters = NULL;
     auto_hal_start_hfp_downlink = NULL;
     auto_hal_stop_hfp_downlink = NULL;
+    auto_hal_get_input_snd_device = NULL;
+    auto_hal_get_output_snd_device = NULL;
 
     ALOGW(":: %s: ---- Feature AUTO_HAL is disabled ----", __func__);
     return -ENOSYS;
@@ -5586,6 +5594,8 @@ int audio_extn_auto_hal_init(struct audio_device *adev)
         auto_hal_init_config.fp_select_devices = select_devices;
         auto_hal_init_config.fp_disable_audio_route = disable_audio_route;
         auto_hal_init_config.fp_disable_snd_device = disable_snd_device;
+        auto_hal_init_config.fp_adev_get_active_input = adev_get_active_input;
+        auto_hal_init_config.fp_platform_set_echo_reference = platform_set_echo_reference;
         return auto_hal_init(adev, auto_hal_init_config);
     }
     else
@@ -5624,25 +5634,19 @@ int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
 int audio_extn_auto_hal_get_car_audio_stream_from_address(const char *address)
 {
     return ((auto_hal_get_car_audio_stream_from_address) ?
-                            auto_hal_get_car_audio_stream_from_address(address): 0);
+                            auto_hal_get_car_audio_stream_from_address(address): -ENOSYS);
 }
 
 int audio_extn_auto_hal_open_output_stream(struct stream_out *out)
 {
     return ((auto_hal_open_output_stream) ?
-                            auto_hal_open_output_stream(out): 0);
+                            auto_hal_open_output_stream(out): -ENOSYS);
 }
 
 bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id)
 {
     return ((auto_hal_is_bus_device_usecase) ?
-                            auto_hal_is_bus_device_usecase(uc_id): 0);
-}
-
-snd_device_t audio_extn_auto_hal_get_snd_device_for_car_audio_stream(struct stream_out *out)
-{
-    return ((auto_hal_get_snd_device_for_car_audio_stream) ?
-                            auto_hal_get_snd_device_for_car_audio_stream(out): 0);
+                            auto_hal_is_bus_device_usecase(uc_id): false);
 }
 
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
@@ -5678,6 +5682,20 @@ int audio_extn_auto_hal_stop_hfp_downlink(struct audio_device *adev,
 {
     return ((auto_hal_stop_hfp_downlink) ?
                             auto_hal_stop_hfp_downlink(adev, uc_info): 0);
+}
+
+snd_device_t audio_extn_auto_hal_get_input_snd_device(struct audio_device *adev,
+                                audio_usecase_t uc_id)
+{
+    return ((auto_hal_get_input_snd_device) ?
+                            auto_hal_get_input_snd_device(adev, uc_id): SND_DEVICE_NONE);
+}
+
+snd_device_t audio_extn_auto_hal_get_output_snd_device(struct audio_device *adev,
+                                audio_usecase_t uc_id)
+{
+    return ((auto_hal_get_output_snd_device) ?
+                            auto_hal_get_output_snd_device(adev, uc_id): SND_DEVICE_NONE);
 }
 // END: AUTO_HAL ===================================================================
 

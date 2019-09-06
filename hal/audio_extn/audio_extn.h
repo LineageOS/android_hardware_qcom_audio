@@ -1315,7 +1315,6 @@ int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
 int audio_extn_auto_hal_get_car_audio_stream_from_address(const char *address);
 int audio_extn_auto_hal_open_output_stream(struct stream_out *out);
 bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id);
-snd_device_t audio_extn_auto_hal_get_snd_device_for_car_audio_stream(struct stream_out *out);
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
                                 struct audio_port *config);
 int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
@@ -1326,11 +1325,16 @@ int audio_extn_auto_hal_start_hfp_downlink(struct audio_device *adev,
                                 struct audio_usecase *uc_info);
 int audio_extn_auto_hal_stop_hfp_downlink(struct audio_device *adev,
                                 struct audio_usecase *uc_info);
+snd_device_t audio_extn_auto_hal_get_input_snd_device(struct audio_device *adev,
+                                audio_usecase_t uc_id);
+snd_device_t audio_extn_auto_hal_get_output_snd_device(struct audio_device *adev,
+                                audio_usecase_t uc_id);
 
 typedef streams_input_ctxt_t* (*fp_in_get_stream_t)(struct audio_device*, audio_io_handle_t);
 typedef streams_output_ctxt_t* (*fp_out_get_stream_t)(struct audio_device*, audio_io_handle_t);
 typedef size_t (*fp_get_output_period_size_t)(uint32_t, audio_format_t, int, int);
 typedef int (*fp_audio_extn_ext_hw_plugin_set_audio_gain_t)(void*, struct audio_usecase*, uint32_t);
+typedef struct stream_in* (*fp_adev_get_active_input_t)(const struct audio_device*);
 
 typedef struct auto_hal_init_config {
     fp_in_get_stream_t                           fp_in_get_stream;
@@ -1343,6 +1347,8 @@ typedef struct auto_hal_init_config {
     fp_select_devices_t                          fp_select_devices;
     fp_disable_audio_route_t                     fp_disable_audio_route;
     fp_disable_snd_device_t                      fp_disable_snd_device;
+    fp_adev_get_active_input_t                   fp_adev_get_active_input;
+    fp_platform_set_echo_reference_t             fp_platform_set_echo_reference;
 } auto_hal_init_config_t;
 // END: AUTO_HAL FEATURE ==================================================
 
