@@ -451,7 +451,7 @@ enum {
 #define FM_CAPTURE_PCM_DEVICE  6
 
 #ifdef PLATFORM_AUTO
-#define HFP_PCM_RX 36
+#define HFP_PCM_RX 29
 #else
 #define HFP_PCM_RX 5
 #endif
@@ -638,8 +638,8 @@ enum {
 #define HFP_SCO_RX 17
 #define HFP_ASM_RX_TX 18
 #elif PLATFORM_AUTO
-#define HFP_SCO_RX 36
-#define HFP_ASM_RX_TX 29
+#define HFP_SCO_RX 29
+#define HFP_ASM_RX_TX 36
 #elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
 #define HFP_SCO_RX 17
 #define HFP_ASM_RX_TX 18
