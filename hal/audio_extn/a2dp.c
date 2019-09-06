@@ -49,7 +49,6 @@
 #include <log_utils.h>
 #endif
 
-#define AUDIO_PARAMETER_A2DP_STARTED "A2dpStarted"
 #define BT_IPC_SOURCE_LIB_NAME "btaudio_offload_if.so"
 #define BT_IPC_SINK_LIB_NAME    "libbthost_if_sink.so"
 #define MEDIA_FMT_NONE                                     0
@@ -91,13 +90,7 @@
 #define MIXER_SET_FEEDBACK_CHANNEL "BT set feedback channel"
 #define MIXER_SINK_SAMPLE_RATE     "BT_TX SampleRate"
 #define MIXER_AFE_SINK_CHANNELS    "AFE Output Channels"
-#define MIXER_ENC_FMT_SBC          "SBC"
-#define MIXER_ENC_FMT_AAC          "AAC"
-#define MIXER_ENC_FMT_APTX         "APTX"
 #define MIXER_FMT_TWS_CHANNEL_MODE "TWS Channel Mode"
-#define MIXER_ENC_FMT_APTXHD       "APTXHD"
-#define MIXER_END_FMT_LDAC         "LDAC"
-#define MIXER_ENC_FMT_NONE         "NONE"
 #define ENCODER_LATENCY_SBC        10
 #define ENCODER_LATENCY_APTX       40
 #define ENCODER_LATENCY_APTX_HD    20
