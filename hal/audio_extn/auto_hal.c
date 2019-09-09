@@ -901,6 +901,18 @@ snd_device_t auto_hal_get_output_snd_device(struct audio_device *adev,
             snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
             break;
         case USECASE_AUDIO_PLAYBACK_MEDIA:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD3:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD4:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD5:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD6:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD7:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD8:
+        case USECASE_AUDIO_PLAYBACK_OFFLOAD9:
+        case USECASE_AUDIO_PLAYBACK_ULL:
+        case USECASE_AUDIO_PLAYBACK_MMAP:
+        case USECASE_AUDIO_PLAYBACK_VOIP:
             snd_device = SND_DEVICE_OUT_BUS_MEDIA;
             break;
         case USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION:
@@ -911,6 +923,9 @@ snd_device_t auto_hal_get_output_snd_device(struct audio_device *adev,
             break;
         case USECASE_AUDIO_PLAYBACK_PHONE:
             snd_device = SND_DEVICE_OUT_BUS_PHN;
+            break;
+        case USECASE_AUDIO_PLAYBACK_REAR_SEAT:
+            snd_device = SND_DEVICE_OUT_BUS_RSE;
             break;
         default:
             ALOGE("%s: Usecase (%d) not supported", __func__, uc_id);
