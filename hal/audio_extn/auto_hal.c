@@ -158,11 +158,11 @@ int auto_hal_create_audio_patch(struct audio_hw_device *dev,
                                                 sources->ext.device.address);
         } else {
             address = (char *)calloc(1, 1);
-            if (address == NULL) {
-                ALOGE("%s: failed to get address",__func__);
-                ret = -EFAULT;
-                goto error;
-            }
+        }
+        if (address == NULL) {
+            ALOGE("%s: failed to get address",__func__);
+            ret = -EFAULT;
+            goto exit;
         }
         parms = str_parms_create_str(address);
         if (!parms) {
@@ -197,11 +197,11 @@ int auto_hal_create_audio_patch(struct audio_hw_device *dev,
                                                 sinks->ext.device.address);
         } else {
             address = (char *)calloc(1, 1);
-            if (address == NULL) {
-                ALOGE("%s: failed to get address",__func__);
-                ret = -EFAULT;
-                goto error;
-            }
+        }
+        if (address == NULL) {
+            ALOGE("%s: failed to get address",__func__);
+            ret = -EFAULT;
+            goto exit;
         }
         parms = str_parms_create_str(address);
         if (!parms) {
