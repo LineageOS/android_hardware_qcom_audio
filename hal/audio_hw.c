@@ -6136,7 +6136,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
             }
         } else if (out->card_status == CARD_STATUS_OFFLINE ||
             // audioflinger still needs position updates when A2DP is suspended
-            is_a2dp_out_device_type(&out->device_list) && audio_extn_a2dp_source_is_suspended()) {
+            (is_a2dp_out_device_type(&out->device_list) && audio_extn_a2dp_source_is_suspended())) {
             *frames = out->written;
             clock_gettime(CLOCK_MONOTONIC, timestamp);
             if (is_offload_usecase(out->usecase))
