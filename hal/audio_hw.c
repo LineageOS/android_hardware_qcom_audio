@@ -9460,6 +9460,7 @@ static int adev_close(hw_device_t *device)
     if ((--audio_device_ref_count) == 0) {
          if (audio_extn_spkr_prot_is_enabled())
              audio_extn_spkr_prot_deinit();
+        audio_extn_battery_properties_listener_deinit();
         audio_extn_snd_mon_unregister_listener(adev);
         audio_extn_sound_trigger_deinit(adev);
         audio_extn_listen_deinit(adev);
