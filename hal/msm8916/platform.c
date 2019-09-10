@@ -8610,3 +8610,93 @@ end:
     *mic_count = actual_mic_count;
     return 0;
 }
+
+int platform_get_edid_info_v2(void *platform,
+                              int controller __unused,
+                              int stream __unused)
+{
+    return platform_get_edid_info(platform);
+}
+
+int platform_edid_get_max_channels_v2(void *platform,
+                                      int controller __unused,
+                                      int stream __unused)
+{
+    return platform_edid_get_max_channels(platform);
+}
+
+bool platform_is_edid_supported_format_v2(void *platform, int format,
+                                          int controller __unused,
+                                          int stream __unused)
+{
+    return platform_is_edid_supported_format(platform, format);
+}
+
+bool platform_is_edid_supported_sample_rate_v2(void *platform, int format,
+                                          int controller __unused,
+                                          int stream __unused)
+{
+    return platform_is_edid_supported_sample_rate(platform, format);
+}
+
+void platform_cache_edid_v2(void * platform,
+                            int controller __unused,
+                            int stream __unused)
+{
+    return platform_cache_edid(platform);
+}
+
+void platform_invalidate_hdmi_config_v2(void * platform,
+                                        int controller __unused,
+                                        int stream __unused)
+{
+    return platform_invalidate_hdmi_config(platform);
+}
+
+int platform_set_ext_display_device(void *platform, int controller, int stream)
+{
+    return -1;
+}
+
+int platform_get_controller_stream_from_params(struct str_parms *parms,
+                                               int *controller, int *stream);
+{
+    return -1;
+}
+
+int platform_get_ext_disp_type_v2(void *platform,
+                                  int controller __unused,
+                                  int stream __unused)
+{
+    return platform_get_ext_disp_type(platform);
+}
+
+int platform_set_edid_channels_configuration_v2(void *platform, int channels,
+                                             int backend_idx,
+                                             snd_device_t snd_device,
+                                             int controller __unused,
+                                             int stream __unused)
+{
+    return platform_set_edid_channels_configuration(platform, channels,
+                                                    backend_idx, snd_device);
+}
+
+int platform_set_channel_allocation_v2(void *platform,
+                                        int controller __unused,
+                                        int stream __unused)
+{
+    return platform_set_channel_allocation(platform);
+}
+
+int platform_set_hdmi_channels_v2(void *platform, int channel_count,
+                                  int controller __unused,
+                                  int stream __unused)
+{
+    return platform_set_hdmi_channels(platform, channel_count);
+}
+
+int platform_get_display_port_ctl_index(int controller __unused,
+                                        int stream __unused)
+{
+    return -EINVAL;
+}

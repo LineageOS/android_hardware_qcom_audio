@@ -159,6 +159,8 @@ enum {
     /* HFP Use case*/
     USECASE_AUDIO_HFP_SCO,
     USECASE_AUDIO_HFP_SCO_WB,
+    USECASE_AUDIO_HFP_SCO_DOWNLINK,
+    USECASE_AUDIO_HFP_SCO_WB_DOWNLINK,
 
     /* Capture usecases */
     USECASE_AUDIO_RECORD,
@@ -435,6 +437,14 @@ struct stream_out {
 
     char address[AUDIO_DEVICE_MAX_ADDRESS_LEN];
     int car_audio_stream;
+
+    union {
+        char *addr;
+        struct {
+            int controller;
+            int stream;
+        } cs;
+    } extconn;
 };
 
 struct stream_in {

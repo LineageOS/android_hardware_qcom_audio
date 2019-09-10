@@ -143,7 +143,8 @@ LOCAL_SHARED_LIBRARIES := \
     libtinycompress \
     libaudioroute \
     libdl \
-    libexpat
+    libexpat \
+    libprocessgroup
 
 LOCAL_C_INCLUDES := \
     vendor/qcom/opensource/audio-hal/primary-hal/hal \
@@ -168,7 +169,7 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-#include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_SHARED_LIBRARY)
 
 #--------------------------------------------
 #          Build HDMI_EDID LIB
@@ -473,6 +474,10 @@ ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 ms
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
+endif
+
+ifeq ($(TARGET_BOARD_AUTO),true)
+  LOCAL_CFLAGS += -DPLATFORM_AUTO
 endif
 
 LOCAL_SRC_FILES:= \

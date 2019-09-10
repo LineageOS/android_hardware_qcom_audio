@@ -1601,8 +1601,6 @@
     </path>
 
     <path name="hfp-sco">
-        <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia21" value="1" />
-        <ctl name="MultiMedia21 Mixer AUX_PCM_UL_TX" value="1" />
         <ctl name="AUX_PCM_RX Audio Mixer MultiMedia6" value="1" />
         <ctl name="TERT_TDM_TX_0 Channels" value="One" />
         <ctl name="MultiMedia6 Mixer TERT_TDM_TX_0" value="1" />
@@ -1630,18 +1628,36 @@
         <path name="hfp-sco headphones" />
     </path>
 
+    <path name="hfp-sco bt-sco">
+        <path name="hfp-sco" />
+    </path>
+
     <path name="hfp-sco-wb">
-        <ctl name="PRIM_AUX_PCM_TX SampleRate" value="KHZ_16" />
         <ctl name="PRIM_AUX_PCM_RX SampleRate" value="KHZ_16" />
         <path name="hfp-sco" />
+    </path>
+
+    <path name="hfp-sco-wb bt-sco-wb">
+        <path name="hfp-sco-wb" />
     </path>
 
     <path name="hfp-sco-wb headphones">
         <path name="hfp-sco headphones" />
     </path>
 
+
     <path name="hfp-sco-wb headset">
         <path name="hfp-sco headphones" />
+    </path>
+
+    <path name="hfp-sco-downlink">
+        <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia21" value="1" />
+        <ctl name="MultiMedia21 Mixer AUX_PCM_UL_TX" value="1" />
+    </path>
+
+    <path name="hfp-sco-wb-downlink">
+        <ctl name="PRIM_AUX_PCM_TX SampleRate" value="KHZ_16" />
+        <path name="hfp-sco-downlink" />
     </path>
 
     <path name="compress-voip-call">
@@ -2105,6 +2121,10 @@
         <path name="speaker-mono" />
     </path>
 
+    <path name="voice-speaker-hfp">
+        <path name="speaker-mono" />
+    </path>
+
     <path name="voice-speaker-2">
         <path name="speaker-mono-2" />
     </path>
@@ -2119,6 +2139,10 @@
 
     <path name="voice-speaker-mic-qrd">
         <path name="speaker-mic-qrd" />
+    </path>
+
+    <path name="voice-speaker-mic-hfp">
+        <path name="speaker-mic" />
     </path>
 
     <path name="voice-headphones">

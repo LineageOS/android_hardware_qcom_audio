@@ -125,6 +125,8 @@ static fp_get_usecase_from_list_t                   fp_get_usecase_from_list;
 static fp_disable_audio_route_t                     fp_disable_audio_route;
 static fp_disable_snd_device_t                      fp_disable_snd_device;
 static fp_voice_get_mic_mute_t                      fp_voice_get_mic_mute;
+static fp_audio_extn_auto_hal_start_hfp_downlink_t  fp_audio_extn_auto_hal_start_hfp_downlink;
+static fp_audio_extn_auto_hal_stop_hfp_downlink_t   fp_audio_extn_auto_hal_stop_hfp_downlink;
 
 static int32_t hfp_set_volume(struct audio_device *adev, float value)
 {
@@ -332,29 +334,11 @@ static int32_t start_hfp(struct audio_device *adev,
     ALOGD("%s: HFP PCM devices (rx: %d tx: %d pcm dev id: %d) usecase(%d)",
               __func__, pcm_dev_rx_id, pcm_dev_tx_id, hfpmod.hfp_pcm_dev_id, uc_info->id);
 
-    hfpmod.hfp_sco_rx = pcm_open(adev->snd_card,
-                                  pcm_dev_asm_rx_id,
-                                  PCM_OUT, &pcm_config_hfp);
-    if (hfpmod.hfp_sco_rx && !pcm_is_ready(hfpmod.hfp_sco_rx)) {
-        ALOGE("%s: %s", __func__, pcm_get_error(hfpmod.hfp_sco_rx));
-        ret = -EIO;
-        goto exit;
-    }
-
     hfpmod.hfp_pcm_rx = pcm_open(adev->snd_card,
                                  pcm_dev_rx_id,
                                  PCM_OUT, &pcm_config_hfp);
     if (hfpmod.hfp_pcm_rx && !pcm_is_ready(hfpmod.hfp_pcm_rx)) {
         ALOGE("%s: %s", __func__, pcm_get_error(hfpmod.hfp_pcm_rx));
-        ret = -EIO;
-        goto exit;
-    }
-
-    hfpmod.hfp_sco_tx = pcm_open(adev->snd_card,
-                                  pcm_dev_asm_tx_id,
-                                  PCM_IN, &pcm_config_hfp);
-    if (hfpmod.hfp_sco_tx && !pcm_is_ready(hfpmod.hfp_sco_tx)) {
-        ALOGE("%s: %s", __func__, pcm_get_error(hfpmod.hfp_sco_tx));
         ret = -EIO;
         goto exit;
     }
@@ -368,17 +352,6 @@ static int32_t start_hfp(struct audio_device *adev,
         goto exit;
     }
 
-    if (pcm_start(hfpmod.hfp_sco_rx) < 0) {
-        ALOGE("%s: pcm start for hfp sco rx failed", __func__);
-        ret = -EINVAL;
-        goto exit;
-    }
-    if (pcm_start(hfpmod.hfp_sco_tx) < 0) {
-        ALOGE("%s: pcm start for hfp sco tx failed", __func__);
-        ret = -EINVAL;
-        goto exit;
-    }
-
     if (pcm_start(hfpmod.hfp_pcm_rx) < 0) {
         ALOGE("%s: pcm start for hfp pcm rx failed", __func__);
         ret = -EINVAL;
@@ -386,6 +359,38 @@ static int32_t start_hfp(struct audio_device *adev,
     }
     if (pcm_start(hfpmod.hfp_pcm_tx) < 0) {
         ALOGE("%s: pcm start for hfp pcm tx failed", __func__);
+        ret = -EINVAL;
+        goto exit;
+    }
+
+    if (fp_audio_extn_auto_hal_start_hfp_downlink(adev, uc_info))
+        ALOGE("%s: start hfp downlink failed", __func__);
+
+    hfpmod.hfp_sco_rx = pcm_open(adev->snd_card,
+                                  pcm_dev_asm_rx_id,
+                                  PCM_OUT, &pcm_config_hfp);
+    if (hfpmod.hfp_sco_rx && !pcm_is_ready(hfpmod.hfp_sco_rx)) {
+        ALOGE("%s: %s", __func__, pcm_get_error(hfpmod.hfp_sco_rx));
+        ret = -EIO;
+        goto exit;
+    }
+
+    hfpmod.hfp_sco_tx = pcm_open(adev->snd_card,
+                                  pcm_dev_asm_tx_id,
+                                  PCM_IN, &pcm_config_hfp);
+    if (hfpmod.hfp_sco_tx && !pcm_is_ready(hfpmod.hfp_sco_tx)) {
+        ALOGE("%s: %s", __func__, pcm_get_error(hfpmod.hfp_sco_tx));
+        ret = -EIO;
+        goto exit;
+    }
+
+    if (pcm_start(hfpmod.hfp_sco_rx) < 0) {
+        ALOGE("%s: pcm start for hfp sco rx failed", __func__);
+        ret = -EINVAL;
+        goto exit;
+    }
+    if (pcm_start(hfpmod.hfp_sco_tx) < 0) {
+        ALOGE("%s: pcm start for hfp sco tx failed", __func__);
         ret = -EINVAL;
         goto exit;
     }
@@ -455,6 +460,9 @@ static int32_t stop_hfp(struct audio_device *adev)
     fp_disable_snd_device(adev, uc_info->out_snd_device);
     fp_disable_snd_device(adev, uc_info->in_snd_device);
 
+    if (fp_audio_extn_auto_hal_stop_hfp_downlink(adev, uc_info))
+        ALOGE("%s: stop hfp downlink failed", __func__);
+
     /* Set the unmute Tx mixer control */
     if (fp_voice_get_mic_mute(adev)) {
         fp_platform_set_mic_mute(adev->platform, false);
@@ -483,6 +491,10 @@ void hfp_init(hfp_init_config_t init_config)
     fp_disable_audio_route = init_config.fp_disable_audio_route;
     fp_disable_snd_device = init_config.fp_disable_snd_device;
     fp_voice_get_mic_mute = init_config.fp_voice_get_mic_mute;
+    fp_audio_extn_auto_hal_start_hfp_downlink =
+                                init_config.fp_audio_extn_auto_hal_start_hfp_downlink;
+    fp_audio_extn_auto_hal_stop_hfp_downlink =
+                                init_config.fp_audio_extn_auto_hal_stop_hfp_downlink;
 }
 
 bool hfp_is_active(struct audio_device *adev)

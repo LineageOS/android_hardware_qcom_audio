@@ -182,6 +182,8 @@ static int32_t ext_hw_plugin_check_plugin_usecase(audio_usecase_t hal_usecase,
         break;
     case USECASE_AUDIO_HFP_SCO:
     case USECASE_AUDIO_HFP_SCO_WB:
+    case USECASE_AUDIO_HFP_SCO_DOWNLINK:
+    case USECASE_AUDIO_HFP_SCO_WB_DOWNLINK:
         *plugin_usecase = AUDIO_HAL_PLUGIN_USECASE_HFP_VOICE_CALL;
         break;
     case USECASE_VOICE_CALL:

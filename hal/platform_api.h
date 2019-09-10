@@ -48,6 +48,8 @@ struct audio_backend_cfg {
     unsigned int   bit_width;
     bool           passthrough_enabled;
     audio_format_t format;
+    int controller;
+    int stream;
 };
 
 struct amp_db_and_gain_table {
@@ -389,4 +391,25 @@ struct audio_custom_mtmx_in_params * platform_get_custom_mtmx_in_params(void *pl
                                     struct audio_custom_mtmx_in_params_info *info);
 int platform_add_custom_mtmx_in_params(void *platform,
                                     struct audio_custom_mtmx_in_params_info *info);
+
+int platform_get_edid_info_v2(void *platform, int controller, int stream);
+int platform_edid_get_max_channels_v2(void *platform, int controller, int stream);
+bool platform_is_edid_supported_format_v2(void *platform, int format,
+                                          int contoller, int stream);
+bool platform_is_edid_supported_sample_rate_v2(void *platform, int sample_rate,
+                                               int contoller, int stream);
+void platform_cache_edid_v2(void * platform, int controller, int stream);
+void platform_invalidate_hdmi_config_v2(void * platform, int controller, int stream);
+int platform_get_controller_stream_from_params(struct str_parms *parms,
+                                               int *controller, int *stream);
+int platform_set_ext_display_device_v2(void *platform, int controller, int stream);
+int platform_get_ext_disp_type_v2(void *platform, int controller, int stream);
+int platform_set_edid_channels_configuration_v2(void *platform, int channels,
+                                             int backend_idx, snd_device_t snd_device,
+                                             int controller, int stream);
+int platform_set_channel_allocation_v2(void *platform, int channel_alloc,
+                                             int controller, int stream);
+int platform_set_hdmi_channels_v2(void *platform, int channel_count,
+                                  int controller, int stream);
+int platform_get_display_port_ctl_index(int controller, int stream);
 #endif // AUDIO_PLATFORM_API_H

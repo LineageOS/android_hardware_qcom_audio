@@ -216,7 +216,9 @@ static bool audio_extn_audiozoom_enabled = false;
 
 #define IS_BIT_SET(NUM, bitno) (NUM & (1 << bitno))
 
-#define EXT_DISPLAY_PLUG_STATUS_NOTIFY_ENABLE 0x30
+#define EXT_DISPLAY_PLUG_STATUS_NOTIFY_ENABLE      0x30
+#define EXT_DISPLAY_PLUG_STATUS_NOTIFY_CONNECT     0x01
+#define EXT_DISPLAY_PLUG_STATUS_NOTIFY_DISCONNECT  0x00
 
 static ssize_t update_sysfs_node(const char *path, const char *data, size_t len)
 {
@@ -276,12 +278,14 @@ static int get_ext_disp_sysfs_node_index(int ext_disp_type)
     return -1;
 }
 
-static int update_ext_disp_sysfs_node(const struct audio_device *adev, int node_value)
+static int update_ext_disp_sysfs_node(const struct audio_device *adev,
+                                      int node_value, int controller, int stream)
 {
     char ext_disp_ack_path[80] = {0};
     char ext_disp_ack_value[3] = {0};
     int index, ret = -1;
-    int ext_disp_type = platform_get_ext_disp_type(adev->platform);
+    int ext_disp_type = platform_get_ext_disp_type_v2(adev->platform, controller,
+                                                      stream);
 
     if (ext_disp_type < 0) {
         ALOGE("%s, Unable to get the external display type, err:%d",
@@ -305,26 +309,47 @@ static int update_ext_disp_sysfs_node(const struct audio_device *adev, int node_
     return ret;
 }
 
-static int update_audio_ack_state(const struct audio_device *adev, int node_value)
+static int update_audio_ack_state(const struct audio_device *adev,
+                                  int node_value,
+                                  int controller,
+                                  int stream)
 {
-    const char *mixer_ctl_name = "External Display Audio Ack";
-    struct mixer_ctl *ctl;
     int ret = 0;
+    int ctl_index = 0;
+    struct mixer_ctl *ctl = NULL;
+    const char *ctl_prefix = "External Display";
+    const char *ctl_suffix = "Audio Ack";
+    char mixer_ctl_name[MIXER_PATH_MAX_LENGTH] = {0};
 
+    ctl_index = platform_get_display_port_ctl_index(controller, stream);
+    if (-EINVAL == ctl_index) {
+        ALOGE("%s: Unknown controller/stream %d/%d",
+              __func__, controller, stream);
+        return -EINVAL;
+    }
+
+    if (0 == ctl_index)
+        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+                 "%s %s", ctl_prefix, ctl_suffix);
+    else
+        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+                 "%s%d %s", ctl_prefix, ctl_index, ctl_suffix);
+
+    ALOGV("%s: mixer ctl name: %s", __func__, mixer_ctl_name);
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     /* If no mixer command support, fall back to sysfs node approach */
     if (!ctl) {
         ALOGI("%s: could not get ctl for mixer cmd(%s), use sysfs node instead\n",
               __func__, mixer_ctl_name);
-        ret = update_ext_disp_sysfs_node(adev, node_value);
+        ret = update_ext_disp_sysfs_node(adev, node_value, controller, stream);
     } else {
         char *ack_str = NULL;
 
         if (node_value == EXT_DISPLAY_PLUG_STATUS_NOTIFY_ENABLE)
             ack_str = "Ack_Enable";
-        else if (node_value == 1)
+        else if (node_value == EXT_DISPLAY_PLUG_STATUS_NOTIFY_CONNECT)
             ack_str = "Connect";
-        else if (node_value == 0)
+        else if (node_value == EXT_DISPLAY_PLUG_STATUS_NOTIFY_DISCONNECT)
             ack_str = "Disconnect";
         else {
             ALOGE("%s: Invalid input parameter - 0x%x\n",
@@ -343,24 +368,32 @@ static int update_audio_ack_state(const struct audio_device *adev, int node_valu
 static void audio_extn_ext_disp_set_parameters(const struct audio_device *adev,
                                                      struct str_parms *parms)
 {
+    int controller = 0;
+    int stream = 0;
     char value[32] = {0};
     static bool is_hdmi_sysfs_node_init = false;
 
     if (str_parms_get_str(parms, "connect", value, sizeof(value)) >= 0
             && (atoi(value) & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
         //params = "connect=1024" for external display connection.
+        platform_get_controller_stream_from_params(parms, &controller, &stream);
         if (is_hdmi_sysfs_node_init == false) {
             //check if this is different for dp and hdmi
             is_hdmi_sysfs_node_init = true;
-            update_audio_ack_state(adev, EXT_DISPLAY_PLUG_STATUS_NOTIFY_ENABLE);
+            update_audio_ack_state(adev,
+                                   EXT_DISPLAY_PLUG_STATUS_NOTIFY_ENABLE,
+                                   controller, stream);
         }
-        update_audio_ack_state(adev, 1);
+        update_audio_ack_state(adev, EXT_DISPLAY_PLUG_STATUS_NOTIFY_CONNECT,
+                               controller, stream);
     } else if(str_parms_get_str(parms, "disconnect", value, sizeof(value)) >= 0
             && (atoi(value) & AUDIO_DEVICE_OUT_AUX_DIGITAL)){
         //params = "disconnect=1024" for external display disconnection.
-        update_audio_ack_state(adev, 0);
+        platform_get_controller_stream_from_params(parms, &controller, &stream);
+        update_audio_ack_state(adev, EXT_DISPLAY_PLUG_STATUS_NOTIFY_DISCONNECT,
+                               controller, stream);
         ALOGV("invalidate cached edid");
-        platform_invalidate_hdmi_config(adev->platform);
+        platform_invalidate_hdmi_config_v2(adev->platform, controller, stream);
     } else {
         // handle ext disp devices only
         return;
@@ -1092,8 +1125,10 @@ void anc_headset_feature_init(bool is_feature_enabled)
 
 bool audio_extn_get_anc_enabled(void)
 {
-    ALOGD("%s: anc_enabled:%d", __func__, aextnmod.anc_enabled);
-    return (aextnmod.anc_enabled ? true: false);
+    ALOGD("%s: anc_enabled:%d", __func__,
+        (aextnmod.anc_enabled && audio_extn_anc_headset_feature_enabled));
+    return (aextnmod.anc_enabled &&
+        audio_extn_anc_headset_feature_enabled);
 }
 
 bool audio_extn_should_use_handset_anc(int in_channels)
@@ -4476,6 +4511,10 @@ int hfp_feature_init(bool is_feature_enabled)
         init_config.fp_disable_audio_route = disable_audio_route;
         init_config.fp_disable_snd_device = disable_snd_device;
         init_config.fp_voice_get_mic_mute = voice_get_mic_mute;
+        init_config.fp_audio_extn_auto_hal_start_hfp_downlink =
+                                        audio_extn_auto_hal_start_hfp_downlink;
+        init_config.fp_audio_extn_auto_hal_stop_hfp_downlink =
+                                        audio_extn_auto_hal_stop_hfp_downlink;
 
         hfp_init(init_config);
         ALOGD("%s:: ---- Feature HFP is Enabled ----", __func__);
@@ -5428,10 +5467,6 @@ static auto_hal_open_output_stream_t auto_hal_open_output_stream;
 typedef bool (*auto_hal_is_bus_device_usecase_t)(audio_usecase_t);
 static auto_hal_is_bus_device_usecase_t auto_hal_is_bus_device_usecase;
 
-typedef snd_device_t (*auto_hal_get_snd_device_for_car_audio_stream_t)(
-                                struct stream_out*);
-static auto_hal_get_snd_device_for_car_audio_stream_t auto_hal_get_snd_device_for_car_audio_stream;
-
 typedef int (*auto_hal_get_audio_port_t)(struct audio_hw_device*,
                                 struct audio_port*);
 static auto_hal_get_audio_port_t auto_hal_get_audio_port;
@@ -5443,6 +5478,22 @@ static auto_hal_set_audio_port_config_t auto_hal_set_audio_port_config;
 typedef void (*auto_hal_set_parameters_t)(struct audio_device*,
                                 struct str_parms*);
 static auto_hal_set_parameters_t auto_hal_set_parameters;
+
+typedef int (*auto_hal_start_hfp_downlink_t)(struct audio_device*,
+                                struct audio_usecase*);
+static auto_hal_start_hfp_downlink_t auto_hal_start_hfp_downlink;
+
+typedef int (*auto_hal_stop_hfp_downlink_t)(struct audio_device*,
+                                struct audio_usecase*);
+static auto_hal_stop_hfp_downlink_t auto_hal_stop_hfp_downlink;
+
+typedef snd_device_t (*auto_hal_get_input_snd_device_t)(struct audio_device*,
+                                audio_usecase_t);
+static auto_hal_get_input_snd_device_t auto_hal_get_input_snd_device;
+
+typedef snd_device_t (*auto_hal_get_output_snd_device_t)(struct audio_device*,
+                                audio_usecase_t);
+static auto_hal_get_output_snd_device_t auto_hal_get_output_snd_device;
 
 int auto_hal_feature_init(bool is_feature_enabled)
 {
@@ -5476,9 +5527,6 @@ int auto_hal_feature_init(bool is_feature_enabled)
             !(auto_hal_is_bus_device_usecase =
                  (auto_hal_is_bus_device_usecase_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_is_bus_device_usecase")) ||
-            !(auto_hal_get_snd_device_for_car_audio_stream =
-                 (auto_hal_get_snd_device_for_car_audio_stream_t)dlsym(
-                            auto_hal_lib_handle, "auto_hal_get_snd_device_for_car_audio_stream")) ||
             !(auto_hal_get_audio_port =
                  (auto_hal_get_audio_port_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_get_audio_port")) ||
@@ -5487,7 +5535,19 @@ int auto_hal_feature_init(bool is_feature_enabled)
                             auto_hal_lib_handle, "auto_hal_set_audio_port_config")) ||
             !(auto_hal_set_parameters =
                  (auto_hal_set_parameters_t)dlsym(
-                            auto_hal_lib_handle, "auto_hal_set_parameters"))) {
+                            auto_hal_lib_handle, "auto_hal_set_parameters")) ||
+            !(auto_hal_start_hfp_downlink =
+                 (auto_hal_start_hfp_downlink_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_start_hfp_downlink")) ||
+            !(auto_hal_stop_hfp_downlink =
+                 (auto_hal_stop_hfp_downlink_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_stop_hfp_downlink")) ||
+            !(auto_hal_get_input_snd_device =
+                 (auto_hal_get_input_snd_device_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_get_input_snd_device")) ||
+            !(auto_hal_get_output_snd_device =
+                 (auto_hal_get_output_snd_device_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_get_output_snd_device"))) {
             ALOGE("%s: dlsym failed", __func__);
             goto feature_disabled;
         }
@@ -5508,10 +5568,13 @@ feature_disabled:
     auto_hal_get_car_audio_stream_from_address = NULL;
     auto_hal_open_output_stream = NULL;
     auto_hal_is_bus_device_usecase = NULL;
-    auto_hal_get_snd_device_for_car_audio_stream = NULL;
     auto_hal_get_audio_port = NULL;
     auto_hal_set_audio_port_config = NULL;
     auto_hal_set_parameters = NULL;
+    auto_hal_start_hfp_downlink = NULL;
+    auto_hal_stop_hfp_downlink = NULL;
+    auto_hal_get_input_snd_device = NULL;
+    auto_hal_get_output_snd_device = NULL;
 
     ALOGW(":: %s: ---- Feature AUTO_HAL is disabled ----", __func__);
     return -ENOSYS;
@@ -5528,6 +5591,11 @@ int audio_extn_auto_hal_init(struct audio_device *adev)
         auto_hal_init_config.fp_get_usecase_from_list = get_usecase_from_list;
         auto_hal_init_config.fp_get_output_period_size = get_output_period_size;
         auto_hal_init_config.fp_audio_extn_ext_hw_plugin_set_audio_gain = audio_extn_ext_hw_plugin_set_audio_gain;
+        auto_hal_init_config.fp_select_devices = select_devices;
+        auto_hal_init_config.fp_disable_audio_route = disable_audio_route;
+        auto_hal_init_config.fp_disable_snd_device = disable_snd_device;
+        auto_hal_init_config.fp_adev_get_active_input = adev_get_active_input;
+        auto_hal_init_config.fp_platform_set_echo_reference = platform_set_echo_reference;
         return auto_hal_init(adev, auto_hal_init_config);
     }
     else
@@ -5566,25 +5634,19 @@ int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
 int audio_extn_auto_hal_get_car_audio_stream_from_address(const char *address)
 {
     return ((auto_hal_get_car_audio_stream_from_address) ?
-                            auto_hal_get_car_audio_stream_from_address(address): 0);
+                            auto_hal_get_car_audio_stream_from_address(address): -ENOSYS);
 }
 
 int audio_extn_auto_hal_open_output_stream(struct stream_out *out)
 {
     return ((auto_hal_open_output_stream) ?
-                            auto_hal_open_output_stream(out): 0);
+                            auto_hal_open_output_stream(out): -ENOSYS);
 }
 
 bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id)
 {
     return ((auto_hal_is_bus_device_usecase) ?
-                            auto_hal_is_bus_device_usecase(uc_id): 0);
-}
-
-snd_device_t audio_extn_auto_hal_get_snd_device_for_car_audio_stream(struct stream_out *out)
-{
-    return ((auto_hal_get_snd_device_for_car_audio_stream) ?
-                            auto_hal_get_snd_device_for_car_audio_stream(out): 0);
+                            auto_hal_is_bus_device_usecase(uc_id): false);
 }
 
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
@@ -5606,6 +5668,34 @@ void audio_extn_auto_hal_set_parameters(struct audio_device *adev,
 {
     if (auto_hal_set_parameters)
         auto_hal_set_parameters(adev, parms);
+}
+
+int audio_extn_auto_hal_start_hfp_downlink(struct audio_device *adev,
+                                struct audio_usecase *uc_info)
+{
+    return ((auto_hal_start_hfp_downlink) ?
+                            auto_hal_start_hfp_downlink(adev, uc_info): 0);
+}
+
+int audio_extn_auto_hal_stop_hfp_downlink(struct audio_device *adev,
+                                struct audio_usecase *uc_info)
+{
+    return ((auto_hal_stop_hfp_downlink) ?
+                            auto_hal_stop_hfp_downlink(adev, uc_info): 0);
+}
+
+snd_device_t audio_extn_auto_hal_get_input_snd_device(struct audio_device *adev,
+                                audio_usecase_t uc_id)
+{
+    return ((auto_hal_get_input_snd_device) ?
+                            auto_hal_get_input_snd_device(adev, uc_id): SND_DEVICE_NONE);
+}
+
+snd_device_t audio_extn_auto_hal_get_output_snd_device(struct audio_device *adev,
+                                audio_usecase_t uc_id)
+{
+    return ((auto_hal_get_output_snd_device) ?
+                            auto_hal_get_output_snd_device(adev, uc_id): SND_DEVICE_NONE);
 }
 // END: AUTO_HAL ===================================================================
 

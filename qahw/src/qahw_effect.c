@@ -37,7 +37,7 @@
 #include <hardware/audio.h>
 #include <hardware/audio_effect.h>
 #include <stdlib.h>
-
+#include <pthread.h>
 #include "qahw.h"
 
 // The current effect API version.

@@ -594,6 +594,12 @@ enum {
     EXT_DISPLAY_TYPE_HDMI,
     EXT_DISPLAY_TYPE_DP
 };
+
+// START: MST ==================================================
+#define MAX_CONTROLLERS 1
+#define MAX_STREAMS_PER_CONTROLLER 2
+// END: MST ==================================================
+
 // START: HDMI_PASSTHROUGH ==================================================
 /* Used to limit sample rate for TrueHD & EC3 */
 #define HDMI_PASSTHROUGH_MAX_SAMPLE_RATE 192000
@@ -676,6 +682,10 @@ typedef int (*fp_disable_audio_route_t)(struct audio_device *,
                                                 struct audio_usecase *);
 typedef int (*fp_disable_snd_device_t)(struct audio_device *, snd_device_t);
 typedef bool (*fp_voice_get_mic_mute_t)(struct audio_device *);
+typedef int (*fp_audio_extn_auto_hal_start_hfp_downlink_t)(struct audio_device *,
+                                                        struct audio_usecase *);
+typedef int (*fp_audio_extn_auto_hal_stop_hfp_downlink_t)(struct audio_device *,
+                                                        struct audio_usecase *);
 
 typedef struct hfp_init_config {
     fp_platform_set_mic_mute_t                   fp_platform_set_mic_mute;
@@ -688,6 +698,8 @@ typedef struct hfp_init_config {
     fp_disable_audio_route_t                     fp_disable_audio_route;
     fp_disable_snd_device_t                      fp_disable_snd_device;
     fp_voice_get_mic_mute_t                      fp_voice_get_mic_mute;
+    fp_audio_extn_auto_hal_start_hfp_downlink_t  fp_audio_extn_auto_hal_start_hfp_downlink;
+    fp_audio_extn_auto_hal_stop_hfp_downlink_t   fp_audio_extn_auto_hal_stop_hfp_downlink;
 } hfp_init_config_t;
 
 
@@ -1303,18 +1315,26 @@ int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
 int audio_extn_auto_hal_get_car_audio_stream_from_address(const char *address);
 int audio_extn_auto_hal_open_output_stream(struct stream_out *out);
 bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id);
-snd_device_t audio_extn_auto_hal_get_snd_device_for_car_audio_stream(struct stream_out *out);
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
                                 struct audio_port *config);
 int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                                 const struct audio_port_config *config);
 void audio_extn_auto_hal_set_parameters(struct audio_device *adev,
                                 struct str_parms *parms);
+int audio_extn_auto_hal_start_hfp_downlink(struct audio_device *adev,
+                                struct audio_usecase *uc_info);
+int audio_extn_auto_hal_stop_hfp_downlink(struct audio_device *adev,
+                                struct audio_usecase *uc_info);
+snd_device_t audio_extn_auto_hal_get_input_snd_device(struct audio_device *adev,
+                                audio_usecase_t uc_id);
+snd_device_t audio_extn_auto_hal_get_output_snd_device(struct audio_device *adev,
+                                audio_usecase_t uc_id);
 
 typedef streams_input_ctxt_t* (*fp_in_get_stream_t)(struct audio_device*, audio_io_handle_t);
 typedef streams_output_ctxt_t* (*fp_out_get_stream_t)(struct audio_device*, audio_io_handle_t);
 typedef size_t (*fp_get_output_period_size_t)(uint32_t, audio_format_t, int, int);
 typedef int (*fp_audio_extn_ext_hw_plugin_set_audio_gain_t)(void*, struct audio_usecase*, uint32_t);
+typedef struct stream_in* (*fp_adev_get_active_input_t)(const struct audio_device*);
 
 typedef struct auto_hal_init_config {
     fp_in_get_stream_t                           fp_in_get_stream;
@@ -1324,6 +1344,11 @@ typedef struct auto_hal_init_config {
     fp_get_usecase_from_list_t                   fp_get_usecase_from_list;
     fp_get_output_period_size_t                  fp_get_output_period_size;
     fp_audio_extn_ext_hw_plugin_set_audio_gain_t fp_audio_extn_ext_hw_plugin_set_audio_gain;
+    fp_select_devices_t                          fp_select_devices;
+    fp_disable_audio_route_t                     fp_disable_audio_route;
+    fp_disable_snd_device_t                      fp_disable_snd_device;
+    fp_adev_get_active_input_t                   fp_adev_get_active_input;
+    fp_platform_set_echo_reference_t             fp_platform_set_echo_reference;
 } auto_hal_init_config_t;
 // END: AUTO_HAL FEATURE ==================================================
 
