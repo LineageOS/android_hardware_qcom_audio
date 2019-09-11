@@ -68,7 +68,7 @@
 #define MAX_NUM_CHANNELS 8
 #define Q14_GAIN_UNITY 0x4000
 
-static int is_running_vendor_enhanced_fwk = 0;
+static int  vendor_enhanced_info = 0;
 static bool is_compress_meta_data_enabled = false;
 
 struct snd_card_split cur_snd_card_split = {
@@ -1774,10 +1774,10 @@ void audio_extn_usb_set_reconfig(bool is_required)
 
 //START: SPEAKER_PROTECTION ==========================================================
 #ifdef __LP64__
-#define SPKR_PROT_LIB_PATH  "/vendor/lib64/libspkrprot.so"
+#define SPKR_PROT_LIB_PATH         "/vendor/lib64/libspkrprot.so"
 #define CIRRUS_SPKR_PROT_LIB_PATH  "/vendor/lib64/libcirrusspkrprot.so"
 #else
-#define SPKR_PROT_LIB_PATH  "/vendor/lib/libspkrprot.so"
+#define SPKR_PROT_LIB_PATH         "/vendor/lib/libspkrprot.so"
 #define CIRRUS_SPKR_PROT_LIB_PATH  "/vendor/lib/libcirrusspkrprot.so"
 #endif
 
@@ -1817,22 +1817,22 @@ static get_spkr_prot_snd_device_t get_spkr_prot_snd_device;
 
 void spkr_prot_feature_init(bool is_feature_enabled)
 {
-    ALOGD("%s: Called with feature %s, is_running_with_enhanced_fwk %d", __func__,
-            is_feature_enabled?"Enabled":"NOT Enabled", is_running_vendor_enhanced_fwk);
+    ALOGD("%s: Called with feature %s, vendor_enhanced_info 0x%x", __func__,
+            is_feature_enabled ? "Enabled" : "NOT Enabled", vendor_enhanced_info);
     if (is_feature_enabled) {
-        //dlopen lib
-        if (is_running_vendor_enhanced_fwk)
-            spkr_prot_lib_handle = dlopen(SPKR_PROT_LIB_PATH, RTLD_NOW);
-        else
+        // dlopen lib
+        if ((vendor_enhanced_info & 0x3) == 0x0) // Pure AOSP
             spkr_prot_lib_handle = dlopen(CIRRUS_SPKR_PROT_LIB_PATH, RTLD_NOW);
+        else
+            spkr_prot_lib_handle = dlopen(SPKR_PROT_LIB_PATH, RTLD_NOW);
 
         if (spkr_prot_lib_handle == NULL) {
             ALOGE("%s: dlopen failed", __func__);
             goto feature_disabled;
         }
-        //map each function
-        //if mandatoy functions are not found, disble feature
 
+        // map each function
+        // if mandatoy functions are not found, disble feature
         // Mandatory functions
         if (((spkr_prot_init =
              (spkr_prot_init_t)dlsym(spkr_prot_lib_handle, "spkr_prot_init")) == NULL) ||
@@ -1853,7 +1853,6 @@ void spkr_prot_feature_init(bool is_feature_enabled)
         }
 
         // optional functions, can be NULL
-
         spkr_prot_set_parameters = NULL;
         fbsp_set_parameters = NULL;
         fbsp_get_parameters = NULL;
@@ -5701,7 +5700,7 @@ snd_device_t audio_extn_auto_hal_get_output_snd_device(struct audio_device *adev
 
 void audio_extn_feature_init()
 {
-    is_running_vendor_enhanced_fwk = audio_extn_utils_is_vendor_enhanced_fwk();
+    vendor_enhanced_info = audio_extn_utils_get_vendor_enhanced_info();
 
     // register feature init functions here
     // each feature needs a vendor property
