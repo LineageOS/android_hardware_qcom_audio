@@ -222,7 +222,6 @@ endif
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
-	libhardware \
 	libtinyalsa \
 	libtinycompress \
 	libaudioroute \
