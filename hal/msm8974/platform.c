@@ -507,6 +507,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_SPEAKER_SAFE] = "speaker-safe",
     [SND_DEVICE_OUT_HEADPHONES] = "headphones",
     [SND_DEVICE_OUT_HEADPHONES_DSD] = "headphones-dsd",
+    [SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER] = "headphones-hifi-filter",
+    [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_HIFI_FILTER] = "speaker-and-headphones-hifi-filter",
     [SND_DEVICE_OUT_HEADPHONES_44_1] = "headphones-44.1",
     [SND_DEVICE_OUT_LINE] = "line",
     [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES] = "speaker-and-headphones",
@@ -844,6 +846,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_TRANSMISSION_FM] = 0,
     [SND_DEVICE_OUT_ANC_HEADSET] = 26,
     [SND_DEVICE_OUT_ANC_FB_HEADSET] = 27,
+    [SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER] = 188,
+    [SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_HIFI_FILTER] = 188,
     [SND_DEVICE_OUT_VOICE_ANC_HEADSET] = 26,
     [SND_DEVICE_OUT_VOICE_ANC_FB_HEADSET] = 27,
     [SND_DEVICE_OUT_SPEAKER_AND_ANC_HEADSET] = 26,
@@ -1014,6 +1018,8 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_SAFE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES_DSD)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_HIFI_FILTER)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_HEADPHONES_44_1)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_LINE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)},
@@ -2160,6 +2166,9 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_IN_CAPTURE_FM] = strdup("capture-fm");
     backend_tag_table[SND_DEVICE_OUT_TRANSMISSION_FM] = strdup("transmission-fm");
     backend_tag_table[SND_DEVICE_OUT_HEADPHONES_DSD] = strdup("headphones-dsd");
+    backend_tag_table[SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER] = strdup("headphones-hifi-filter");
+    backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_HIFI_FILTER] =
+        strdup("speaker-and-headphones-hifi-filter");
     backend_tag_table[SND_DEVICE_OUT_HEADPHONES_44_1] = strdup("headphones-44.1");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_VBAT] = strdup("voice-speaker-vbat");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT] = strdup("voice-speaker-2-vbat");
@@ -4935,6 +4944,9 @@ int platform_get_backend_index(snd_device_t snd_device)
                 if (strncmp(backend_tag_table[snd_device], "headphones-44.1",
                             sizeof("headphones-44.1")) == 0)
                         port = HEADPHONE_44_1_BACKEND;
+                else if (strncmp(backend_tag_table[snd_device], "headphones-hifi-filter",
+                            sizeof("headphones-hifi-filter")) == 0)
+                        port = HEADPHONE_BACKEND;
                 else if (strncmp(backend_tag_table[snd_device], "headphones-dsd",
                             sizeof("headphones-dsd")) == 0)
                         port = DSD_NATIVE_BACKEND;
@@ -5607,6 +5619,12 @@ int platform_split_snd_device(void *platform,
         new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
         new_snd_devices[1] = SND_DEVICE_OUT_USB_HEADSET;
         ret = 0;
+    } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_HIFI_FILTER &&
+               !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER)) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_OUT_SPEAKER;
+        new_snd_devices[1] = SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER;
+        ret = 0;
     } else if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_SCO &&
                !platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, SND_DEVICE_OUT_BT_SCO)) {
         *num_devices = 2;
@@ -5905,6 +5923,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2;
             else if (is_active_voice_call)
                 snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES;
+            else if  (audio_extn_is_hifi_filter_enabled(adev, out, snd_device,
+               my_data->codec_variant, channel_count, 1))
+                snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_HIFI_FILTER;
             else
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
         } else if (devices == (AUDIO_DEVICE_OUT_LINE |
@@ -5928,6 +5949,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1;
             else if (my_data->external_spk_2)
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_2;
+            else if  (audio_extn_is_hifi_filter_enabled(adev, out, snd_device,
+               my_data->codec_variant, channel_count, 1))
+                snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_HIFI_FILTER;
             else {
                 if (is_active_voice_call)
                     snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES;
@@ -6196,6 +6220,11 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
         } else if (out->format == AUDIO_FORMAT_DSD) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_DSD;
+        } else if (audio_extn_is_hifi_filter_enabled(adev, out, snd_device,
+             my_data->codec_variant, channel_count, 1)) {
+                snd_device = SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER;
+        } else if (devices & SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER) {
+                snd_device = SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER;
         } else if (devices & AUDIO_DEVICE_OUT_LINE) {
                 snd_device = SND_DEVICE_OUT_LINE;
         } else
@@ -7429,7 +7458,7 @@ static void true_32_bit_set_params(struct str_parms *parms,
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TRUE_32_BIT,
                             value,len);
     if (ret >= 0) {
-        if (value && !strncmp(value, "true", sizeof("src")))
+        if (value && !strncmp(value, "true", sizeof("true")))
             supports_true_32_bit = true;
         else
             supports_true_32_bit = false;
@@ -7779,6 +7808,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
     audio_extn_hfp_set_parameters(my_data->adev, parms);
     perf_lock_set_params(platform, parms, value, len);
     true_32_bit_set_params(parms, value, len);
+    audio_extn_hifi_filter_set_params(parms, value, len);
     platform_spkr_device_set_params(platform, parms, value, len);
 done:
     ALOGV("%s: exit with code(%d)", __func__, ret);
@@ -8944,6 +8974,12 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                         if (channels < out_channels)
                             channels = out_channels;
                 }
+                if ((snd_device == SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER) &&
+                    (usecase->id==USECASE_AUDIO_PLAYBACK_LOW_LATENCY ||
+                      usecase->id == USECASE_AUDIO_PLAYBACK_ULL)) {
+                       sample_rate = my_data->current_backend_cfg[backend_idx].sample_rate;
+                       bit_width = my_data->current_backend_cfg[backend_idx].bit_width;
+                }
             }
         }
     }
@@ -9041,6 +9077,37 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
             ALOGD("%s:becf: afe: set sample rate to default Sample Rate(48k)",__func__);
         }
+    }
+
+    if (backend_idx != platform_get_voice_call_backend(adev)
+        && usecase->type == PCM_PLAYBACK) {
+        struct stream_out *out = (struct stream_out*) usecase->stream.out;
+        if(audio_extn_is_hifi_filter_enabled(adev, out, snd_device,
+            my_data->codec_variant, channels, 0))  {
+            switch (sample_rate) {
+                case 48000:
+                    audio_extn_enable_hifi_filter(adev, true);
+                    if (audio_is_true_native_stream_active(adev))
+                        sample_rate = 352800;
+                    else
+                        sample_rate = 384000;
+                    bit_width = 32;
+                    break;
+                case 44100:
+                    audio_extn_enable_hifi_filter(adev, true);
+                    sample_rate = 352800;
+                    bit_width = 32;
+                    break;
+                default:
+                    audio_extn_enable_hifi_filter(adev, false);
+            }
+        }
+        if (snd_device != SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER)
+            audio_extn_enable_hifi_filter(adev, false);
+        ALOGD("%s:becf: updated afe: bitwidth %d, samplerate %d channels %d,"
+            "backend_idx %d usecase = %d device (%s)", __func__, bit_width,
+            sample_rate, channels, backend_idx, usecase->id,
+            platform_get_snd_device_name(snd_device));
     }
 
     /*
@@ -9165,7 +9232,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     if (snd_device == SND_DEVICE_OUT_HEADPHONES || snd_device ==
-        SND_DEVICE_OUT_HEADPHONES_44_1) {
+        SND_DEVICE_OUT_HEADPHONES_44_1 || snd_device == SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER) {
         if (sample_rate > 48000 ||
             (bit_width >= 24 && (sample_rate == 48000  || sample_rate == 44100))) {
             ALOGI("%s: apply HPH HQ mode\n", __func__);
