@@ -5789,7 +5789,7 @@ void audio_extn_feature_init()
     // default value added is for GSI (non vendor modified images)
     snd_mon_feature_init(
         property_get_bool("vendor.audio.feature.snd_mon.enable",
-                           true));
+                           false));
     compr_cap_feature_init(
         property_get_bool("vendor.audio.feature.compr_cap.enable",
                            false));
@@ -5819,7 +5819,7 @@ void audio_extn_feature_init()
                            false));
     usb_offload_feature_init(
         property_get_bool("vendor.audio.feature.usb_offload.enable",
-                           true));
+                           false));
     usb_offload_burst_mode_feature_init(
         property_get_bool("vendor.audio.feature.usb_offload_burst_mode.enable",
                            false));
@@ -5852,25 +5852,25 @@ void audio_extn_feature_init()
                            false));
     spkr_prot_feature_init(
         property_get_bool("vendor.audio.feature.spkr_prot.enable",
-                           true));
+                           false));
     fm_feature_init(
         property_get_bool("vendor.audio.feature.fm.enable",
                            false));
     external_qdsp_feature_init(
         property_get_bool("vendor.audio.feature.external_dsp.enable",
-                           true));
+                           false));
     external_speaker_feature_init(
         property_get_bool("vendor.audio.feature.external_speaker.enable",
-                           true));
+                           false));
     external_speaker_tfa_feature_init(
         property_get_bool("vendor.audio.feature.external_speaker_tfa.enable",
                            false));
     hwdep_cal_feature_init(
         property_get_bool("vendor.audio.feature.hwdep_cal.enable",
-                           true));
+                           false));
     hfp_feature_init(
         property_get_bool("vendor.audio.feature.hfp.enable",
-                           true));
+                           false));
     ext_hw_plugin_feature_init(
         property_get_bool("vendor.audio.feature.ext_hw_plugin.enable",
                            false));
@@ -5882,7 +5882,7 @@ void audio_extn_feature_init()
                            false));
     concurrent_capture_feature_init(
         property_get_bool("vendor.audio.feature.concurrent_capture.enable",
-                           true));
+                           false));
     compress_in_feature_init(
         property_get_bool("vendor.audio.feature.compress_in.enable",
                            false));
@@ -5891,10 +5891,10 @@ void audio_extn_feature_init()
                            false));
     maxx_audio_feature_init(
         property_get_bool("vendor.audio.feature.maxx_audio.enable",
-                           true));
+                           false));
     audiozoom_feature_init(
         property_get_bool("vendor.audio.feature.audiozoom.enable",
-                           true));
+                           false));
     auto_hal_feature_init(
         property_get_bool("vendor.audio.feature.auto_hal.enable",
                            false));

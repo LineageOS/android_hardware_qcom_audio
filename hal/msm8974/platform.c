@@ -3192,8 +3192,8 @@ void *platform_init(struct audio_device *adev)
     if (property_get_bool("vendor.audio.ambisonic.auto.profile",false))
         my_data->ambisonic_profile = true;
 
-    if (check_and_get_wsa_info((char *)snd_card_name, &wsaCount, &is_wsa_combo_supported)
-        && audio_extn_is_wsa_enabled()) {
+    if (audio_extn_is_wsa_enabled()
+        && check_and_get_wsa_info((char *)snd_card_name, &wsaCount, &is_wsa_combo_supported)) {
         /*Set ACDB ID of Stereo speaker if two WSAs are present*/
         /*Default ACDB ID for wsa speaker is that for mono*/
         if (wsaCount == 2) {
