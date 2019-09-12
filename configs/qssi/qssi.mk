@@ -104,7 +104,15 @@ vendor.audio.hw.aac.encoder=true
 
 #audio becoming noisy intent broadcast delay
 PRODUCT_PRODUCT_PROPERTIES += \
-audio.sys.noisy.broadcast.delay=600
+audio.sys.noisy.broadcast.delay=500
+
+#audio device switch mute latency factor for draining unmuted data
+PRODUCT_PRODUCT_PROPERTIES += \
+audio.sys.mute.latency.factor=2
+
+#audio device switch mute latency to absorb routing activities
+PRODUCT_PRODUCT_PROPERTIES += \
+audio.sys.routing.latency=0
 
 #offload minimum duration set to 30sec
 PRODUCT_PRODUCT_PROPERTIES += \
