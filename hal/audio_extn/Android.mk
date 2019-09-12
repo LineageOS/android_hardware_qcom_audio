@@ -114,6 +114,7 @@ include $(BUILD_SHARED_LIBRARY)
 #-------------------------------------------
 #            Build SSREC LIB
 #-------------------------------------------
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SSR)),true)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libssrec
@@ -170,7 +171,7 @@ endif
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
 include $(BUILD_SHARED_LIBRARY)
-
+endif
 #--------------------------------------------
 #          Build HDMI_EDID LIB
 #--------------------------------------------
