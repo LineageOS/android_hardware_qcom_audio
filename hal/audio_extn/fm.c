@@ -387,3 +387,23 @@ void fm_set_parameters(struct audio_device *adev,
 exit:
     ALOGV("%s: exit", __func__);
 }
+
+void audio_extn_fm_route_on_selected_device(struct audio_device *adev, audio_devices_t device)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+
+    if (fmmod.is_fm_running) {
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
+                if (fmmod.fm_device != device) {
+                    ALOGV("%s selected routing device %x current device %x"
+                          "are different, reroute on selected device", __func__,
+                          fmmod.fm_device, device);
+                    select_devices(adev, usecase->id);
+                }
+            }
+        }
+    }
+}
