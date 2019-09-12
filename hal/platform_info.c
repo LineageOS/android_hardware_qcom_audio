@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <expat.h>
+#include <pthread.h>
 #include <log/log.h>
 #include <cutils/str_parms.h>
 #include <audio_hw.h>
