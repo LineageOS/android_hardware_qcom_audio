@@ -257,6 +257,10 @@ persist.audio.fluence.voicecomm=true
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.aac_frm_ctl.enabled=true
 
+#Set speaker protection cal tx path sampling rate to 48k
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.spkr_prot.tx.sampling_rate=48000
+
 #add dynamic feature flags here
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.feature.a2dp_offload.enable=true \
