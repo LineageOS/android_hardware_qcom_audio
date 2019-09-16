@@ -7348,6 +7348,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                               __func__, ret);
                         goto error_open;
                     }
+                } else {
+                    out->usecase = GET_USECASE_AUDIO_PLAYBACK_PRIMARY(use_db_as_primary);
+                    out->config = GET_PCM_CONFIG_AUDIO_PLAYBACK_PRIMARY(use_db_as_primary);
                 }
         }
     } else if (audio_is_linear_pcm(out->format) &&
