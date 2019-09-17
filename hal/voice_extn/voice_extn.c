@@ -747,8 +747,8 @@ int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
 
         out->config = pcm_config_incall_music;
         //FIXME: add support for MONO stream configuration when audioflinger mixer supports it
-        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_STEREO;
-        out->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+        out->supported_channel_masks[0] = AUDIO_CHANNEL_OUT_MONO;
+        out->supported_channel_masks[1] = AUDIO_CHANNEL_OUT_STEREO;
         out->config.rate = out->sample_rate;
 
         ALOGV("%s: mode=%d, usecase id=%d", __func__, adev->mode, out->usecase);
