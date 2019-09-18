@@ -1138,10 +1138,11 @@ int usb_get_sup_sample_rates(bool is_playback,
     uint32_t tries = _MIN(sample_rate_size, (uint32_t)__builtin_popcount(bm));
 
     int i = 0;
-    while (tries--) {
+    while (tries) {
         int idx = __builtin_ffs(bm) - 1;
         sample_rates[i++] = supported_sample_rates[idx];
         bm &= ~(1<<idx);
+        tries--;
     }
 
     return i;
