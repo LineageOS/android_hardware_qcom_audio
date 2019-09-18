@@ -527,7 +527,7 @@ typedef void (* snd_mon_cb)(void * stream, struct str_parms * parms);
 #ifndef SND_MONITOR_ENABLED
 #define audio_extn_snd_mon_init()           (0)
 #define audio_extn_snd_mon_deinit()         (0)
-#define audio_extn_snd_mon_register_listener(stream, cb) (0)
+#define audio_extn_snd_mon_register_listener(stream, cb) { (void) cb; }
 #define audio_extn_snd_mon_unregister_listener(stream) (0)
 #else
 int audio_extn_snd_mon_init();
