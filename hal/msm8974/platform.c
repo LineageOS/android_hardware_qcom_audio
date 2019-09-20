@@ -6219,8 +6219,6 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (audio_extn_is_hifi_filter_enabled(adev, out, snd_device,
              my_data->codec_variant, channel_count, 1)) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER;
-        } else if (devices & SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER) {
-                snd_device = SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER;
         } else if (devices & AUDIO_DEVICE_OUT_LINE) {
                 snd_device = SND_DEVICE_OUT_LINE;
         } else
