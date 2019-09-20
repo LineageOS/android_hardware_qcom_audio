@@ -2643,7 +2643,11 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                  is_single_device_type_equal(&vc_usecase->device_list,
                                                         AUDIO_DEVICE_OUT_HEARING_AID) ||
                                  is_single_device_type_equal(&usecase->device_list,
-                                                     AUDIO_DEVICE_IN_VOICE_CALL))) {
+                                                     AUDIO_DEVICE_IN_VOICE_CALL) ||
+                                 (is_single_device_type_equal(&usecase->device_list,
+                                                     AUDIO_DEVICE_IN_USB_HEADSET) &&
+                                 is_single_device_type_equal(&vc_usecase->device_list,
+                                                        AUDIO_DEVICE_OUT_USB_HEADSET)))) {
                 in_snd_device = vc_usecase->in_snd_device;
                 out_snd_device = vc_usecase->out_snd_device;
             }
