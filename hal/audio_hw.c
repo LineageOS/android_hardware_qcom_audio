@@ -4198,6 +4198,8 @@ static int out_standby(struct audio_stream *stream)
         if (do_stop) {
             stop_output_stream(out);
         }
+        // if fm is active route on selected device in UI
+        audio_extn_fm_route_on_selected_device(adev, out->devices);
         pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&out->lock);
@@ -8607,6 +8609,7 @@ static int adev_update_voice_comm_input_stream(struct stream_in *in,
         //XXX needed for voice_extn_compress_voip_open_input_stream
         in->config.rate = config->sample_rate;
         if ((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
+             in->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
              voice_extn_compress_voip_is_active(in->dev)) &&
             (voice_extn_compress_voip_is_format_supported(in->format)) &&
             valid_rate && valid_ch) {
@@ -8991,8 +8994,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             }
         }
     }
+    if (audio_extn_ssr_get_stream() != in)
+        in->config.channels = channel_count;
 
-    in->config.channels = channel_count;
     in->sample_rate  = in->config.rate;
 
     audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
