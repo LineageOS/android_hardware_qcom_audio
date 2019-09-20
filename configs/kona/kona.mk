@@ -216,11 +216,11 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 ##Ambisonic Capture
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.ambisonic.capture=true \
-vendor.audio.ambisonic.auto.profile=true
+persist.vendor.audio.ambisonic.capture=false \
+persist.vendor.audio.ambisonic.auto.profile=false
 
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.apptype.multirec.enabled=true
+persist.vendor.audio.apptype.multirec.enabled=false
 
 ##fluencetype can be "fluence" or "fluencepro" or "none"
 PRODUCT_PROPERTY_OVERRIDES += \
