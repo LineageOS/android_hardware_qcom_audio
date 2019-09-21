@@ -117,9 +117,15 @@
 #define VNDK_FWK_LIB_PATH "/vendor/lib/libqti_vndfwk_detect.so"
 #endif
 
-static void *vndk_fwk_lib_handle = NULL;
-typedef int (*vndk_fwk_isVendorEnhancedFwk_t)();
-static vndk_fwk_isVendorEnhancedFwk_t vndk_fwk_isVendorEnhancedFwk;
+typedef struct vndkfwk_s {
+    void *lib_handle;
+    int (*isVendorEnhancedFwk)(void);
+    int (*getVendorEnhancedInfo)(void);
+    const char *lib_name;
+} vndkfwk_t;
+
+static vndkfwk_t mVndkFwk = {
+    NULL, NULL, NULL, VNDK_FWK_LIB_PATH};
 
 typedef struct {
     const char *id_string;
@@ -2915,15 +2921,15 @@ void audio_extn_utils_release_snd_device(snd_device_t snd_device)
             LISTEN_EVENT_SND_DEVICE_FREE);
 }
 
-int audio_extn_utils_get_license_params
-(
-const struct audio_device *adev,
-struct audio_license_params *license_params
-)
+int audio_extn_utils_get_license_params(
+        const struct audio_device *adev,
+        struct audio_license_params *license_params)
 {
     if(!license_params)
         return -EINVAL;
-    return platform_get_license_by_product(adev->platform, (const char*)license_params->product, &license_params->key, license_params->license);
+
+    return platform_get_license_by_product(adev->platform,
+            (const char*)license_params->product, &license_params->key, license_params->license);
 }
 
 int audio_extn_utils_send_app_type_gain(struct audio_device *adev,
@@ -2948,32 +2954,78 @@ int audio_extn_utils_send_app_type_gain(struct audio_device *adev,
                                sizeof(gain_cfg)/sizeof(gain_cfg[0]));
 }
 
-int audio_extn_utils_is_vendor_enhanced_fwk()
+static void vndk_fwk_init()
 {
-    static int is_running_with_enhanced_fwk = -EINVAL;
+    if (mVndkFwk.lib_handle != NULL)
+        return;
 
-    if (is_running_with_enhanced_fwk == -EINVAL) {
-        vndk_fwk_lib_handle = dlopen(VNDK_FWK_LIB_PATH, RTLD_NOW);
-        if (vndk_fwk_lib_handle != NULL) {
-            vndk_fwk_isVendorEnhancedFwk = (vndk_fwk_isVendorEnhancedFwk_t)
-                        dlsym(vndk_fwk_lib_handle, "isRunningWithVendorEnhancedFramework");
-            if (vndk_fwk_isVendorEnhancedFwk == NULL) {
-                ALOGW("%s: dlsym failed, defaulting to enhanced_fwk configuration",
-                       __func__);
-                is_running_with_enhanced_fwk = 1;
-            } else {
-                is_running_with_enhanced_fwk = vndk_fwk_isVendorEnhancedFwk();
-            }
-            dlclose(vndk_fwk_lib_handle);
-            vndk_fwk_lib_handle = NULL;
-        } else {
-            ALOGW("%s: VNDK_FWK_LIB not found, setting stock configuration", __func__);
-            is_running_with_enhanced_fwk = 0;
-        }
-        ALOGV("%s: vndk_fwk_isVendorEnhancedFwk=%d", __func__, is_running_with_enhanced_fwk);
+    mVndkFwk.lib_handle = dlopen(VNDK_FWK_LIB_PATH, RTLD_NOW);
+    if (mVndkFwk.lib_handle == NULL) {
+        ALOGW("%s: failed to dlopen VNDK_FWK_LIB %s", __func__,  strerror(errno));
+        return;
     }
 
-    return is_running_with_enhanced_fwk;
+    *(void **)(&mVndkFwk.isVendorEnhancedFwk) =
+        dlsym(mVndkFwk.lib_handle, "isRunningWithVendorEnhancedFramework");
+    if (mVndkFwk.isVendorEnhancedFwk == NULL) {
+        ALOGW("%s: dlsym failed %s", __func__, strerror(errno));
+        if (mVndkFwk.lib_handle) {
+            dlclose(mVndkFwk.lib_handle);
+            mVndkFwk.lib_handle = NULL;
+        }
+        return;
+    }
+
+
+    *(void **)(&mVndkFwk.getVendorEnhancedInfo) =
+        dlsym(mVndkFwk.lib_handle, "getVendorEnhancedInfo");
+    if (mVndkFwk.getVendorEnhancedInfo == NULL) {
+        ALOGW("%s: dlsym failed %s", __func__, strerror(errno));
+        if (mVndkFwk.lib_handle) {
+            dlclose(mVndkFwk.lib_handle);
+            mVndkFwk.lib_handle = NULL;
+        }
+    }
+
+    return;
+}
+
+bool audio_extn_utils_is_vendor_enhanced_fwk()
+{
+    static int is_vendor_enhanced_fwk = -EINVAL;
+    if (is_vendor_enhanced_fwk != -EINVAL)
+        return (bool)is_vendor_enhanced_fwk;
+
+    vndk_fwk_init();
+
+    if (mVndkFwk.isVendorEnhancedFwk != NULL) {
+        is_vendor_enhanced_fwk = mVndkFwk.isVendorEnhancedFwk();
+        ALOGW("%s: is_vendor_enhanced_fwk %d", __func__, is_vendor_enhanced_fwk);
+    } else {
+        is_vendor_enhanced_fwk = 0;
+        ALOGW("%s: default to non enhanced_fwk config", __func__);
+    }
+
+    return (bool)is_vendor_enhanced_fwk;
+}
+
+int audio_extn_utils_get_vendor_enhanced_info()
+{
+    static int vendor_enhanced_info = -EINVAL;
+    if (vendor_enhanced_info != -EINVAL)
+        return vendor_enhanced_info;
+
+    vndk_fwk_init();
+
+    if (mVndkFwk.getVendorEnhancedInfo != NULL) {
+        vendor_enhanced_info = mVndkFwk.getVendorEnhancedInfo();
+        ALOGW("%s: vendor_enhanced_info 0x%x", __func__, vendor_enhanced_info);
+    } else {
+        vendor_enhanced_info = 0x0;
+        ALOGW("%s: default to vendor_enhanced_info 0x0", __func__);
+    }
+
+    return vendor_enhanced_info;
 }
 
 int audio_extn_utils_get_perf_mode_flag(void)
