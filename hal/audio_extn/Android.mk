@@ -565,6 +565,8 @@ include $(BUILD_SHARED_LIBRARY)
 #-------------------------------------------
 #            Build HDMI PASSTHROUGH
 #-------------------------------------------
+ifneq ($(QCPATH),)
+
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libhdmipassthru
@@ -633,6 +635,8 @@ ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_SANITIZE := integer_overflow
 endif
 include $(BUILD_SHARED_LIBRARY)
+
+endif
 
 #-------------------------------------------
 #            Build BATTERY_LISTENER
