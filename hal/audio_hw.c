@@ -7244,7 +7244,8 @@ static int adev_update_voice_comm_input_stream(struct stream_in *in,
 
 #ifndef COMPRESS_VOIP_ENABLED
     if (valid_rate && valid_ch &&
-        in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+        (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
+         in->source == AUDIO_SOURCE_VOICE_COMMUNICATION)) {
         in->usecase = USECASE_AUDIO_RECORD_VOIP;
         in->config = default_pcm_config_voip_copp;
         in->config.period_size = VOIP_IO_BUF_SIZE(in->sample_rate,
@@ -7260,8 +7261,9 @@ static int adev_update_voice_comm_input_stream(struct stream_in *in,
 #else
     //XXX needed for voice_extn_compress_voip_open_input_stream
     in->config.rate = config->sample_rate;
-    if ((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
-         voice_extn_compress_voip_is_active(in->dev)) &&
+    if((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
+        in->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+        voice_extn_compress_voip_is_active(in->dev)) &&
         (voice_extn_compress_voip_is_format_supported(in->format)) &&
         valid_rate && valid_ch) {
         voice_extn_compress_voip_open_input_stream(in);
