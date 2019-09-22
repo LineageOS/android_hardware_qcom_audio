@@ -237,7 +237,6 @@ endif
 LOCAL_SHARED_LIBRARIES := \
         liblog \
         libcutils \
-        libhardware \
         libprocessgroup \
         libtinyalsa \
         libtinycompress \
@@ -286,13 +285,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PM_SUPPORT)),true)
     LOCAL_SHARED_LIBRARIES += libperipheral_client
 endif
 
-ifneq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_AMPLIFIER)),false)
-    LOCAL_CFLAGS += -DEXT_AMPLIFIER_ENABLED
-    LOCAL_SRC_FILES += audio_extn/audio_amplifier.c
-endif
-
 LOCAL_CFLAGS += -Wall -Wno-unused-parameter
-
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
 
