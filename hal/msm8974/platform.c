@@ -3185,11 +3185,11 @@ void *platform_init(struct audio_device *adev)
         }
     }
     /* Check for Ambisonic Capture Enablement */
-    if (property_get_bool("vendor.audio.ambisonic.capture",false))
+    if (property_get_bool("persist.vendor.audio.ambisonic.capture",false))
         my_data->ambisonic_capture = true;
 
     /* Check for Ambisonic Profile Assignment*/
-    if (property_get_bool("vendor.audio.ambisonic.auto.profile",false))
+    if (property_get_bool("persist.vendor.audio.ambisonic.auto.profile",false))
         my_data->ambisonic_profile = true;
 
     if (audio_extn_is_wsa_enabled()
@@ -3761,7 +3761,7 @@ acdb_init_fail:
         }
     }
 
-    if (property_get_bool("vendor.audio.apptype.multirec.enabled", false))
+    if (property_get_bool("persist.vendor.audio.apptype.multirec.enabled", false))
         my_data->use_generic_handset = true;
 
     /* Initialize keep alive for HDMI/loopback silence */
