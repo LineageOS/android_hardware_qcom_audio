@@ -8435,7 +8435,8 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
     int controller = -1;
     int stream = -1;
 
-    if (usecase) {
+    if (usecase != NULL && usecase->stream.out &&
+            usecase->type == PCM_PLAYBACK) {
         controller = usecase->stream.out->extconn.cs.controller;
         stream = usecase->stream.out->extconn.cs.stream;
     }
