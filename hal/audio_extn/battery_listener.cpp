@@ -65,6 +65,7 @@ struct BatteryListenerImpl : public hardware::health::V2_0::IHealthInfoCallback,
         std::lock_guard<std::mutex> _l(mLock);
         return statusToBool(mStatus);
     }
+    void reset();
   private:
     sp<hardware::health::V2_0::IHealth> mHealth;
     status_t init();
@@ -164,15 +165,19 @@ BatteryListenerImpl::BatteryListenerImpl(cb_fn_t cb) :
 
 BatteryListenerImpl::~BatteryListenerImpl()
 {
-    {
-        std::lock_guard<std::mutex> _l(mLock);
-        if (mHealth != NULL)
-            mHealth->unlinkToDeath(this);
-    }
-    mDone = true;
     mThread->join();
 }
 
+void BatteryListenerImpl::reset(){
+    std::lock_guard<std::mutex> _l(mLock);
+    if (mHealth != nullptr) {
+        mHealth->unregisterCallback(this);
+        mHealth->unlinkToDeath(this);
+    }
+    mStatus = BatteryStatus::UNKNOWN;
+    mDone = true;
+    mCond.notify_one();
+}
 void BatteryListenerImpl::serviceDied(uint64_t cookie __unused,
                                      const wp<hidl::base::V1_0::IBase>& who)
 {
@@ -216,6 +221,7 @@ status_t batteryPropertiesListenerInit(BatteryListenerImpl::cb_fn_t cb)
 
 status_t batteryPropertiesListenerDeinit()
 {
+    batteryListener->reset();
     batteryListener.clear();
     return OK;
 }
