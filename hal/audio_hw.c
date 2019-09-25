@@ -240,125 +240,6 @@ static unsigned int audio_device_ref_count;
 
 static int set_voice_volume_l(struct audio_device *adev, float volume);
 
-static amplifier_device_t * get_amplifier_device(void)
-{
-    if (adev)
-        return adev->amp;
-
-    return NULL;
-}
-
-static int amplifier_open(void)
-{
-    int rc;
-    amplifier_module_t *module;
-
-    rc = hw_get_module(AMPLIFIER_HARDWARE_MODULE_ID,
-            (const hw_module_t **) &module);
-    if (rc) {
-        ALOGV("%s: Failed to obtain reference to amplifier module: %s\n",
-                __func__, strerror(-rc));
-        return -ENODEV;
-    }
-
-    rc = amplifier_device_open((const hw_module_t *) module, &adev->amp);
-    if (rc) {
-        ALOGV("%s: Failed to open amplifier hardware device: %s\n",
-                __func__, strerror(-rc));
-        return -ENODEV;
-    }
-
-    return 0;
-}
-
-static int amplifier_set_input_devices(uint32_t devices)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-    if (amp && amp->set_input_devices)
-        return amp->set_input_devices(amp, devices);
-
-    return 0;
-}
-
-static int amplifier_set_output_devices(uint32_t devices)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-    if (amp && amp->set_output_devices)
-        return amp->set_output_devices(amp, devices);
-
-    return 0;
-}
-
-static int amplifier_enable_devices(uint32_t devices, bool enable)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-    bool is_output = devices > SND_DEVICE_OUT_BEGIN &&
-        devices < SND_DEVICE_OUT_END;
-
-    if (amp && amp->enable_output_devices && is_output)
-        return amp->enable_output_devices(amp, devices, enable);
-
-    if (amp && amp->enable_input_devices && !is_output)
-        return amp->enable_input_devices(amp, devices, enable);
-
-    return 0;
-}
-
-static int amplifier_set_mode(audio_mode_t mode)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-    if (amp && amp->set_mode)
-        return amp->set_mode(amp, mode);
-
-    return 0;
-}
-
-static int amplifier_output_stream_start(struct audio_stream_out *stream,
-        bool offload)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-    if (amp && amp->output_stream_start)
-        return amp->output_stream_start(amp, stream, offload);
-
-    return 0;
-}
-
-static int amplifier_input_stream_start(struct audio_stream_in *stream)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-    if (amp && amp->input_stream_start)
-        return amp->input_stream_start(amp, stream);
-
-    return 0;
-}
-
-static int amplifier_output_stream_standby(struct audio_stream_out *stream)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-    if (amp && amp->output_stream_standby)
-        return amp->output_stream_standby(amp, stream);
-
-    return 0;
-}
-
-static int amplifier_input_stream_standby(struct audio_stream_in *stream)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-    if (amp && amp->input_stream_standby)
-        return amp->input_stream_standby(amp, stream);
-
-    return 0;
-}
-
-static int amplifier_close(void)
-{
-    amplifier_device_t *amp = get_amplifier_device();
-    if (amp)
-        amplifier_device_close(amp);
-
-    return 0;
-}
-
 static int check_and_set_gapless_mode(struct audio_device *adev, bool enable_gapless)
 {
     bool gapless_enabled = false;
@@ -610,7 +491,6 @@ int enable_snd_device(struct audio_device *adev,
         }
         audio_extn_listen_update_status(snd_device,
                 LISTEN_EVENT_SND_DEVICE_BUSY);
-        amplifier_enable_devices(snd_device, true);
         audio_route_apply_and_update_path(adev->audio_route, device_name);
     }
     return 0;
@@ -656,7 +536,6 @@ int disable_snd_device(struct audio_device *adev,
             audio_extn_spkr_prot_stop_processing();
         } else {
             audio_route_reset_and_update_path(adev->audio_route, device_name);
-            amplifier_enable_devices(snd_device, false);
         }
 
         audio_extn_listen_update_status(snd_device,
@@ -1008,10 +887,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     usecase->out_snd_device = out_snd_device;
 
     enable_audio_route(adev, usecase);
-
-    /* Rely on amplifier_set_devices to distinguish between in/out devices */
-    amplifier_set_input_devices(in_snd_device);
-    amplifier_set_output_devices(out_snd_device);
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
@@ -1821,8 +1696,6 @@ static int out_standby(struct audio_stream *stream)
     if (!out->standby) {
         pthread_mutex_lock(&adev->lock);
 
-        amplifier_output_stream_standby((struct audio_stream_out *) stream);
-
         out->standby = true;
         if (!is_offload_usecase(out->usecase)) {
             if (out->pcm) {
@@ -2123,8 +1996,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ret = start_output_stream(out);
 
         if (ret == 0)
-            amplifier_output_stream_start(stream,
-                    is_offload_usecase(out->usecase));
+            ;
 
         pthread_mutex_unlock(&adev->lock);
         /* ToDo: If use case is compress offload should return 0 */
@@ -2499,8 +2371,6 @@ static int in_standby(struct audio_stream *stream)
     if (!in->standby) {
         pthread_mutex_lock(&adev->lock);
 
-        amplifier_input_stream_standby((struct audio_stream_in *) stream);
-
         in->standby = true;
         if (in->pcm) {
             pcm_close(in->pcm);
@@ -2636,7 +2506,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ret = start_input_stream(in);
 
         if (ret == 0)
-            amplifier_input_stream_start(stream);
+            ;
 
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0) {
@@ -3369,8 +3239,6 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
         ALOGD("%s mode %d\n", __func__, mode);
-        if (amplifier_set_mode(mode) != 0)
-            ALOGE("Failed setting amplifier mode");
         adev->mode = mode;
     }
     pthread_mutex_unlock(&adev->lock);
@@ -3726,8 +3594,6 @@ static int adev_close(hw_device_t *device)
     pthread_mutex_lock(&adev_init_lock);
 
     if ((--audio_device_ref_count) == 0) {
-        if (amplifier_close() != 0)
-            ALOGE("Amplifier close failed");
         audio_extn_listen_deinit(adev);
         audio_route_free(adev->audio_route);
         free(adev->snd_dev_ref_cnt);
@@ -3879,9 +3745,6 @@ static int adev_open(const hw_module_t *module, const char *name,
                                          "offload_effects_bundle_hal_stop_output");
         }
     }
-
-    if (amplifier_open() != 0)
-        ALOGE("Amplifier initialization failed");
 
     *device = &adev->device.common;
     if (k_enable_extended_precision)
