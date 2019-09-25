@@ -51,6 +51,7 @@
 #include <log/log.h>
 
 #include "QalApi.h"
+#include "audio_extn.h"
 
 std::shared_ptr<AudioDevice> AudioDevice::GetInstance() {
     if (!adev_) {
@@ -213,6 +214,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
         ALOGE("%s: invalid adevice object",__func__);
+        goto exit;
+    }
+
+    if (config->format == AUDIO_FORMAT_PCM_FLOAT){
+        ALOGE("%s: format not supported\n",__func__);
+        config->format = AUDIO_FORMAT_PCM_16_BIT;
+        ret = -EINVAL;
         goto exit;
     }
 
@@ -417,6 +425,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
                                     "offload_effects_bundle_hal_stop_output");
         }
     }
+    audio_extn_sound_trigger_init(adev_);
 
     return ret;
 }

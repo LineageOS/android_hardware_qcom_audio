@@ -42,6 +42,7 @@
 #include <log/log.h>
 
 #include "QalApi.h"
+#include "audio_extn.h"
 
 void StreamOutPrimary::GetStreamHandle(audio_stream_out** stream) {
   *stream = (audio_stream_out*)stream_.get();
@@ -61,6 +62,11 @@ audio_format_t StreamPrimary::GetFormat() {
 
 uint32_t StreamPrimary::GetChannels() {
     return config_.channel_mask;
+}
+
+audio_io_handle_t StreamPrimary::GetHandle()
+{
+    return handle_;
 }
 
 std::shared_ptr<AudioDevice> AudioDevice::adev_ = nullptr;
@@ -960,6 +966,11 @@ StreamOutPrimary::~StreamOutPrimary() {
 int StreamInPrimary::Standby() {
     int ret = 0;
 
+    if (is_st_session && is_st_session_active) {
+        audio_extn_sound_trigger_stop_lab(this);
+        return ret;
+    }
+
     if (qal_stream_handle_) {
         ret = qal_stream_stop(qal_stream_handle_);
     }
@@ -1009,6 +1020,12 @@ int StreamInPrimary::Open() {
         ret = -ENOMEM;
         goto error_open;
     }
+
+    audio_extn_sound_trigger_check_and_get_session(this);
+    if (is_st_session) {
+        return 0;
+    }
+
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
     ch_info->channels = channels;
     ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
@@ -1058,7 +1075,6 @@ uint32_t StreamInPrimary::GetBufferSize() {
     return BUF_SIZE_CAPTURE * NO_OF_BUF;
 }
 
-
 ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
     int ret = 0;
     struct qal_buffer qalBuffer;
@@ -1070,6 +1086,11 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
     ALOGD("%s: Bytes:(%zu)",__func__,bytes);
     if (!qal_stream_handle_){
         ret = Open();
+    }
+
+    if (is_st_session) {
+        audio_extn_sound_trigger_read(this, (void *)buffer, bytes);
+        return bytes;
     }
 
     if (!stream_started_) {

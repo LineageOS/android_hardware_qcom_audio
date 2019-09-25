@@ -81,6 +81,7 @@ public:
     audio_format_t GetFormat();
     uint32_t GetChannels();
     static qal_device_id_t GetQalDeviceId(audio_devices_t halDeviceId);
+    audio_io_handle_t GetHandle();
 
 protected:
     struct qal_stream_attributes streamAttributes_;
@@ -139,6 +140,8 @@ public:
     ssize_t Read(const void *buffer, size_t bytes);
     uint32_t GetBufferSize();
     static qal_stream_type_t GetQalStreamType(audio_input_flags_t halStreamFlags);
+    bool is_st_session;
+    bool is_st_session_active;
 protected:
     audio_input_flags_t flags_;
     std::shared_ptr<audio_stream_in> stream_;

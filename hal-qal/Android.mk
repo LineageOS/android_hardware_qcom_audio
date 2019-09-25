@@ -13,7 +13,8 @@ LOCAL_HEADER_LIBRARIES := libhardware_headers
 
 LOCAL_SRC_FILES := \
     AudioStream.cpp \
-    AudioDevice.cpp
+    AudioDevice.cpp \
+    audio_extn/soundtrigger.cpp
 
 LOCAL_SHARED_LIBRARIES := \
     libbase \
@@ -30,10 +31,12 @@ LOCAL_SHARED_LIBRARIES := \
     libqal
 
 LOCAL_C_INCLUDES += \
+    external/tinyalsa/include \
     system/media/audio_utils/include \
     external/expat/lib \
     vendor/qcom/opensource/core-utils/fwk-detect \
     vendor/qcom/opensource/qal \
+    $(LOCAL_PATH)/audio_extn
 
 
 LOCAL_CFLAGS += -D_GNU_SOURCE
