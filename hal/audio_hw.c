@@ -9591,10 +9591,10 @@ static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *ou
 
     if (restore) {
         // restore A2DP device for active usecases and unmute if required
-        if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
-            (uc_info->out_snd_device != SND_DEVICE_OUT_BT_A2DP)) {
+        if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
             ALOGD("%s: restoring A2dp and unmuting stream", __func__);
-            select_devices(adev, uc_info->id);
+            if (uc_info->out_snd_device != SND_DEVICE_OUT_BT_A2DP)
+                select_devices(adev, uc_info->id);
             pthread_mutex_lock(&out->compr_mute_lock);
             if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
                 (out->a2dp_compress_mute) && (uc_info->out_snd_device == SND_DEVICE_OUT_BT_A2DP)) {
