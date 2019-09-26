@@ -497,7 +497,7 @@ enum {
     defined (PLATFORM_MSMNILE) || defined (PLATFORM_KONA) || \
     defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || \
     defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || \
-    defined (PLATFORM_ATOLL)
+    defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL)
 #define PLAYBACK_OFFLOAD_DEVICE2 17
 #elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
 #define PLAYBACK_OFFLOAD_DEVICE2 24
@@ -510,7 +510,8 @@ enum {
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
-    defined (PLATFORM_MSM8937) || defined (PLATFORM_ATOLL)
+    defined (PLATFORM_MSM8937) || defined (PLATFORM_ATOLL) || \
+    defined (PLATFORM_BENGAL)
 #define PLAYBACK_OFFLOAD_DEVICE3 18
 #define PLAYBACK_OFFLOAD_DEVICE4 34
 #define PLAYBACK_OFFLOAD_DEVICE5 35
@@ -674,7 +675,7 @@ enum {
 #define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
 #elif defined (PLATFORM_MSM8996) || defined (PLATFORM_KONA)
 #define FM_RX_VOLUME "Tert MI2S LOOPBACK Volume"
-#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || defined (PLATFORM_ATOLL)
+#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || defined (PLATFORM_ATOLL) ||defined (PLATFORM_BENGAL)
 #define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
 #else
 #define FM_RX_VOLUME "Internal FM RX Volume"
