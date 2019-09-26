@@ -36,6 +36,7 @@ LOCAL_C_INCLUDES += \
     external/expat/lib \
     vendor/qcom/opensource/core-utils/fwk-detect \
     vendor/qcom/opensource/qal \
+    $(call include-path-for, audio-effects) \
     $(LOCAL_PATH)/audio_extn
 
 

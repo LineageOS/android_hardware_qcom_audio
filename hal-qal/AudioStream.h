@@ -140,6 +140,7 @@ public:
     ssize_t Read(const void *buffer, size_t bytes);
     uint32_t GetBufferSize();
     static qal_stream_type_t GetQalStreamType(audio_input_flags_t halStreamFlags);
+    int addRemoveAudioEffect(const struct audio_stream *stream, effect_handle_t effect,bool enable);
     bool is_st_session;
     bool is_st_session_active;
 protected:
@@ -149,5 +150,7 @@ protected:
     friend class AudioDevice;
     uint64_t total_bytes_read_; /* total frames written, not cleared when entering standby */
     int FillHalFnPtrs();
+    bool isECEnabled = false;
+    bool isNSEnabled = false;
 };
 #endif  // ANDROID_HARDWARE_AHAL_ASTREAM_H_

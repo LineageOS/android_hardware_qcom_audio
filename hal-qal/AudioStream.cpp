@@ -42,6 +42,8 @@
 #include <log/log.h>
 
 #include "QalApi.h"
+#include <audio_effects/effect_aec.h>
+#include <audio_effects/effect_ns.h>
 #include "audio_extn.h"
 
 void StreamOutPrimary::GetStreamHandle(audio_stream_out** stream) {
@@ -350,19 +352,39 @@ static int astream_in_add_audio_effect(
                                 const struct audio_stream *stream,
                                 effect_handle_t effect)
 {
-    std::ignore = stream;
-    std::ignore = effect;
-    ALOGD("%s: effects not implemented currently supported in qal",__func__);
-    return 0;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<StreamInPrimary> astream_in;
+    if (adevice) {
+        astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    } else {
+        ALOGE("%s: unable to get audio device",__func__);
+        return -EINVAL;
+    }
+    if (astream_in) {
+        return astream_in->addRemoveAudioEffect(stream, effect, true);
+    } else {
+        ALOGE("%s: unable to get audio stream",__func__);
+        return -EINVAL;
+    }
 }
 
 static int astream_in_remove_audio_effect(const struct audio_stream *stream,
                                           effect_handle_t effect)
 {
-    std::ignore = stream;
-    std::ignore = effect;
-    ALOGD("%s: effects not implemented currently supported in qal",__func__);
-    return 0;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<StreamInPrimary> astream_in;
+    if (adevice) {
+        astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    } else {
+        ALOGE("%s: unable to get audio device",__func__);
+        return -EINVAL;
+    }
+    if (astream_in) {
+        return astream_in->addRemoveAudioEffect(stream, effect, false);
+    } else {
+        ALOGE("%s: unable to get audio stream",__func__);
+        return -EINVAL;
+    }
 }
 
 static int astream_in_get_capture_position(const struct audio_stream_in *stream,
@@ -987,6 +1009,101 @@ int StreamInPrimary::Standby() {
     else
         return ret;
 }
+
+int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __unused,
+                                   effect_handle_t effect,
+                                   bool enable)
+{
+    int status = 0;
+    effect_descriptor_t desc;
+
+    status = (*effect)->get_descriptor(effect, &desc);
+    if (status != 0)
+        return status;
+
+
+    if (source_ == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+
+        if (memcmp(&desc.type, FX_IID_AEC, sizeof(effect_uuid_t)) == 0) {
+            if (enable) {
+                if (isECEnabled) {
+                    ALOGE("%s: EC already enabled", __func__);
+                    status  = -EINVAL;
+                    goto exit;
+                } else if (isNSEnabled) {
+                    ALOGV("%s: Got EC enable and NS is already active. Enabling ECNS", __func__);
+                    status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_ECNS,true);
+                    isECEnabled = true;
+                    goto exit;
+                } else {
+                    ALOGV("%s: Got EC enable. Enabling EC", __func__);
+                    status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_EC,true);
+                    isECEnabled = true;
+                    goto exit;
+               }
+            } else {
+                if (isECEnabled) {
+                    if (isNSEnabled) {
+                        ALOGV("%s: ECNS is running. Disabling EC and enabling NS alone", __func__);
+                        status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_NS,true);
+                        isECEnabled = false;
+                        goto exit;
+                    } else {
+                        ALOGV("%s: EC is running. Disabling it", __func__);
+                        status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_EC,false);
+                        isECEnabled = false;
+                        goto exit;
+                    }
+                } else {
+                    ALOGE("%s: EC is not enabled", __func__);
+                    status = -EINVAL;
+                    goto exit;
+               }
+            }
+        }
+
+        if (memcmp(&desc.type, FX_IID_NS, sizeof(effect_uuid_t)) == 0) {
+            if (enable) {
+                if (isNSEnabled) {
+                    ALOGE("%s: NS already enabled", __func__);
+                    status  = -EINVAL;
+                    goto exit;
+                } else if (isECEnabled) {
+                    ALOGV("%s: Got NS enable and EC is already active. Enabling ECNS", __func__);
+                    status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_ECNS,true);
+                    isNSEnabled = true;
+                    goto exit;
+                } else {
+                    ALOGV("%s: Got NS enable. Enabling NS", __func__);
+                    status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_NS,true);
+                    isNSEnabled = true;
+                    goto exit;
+               }
+            } else {
+                if (isNSEnabled) {
+                    if (isECEnabled) {
+                        ALOGV("%s: ECNS is running. Disabling NS and enabling EC alone", __func__);
+                        status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_EC,true);
+                        isNSEnabled = false;
+                        goto exit;
+                    } else {
+                        ALOGV("%s: NS is running. Disabling it", __func__);
+                        status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_NS,false);
+                        isNSEnabled = false;
+                        goto exit;
+                    }
+                } else {
+                    ALOGE("%s: NS is not enabled", __func__);
+                    status = -EINVAL;
+                    goto exit;
+               }
+            }
+        }
+    }
+exit:
+    return status;
+}
+
 
 int StreamInPrimary::SetGain(float gain) {
     struct qal_volume_data* volume;
