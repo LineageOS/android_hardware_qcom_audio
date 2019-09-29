@@ -36,6 +36,7 @@
 #include <log/log.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <pthread.h>
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
