@@ -2775,6 +2775,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                     usecase->stream.out->sample_rate,
                     &usecase->stream.out->app_type_cfg.sample_rate);
         } else if (((out_snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+                     out_snd_device != SND_DEVICE_OUT_HEADPHONES &&
+                     out_snd_device != SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER &&
                      !audio_is_true_native_stream_active(adev)) &&
                     usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
                     (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
