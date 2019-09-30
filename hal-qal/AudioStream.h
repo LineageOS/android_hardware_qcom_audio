@@ -40,6 +40,9 @@
 #include <system/audio.h>
 
 #include "QalDefs.h"
+#include <audio_extn/AudioExtn.h>
+#include <mutex>
+#include <map>
 
 #define BUF_SIZE_PLAYBACK 1024
 #define BUF_SIZE_CAPTURE 960
@@ -82,7 +85,13 @@ public:
     uint32_t GetChannels();
     static qal_device_id_t GetQalDeviceId(audio_devices_t halDeviceId);
     audio_io_handle_t GetHandle();
+    std::mutex write_wait_mutex_;
+    std::condition_variable write_condition_;
+    bool write_ready_;
 
+    std::mutex drain_wait_mutex_;
+    std::condition_variable drain_condition_;
+    bool drain_ready_;
 protected:
     struct qal_stream_attributes streamAttributes_;
     qal_stream_handle_t* qal_stream_handle_;
@@ -106,6 +115,7 @@ public:
     ~StreamOutPrimary();
     int Standby();
     int SetVolume(float left, float right);
+    int SetParameters(struct str_parms *parms);
     int GetFramesWritten();
     ssize_t Write(const void *buffer, size_t bytes);
     int Open();
@@ -114,9 +124,12 @@ public:
     static qal_stream_type_t GetQalStreamType(audio_output_flags_t halStreamFlags);
     int StartOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     int StopOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
-protected:
     audio_output_flags_t flags_;
-    std::shared_ptr<audio_stream_out> stream_;
+protected:
+    qal_param_payload qparam_payload;
+    uint32_t msample_rate;
+    uint16_t mchannels;
+    std::shared_ptr<audio_stream_out>   stream_;
     uint64_t total_bytes_written_; /* total frames written, not cleared when entering standby */
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;

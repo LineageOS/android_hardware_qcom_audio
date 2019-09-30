@@ -152,7 +152,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         goto exit;
     }
     astream = adevice->OutGetStream(handle);
-
+ 
     if (astream == nullptr) {
         adevice->CreateStreamOut(handle, devices, flags, config,
                                  stream_out, address);

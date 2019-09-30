@@ -29,7 +29,8 @@
 
 #ifndef AUDIO_DEFS_H
 #define AUDIO_DEFS_H
-
+#include <system/audio-base.h>
+#include <system/audio.h>
 
 /**
  * extended audio codec parameters

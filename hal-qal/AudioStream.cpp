@@ -46,6 +46,20 @@
 #include <audio_effects/effect_ns.h>
 #include "audio_extn.h"
 
+const std::map<uint32_t, qal_audio_fmt_t> getFormatId {
+	{AUDIO_FORMAT_PCM,                 QAL_AUDIO_FMT_DEFAULT_PCM},
+	{AUDIO_FORMAT_MP3,                 QAL_AUDIO_FMT_MP3},
+	{AUDIO_FORMAT_AAC,                 QAL_AUDIO_FMT_AAC},
+	{AUDIO_FORMAT_AAC_ADTS,            QAL_AUDIO_FMT_AAC_ADTS},
+	{AUDIO_FORMAT_AAC_ADIF,            QAL_AUDIO_FMT_AAC_ADIF},
+	{AUDIO_FORMAT_AAC_LATM,            QAL_AUDIO_FMT_AAC_LATM},
+	{AUDIO_FORMAT_WMA,                 QAL_AUDIO_FMT_WMA_STD},
+	{AUDIO_FORMAT_ALAC,                QAL_AUDIO_FMT_ALAC},
+	{AUDIO_FORMAT_APE,                 QAL_AUDIO_FMT_APE},
+	{AUDIO_FORMAT_WMA_PRO,             QAL_AUDIO_FMT_WMA_PRO},
+        {AUDIO_FORMAT_FLAC,                QAL_AUDIO_FMT_FLAC}
+};
+
 void StreamOutPrimary::GetStreamHandle(audio_stream_out** stream) {
   *stream = (audio_stream_out*)stream_.get();
 }
@@ -86,8 +100,31 @@ static int32_t qal_callback(qal_stream_handle_t *stream_handle,
                 event_id,
                 event_data,
                 cookie);
-
-    return 0;
+  int status = 0;
+  StreamOutPrimary *astream_out = static_cast<StreamOutPrimary *> (cookie);
+  switch (event_id)
+  {
+      case QAL_STREAM_CBK_EVENT_WRITE_READY:
+      {
+         std::lock_guard<std::mutex> write_guard (astream_out->write_wait_mutex_);
+         astream_out->write_ready_ = true;
+         ALOGE("%s: received WRITE_READY event\n",__func__);
+      }
+      (astream_out->write_condition_).notify_all();
+      break;
+      case QAL_STREAM_CBK_EVENT_DRAIN_READY:
+      {
+         std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
+         astream_out->drain_ready_ = true;
+         ALOGE("%s: received DRAIN_READY event\n",__func__);
+      }
+      (astream_out->drain_condition_).notify_all();
+      break;
+      case QAL_STREAM_CBK_EVENT_ERROR:
+         status = -1;
+      break;
+  }
+  return status;
 }
 
 
@@ -237,10 +274,33 @@ static int out_get_render_position(const struct audio_stream_out *stream,
 
 static int astream_out_set_parameters(struct audio_stream *stream,
                                       const char *kvpairs) {
-    std::ignore = stream;
-    std::ignore = kvpairs;
-    ALOGD("%s: function not implemented",__func__);
-    return 0;
+    int ret = 0;
+    struct str_parms *parms;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+	if (adevice) {
+        astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    } else {
+        ret = -EINVAL;
+        ALOGE("%s: unable to get audio device",__func__);
+        goto exit;
+    }
+    parms = str_parms_create_str(kvpairs);
+    if (!parms) {
+       ret = -EINVAL;
+       goto exit;
+    }
+    if(astream_out->flags_ ==
+            (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD |
+             AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
+       ret = astream_out->SetParameters(parms);
+       if (ret) {
+          ALOGE("Stream SetParameters Error (%x)", ret);
+          goto exit;
+       }
+    }
+exit:
+    return ret;
 }
 
 static char* astream_out_get_parameters(const struct audio_stream *stream,
@@ -757,12 +817,26 @@ int StreamOutPrimary::Standby() {
         return ret;
 }
 
+int StreamOutPrimary::SetParameters(struct str_parms *parms) {
+   int ret = -EINVAL;
+   ALOGE("%s: g\n", __func__);
+
+   ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &qparam_payload, parms, &msample_rate, &mchannels);
+   if (ret) {
+      ALOGE("parse_compress_metadata Error (%x)", ret);
+   }
+   ALOGE("%s: exit %d\n", __func__, ret);
+   return ret;
+}
+
 int StreamOutPrimary::SetVolume(float left , float right) {
     if (!qal_stream_handle_) {
         ALOGE("%s: handle is null. abort\n", __func__);
         return 0;
     }
-
+    if (flags_ == (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
+       return 0;
+    }
     struct qal_volume_data* volume;
     int ret = 0;
     if (left == right) {
@@ -822,7 +896,7 @@ int StreamOutPrimary::Open() {
     qalDevice.config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     qalDevice.config.ch_info = ch_info;
     qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
-    streamAttributes_.type = QAL_STREAM_LOW_LATENCY;
+    streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
     streamAttributes_.flags = (qal_stream_flags_t)flags_;
     streamAttributes_.direction = QAL_AUDIO_OUTPUT;
     streamAttributes_.out_media_config.sample_rate = config_.sample_rate;
@@ -830,8 +904,26 @@ int StreamOutPrimary::Open() {
     streamAttributes_.out_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
     streamAttributes_.out_media_config.ch_info = ch_info;
 
-    ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
-    ret = qal_stream_open(&streamAttributes_,
+    if (streamAttributes.type == QAL_STREAM_COMPRESSED) {
+       streamAttributes.flags = (qal_stream_flags_t)(1 << QAL_STREAM_FLAG_NON_BLOCKING);
+       if (config_.offload_info.format == 0)
+          config_.offload_info.format = config_.format;
+       if (config_.offload_info.sample_rate == 0)
+          config_.offload_info.sample_rate = config_.sample_rate;
+       streamAttributes.out_media_config.sample_rate = config_.offload_info.sample_rate;
+       if (msample_rate)
+          streamAttributes.out_media_config.sample_rate = msample_rate;
+       if (mchannels)
+          streamAttributes.out_media_config.ch_info->channels = mchannels;
+       streamAttributes.out_media_config.aud_fmt_id = getFormatId.at(config_.format);
+    }
+    ALOGE("channels %d samplerate %d format id %d \n",
+            streamAttributes.out_media_config.ch_info->channels,
+            streamAttributes.out_media_config.sample_rate,
+          streamAttributes.out_media_config.aud_fmt_id);
+    ALOGE("chanels %d \n", streamAttributes.out_media_config.ch_info->channels);
+    ALOGE("msample_rate %d mchannels %d \n", msample_rate, mchannels);
+    ret = qal_stream_open (&streamAttributes,
                           1,
                           &qalDevice,
                           0,
@@ -841,12 +933,16 @@ int StreamOutPrimary::Open() {
                           &qal_stream_handle_);
 
     ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
-
     if (ret) {
         ALOGE("Qal Stream Open Error (%x)", ret);
         ret = -EINVAL;
     }
-
+    if (streamAttributes.type == QAL_STREAM_COMPRESSED) {
+       ret = qal_stream_set_param(qal_stream_handle_, 0, &qparam_payload);
+       if (ret) {
+          ALOGE("Qal Set Param Error (%x)\n", ret);
+       }
+    }
     total_bytes_written_ = 0; // reset at each open
 
 error_open:
