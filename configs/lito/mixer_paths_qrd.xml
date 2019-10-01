@@ -3324,12 +3324,16 @@
          <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
          <ctl name="TX DMIC MUX2" value="DMIC3" />
          <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
-         <ctl name="TX DMIC MUX3" value="DMIC4" />
+         <ctl name="TX DMIC MUX3" value="DMIC5" />
     </path>
 
     <path name="voice-speaker-qmic">
          <path name="speaker-qmic" />
     </path>
+
+   <path name="quad-mic">
+         <path name="speaker-qmic" />
+   </path>
 
     <path name="unprocessed-quad-mic">
         <path name="quad-mic" />
