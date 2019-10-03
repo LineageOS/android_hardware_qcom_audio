@@ -2597,6 +2597,10 @@
         <path name="headphones" />
     </path>
 
+    <path name="headphones-hifi-filter">
+        <path name="headphones" />
+    </path>
+
     <path name="hph-highquality-mode">
     </path>
 
@@ -2681,6 +2685,11 @@
     </path>
 
     <path name="speaker-and-headphones">
+        <path name="headphones" />
+        <path name="speaker" />
+    </path>
+
+    <path name="speaker-and-headphones-hifi-filter">
         <path name="headphones" />
         <path name="speaker" />
     </path>
