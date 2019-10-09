@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7e8efd62_6d085f45",
+        "filename": "hal/platform_info.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 958,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2019-10-09T21:28:52Z",
+      "side": 0,
+      "message": "Useless edit",
+      "revId": "b535d534842208da9472799dfec24074283b3961",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
