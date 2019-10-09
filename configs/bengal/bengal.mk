@@ -44,6 +44,7 @@ AUDIO_FEATURE_ENABLED_USB_TUNNEL := true
 AUDIO_FEATURE_ENABLED_A2DP_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_3D_AUDIO := true
 AUDIO_FEATURE_ENABLED_AHAL_EXT := true
+AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
 DOLBY_ENABLE := false
 endif
 
@@ -87,7 +88,7 @@ BOARD_SUPPORTS_OPENSOURCE_STHAL := true
 AUDIO_HARDWARE := audio.a2dp.default
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
-AUDIO_HARDWARE += audio.primary.lito
+AUDIO_HARDWARE += audio.primary.bengal
 
 #HAL Wrapper
 AUDIO_WRAPPER := libqahw
@@ -348,7 +349,7 @@ vendor.audio.adm.buffering.ms=2
 
 #enable headset calibration
 PRODUCT_PROPERTY_OVERRIDES += \
-audio.volume.headset.gain.depcal=true
+vendor.audio.volume.headset.gain.depcal=true
 
 #enable dualmic fluence for voice communication
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -391,7 +392,7 @@ vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.compress_in.enable=true \
 vendor.audio.feature.compress_meta_data.enable=true \
 vendor.audio.feature.compr_voip.enable=false \
-vendor.audio.feature.concurrent_capture.enable=false \
+vendor.audio.feature.concurrent_capture.enable=true \
 vendor.audio.feature.custom_stereo.enable=true \
 vendor.audio.feature.display_port.enable=true \
 vendor.audio.feature.dsm_feedback.enable=false \
@@ -408,6 +409,7 @@ vendor.audio.feature.hfp.enable=true \
 vendor.audio.feature.hifi_audio.enable=false \
 vendor.audio.feature.hwdep_cal.enable=false \
 vendor.audio.feature.incall_music.enable=true \
+vendor.audio.feature.multi_voice_session.enable=true \
 vendor.audio.feature.keep_alive.enable=true \
 vendor.audio.feature.kpi_optimize.enable=true \
 vendor.audio.feature.maxx_audio.enable=false \
@@ -440,6 +442,19 @@ PRODUCT_PACKAGES += \
     vendor.qti.hardware.audiohalext@1.0 \
     vendor.qti.hardware.audiohalext@1.0-impl \
     vendor.qti.hardware.audiohalext-utils
+
+# enable audio hidl hal 5.0
+PRODUCT_PACKAGES += \
+    android.hardware.audio@5.0 \
+    android.hardware.audio.common@5.0 \
+    android.hardware.audio.common@5.0-util \
+    android.hardware.audio@5.0-impl \
+    android.hardware.audio.effect@5.0 \
+    android.hardware.audio.effect@5.0-impl
+
+# enable sound trigger hidl hal 2.2
+PRODUCT_PACKAGES += \
+    android.hardware.soundtrigger@2.2-impl \
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \

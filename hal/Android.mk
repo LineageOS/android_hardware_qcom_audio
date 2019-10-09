@@ -1,6 +1,5 @@
 ifneq ($(AUDIO_USE_STUB_HAL), true)
 ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)
-
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -92,6 +91,7 @@ endif
 ifneq ($(filter bengal,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_BENGAL
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
+  LOCAL_CFLAGS += -DINCALL_STEREO_CAPTURE_ENABLED
 endif
 ifneq ($(filter atoll,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_ATOLL
@@ -373,6 +373,9 @@ LOCAL_MODULE_OWNER := qti
 
 LOCAL_VENDOR_MODULE := true
 
+ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 LOCAL_CFLAGS += -Wno-unused-variable

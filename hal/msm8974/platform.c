@@ -90,7 +90,7 @@
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
-    defined (PLATFORM_ATOLL)
+    defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL)
 
 #include <sound/devdep_params.h>
 #endif
@@ -3185,11 +3185,11 @@ void *platform_init(struct audio_device *adev)
         }
     }
     /* Check for Ambisonic Capture Enablement */
-    if (property_get_bool("vendor.audio.ambisonic.capture",false))
+    if (property_get_bool("persist.vendor.audio.ambisonic.capture",false))
         my_data->ambisonic_capture = true;
 
     /* Check for Ambisonic Profile Assignment*/
-    if (property_get_bool("vendor.audio.ambisonic.auto.profile",false))
+    if (property_get_bool("persist.vendor.audio.ambisonic.auto.profile",false))
         my_data->ambisonic_profile = true;
 
     if (audio_extn_is_wsa_enabled()
@@ -3761,7 +3761,7 @@ acdb_init_fail:
         }
     }
 
-    if (property_get_bool("vendor.audio.apptype.multirec.enabled", false))
+    if (property_get_bool("persist.vendor.audio.apptype.multirec.enabled", false))
         my_data->use_generic_handset = true;
 
     /* Initialize keep alive for HDMI/loopback silence */
@@ -6219,8 +6219,6 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (audio_extn_is_hifi_filter_enabled(adev, out, snd_device,
              my_data->codec_variant, channel_count, 1)) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER;
-        } else if (devices & SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER) {
-                snd_device = SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER;
         } else if (devices & AUDIO_DEVICE_OUT_LINE) {
                 snd_device = SND_DEVICE_OUT_LINE;
         } else
@@ -8437,7 +8435,8 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
     int controller = -1;
     int stream = -1;
 
-    if (usecase) {
+    if (usecase != NULL && usecase->stream.out &&
+            usecase->type == PCM_PLAYBACK) {
         controller = usecase->stream.out->extconn.cs.controller;
         stream = usecase->stream.out->extconn.cs.stream;
     }
@@ -11246,7 +11245,7 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
-    defined (PLATFORM_ATOLL)
+    defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {
