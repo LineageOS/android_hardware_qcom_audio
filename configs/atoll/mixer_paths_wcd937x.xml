@@ -2769,10 +2769,18 @@
     </path>
 
     <path name="hph-highquality-mode">
+        <ctl name="RX_HPH_PWR_MODE" value="LOHIFI" />
+        <ctl name="RX HPH Mode" value="CLS_H_LOHIFI" />
     </path>
 
     <path name="hph-lowpower-mode">
+        <ctl name="RX_HPH_PWR_MODE" value="ULP" />
+        <ctl name="RX HPH Mode" value="CLS_H_ULP" />
     </path>
+
+     <path name="hph-class-ab-mode">
+        <ctl name="RX HPH Mode" value="CLS_AB" />
+     </path>
 
     <path name="true-native-mode">
     </path>
