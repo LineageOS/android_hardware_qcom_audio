@@ -720,8 +720,8 @@ qal_stream_type_t StreamOutPrimary::GetQalStreamType(
                                     audio_output_flags_t halStreamFlags) {
     qal_stream_type_t qalStreamType = QAL_STREAM_LOW_LATENCY;
 
-    if (halStreamFlags == (AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_PRIMARY)) {
-        qalStreamType = QAL_STREAM_DEEP_BUFFER;
+    if ((halStreamFlags & AUDIO_OUTPUT_FLAG_FAST) != 0) {
+        qalStreamType = QAL_STREAM_LOW_LATENCY;
     } else if (halStreamFlags ==
                     (AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_RAW)) {
         qalStreamType = QAL_STREAM_RAW;
@@ -744,9 +744,7 @@ qal_stream_type_t StreamOutPrimary::GetQalStreamType(
                                   AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
         // low latency for now
         qalStreamType = QAL_STREAM_COMPRESSED;
-    } else if (halStreamFlags == (AUDIO_OUTPUT_FLAG_DIRECT|
-                                      AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|
-                                  AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
+    } else if (halStreamFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         // dsd_compress_passthrough
         qalStreamType = QAL_STREAM_COMPRESSED;
     } else if (halStreamFlags == (AUDIO_OUTPUT_FLAG_DIRECT|
@@ -875,7 +873,29 @@ int StreamOutPrimary::Open() {
 
     uint8_t channels = 0;
     struct qal_device qalDevice;
-    struct qal_channel_info *ch_info;
+    struct qal_channel_info *ch_info, *dev_ch_info;
+
+    /* TODO: Update channels based on device */
+    channels = 2;
+    dev_ch_info = (struct qal_channel_info *) calloc(1,sizeof(uint16_t) +
+            sizeof(uint8_t)*channels);
+    if (dev_ch_info == NULL) {
+      ALOGE("Allocation failed for channel map");
+      ret = -ENOMEM;
+      goto error_open_devc;
+    }
+ 
+    qalDevice.id = qal_device_id_;
+    qalDevice.config.sample_rate = config_.sample_rate;
+    qalDevice.config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    qalDevice.config.ch_info = dev_ch_info;
+    qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    if (qalDevice.id == QAL_DEVICE_OUT_SPEAKER) {
+         qalDevice.config.sample_rate = 48000;
+         dev_ch_info->channels = 2;
+         dev_ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+         dev_ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+    }
 
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
     ch_info = (struct qal_channel_info *)calloc(
@@ -891,11 +911,6 @@ int StreamOutPrimary::Open() {
     if (ch_info->channels > 1 )
       ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
-    qalDevice.id = qal_device_id_;
-    qalDevice.config.sample_rate = config_.sample_rate;
-    qalDevice.config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    qalDevice.config.ch_info = ch_info;
-    qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
     streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
     streamAttributes_.flags = (qal_stream_flags_t)flags_;
     streamAttributes_.direction = QAL_AUDIO_OUTPUT;
@@ -915,7 +930,7 @@ int StreamOutPrimary::Open() {
           streamAttributes.out_media_config.sample_rate = msample_rate;
        if (mchannels)
           streamAttributes.out_media_config.ch_info->channels = mchannels;
-       streamAttributes.out_media_config.aud_fmt_id = getFormatId.at(config_.format);
+       streamAttributes.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
     }
     ALOGE("channels %d samplerate %d format id %d \n",
             streamAttributes.out_media_config.ch_info->channels,
@@ -948,6 +963,9 @@ int StreamOutPrimary::Open() {
 error_open:
     if (ch_info)
         free(ch_info);
+error_open_devc:
+    if (dev_ch_info)
+        free(dev_ch_info);
     return ret;
 }
 

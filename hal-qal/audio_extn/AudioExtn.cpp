@@ -231,9 +231,12 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
                 param_payload->qal_snd_dec.wma_dec.encodeopt2);
     }
 
-    else if (config_->offload_info.format == AUDIO_FORMAT_AAC || config_->offload_info.format == AUDIO_FORMAT_AAC_ADTS 
-             || config_->offload_info.format == AUDIO_FORMAT_AAC_ADIF || config_->offload_info.format == AUDIO_FORMAT_AAC_LATM) {
-       param_payload->qal_snd_dec.aac_dec.audio_obj_type = 2;
+    else if ((config_->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC ||
+             (config_->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADTS ||
+             (config_->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADIF ||
+             (config_->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_LATM) {
+
+       param_payload->qal_snd_dec.aac_dec.audio_obj_type = 29;
        param_payload->qal_snd_dec.aac_dec.pce_bits_size = 0;
        ALOGE("AAC params: aot %d pce %d", param_payload->qal_snd_dec.aac_dec.audio_obj_type, param_payload->qal_snd_dec.aac_dec.pce_bits_size);
        ALOGE("format %x", config_->offload_info.format);
