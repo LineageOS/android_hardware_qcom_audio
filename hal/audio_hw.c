@@ -3044,10 +3044,11 @@ int start_input_stream(struct stream_in *in)
                     pcm_close(in->pcm);
                     in->pcm = NULL;
                 }
-                if (pcm_open_retry_count-- == 0) {
+                if (pcm_open_retry_count == 0) {
                     ret = -EIO;
                     goto error_open;
                 }
+                pcm_open_retry_count--;
                 usleep(PROXY_OPEN_WAIT_TIME * 1000);
                 continue;
             }
@@ -3536,9 +3537,10 @@ struct pcm* pcm_open_prepare_helper(unsigned int snd_card, unsigned int pcm_devi
                 pcm_close(pcm);
                 pcm = NULL;
             }
-            if (pcm_open_retry_count-- == 0)
+            if (pcm_open_retry_count == 0)
                 return NULL;
 
+            pcm_open_retry_count--;
             usleep(PROXY_OPEN_WAIT_TIME * 1000);
             continue;
         }
