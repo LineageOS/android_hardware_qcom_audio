@@ -93,38 +93,47 @@ AudioDevice::~AudioDevice() {
 
 static int32_t qal_callback(qal_stream_handle_t *stream_handle,
                             uint32_t event_id, uint32_t *event_data,
-                            void *cookie){
+                            void *cookie)
+{
+    stream_callback_event_t event;
+    StreamOutPrimary *astream_out = static_cast<StreamOutPrimary *> (cookie);
+
     ALOGD("%s: stream_handle (%p), event_id (%x), event_data (%p), cookie (%p)",
-                __func__,
-                stream_handle,
-                event_id,
-                event_data,
-                cookie);
-  int status = 0;
-  StreamOutPrimary *astream_out = static_cast<StreamOutPrimary *> (cookie);
-  switch (event_id)
-  {
-      case QAL_STREAM_CBK_EVENT_WRITE_READY:
-      {
-         std::lock_guard<std::mutex> write_guard (astream_out->write_wait_mutex_);
-         astream_out->write_ready_ = true;
-         ALOGE("%s: received WRITE_READY event\n",__func__);
-      }
-      (astream_out->write_condition_).notify_all();
-      break;
-      case QAL_STREAM_CBK_EVENT_DRAIN_READY:
-      {
-         std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
-         astream_out->drain_ready_ = true;
-         ALOGE("%s: received DRAIN_READY event\n",__func__);
-      }
-      (astream_out->drain_condition_).notify_all();
-      break;
-      case QAL_STREAM_CBK_EVENT_ERROR:
-         status = -1;
-      break;
-  }
-  return status;
+          __func__, stream_handle, event_id, event_data, cookie);
+
+    switch (event_id)
+    {
+        case QAL_STREAM_CBK_EVENT_WRITE_READY:
+        {
+            std::lock_guard<std::mutex> write_guard (astream_out->write_wait_mutex_);
+            astream_out->write_ready_ = true;
+            ALOGE("%s: received WRITE_READY event\n",__func__);
+            (astream_out->write_condition_).notify_all();
+            event = STREAM_CBK_EVENT_WRITE_READY;
+        }
+        break;
+
+    case QAL_STREAM_CBK_EVENT_DRAIN_READY:
+        {
+            std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
+            astream_out->drain_ready_ = true;
+            ALOGE("%s: received DRAIN_READY event\n",__func__);
+            (astream_out->drain_condition_).notify_all();
+            event = STREAM_CBK_EVENT_DRAIN_READY;
+            }
+        break;
+    case QAL_STREAM_CBK_EVENT_ERROR:
+        event = STREAM_CBK_EVENT_ERROR;
+        break;
+    default:
+        ALOGE("%s: Invalid event id:%d\n",__func__, event_id);
+        return -EINVAL;
+    }
+
+    if (astream_out && astream_out->client_callback)
+        astream_out->client_callback(event, NULL, astream_out->client_cookie);
+
+    return 0;
 }
 
 
@@ -208,6 +217,109 @@ static uint32_t astream_out_get_channels(const struct audio_stream *stream) {
     }
 }
 
+static int astream_pause(struct audio_stream_out *stream)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device",__func__);
+        return -EINVAL;
+    }
+
+    astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    if (!astream_out) {
+        ALOGE("%s: unable to get audio stream",__func__);
+        return -EINVAL;
+    }
+
+    return astream_out->Pause();
+}
+
+static int astream_resume(struct audio_stream_out *stream)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device",__func__);
+        return -EINVAL;
+    }
+
+    astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    if (!astream_out) {
+        ALOGE("%s: unable to get audio stream",__func__);
+        return -EINVAL;
+    }
+
+    return astream_out->Resume();
+}
+
+static int astream_flush(struct audio_stream_out *stream)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device",__func__);
+        return -EINVAL;
+    }
+
+    astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    if (!astream_out) {
+        ALOGE("%s: unable to get audio stream",__func__);
+        return -EINVAL;
+    }
+
+    return astream_out->Flush();
+}
+
+static int astream_drain(struct audio_stream_out *stream, audio_drain_type_t type)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device",__func__);
+        return -EINVAL;
+    }
+
+    astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    if (!astream_out) {
+        ALOGE("%s: unable to get audio stream",__func__);
+        return -EINVAL;
+    }
+
+    return astream_out->Drain(type);
+}
+
+static int astream_set_callback(struct audio_stream_out *stream, stream_callback_t callback, void *cookie)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+
+    if (!callback) {
+        ALOGE("%s: NULL Callback passed",__func__);
+        return -EINVAL;
+    }
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device",__func__);
+        return -EINVAL;
+    }
+
+    astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    if (!astream_out) {
+        ALOGE("%s: unable to get audio stream",__func__);
+        return -EINVAL;
+    }
+
+    astream_out->client_callback = callback;
+    astream_out->client_cookie = cookie;
+
+    return 0;
+}
+
 static int astream_out_standby(struct audio_stream *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
@@ -216,7 +328,7 @@ static int astream_out_standby(struct audio_stream *stream) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
         ALOGE("%s: unable to get audio device",__func__);
-        return EINVAL;
+        return -EINVAL;
     }
 
     if (astream_out) {
@@ -541,7 +653,7 @@ static int astream_in_standby(struct audio_stream *stream) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
         ALOGE("%s: unable to get audio device",__func__);
-        return EINVAL;
+        return -EINVAL;
     }
 
     if (astream_in) {
@@ -576,7 +688,7 @@ static int astream_in_set_gain(struct audio_stream_in *stream, float gain) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
         ALOGE("%s: unable to get audio device",__func__);
-        return EINVAL;
+        return -EINVAL;
     }
 
     if (astream_in) {
@@ -785,6 +897,73 @@ int StreamOutPrimary::FillHalFnPtrs() {
     stream_.get()->get_presentation_position =
                                             astream_out_get_presentation_position;
     stream_.get()->update_source_metadata = NULL;
+    stream_.get()->pause = astream_pause;
+    stream_.get()->resume = astream_resume;
+    stream_.get()->drain = astream_drain;
+    stream_.get()->flush = astream_flush;
+    stream_.get()->set_callback = astream_set_callback;
+    return ret;
+}
+
+int StreamOutPrimary::Pause() {
+    int ret = 0;
+
+    if (qal_stream_handle_) {
+        ret = qal_stream_pause(qal_stream_handle_);
+    }
+    if (ret)
+        return -EINVAL;
+    else
+        return ret;
+}
+
+int StreamOutPrimary::Resume() {
+    int ret = 0;
+
+    if (qal_stream_handle_) {
+        ret = qal_stream_resume(qal_stream_handle_);
+    }
+    if (ret)
+        return -EINVAL;
+    else
+        return ret;
+}
+
+int StreamOutPrimary::Flush() {
+    int ret = 0;
+
+    if (qal_stream_handle_) {
+        ret = qal_stream_flush(qal_stream_handle_);
+    }
+
+    if (ret)
+        return -EINVAL;
+    else
+        return ret;
+}
+
+int StreamOutPrimary::Drain(audio_drain_type_t type) {
+    int ret = 0;
+    qal_drain_type_t qalDrainType;
+
+    switch (type) {
+      case AUDIO_DRAIN_ALL:
+           qalDrainType = QAL_DRAIN;
+           break;
+      case AUDIO_DRAIN_EARLY_NOTIFY:
+           qalDrainType = QAL_DRAIN_PARTIAL;
+           break;
+    default:
+           ALOGE("%s: Invalid drain type:%d\n", __func__, type);
+           return -EINVAL;
+    }
+
+    if (qal_stream_handle_)
+        ret = qal_stream_drain(qal_stream_handle_, qalDrainType);
+
+    if (ret) {
+        ALOGE("%s: Invalid drain type:%d\n", __func__, type);
+    }
 
     return ret;
 }

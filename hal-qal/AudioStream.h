@@ -92,6 +92,9 @@ public:
     std::mutex drain_wait_mutex_;
     std::condition_variable drain_condition_;
     bool drain_ready_;
+    stream_callback_t client_callback;
+    void *client_cookie;
+
 protected:
     struct qal_stream_attributes streamAttributes_;
     qal_stream_handle_t* qal_stream_handle_;
@@ -117,6 +120,10 @@ public:
     int SetVolume(float left, float right);
     int SetParameters(struct str_parms *parms);
     int GetFramesWritten();
+    int Pause();
+    int Resume();
+    int Drain(audio_drain_type_t type);
+    int Flush();
     ssize_t Write(const void *buffer, size_t bytes);
     int Open();
     void GetStreamHandle(audio_stream_out** stream);
