@@ -548,6 +548,7 @@ static int astream_in_add_audio_effect(
 {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
+    return 0;
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
@@ -567,6 +568,7 @@ static int astream_in_remove_audio_effect(const struct audio_stream *stream,
 {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
+    return 0;
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
@@ -618,6 +620,7 @@ static int astream_in_get_active_microphones(
 static uint32_t astream_in_get_sample_rate(const struct audio_stream *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
+    ALOGE("%s: Inside",__func__);
 
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
@@ -739,7 +742,7 @@ qal_device_id_t StreamPrimary::GetQalDeviceId(audio_devices_t halDeviceId) {
             qalDeviceId = QAL_DEVICE_OUT_SPEAKER;
             break;
         case AUDIO_DEVICE_OUT_EARPIECE:
-            qalDeviceId = QAL_DEVICE_OUT_EARPIECE;
+            qalDeviceId = QAL_DEVICE_OUT_SPEAKER;
             break;
         case AUDIO_DEVICE_OUT_WIRED_HEADSET:
             qalDeviceId = QAL_DEVICE_OUT_WIRED_HEADSET;
@@ -822,6 +825,10 @@ qal_device_id_t StreamPrimary::GetQalDeviceId(audio_devices_t halDeviceId) {
 qal_stream_type_t StreamInPrimary::GetQalStreamType(
                                         audio_input_flags_t halStreamFlags) {
     qal_stream_type_t qalStreamType = QAL_STREAM_LOW_LATENCY;
+    if ((halStreamFlags & AUDIO_INPUT_FLAG_VOIP_TX)!=0){
+         qalStreamType = QAL_STREAM_VOIP_TX;
+         return qalStreamType;
+    }
     switch (halStreamFlags) {
         case AUDIO_INPUT_FLAG_FAST:
         case AUDIO_INPUT_FLAG_MMAP_NOIRQ:
@@ -853,7 +860,10 @@ qal_stream_type_t StreamInPrimary::GetQalStreamType(
 qal_stream_type_t StreamOutPrimary::GetQalStreamType(
                                     audio_output_flags_t halStreamFlags) {
     qal_stream_type_t qalStreamType = QAL_STREAM_LOW_LATENCY;
-
+     if ((halStreamFlags & AUDIO_OUTPUT_FLAG_VOIP_RX)!=0){
+         qalStreamType = QAL_STREAM_VOIP_RX;
+         return qalStreamType;
+    }
     if ((halStreamFlags & AUDIO_OUTPUT_FLAG_FAST) != 0) {
         qalStreamType = QAL_STREAM_LOW_LATENCY;
     } else if (halStreamFlags ==
@@ -885,6 +895,8 @@ qal_stream_type_t StreamOutPrimary::GetQalStreamType(
                                       AUDIO_OUTPUT_FLAG_VOIP_RX)) {
         // voice rx
         qalStreamType = QAL_STREAM_VOICE_CALL_RX;
+    } else if (halStreamFlags == AUDIO_OUTPUT_FLAG_VOIP_RX) {
+        qalStreamType = QAL_STREAM_VOIP_RX;
     } else if (halStreamFlags == AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
         // incall_music_uplink
         qalStreamType = QAL_STREAM_VOICE_CALL_MUSIC;
@@ -1440,6 +1452,7 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
         }
     }
 exit:
+    status = 0;
     return status;
 }
 
@@ -1484,8 +1497,10 @@ int StreamInPrimary::Open() {
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
     ch_info->channels = channels;
     ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-    if (ch_info->channels > 1 )
+    if (ch_info->channels > 1 ) {
       ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+      ch_info->ch_map[2] = QAL_CHMAP_CHANNEL_C;
+    }
 
     qalDevice.id = QAL_DEVICE_IN_HANDSET_MIC;
     qalDevice.config.sample_rate = config_.sample_rate;
@@ -1493,7 +1508,9 @@ int StreamInPrimary::Open() {
     qalDevice.config.ch_info = ch_info;
     qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
 
-    streamAttributes.type = QAL_STREAM_LOW_LATENCY;
+    streamAttributes.type = StreamInPrimary::GetQalStreamType(flags_);;
+    //streamAttributes.type = QAL_STREAM_COMPRESSED;
+    //streamAttributes.info  //Optional
     streamAttributes.flags = (qal_stream_flags_t)0;
     streamAttributes.direction = QAL_AUDIO_INPUT;
     streamAttributes.in_media_config.sample_rate = config_.sample_rate;

@@ -82,7 +82,7 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::CreateStreamOut(
                                               fnp_offload_effect_stop_output_));
     astream->GetStreamHandle(stream_out);
     stream_out_list_.push_back(astream);
-
+    ALOGE("%s: output stream %d %p", __func__,(int)stream_out_list_.size(), stream_out);
     return astream;
 }
 
@@ -108,6 +108,7 @@ std::shared_ptr<StreamInPrimary> AudioDevice::CreateStreamIn(
                                               devices, flags, config, source));
     astream->GetStreamHandle(stream_in);
     stream_in_list_.push_back(astream);
+    ALOGE("%s: input stream %d %p", __func__,(int)stream_in_list_.size(), stream_in); 
     return astream;
 }
 
@@ -467,7 +468,6 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(audio_stream_t* stre
 
 std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_io_handle_t handle) {
     std::shared_ptr<StreamInPrimary> astream_in = NULL;
-
     for (int i = 0; i < stream_in_list_.size(); i++){
         if (stream_in_list_[i]->handle_ == handle) {
             ALOGI("%s: Found existing stream associated with iohandle %d",
@@ -483,14 +483,14 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_io_handle_t han
 std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* stream_in) {
     std::shared_ptr<StreamInPrimary> astream_in;
 
-    for (int i = 0; i < stream_out_list_.size(); i++) {
+    ALOGE("%s: stream_in(%p)",__func__, stream_in);
+    for (int i = 0; i < stream_in_list_.size(); i++) {
         if (stream_in_list_[i]->stream_.get() == (audio_stream_in*) stream_in) {
-            ALOGI("%s: Found stream associated with astream_in", __func__);
+            ALOGI("%s: Found existing stream associated with astream_in", __func__);
             astream_in = stream_in_list_[i];
             break;
         }
     }
-
     return astream_in;
 }
 
