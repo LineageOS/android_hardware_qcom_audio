@@ -1495,15 +1495,25 @@ int StreamInPrimary::Open() {
     }
 
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
-    ch_info->channels = channels;
-    ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-    if (ch_info->channels > 1 ) {
+    //need to convert channel mask to qal channel mask
+    if (channels == 3) {
+      qalDevice.id = QAL_DEVICE_IN_TRI_MIC; //To-Do: convert into QAL Device
+      ch_info->channels = 3;
+      ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
       ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
       ch_info->ch_map[2] = QAL_CHMAP_CHANNEL_C;
+    } else if (channels == 2) {
+      qalDevice.id = QAL_DEVICE_IN_SPEAKER_MIC; //To-Do: convert into QAL Device
+      ch_info->channels = 2;
+      ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+      ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+    } else {
+      qalDevice.id = QAL_DEVICE_IN_SPEAKER_MIC; //To-Do: convert into QAL Device
+      ch_info->channels = 1;
+      ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
     }
 
-    qalDevice.id = QAL_DEVICE_IN_HANDSET_MIC;
-    qalDevice.config.sample_rate = config_.sample_rate;
+    qalDevice.config.sample_rate = 48000;
     qalDevice.config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     qalDevice.config.ch_info = ch_info;
     qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;

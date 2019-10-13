@@ -211,11 +211,35 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                   const char *address __unused,
                                   audio_source_t source) {
     int32_t ret = 0;
-    std::shared_ptr<StreamInPrimary> astream;
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
+    bool ret_error = false;
+    std::shared_ptr<StreamInPrimary> astream = nullptr;
+    ALOGE("%s: inside",__func__);
+    std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
         ALOGE("%s: invalid adevice object",__func__);
         goto exit;
+    }
+    if ((config->format == AUDIO_FORMAT_PCM_FLOAT) ||
+        (config->format == AUDIO_FORMAT_PCM_32_BIT) ||
+        (config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) ||
+        (config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
+    //astream->bit_width = 24;
+    if ((source != AUDIO_SOURCE_UNPROCESSED) &&
+            (source != AUDIO_SOURCE_CAMCORDER)) {
+        config->format = AUDIO_FORMAT_PCM_16_BIT;
+        if (config->sample_rate > 48000)
+            config->sample_rate = 48000;
+        ret_error = true;
+    } else if (!(config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED ||
+                config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
+        config->format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+        ret_error = true;
+    }
+
+    if (ret_error) {
+        ret = -EINVAL;
+        goto exit;
+    }
     }
 
     if (config->format == AUDIO_FORMAT_PCM_FLOAT){
@@ -230,9 +254,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         adevice->CreateStreamIn(handle, devices, flags, config,
                                 stream_in, source);
     }
-
-exit:
-    return ret;
+    //Need keep track of the list of streams that are allocated
+  exit:
+      return ret;
 }
 
 static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
