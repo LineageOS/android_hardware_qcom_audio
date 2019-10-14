@@ -219,7 +219,7 @@ static uint32_t astream_out_get_channels(const struct audio_stream *stream) {
 
 static int astream_pause(struct audio_stream_out *stream)
 {
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
@@ -238,7 +238,7 @@ static int astream_pause(struct audio_stream_out *stream)
 
 static int astream_resume(struct audio_stream_out *stream)
 {
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
@@ -257,7 +257,7 @@ static int astream_resume(struct audio_stream_out *stream)
 
 static int astream_flush(struct audio_stream_out *stream)
 {
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
@@ -276,7 +276,7 @@ static int astream_flush(struct audio_stream_out *stream)
 
 static int astream_drain(struct audio_stream_out *stream, audio_drain_type_t type)
 {
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
@@ -295,7 +295,7 @@ static int astream_drain(struct audio_stream_out *stream, audio_drain_type_t typ
 
 static int astream_set_callback(struct audio_stream_out *stream, stream_callback_t callback, void *cookie)
 {
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!callback) {
@@ -358,7 +358,9 @@ static int astream_out_get_presentation_position(
     std::ignore = timestamp;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
-
+    uint64_t timestp = 0;
+    int ret = 0;
+    ALOGE("%s: Enter",__func__);
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
@@ -367,19 +369,39 @@ static int astream_out_get_presentation_position(
     }
 
     if (astream_out) {
-       *frames = astream_out->GetFramesWritten();
+       ALOGE("%s: flag %x",__func__, (astream_out->GetQalStreamType(astream_out->flags_)));
+       switch (astream_out->GetQalStreamType(astream_out->flags_)) {
+       case QAL_STREAM_COMPRESSED:
+          ALOGE("%s: switch compress flag %x",__func__, (astream_out->GetQalStreamType(astream_out->flags_)));
+          ret = astream_out->GetTimestamp(&timestp);
+          if (ret != 0){
+             ALOGE("%s: GetTimestamp failed %d",__func__, ret);
+             return ret;
+          }
+          ALOGE("%s: timestp %lld",__func__, ((long long) timestp));
+          *frames = timestp/1000000;
+          ALOGE("%s: frames %lld ",__func__, ((long long) *frames));
+          clock_gettime(CLOCK_MONOTONIC, timestamp);
+          break;
+       default:
+          ALOGE("%s: entered default",__func__);
+          *frames = astream_out->GetFramesWritten();
+          ALOGE("%s: frames %lld ",__func__, ((long long) *frames));
+          break;
+       }
     } else {
         ALOGE("%s: unable to get audio stream",__func__);
         return -EINVAL;
     }
 
-    return 0;
+    return ret;
 }
 
 static int out_get_render_position(const struct audio_stream_out *stream,
                                    uint32_t *dsp_frames) {
     std::ignore = stream;
     std::ignore = dsp_frames;
+    ALOGE("%s: enter",__func__);
 
     return 0;
 }
@@ -388,7 +410,7 @@ static int astream_out_set_parameters(struct audio_stream *stream,
                                       const char *kvpairs) {
     int ret = 0;
     struct str_parms *parms;
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
 	if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
@@ -524,7 +546,7 @@ static int astream_in_add_audio_effect(
                                 const struct audio_stream *stream,
                                 effect_handle_t effect)
 {
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
@@ -543,7 +565,7 @@ static int astream_in_add_audio_effect(
 static int astream_in_remove_audio_effect(const struct audio_stream *stream,
                                           effect_handle_t effect)
 {
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::getInstance();
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
@@ -980,7 +1002,7 @@ int StreamOutPrimary::Standby() {
     }
 
     stream_started_ = false;
-    if (streamAttributes_.type == QAL_STREAM_COMPRESSED)
+    if (streamAttributes.type == QAL_STREAM_COMPRESSED)
         ret = StopOffloadEffects(handle_, qal_stream_handle_);
 
     if (qal_stream_handle_) {
@@ -1049,7 +1071,6 @@ int StreamOutPrimary::GetFramesWritten() {
 
 int StreamOutPrimary::Open() {
     int ret = -EINVAL;
-
     uint8_t channels = 0;
     struct qal_device qalDevice;
     struct qal_channel_info *ch_info, *dev_ch_info;
@@ -1090,13 +1111,13 @@ int StreamOutPrimary::Open() {
     if (ch_info->channels > 1 )
       ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
-    streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
-    streamAttributes_.flags = (qal_stream_flags_t)flags_;
-    streamAttributes_.direction = QAL_AUDIO_OUTPUT;
-    streamAttributes_.out_media_config.sample_rate = config_.sample_rate;
-    streamAttributes_.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes_.out_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
-    streamAttributes_.out_media_config.ch_info = ch_info;
+    streamAttributes.type = StreamOutPrimary::GetQalStreamType(flags_);
+    streamAttributes.flags = (qal_stream_flags_t)flags_;
+    streamAttributes.direction = QAL_AUDIO_OUTPUT;
+    streamAttributes.out_media_config.sample_rate = config_.sample_rate;
+    streamAttributes.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    streamAttributes.out_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    streamAttributes.out_media_config.ch_info = ch_info;
 
     if (streamAttributes.type == QAL_STREAM_COMPRESSED) {
        streamAttributes.flags = (qal_stream_flags_t)(1 << QAL_STREAM_FLAG_NON_BLOCKING);
@@ -1152,6 +1173,31 @@ uint32_t StreamOutPrimary::GetBufferSize() {
     return BUF_SIZE_PLAYBACK * NO_OF_BUF;
 }
 
+int StreamOutPrimary::GetTimestamp(uint64_t *timestp) {
+    int ret = 0;
+    if (!qal_stream_handle_) {
+       ALOGE("%s: qal_stream_handle_ NULL",__func__);
+       *timestp = 0;
+       return 0;
+    }
+    qal_session_time tstamp;
+    uint64_t timestamp = 0;
+    ret = qal_get_timestamp(qal_stream_handle_, &tstamp);
+    if (ret != 0){
+       ALOGE("%s: qal_get_timestamp failed %d",__func__, ret);
+       goto exit;
+    }
+    timestamp = (uint64_t)tstamp.session_time.value_msw;
+    timestamp = timestamp  << 32 | tstamp.session_time.value_lsw;
+    ALOGE("%s: session msw %u",__func__, tstamp.session_time.value_msw);
+    ALOGE("%s: session lsw %u",__func__, tstamp.session_time.value_lsw);
+    ALOGE("%s: session timespec %lld",__func__, ((long long) timestamp));
+    timestamp *= (streamAttributes.out_media_config.sample_rate);
+    *timestp = timestamp;
+exit:
+    return ret;
+}
+
 ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
     int ret = 0;
     struct qal_buffer qalBuffer;
@@ -1180,8 +1226,8 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
         }
 
         stream_started_ = true;
-        if (streamAttributes_.type == QAL_STREAM_COMPRESSED)
-            ret = StartOffloadEffects(handle_, qal_stream_handle_);
+        if (streamAttributes.type == QAL_STREAM_COMPRESSED)
+		    ret = StartOffloadEffects(handle_, qal_stream_handle_);
     }
 
     local_bytes_written = qal_stream_write(qal_stream_handle_, &qalBuffer);
@@ -1269,7 +1315,7 @@ StreamOutPrimary::~StreamOutPrimary() {
     ALOGD("%s: close stream, handle(%x), qal_stream_handle (%p)", __func__,
           handle_, qal_stream_handle_);
 
-    if (streamAttributes_.type == QAL_STREAM_COMPRESSED)
+    if (streamAttributes.type == QAL_STREAM_COMPRESSED)
         StopOffloadEffects(handle_, qal_stream_handle_);
 
     if (qal_stream_handle_) {
@@ -1419,7 +1465,6 @@ int StreamInPrimary::SetGain(float gain) {
 
 int StreamInPrimary::Open() {
     int ret = -EINVAL;
-    struct qal_stream_attributes streamAttributes;
     uint8_t channels = 0;
     struct qal_device qalDevice;
     struct qal_channel_info *ch_info =
@@ -1449,14 +1494,14 @@ int StreamInPrimary::Open() {
     qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
 
     streamAttributes.type = QAL_STREAM_LOW_LATENCY;
-    streamAttributes_.flags = (qal_stream_flags_t)0;
-    streamAttributes_.direction = QAL_AUDIO_INPUT;
-    streamAttributes_.in_media_config.sample_rate = config_.sample_rate;
-    streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes_.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
-    streamAttributes_.in_media_config.ch_info = ch_info;
+    streamAttributes.flags = (qal_stream_flags_t)0;
+    streamAttributes.direction = QAL_AUDIO_INPUT;
+    streamAttributes.in_media_config.sample_rate = config_.sample_rate;
+    streamAttributes.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    streamAttributes.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    streamAttributes.in_media_config.ch_info = ch_info;
     ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
-    ret = qal_stream_open(&streamAttributes_,
+    ret = qal_stream_open(&streamAttributes,
                           1,
                           &qalDevice,
                           0,
