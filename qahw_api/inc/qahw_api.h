@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2011 The Android Open Source Project *
@@ -484,6 +484,75 @@ int qahw_set_audio_port_config(qahw_module_handle_t *hw_module,
                      const struct audio_port_config *config);
 
 void qahw_register_qas_death_notify_cb(audio_error_callback cb, void* context);
+
+/* updated new stream APIs to support voice and Audio use cases */
+
+int qahw_stream_open(qahw_module_handle_t *hw_module,
+                     struct qahw_stream_attributes attr,
+                     uint32_t num_of_devices,
+                     qahw_device_t *devices,
+                     uint32_t no_of_modifiers,
+                     struct qahw_modifier_kv *modifiers,
+                     qahw_stream_callback_t cb,
+                     void *cookie,
+                     qahw_stream_handle_t **stream_handle);
+
+int qahw_stream_close(qahw_stream_handle_t *stream_handle);
+
+int qahw_stream_start(qahw_stream_handle_t *stream_handle);
+
+int qahw_stream_stop(qahw_stream_handle_t *stream_handle);
+
+int qahw_stream_set_device(qahw_stream_handle_t *stream_handle,
+                           uint32_t num_of_dev,
+                           qahw_device_t *devices);
+
+int qahw_stream_get_device(qahw_stream_handle_t *stream_handle,
+                           uint32_t *num_of_dev,
+                           qahw_device_t **devices);
+
+int qahw_stream_set_volume(qahw_stream_handle_t *stream_handle,
+                           struct qahw_volume_data vol_data);
+
+int qahw_stream_get_volume(qahw_stream_handle_t *stream_handle,
+                           struct qahw_volume_data **vol_data);
+
+int qahw_stream_set_mute(qahw_stream_handle_t *stream_handle,
+                         struct qahw_mute_data mute_data);
+
+int qahw_stream_get_mute(qahw_stream_handle_t *stream_handle,
+                         struct qahw_mute_data *mute_data);
+
+ssize_t qahw_stream_read(qahw_stream_handle_t *stream_handle,
+                         qahw_buffer_t *in_buf);
+
+ssize_t qahw_stream_write(qahw_stream_handle_t *stream_handle,
+                          qahw_buffer_t *out_buf);
+
+int32_t qahw_stream_pause(qahw_stream_handle_t *stream_handle);
+
+int32_t qahw_stream_standby(qahw_stream_handle_t *stream_handle);
+
+int32_t qahw_stream_resume(qahw_stream_handle_t *stream_handle);
+
+int32_t qahw_stream_flush(qahw_stream_handle_t *stream_handle);
+
+int32_t qahw_stream_drain(qahw_stream_handle_t *stream_handle,
+                          qahw_drain_type_t type);
+
+int32_t qahw_stream_get_buffer_size(const qahw_stream_handle_t *stream_handle,
+                                    size_t *in_buffer, size_t *out_buffer);
+
+int32_t qahw_stream_set_buffer_size(const qahw_stream_handle_t *stream_handle,
+                                    size_t in_buffer, size_t out_buffer);
+
+int32_t qahw_stream_set_parameters(qahw_stream_handle_t *stream_handle,
+                                   uint32_t param_id,
+                                   qahw_param_payload *param_payload);
+
+int32_t qahw_stream_get_parameters(qahw_stream_handle_t *stream_handle,
+                                   uint32_t param_id,
+                                   qahw_param_payload *param_payload);
 
 __END_DECLS
 
