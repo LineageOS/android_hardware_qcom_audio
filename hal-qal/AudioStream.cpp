@@ -965,7 +965,7 @@ int StreamOutPrimary::Resume() {
 
 int StreamOutPrimary::Flush() {
     int ret = 0;
-
+    ALOGD("%s: Enter \n", __func__);
     if (qal_stream_handle_) {
         ret = qal_stream_flush(qal_stream_handle_);
     }
@@ -1291,7 +1291,7 @@ StreamOutPrimary::StreamOutPrimary(
                         offload_effects_start_output start_offload_effect,
                         offload_effects_stop_output stop_offload_effect) {
 
-    stream_ = std::shared_ptr<audio_stream_out> (new audio_stream_out);
+    stream_ = std::shared_ptr<audio_stream_out> (new audio_stream_out());
     qal_stream_handle_ = NULL;
     if (!stream_) {
         ALOGE("%s: No memory allocated for stream_",__func__);
@@ -1592,7 +1592,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
                                  struct audio_config *config,
                                  audio_source_t source) {
 
-    stream_ = std::shared_ptr<audio_stream_in> (new audio_stream_in);
+    stream_ = std::shared_ptr<audio_stream_in> (new audio_stream_in());
     qal_stream_handle_ = NULL;
 
     if (config) {

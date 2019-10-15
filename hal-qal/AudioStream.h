@@ -97,12 +97,12 @@ public:
 
 protected:
     struct qal_stream_attributes streamAttributes;
-    qal_stream_handle_t* qal_stream_handle_;
-    audio_io_handle_t handle_;
-    qal_device_id_t qal_device_id_;
-    struct audio_config config_;
-    char address_[AUDIO_DEVICE_MAX_ADDRESS_LEN];
-    bool stream_started_;
+    qal_stream_handle_t*      qal_stream_handle_;
+    audio_io_handle_t         handle_;
+    qal_device_id_t           qal_device_id_;
+    struct audio_config       config_;
+    char                      address_[AUDIO_DEVICE_MAX_ADDRESS_LEN];
+    bool                      stream_started_ = false;
 };
 
 class StreamOutPrimary : public StreamPrimary {
