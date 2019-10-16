@@ -60,6 +60,93 @@ const std::map<uint32_t, qal_audio_fmt_t> getFormatId {
         {AUDIO_FORMAT_FLAC,                QAL_AUDIO_FMT_FLAC}
 };
 
+const char * const use_case_table[AUDIO_USECASE_MAX] = {
+    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = "deep-buffer-playback",
+    [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
+    [USECASE_AUDIO_PLAYBACK_WITH_HAPTICS] = "audio-with-haptics-playback",
+    [USECASE_AUDIO_PLAYBACK_ULL]         = "audio-ull-playback",
+    [USECASE_AUDIO_PLAYBACK_MULTI_CH]    = "multi-channel-playback",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
+    //Enabled for Direct_PCM
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD2] = "compress-offload-playback2",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD3] = "compress-offload-playback3",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD4] = "compress-offload-playback4",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD5] = "compress-offload-playback5",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD6] = "compress-offload-playback6",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD7] = "compress-offload-playback7",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD8] = "compress-offload-playback8",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD9] = "compress-offload-playback9",
+    [USECASE_AUDIO_PLAYBACK_FM] = "play-fm",
+    [USECASE_AUDIO_PLAYBACK_MMAP] = "mmap-playback",
+    [USECASE_AUDIO_PLAYBACK_HIFI] = "hifi-playback",
+    [USECASE_AUDIO_PLAYBACK_TTS] = "audio-tts-playback",
+
+    [USECASE_AUDIO_RECORD] = "audio-record",
+    [USECASE_AUDIO_RECORD_COMPRESS] = "audio-record-compress",
+    [USECASE_AUDIO_RECORD_COMPRESS2] = "audio-record-compress2",
+    [USECASE_AUDIO_RECORD_COMPRESS3] = "audio-record-compress3",
+    [USECASE_AUDIO_RECORD_COMPRESS4] = "audio-record-compress4",
+    [USECASE_AUDIO_RECORD_COMPRESS5] = "audio-record-compress5",
+    [USECASE_AUDIO_RECORD_COMPRESS6] = "audio-record-compress6",
+    [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
+    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = "fm-virtual-record",
+    [USECASE_AUDIO_RECORD_MMAP] = "mmap-record",
+    [USECASE_AUDIO_RECORD_HIFI] = "hifi-record",
+
+    [USECASE_AUDIO_HFP_SCO] = "hfp-sco",
+    [USECASE_AUDIO_HFP_SCO_WB] = "hfp-sco-wb",
+    [USECASE_VOICE_CALL] = "voice-call",
+
+    [USECASE_VOICE2_CALL] = "voice2-call",
+    [USECASE_VOLTE_CALL] = "volte-call",
+    [USECASE_QCHAT_CALL] = "qchat-call",
+    [USECASE_VOWLAN_CALL] = "vowlan-call",
+    [USECASE_VOICEMMODE1_CALL] = "voicemmode1-call",
+    [USECASE_VOICEMMODE2_CALL] = "voicemmode2-call",
+    [USECASE_COMPRESS_VOIP_CALL] = "compress-voip-call",
+    [USECASE_INCALL_REC_UPLINK] = "incall-rec-uplink",
+    [USECASE_INCALL_REC_DOWNLINK] = "incall-rec-downlink",
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = "incall-rec-uplink-and-downlink",
+    [USECASE_INCALL_REC_UPLINK_COMPRESS] = "incall-rec-uplink-compress",
+    [USECASE_INCALL_REC_DOWNLINK_COMPRESS] = "incall-rec-downlink-compress",
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS] = "incall-rec-uplink-and-downlink-compress",
+
+    [USECASE_INCALL_MUSIC_UPLINK] = "incall_music_uplink",
+    [USECASE_INCALL_MUSIC_UPLINK2] = "incall_music_uplink2",
+    [USECASE_AUDIO_SPKR_CALIB_RX] = "spkr-rx-calib",
+    [USECASE_AUDIO_SPKR_CALIB_TX] = "spkr-vi-record",
+
+    [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
+    [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
+    [USECASE_AUDIO_PLAYBACK_SILENCE] = "silence-playback",
+
+    /* Transcode loopback cases */
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK_RX] = "audio-transcode-loopback-rx",
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK_TX] = "audio-transcode-loopback-tx",
+
+    [USECASE_AUDIO_PLAYBACK_VOIP] = "audio-playback-voip",
+    [USECASE_AUDIO_RECORD_VOIP] = "audio-record-voip",
+    /* For Interactive Audio Streams */
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1] = "audio-interactive-stream1",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2] = "audio-interactive-stream2",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3] = "audio-interactive-stream3",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4] = "audio-interactive-stream4",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5] = "audio-interactive-stream5",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6] = "audio-interactive-stream6",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7] = "audio-interactive-stream7",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8] = "audio-interactive-stream8",
+
+    [USECASE_AUDIO_EC_REF_LOOPBACK] = "ec-ref-audio-capture",
+
+    [USECASE_AUDIO_A2DP_ABR_FEEDBACK] = "a2dp-abr-feedback",
+
+    [USECASE_AUDIO_PLAYBACK_MEDIA] = "media-playback",
+    [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = "sys-notification-playback",
+    [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = "nav-guidance-playback",
+    [USECASE_AUDIO_PLAYBACK_PHONE] = "phone-playback",
+    [USECASE_AUDIO_FM_TUNER_EXT] = "fm-tuner-ext",
+};
+
 void StreamOutPrimary::GetStreamHandle(audio_stream_out** stream) {
   *stream = (audio_stream_out*)stream_.get();
 }
@@ -85,6 +172,18 @@ audio_io_handle_t StreamPrimary::GetHandle()
     return handle_;
 }
 
+int StreamPrimary::GetUseCase()
+{
+    return usecase_;
+}
+
+#if 0
+static qal_stream_type_t GetQalStreamType(audio_output_flags_t flags) {
+    std::ignore = flags;
+    return QAL_STREAM_LOW_LATENCY;
+}
+#endif
+//audio_hw_device_t* AudioDevice::device_ = NULL;
 std::shared_ptr<AudioDevice> AudioDevice::adev_ = nullptr;
 std::shared_ptr<audio_hw_device_t> AudioDevice::device_ = nullptr;
 
@@ -331,6 +430,9 @@ static int astream_out_standby(struct audio_stream *stream) {
         return -EINVAL;
     }
 
+    ALOGD("%s: enter: stream (%p), usecase(%d: %s)", __func__, astream_out.get(),
+          astream_out->GetUseCase(), use_case_table[astream_out->GetUseCase()]);
+
     if (astream_out) {
         return astream_out->Standby();
     } else {
@@ -419,6 +521,10 @@ static int astream_out_set_parameters(struct audio_stream *stream,
         ALOGE("%s: unable to get audio device",__func__);
         goto exit;
     }
+
+    ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
+          __func__, astream_out->GetUseCase(), use_case_table[astream_out->GetUseCase()], kvpairs);
+
     parms = str_parms_create_str(kvpairs);
     if (!parms) {
        ret = -EINVAL;
@@ -680,6 +786,9 @@ static int astream_in_standby(struct audio_stream *stream) {
         ALOGE("%s: unable to get audio device",__func__);
         return -EINVAL;
     }
+
+    ALOGD("%s: enter: stream (%p) usecase(%d: %s)", __func__, astream_in.get(),
+          astream_in->GetUseCase(), use_case_table[astream_in->GetUseCase()]);
 
     if (astream_in) {
         return astream_in->Standby();
@@ -1250,6 +1359,29 @@ exit:
     return ret;
 }
 
+int StreamOutPrimary::GetOutputUseCase(audio_output_flags_t halStreamFlags)
+{
+    // TODO: just covered current supported usecases in QAL
+    // need to update other usecases in future
+    int usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
+    if (halStreamFlags & AUDIO_OUTPUT_FLAG_VOIP_RX)
+        usecase = USECASE_AUDIO_PLAYBACK_VOIP;
+    else if ((halStreamFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) ||
+             (halStreamFlags == AUDIO_OUTPUT_FLAG_DIRECT)) {
+        if (halStreamFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)
+            usecase = USECASE_AUDIO_PLAYBACK_OFFLOAD;
+        else
+            usecase = USECASE_AUDIO_PLAYBACK_OFFLOAD2;
+    } else if (halStreamFlags & AUDIO_OUTPUT_FLAG_RAW)
+        usecase = USECASE_AUDIO_PLAYBACK_ULL;
+    else if (halStreamFlags & AUDIO_OUTPUT_FLAG_FAST)
+        usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
+    else if (halStreamFlags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER)
+        usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
+
+    return usecase;
+}
+
 ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
     int ret = 0;
     struct qal_buffer qalBuffer;
@@ -1340,6 +1472,7 @@ StreamOutPrimary::StreamOutPrimary(
     handle_ = handle;
     qal_device_id_ = GetQalDeviceId(devices);
     flags_ = flags;
+    usecase_ = GetOutputUseCase(flags);
 
     if (config) {
         ALOGD("%s: enter: handle (%x) format(%#x) sample_rate(%d)\
@@ -1627,6 +1760,24 @@ uint32_t StreamInPrimary::GetBufferSize() {
     }
 }
 
+int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_source_t source)
+{
+    // TODO: cover other usecases
+    int usecase = USECASE_AUDIO_RECORD;
+    if ((halStreamFlags & AUDIO_INPUT_FLAG_TIMESTAMP) == 0 &&
+        (halStreamFlags & AUDIO_INPUT_FLAG_COMPRESS) == 0 &&
+        (halStreamFlags & AUDIO_INPUT_FLAG_FAST) != 0)
+        usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
+
+    if ((halStreamFlags & AUDIO_INPUT_FLAG_MMAP_NOIRQ) != 0)
+        usecase = USECASE_AUDIO_RECORD_MMAP;
+    else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
+             halStreamFlags & AUDIO_INPUT_FLAG_VOIP_TX)
+        usecase = USECASE_AUDIO_RECORD_VOIP;
+
+    return usecase;
+}
+
 ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
     int ret = 0;
     struct qal_buffer qalBuffer;
@@ -1680,6 +1831,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     flags_ = flags;
     source_ = source;
     config_ = *config;
+    usecase_ = GetInputUseCase(flags, source);
 
     (void)FillHalFnPtrs();
 }

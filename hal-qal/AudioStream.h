@@ -67,6 +67,111 @@
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/vendor/lib/soundfx/libqcompostprocbundle.so"
 #endif
 
+/* These are the supported use cases by the hardware.
+ * Each usecase is mapped to a specific PCM device.
+ * Refer to pcm_device_table[].
+ */
+enum {
+    USECASE_INVALID = -1,
+    /* Playback usecases */
+    USECASE_AUDIO_PLAYBACK_DEEP_BUFFER = 0,
+    USECASE_AUDIO_PLAYBACK_LOW_LATENCY,
+    USECASE_AUDIO_PLAYBACK_MULTI_CH,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD2,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD3,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD4,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD5,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD6,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD7,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD8,
+    USECASE_AUDIO_PLAYBACK_OFFLOAD9,
+    USECASE_AUDIO_PLAYBACK_ULL,
+    USECASE_AUDIO_PLAYBACK_MMAP,
+    USECASE_AUDIO_PLAYBACK_WITH_HAPTICS,
+    USECASE_AUDIO_PLAYBACK_HIFI,
+    USECASE_AUDIO_PLAYBACK_TTS,
+
+    /* FM usecase */
+    USECASE_AUDIO_PLAYBACK_FM,
+
+    /* HFP Use case*/
+    USECASE_AUDIO_HFP_SCO,
+    USECASE_AUDIO_HFP_SCO_WB,
+
+    /* Capture usecases */
+    USECASE_AUDIO_RECORD,
+    USECASE_AUDIO_RECORD_COMPRESS,
+    USECASE_AUDIO_RECORD_COMPRESS2,
+    USECASE_AUDIO_RECORD_COMPRESS3,
+    USECASE_AUDIO_RECORD_COMPRESS4,
+    USECASE_AUDIO_RECORD_COMPRESS5,
+    USECASE_AUDIO_RECORD_COMPRESS6,
+    USECASE_AUDIO_RECORD_LOW_LATENCY,
+    USECASE_AUDIO_RECORD_FM_VIRTUAL,
+    USECASE_AUDIO_RECORD_HIFI,
+
+    USECASE_AUDIO_PLAYBACK_VOIP,
+    USECASE_AUDIO_RECORD_VOIP,
+    /* Voice usecase */
+    USECASE_VOICE_CALL,
+    USECASE_AUDIO_RECORD_MMAP,
+
+    /* Voice extension usecases */
+    USECASE_VOICE2_CALL,
+    USECASE_VOLTE_CALL,
+    USECASE_QCHAT_CALL,
+    USECASE_VOWLAN_CALL,
+    USECASE_VOICEMMODE1_CALL,
+    USECASE_VOICEMMODE2_CALL,
+    USECASE_COMPRESS_VOIP_CALL,
+
+    USECASE_INCALL_REC_UPLINK,
+    USECASE_INCALL_REC_DOWNLINK,
+    USECASE_INCALL_REC_UPLINK_AND_DOWNLINK,
+    USECASE_INCALL_REC_UPLINK_COMPRESS,
+    USECASE_INCALL_REC_DOWNLINK_COMPRESS,
+    USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS,
+
+    USECASE_INCALL_MUSIC_UPLINK,
+    USECASE_INCALL_MUSIC_UPLINK2,
+
+    USECASE_AUDIO_SPKR_CALIB_RX,
+    USECASE_AUDIO_SPKR_CALIB_TX,
+
+    USECASE_AUDIO_PLAYBACK_AFE_PROXY,
+    USECASE_AUDIO_RECORD_AFE_PROXY,
+    USECASE_AUDIO_DSM_FEEDBACK,
+
+    USECASE_AUDIO_PLAYBACK_SILENCE,
+
+    USECASE_AUDIO_TRANSCODE_LOOPBACK_RX,
+    USECASE_AUDIO_TRANSCODE_LOOPBACK_TX,
+
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7,
+    USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8,
+
+    USECASE_AUDIO_EC_REF_LOOPBACK,
+
+    USECASE_AUDIO_A2DP_ABR_FEEDBACK,
+
+    /* car streams usecases */
+    USECASE_AUDIO_PLAYBACK_MEDIA,
+    USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
+    USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
+    USECASE_AUDIO_PLAYBACK_PHONE,
+
+    /*Audio FM Tuner usecase*/
+    USECASE_AUDIO_FM_TUNER_EXT,
+    AUDIO_USECASE_MAX
+};
+
 extern "C" typedef void (*hello_t)( const char* text );
 extern "C" typedef int (*offload_effects_start_output)(audio_io_handle_t,
                                                        qal_stream_handle_t*);
@@ -85,6 +190,7 @@ public:
     uint32_t GetChannels();
     static qal_device_id_t GetQalDeviceId(audio_devices_t halDeviceId);
     audio_io_handle_t GetHandle();
+    int             GetUseCase();
     std::mutex write_wait_mutex_;
     std::condition_variable write_condition_;
     bool write_ready_;
@@ -103,6 +209,7 @@ protected:
     struct audio_config       config_;
     char                      address_[AUDIO_DEVICE_MAX_ADDRESS_LEN];
     bool                      stream_started_ = false;
+    int usecase_;
 };
 
 class StreamOutPrimary : public StreamPrimary {
@@ -130,6 +237,7 @@ public:
     uint32_t GetBufferSize();
     int GetTimestamp(uint64_t *timestp);
     static qal_stream_type_t GetQalStreamType(audio_output_flags_t halStreamFlags);
+    int GetOutputUseCase(audio_output_flags_t halStreamFlags);
     int StartOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     int StopOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     audio_output_flags_t flags_;
@@ -161,6 +269,7 @@ public:
     ssize_t Read(const void *buffer, size_t bytes);
     uint32_t GetBufferSize();
     static qal_stream_type_t GetQalStreamType(audio_input_flags_t halStreamFlags);
+    int GetInputUseCase(audio_input_flags_t halStreamFlags, audio_source_t source);
     int addRemoveAudioEffect(const struct audio_stream *stream, effect_handle_t effect,bool enable);
     bool is_st_session;
     bool is_st_session_active;

@@ -147,7 +147,11 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     int32_t ret = 0;
     std::shared_ptr<StreamOutPrimary> astream;
 
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
+    ALOGD("%s: enter: format(%#x) sample_rate(%d) channel_mask(%#x) devices(%#x)\
+        flags(%#x) address(%s)", __func__, config->format, config->sample_rate,
+        config->channel_mask, devices, flags, address);
+
+    std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
         ALOGE("%s: invalid adevice object",__func__);
         goto exit;
@@ -179,6 +183,7 @@ void adev_close_output_stream(struct audio_hw_device *dev,
         return;
     }
 
+    ALOGD("%s: enter:stream_handle(%p)", __func__, astream_out.get());
     adevice->CloseStreamOut(astream_out);
 }
 
@@ -199,6 +204,7 @@ void adev_close_input_stream(struct audio_hw_device *dev,
         return;
     }
 
+    ALOGD("%s: enter:stream_handle(%p)", __func__, astream_in.get());
     adevice->CloseStreamIn(astream_in);
 }
 
@@ -213,7 +219,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     int32_t ret = 0;
     bool ret_error = false;
     std::shared_ptr<StreamInPrimary> astream = nullptr;
-    ALOGE("%s: inside",__func__);
+    ALOGD("%s: enter: sample_rate(%d) channel_mask(%#x) devices(%#x)\
+        io_handle(%d) source(%d) format %x",__func__, config->sample_rate,
+        config->channel_mask, devices, handle, source, config->format);
+
     std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
         ALOGE("%s: invalid adevice object",__func__);
