@@ -164,13 +164,13 @@ public:
     int addRemoveAudioEffect(const struct audio_stream *stream, effect_handle_t effect,bool enable);
     bool is_st_session;
     bool is_st_session_active;
+    audio_input_flags_t                 flags_;
 protected:
-    audio_input_flags_t flags_;
-    std::shared_ptr<audio_stream_in> stream_;
-    audio_source_t source_;
+    int FillHalFnPtrs();
+    std::shared_ptr<audio_stream_in>    stream_;
+    audio_source_t                      source_;
     friend class AudioDevice;
     uint64_t total_bytes_read_; /* total frames written, not cleared when entering standby */
-    int FillHalFnPtrs();
     bool isECEnabled = false;
     bool isNSEnabled = false;
 };

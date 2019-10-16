@@ -41,6 +41,11 @@
 
 #include "AudioStream.h"
 
+#define COMPRESS_VOIP_IO_BUF_SIZE_NB 320
+#define COMPRESS_VOIP_IO_BUF_SIZE_WB 640
+#define COMPRESS_VOIP_IO_BUF_SIZE_SWB 1280
+#define COMPRESS_VOIP_IO_BUF_SIZE_FB 1920
+
 class AudioDevice {
 public:
     ~AudioDevice();

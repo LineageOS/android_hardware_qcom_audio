@@ -1078,11 +1078,47 @@ int StreamOutPrimary::GetFramesWritten() {
         audio_channel_mask_get_bits(config_.channel_mask), config_.format);
 }
 
+static int voip_get_buffer_size(uint32_t sample_rate)
+{
+    if (sample_rate == 48000)
+        return COMPRESS_VOIP_IO_BUF_SIZE_FB;
+    else if (sample_rate == 32000)
+        return COMPRESS_VOIP_IO_BUF_SIZE_SWB;
+    else if (sample_rate == 16000)
+        return COMPRESS_VOIP_IO_BUF_SIZE_WB;
+    else
+        return COMPRESS_VOIP_IO_BUF_SIZE_NB;
+
+}
+
+uint32_t StreamOutPrimary::GetBufferSize() {
+    struct qal_stream_attributes streamAttributes;
+
+    streamAttributes.type = StreamOutPrimary::GetQalStreamType(flags_);
+    if (streamAttributes.type == QAL_STREAM_VOIP_RX) {
+        return voip_get_buffer_size(config_.sample_rate);
+    } else {
+       return BUF_SIZE_PLAYBACK * NO_OF_BUF;
+    }
+}
+
 int StreamOutPrimary::Open() {
     int ret = -EINVAL;
     uint8_t channels = 0;
     struct qal_device qalDevice;
     struct qal_channel_info *ch_info, *dev_ch_info;
+    uint32_t inBufSize;
+    uint32_t outBufSize;
+    uint32_t inBufCount = NO_OF_BUF;
+    uint32_t outBufCount = NO_OF_BUF;
+
+/*
+    ret = qal_init();
+    if ( ret ) {
+      ALOGD("%s:(%d) qal_init failed ret=(%d)",__func__,__LINE__, ret);
+      return -EINVAL;
+    }
+*/
 
     /* TODO: Update channels based on device */
     channels = 2;
@@ -1167,6 +1203,16 @@ int StreamOutPrimary::Open() {
           ALOGE("Qal Set Param Error (%x)\n", ret);
        }
     }
+
+    outBufSize = StreamOutPrimary::GetBufferSize();
+    if (streamAttributes.type != QAL_STREAM_VOIP_RX) {
+        outBufSize = outBufSize/NO_OF_BUF;
+    }
+    ret = qal_stream_set_buffer_size(qal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
+    if (ret) {
+        ALOGE("Qal Stream set buffer size Error  (%x)", ret);
+    }
+
     total_bytes_written_ = 0; // reset at each open
 
 error_open:
@@ -1178,9 +1224,6 @@ error_open_devc:
     return ret;
 }
 
-uint32_t StreamOutPrimary::GetBufferSize() {
-    return BUF_SIZE_PLAYBACK * NO_OF_BUF;
-}
 
 int StreamOutPrimary::GetTimestamp(uint64_t *timestp) {
     int ret = 0;
@@ -1477,14 +1520,12 @@ int StreamInPrimary::Open() {
     int ret = -EINVAL;
     uint8_t channels = 0;
     struct qal_device qalDevice;
-    struct qal_channel_info *ch_info =
-        (struct qal_channel_info *)calloc(
-                1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
-    if (ch_info == NULL) {
-        ALOGE("Allocation failed for channel map");
-        ret = -ENOMEM;
-        goto error_open;
-    }
+    struct qal_channel_info *ch_info = NULL;
+    struct qal_channel_info *dev_ch_info = NULL;
+    uint32_t inBufSize;
+    uint32_t outBufSize;
+    uint32_t inBufCount = NO_OF_BUF;
+    uint32_t outBufCount = NO_OF_BUF;
 
     audio_extn_sound_trigger_check_and_get_session(this);
     if (is_st_session) {
@@ -1492,38 +1533,51 @@ int StreamInPrimary::Open() {
     }
 
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
+    ch_info =(struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*channels);
     //need to convert channel mask to qal channel mask
     if (channels == 3) {
-      qalDevice.id = QAL_DEVICE_IN_TRI_MIC; //To-Do: convert into QAL Device
       ch_info->channels = 3;
       ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
       ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
       ch_info->ch_map[2] = QAL_CHMAP_CHANNEL_C;
     } else if (channels == 2) {
-      qalDevice.id = QAL_DEVICE_IN_SPEAKER_MIC; //To-Do: convert into QAL Device
       ch_info->channels = 2;
       ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
       ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
     } else {
-      qalDevice.id = QAL_DEVICE_IN_SPEAKER_MIC; //To-Do: convert into QAL Device
       ch_info->channels = 1;
       ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
     }
 
-    qalDevice.config.sample_rate = 48000;
-    qalDevice.config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    qalDevice.config.ch_info = ch_info;
-    qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
-
-    streamAttributes.type = StreamInPrimary::GetQalStreamType(flags_);;
     //streamAttributes.type = QAL_STREAM_COMPRESSED;
     //streamAttributes.info  //Optional
+    streamAttributes.type = StreamInPrimary::GetQalStreamType(flags_);;
     streamAttributes.flags = (qal_stream_flags_t)0;
     streamAttributes.direction = QAL_AUDIO_INPUT;
     streamAttributes.in_media_config.sample_rate = config_.sample_rate;
     streamAttributes.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     streamAttributes.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
     streamAttributes.in_media_config.ch_info = ch_info;
+
+    if (streamAttributes.type == QAL_STREAM_VOIP_TX) {
+        dev_ch_info =(struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*3);
+        qalDevice.id = QAL_DEVICE_IN_TRI_MIC;
+        dev_ch_info->channels = 3;
+        dev_ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+        dev_ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+        dev_ch_info->ch_map[2] = QAL_CHMAP_CHANNEL_C;
+    } else {
+        dev_ch_info =(struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*1);
+        qalDevice.id = QAL_DEVICE_IN_SPEAKER_MIC;
+        dev_ch_info->channels = 1;
+        dev_ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+    }
+
+    qalDevice.config.ch_info = dev_ch_info; //is there a reason to have two different ch_info for device/stream?
+    qalDevice.config.sample_rate = 48000;
+    qalDevice.config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+
     ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
     ret = qal_stream_open(&streamAttributes,
                           1,
@@ -1539,6 +1593,16 @@ int StreamInPrimary::Open() {
     if (ret) {
         ALOGE("Qal Stream Open Error (%x)", ret);
         ret = -EINVAL;
+        goto error_open;
+    }
+
+    inBufSize = StreamInPrimary::GetBufferSize();
+    if (streamAttributes.type != QAL_STREAM_VOIP_TX) {
+        inBufSize = inBufSize/NO_OF_BUF;
+    }
+    ret = qal_stream_set_buffer_size(qal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
+    if (ret) {
+        ALOGE("Qal Stream set buffer size Error  (%x)", ret);
     }
 
     total_bytes_read_ = 0; // reset at each open
@@ -1546,12 +1610,21 @@ int StreamInPrimary::Open() {
 error_open:
     if (ch_info)
         free(ch_info);
+    if (dev_ch_info)
+        free(dev_ch_info);
     return ret;
 }
 
 
 uint32_t StreamInPrimary::GetBufferSize() {
-    return BUF_SIZE_CAPTURE * NO_OF_BUF;
+    struct qal_stream_attributes streamAttributes;
+
+    streamAttributes.type = StreamInPrimary::GetQalStreamType(flags_);
+    if (streamAttributes.type == QAL_STREAM_VOIP_TX) {
+        return voip_get_buffer_size(config_.sample_rate);
+    } else {
+       return BUF_SIZE_CAPTURE * NO_OF_BUF;
+    }
 }
 
 ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
