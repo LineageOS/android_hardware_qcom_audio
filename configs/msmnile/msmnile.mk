@@ -91,6 +91,7 @@ AUDIO_AGM += vendor.qti.hardware.AGMIPC@1.0-service.rc
 AUDIO_AGM += libagm
 AUDIO_AGM += agmplay
 AUDIO_AGM += agmcap
+AUDIO_AGM += libmcs
 AUDIO_AGM += libagmmixer
 AUDIO_AGM += agmcompressplay
 AUDIO_AGM += libagm_mixer_plugin
@@ -106,6 +107,13 @@ AUDIO_HARDWARE += audio.primary.msmnile
 AUDIO_WRAPPER := libqahw
 AUDIO_WRAPPER += libqahwwrapper
 
+<<<<<<< HEAD
+=======
+#QAL Module
+AUDIO_QAL := libqal
+AUDIO_QAL += catf
+
+>>>>>>> 8df9823... Config : add catf and mcs to compile in build
 #HAL Test app
 AUDIO_HAL_TEST_APPS := hal_play_test
 AUDIO_HAL_TEST_APPS += hal_rec_test
