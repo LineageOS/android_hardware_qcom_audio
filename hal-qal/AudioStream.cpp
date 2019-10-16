@@ -1045,9 +1045,6 @@ int StreamOutPrimary::SetVolume(float left , float right) {
         ALOGE("%s: handle is null. abort\n", __func__);
         return 0;
     }
-    if (flags_ == (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
-       return 0;
-    }
     struct qal_volume_data* volume;
     int ret = 0;
     if (left == right) {
