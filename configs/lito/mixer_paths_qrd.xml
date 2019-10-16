@@ -2852,6 +2852,10 @@
         <path name="headphones" />
     </path>
 
+    <path name="headphones-hifi-filter">
+        <path name="headphones" />
+    </path>
+
     <path name="hph-highquality-mode">
         <ctl name="RX_HPH_PWR_MODE" value="LOHIFI" />
         <ctl name="RX HPH Mode" value="CLS_H_LOHIFI" />
@@ -2910,6 +2914,11 @@
     </path>
 
     <path name="speaker-and-headphones">
+        <path name="headphones" />
+        <path name="speaker" />
+    </path>
+
+    <path name="speaker-and-headphones-hifi-filter">
         <path name="headphones" />
         <path name="speaker" />
     </path>
