@@ -46,6 +46,8 @@
 #include <audio_effects/effect_ns.h>
 #include "audio_extn.h"
 
+#define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
+
 const std::map<uint32_t, qal_audio_fmt_t> getFormatId {
 	{AUDIO_FORMAT_PCM,                 QAL_AUDIO_FMT_DEFAULT_PCM},
 	{AUDIO_FORMAT_MP3,                 QAL_AUDIO_FMT_MP3},
@@ -1187,6 +1189,13 @@ int StreamOutPrimary::GetFramesWritten() {
         audio_channel_mask_get_bits(config_.channel_mask), config_.format);
 }
 
+int StreamOutPrimary::get_compressed_buffer_size()
+{
+    
+    ALOGE("%s:%d config_ %x", __func__, __LINE__, config_.format);
+    return COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+}
+
 static int voip_get_buffer_size(uint32_t sample_rate)
 {
     if (sample_rate == 48000)
@@ -1204,8 +1213,11 @@ uint32_t StreamOutPrimary::GetBufferSize() {
     struct qal_stream_attributes streamAttributes;
 
     streamAttributes.type = StreamOutPrimary::GetQalStreamType(flags_);
+    ALOGE("%s:%d type %d", __func__, __LINE__, streamAttributes.type);
     if (streamAttributes.type == QAL_STREAM_VOIP_RX) {
         return voip_get_buffer_size(config_.sample_rate);
+    } else if (streamAttributes.type == QAL_STREAM_COMPRESSED) {
+        return get_compressed_buffer_size();
     } else {
        return BUF_SIZE_PLAYBACK * NO_OF_BUF;
     }
@@ -1314,9 +1326,9 @@ int StreamOutPrimary::Open() {
     }
 
     outBufSize = StreamOutPrimary::GetBufferSize();
-    if (streamAttributes.type != QAL_STREAM_VOIP_RX) {
-        outBufSize = outBufSize/NO_OF_BUF;
-    }
+//    if (streamAttributes.type != QAL_STREAM_VOIP_RX) {
+ //       outBufSize = outBufSize/NO_OF_BUF;
+ //   }
     ret = qal_stream_set_buffer_size(qal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
     if (ret) {
         ALOGE("Qal Stream set buffer size Error  (%x)", ret);

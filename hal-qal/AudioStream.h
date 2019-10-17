@@ -242,6 +242,7 @@ public:
     int StopOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     audio_output_flags_t flags_;
 protected:
+    int get_compressed_buffer_size();
     qal_param_payload qparam_payload;
     uint32_t msample_rate;
     uint16_t mchannels;
