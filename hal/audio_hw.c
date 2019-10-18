@@ -8399,21 +8399,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 adev->allow_afe_proxy_usage = true;
             }
         }
-        if (audio_is_a2dp_out_device(device)) {
-           struct audio_usecase *usecase;
-           struct listnode *node;
-           list_for_each(node, &adev->usecase_list) {
-               usecase = node_to_item(node, struct audio_usecase, list);
-               if (PCM_PLAYBACK == usecase->type && usecase->stream.out &&
-                  (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-                   usecase->stream.out->a2dp_compress_mute) {
-                   struct stream_out *out = usecase->stream.out;
-                   ALOGD("Unmuting the stream when Bt-A2dp disconnected and stream is mute");
-                   out->a2dp_compress_mute = false;
-                   out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
-               }
-           }
-        }
     }
 
     audio_extn_hfp_set_parameters(adev, parms);
