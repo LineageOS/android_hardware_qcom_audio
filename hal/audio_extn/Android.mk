@@ -144,7 +144,8 @@ LOCAL_SHARED_LIBRARIES := \
     libtinycompress \
     libaudioroute \
     libdl \
-    libexpat
+    libexpat \
+    libprocessgroup
 
 LOCAL_C_INCLUDES := \
     $(PRIMARY_HAL_PATH) \
@@ -169,7 +170,7 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
-#include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_SHARED_LIBRARY)
 
 #--------------------------------------------
 #          Build HDMI_EDID LIB
