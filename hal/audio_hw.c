@@ -516,6 +516,8 @@ static void adev_snd_mon_cb(void *cookie, struct str_parms *parms);
 static void in_snd_mon_cb(void * stream, struct str_parms * parms);
 static void out_snd_mon_cb(void * stream, struct str_parms * parms);
 
+static int configure_btsco_sample_rate(snd_device_t snd_device);
+
 #ifdef AUDIO_FEATURE_ENABLED_GCOV
 extern void  __gcov_flush();
 static void enable_gcov()
@@ -1311,6 +1313,7 @@ int enable_snd_device(struct audio_device *adev,
             goto err;
         }
 
+        configure_btsco_sample_rate(snd_device);
         /* due to the possibility of calibration overwrite between listen
             and audio, notify listen hal before audio calibration is sent */
         audio_extn_sound_trigger_update_device_status(snd_device,
@@ -2316,6 +2319,50 @@ bool is_bt_soc_on(struct audio_device *adev)
     bt_soc_status = mixer_ctl_get_value(ctl, 0);
     ALOGD("BT SOC status: %d",bt_soc_status);
     return bt_soc_status;
+}
+
+static int configure_btsco_sample_rate(snd_device_t snd_device)
+{
+    struct mixer_ctl *ctl = NULL;
+    struct mixer_ctl *ctl_sr_rx = NULL, *ctl_sr_tx = NULL, *ctl_sr = NULL;
+    char *rate_str = NULL;
+    bool is_rx_dev = true;
+
+    if (is_btsco_device(snd_device, snd_device)) {
+        ctl_sr_tx = mixer_get_ctl_by_name(adev->mixer, "BT SampleRate TX");
+        ctl_sr_rx = mixer_get_ctl_by_name(adev->mixer, "BT SampleRate RX");
+        if (!ctl_sr_tx || !ctl_sr_rx) {
+            ctl_sr = mixer_get_ctl_by_name(adev->mixer, "BT SampleRate");
+            if (!ctl_sr)
+                return -ENOSYS;
+        }
+
+        switch (snd_device) {
+        case SND_DEVICE_OUT_BT_SCO:
+            rate_str = "KHZ_8";
+            break;
+        case SND_DEVICE_IN_BT_SCO_MIC_NREC:
+        case SND_DEVICE_IN_BT_SCO_MIC:
+            rate_str = "KHZ_8";
+            is_rx_dev = false;
+            break;
+        case SND_DEVICE_OUT_BT_SCO_WB:
+            rate_str = "KHZ_16";
+            break;
+        case SND_DEVICE_IN_BT_SCO_MIC_WB_NREC:
+        case SND_DEVICE_IN_BT_SCO_MIC_WB:
+            rate_str = "KHZ_16";
+            is_rx_dev = false;
+            break;
+        default:
+            return 0;
+        }
+
+        ctl = (ctl_sr == NULL) ? (is_rx_dev ? ctl_sr_rx : ctl_sr_tx) : ctl_sr;
+        if (mixer_ctl_set_enum_by_string(ctl, rate_str) != 0)
+            return -ENOSYS;
+    }
+    return 0;
 }
 
 int out_standby_l(struct audio_stream *stream);

@@ -138,6 +138,7 @@ struct platform_info {
 };
 
 static struct platform_info my_data;
+static pthread_mutex_t parser_lock = PTHREAD_MUTEX_INITIALIZER;
 
 
 struct audio_string_to_enum {
@@ -1491,6 +1492,7 @@ int platform_info_init(const char *filename, void *platform, caller_t caller_typ
     void            *buf;
     char            platform_info_file_name[MIXER_PATH_MAX_LENGTH]= {0};
 
+    pthread_mutex_lock(&parser_lock);
     if (filename == NULL)
         strlcpy(platform_info_file_name, PLATFORM_INFO_XML_PATH,
                 MIXER_PATH_MAX_LENGTH);
@@ -1555,5 +1557,6 @@ err_free_parser:
 err_close_file:
     fclose(file);
 done:
+    pthread_mutex_unlock(&parser_lock);
     return ret;
 }
