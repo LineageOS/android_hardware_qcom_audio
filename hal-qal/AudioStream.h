@@ -184,10 +184,15 @@ class AudioDevice;
 
 class StreamPrimary {
 public:
-    uint32_t GetSampleRate();
-    uint32_t GetBufferSize();
-    audio_format_t GetFormat();
-    uint32_t GetChannels();
+    StreamPrimary(audio_io_handle_t handle,
+        audio_devices_t devices,
+        struct audio_config *config);
+    ~StreamPrimary();
+
+    uint32_t        GetSampleRate();
+    uint32_t        GetBufferSize();
+    audio_format_t  GetFormat();
+    uint32_t        GetChannels();
     static qal_device_id_t GetQalDeviceId(audio_devices_t halDeviceId);
     audio_io_handle_t GetHandle();
     int             GetUseCase();
@@ -202,7 +207,7 @@ public:
     void *client_cookie;
 
 protected:
-    struct qal_stream_attributes streamAttributes;
+    struct qal_stream_attributes streamAttributes_;
     qal_stream_handle_t*      qal_stream_handle_;
     audio_io_handle_t         handle_;
     qal_device_id_t           qal_device_id_;
@@ -210,6 +215,7 @@ protected:
     char                      address_[AUDIO_DEVICE_MAX_ADDRESS_LEN];
     bool                      stream_started_ = false;
     int usecase_;
+    struct qal_volume_data *volume_; /* used to cache volume */
 };
 
 class StreamOutPrimary : public StreamPrimary {

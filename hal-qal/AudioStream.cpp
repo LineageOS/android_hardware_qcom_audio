@@ -1127,7 +1127,7 @@ int StreamOutPrimary::Standby() {
     }
 
     stream_started_ = false;
-    if (streamAttributes.type == QAL_STREAM_COMPRESSED)
+    if (streamAttributes_.type == QAL_STREAM_COMPRESSED)
         ret = StopOffloadEffects(handle_, qal_stream_handle_);
 
     if (qal_stream_handle_) {
@@ -1154,34 +1154,37 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
 }
 
 int StreamOutPrimary::SetVolume(float left , float right) {
-    if (!qal_stream_handle_) {
-        ALOGE("%s: handle is null. abort\n", __func__);
-        return 0;
-    }
-    struct qal_volume_data* volume;
     int ret = 0;
-    if (left == right) {
-        volume = (struct qal_volume_data*)malloc(sizeof(struct qal_volume_data)
-                    +sizeof(struct qal_channel_vol_kv));
-        volume->no_of_volpair = 1;
-        volume->volume_pair[0].channel_mask = 0x03;
-        volume->volume_pair[0].vol = left;
-        ret = qal_stream_set_volume(qal_stream_handle_, volume);
-    } else {
-        volume = (struct qal_volume_data*)malloc(sizeof(struct qal_volume_data)
-                    +sizeof(struct qal_channel_vol_kv) * 2);
-        volume->no_of_volpair = 2;
-        volume->volume_pair[0].channel_mask = 0x01;
-        volume->volume_pair[0].vol = left;
-        volume->volume_pair[1].channel_mask = 0x10;
-        volume->volume_pair[1].vol = right;
-        ret = qal_stream_set_volume(qal_stream_handle_, volume);
+    ALOGE("%s: g\n", __func__);
+
+    /* free previously cached volume if any */
+    if (volume_) {
+        free(volume_);
+        volume_ = NULL;
     }
 
-    free(volume);
-    if (ret) {
-        ALOGE("Qal Stream volume Error (%x)", ret);
-        return -EINVAL;
+    if (left == right) {
+        volume_ = (struct qal_volume_data *)malloc(sizeof(struct qal_volume_data)
+                    +sizeof(struct qal_channel_vol_kv));
+        volume_->no_of_volpair = 1;
+        volume_->volume_pair[0].channel_mask = 0x03;
+        volume_->volume_pair[0].vol = left;
+    } else {
+        volume_ = (struct qal_volume_data *)malloc(sizeof(struct qal_volume_data)
+                    +sizeof(struct qal_channel_vol_kv) * 2);
+        volume_->no_of_volpair = 2;
+        volume_->volume_pair[0].channel_mask = 0x01;
+        volume_->volume_pair[0].vol = left;
+        volume_->volume_pair[1].channel_mask = 0x10;
+        volume_->volume_pair[1].vol = right;
+    }
+
+    /* if stream is not opened already cache the volume and set on open */
+    if (qal_stream_handle_) {
+        ret = qal_stream_set_volume(qal_stream_handle_, volume_);
+        if (ret) {
+            ALOGE("Qal Stream volume Error (%x)", ret);
+        }
     }
     return ret;
 }
@@ -1212,13 +1215,13 @@ static int voip_get_buffer_size(uint32_t sample_rate)
 }
 
 uint32_t StreamOutPrimary::GetBufferSize() {
-    struct qal_stream_attributes streamAttributes;
+    struct qal_stream_attributes streamAttributes_;
 
-    streamAttributes.type = StreamOutPrimary::GetQalStreamType(flags_);
-    ALOGE("%s:%d type %d", __func__, __LINE__, streamAttributes.type);
-    if (streamAttributes.type == QAL_STREAM_VOIP_RX) {
+    streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
+    ALOGE("%s:%d type %d", __func__, __LINE__, streamAttributes_.type);
+    if (streamAttributes_.type == QAL_STREAM_VOIP_RX) {
         return voip_get_buffer_size(config_.sample_rate);
-    } else if (streamAttributes.type == QAL_STREAM_COMPRESSED) {
+    } else if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
         return get_compressed_buffer_size();
     } else {
        return BUF_SIZE_PLAYBACK * NO_OF_BUF;
@@ -1279,34 +1282,34 @@ int StreamOutPrimary::Open() {
     if (ch_info->channels > 1 )
       ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
-    streamAttributes.type = StreamOutPrimary::GetQalStreamType(flags_);
-    streamAttributes.flags = (qal_stream_flags_t)flags_;
-    streamAttributes.direction = QAL_AUDIO_OUTPUT;
-    streamAttributes.out_media_config.sample_rate = config_.sample_rate;
-    streamAttributes.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes.out_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
-    streamAttributes.out_media_config.ch_info = ch_info;
+    streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
+    streamAttributes_.flags = (qal_stream_flags_t)flags_;
+    streamAttributes_.direction = QAL_AUDIO_OUTPUT;
+    streamAttributes_.out_media_config.sample_rate = config_.sample_rate;
+    streamAttributes_.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    streamAttributes_.out_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    streamAttributes_.out_media_config.ch_info = ch_info;
 
-    if (streamAttributes.type == QAL_STREAM_COMPRESSED) {
-       streamAttributes.flags = (qal_stream_flags_t)(1 << QAL_STREAM_FLAG_NON_BLOCKING);
+    if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
+       streamAttributes_.flags = (qal_stream_flags_t)(1 << QAL_STREAM_FLAG_NON_BLOCKING);
        if (config_.offload_info.format == 0)
           config_.offload_info.format = config_.format;
        if (config_.offload_info.sample_rate == 0)
           config_.offload_info.sample_rate = config_.sample_rate;
-       streamAttributes.out_media_config.sample_rate = config_.offload_info.sample_rate;
+       streamAttributes_.out_media_config.sample_rate = config_.offload_info.sample_rate;
        if (msample_rate)
-          streamAttributes.out_media_config.sample_rate = msample_rate;
+          streamAttributes_.out_media_config.sample_rate = msample_rate;
        if (mchannels)
-          streamAttributes.out_media_config.ch_info->channels = mchannels;
-       streamAttributes.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
+          streamAttributes_.out_media_config.ch_info->channels = mchannels;
+       streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
     }
     ALOGE("channels %d samplerate %d format id %d \n",
-            streamAttributes.out_media_config.ch_info->channels,
-            streamAttributes.out_media_config.sample_rate,
-          streamAttributes.out_media_config.aud_fmt_id);
-    ALOGE("chanels %d \n", streamAttributes.out_media_config.ch_info->channels);
+            streamAttributes_.out_media_config.ch_info->channels,
+            streamAttributes_.out_media_config.sample_rate,
+          streamAttributes_.out_media_config.aud_fmt_id);
+    ALOGE("chanels %d \n", streamAttributes_.out_media_config.ch_info->channels);
     ALOGE("msample_rate %d mchannels %d \n", msample_rate, mchannels);
-    ret = qal_stream_open (&streamAttributes,
+    ret = qal_stream_open (&streamAttributes_,
                           1,
                           &qalDevice,
                           0,
@@ -1320,7 +1323,7 @@ int StreamOutPrimary::Open() {
         ALOGE("Qal Stream Open Error (%x)", ret);
         ret = -EINVAL;
     }
-    if (streamAttributes.type == QAL_STREAM_COMPRESSED) {
+    if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
        ret = qal_stream_set_param(qal_stream_handle_, 0, &qparam_payload);
        if (ret) {
           ALOGE("Qal Set Param Error (%x)\n", ret);
@@ -1328,7 +1331,7 @@ int StreamOutPrimary::Open() {
     }
 
     outBufSize = StreamOutPrimary::GetBufferSize();
-//    if (streamAttributes.type != QAL_STREAM_VOIP_RX) {
+//    if (streamAttributes_.type != QAL_STREAM_VOIP_RX) {
  //       outBufSize = outBufSize/NO_OF_BUF;
  //   }
     ret = qal_stream_set_buffer_size(qal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
@@ -1367,7 +1370,7 @@ int StreamOutPrimary::GetTimestamp(uint64_t *timestp) {
     ALOGE("%s: session msw %u",__func__, tstamp.session_time.value_msw);
     ALOGE("%s: session lsw %u",__func__, tstamp.session_time.value_lsw);
     ALOGE("%s: session timespec %lld",__func__, ((long long) timestamp));
-    timestamp *= (streamAttributes.out_media_config.sample_rate);
+    timestamp *= (streamAttributes_.out_media_config.sample_rate);
     *timestp = timestamp;
 exit:
     return ret;
@@ -1424,8 +1427,18 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
         }
 
         stream_started_ = true;
-        if (streamAttributes.type == QAL_STREAM_COMPRESSED)
-		    ret = StartOffloadEffects(handle_, qal_stream_handle_);
+
+        if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
+            ret = StartOffloadEffects(handle_, qal_stream_handle_);
+        }
+
+        /* set cached volume if any, dont return failure back up */
+        if (volume_) {
+            ret = qal_stream_set_volume(qal_stream_handle_, volume_);
+            if (ret) {
+                ALOGE("Qal Stream volume Error (%x)", ret);
+            }
+        }
     }
 
     local_bytes_written = qal_stream_write(qal_stream_handle_, &qalBuffer);
@@ -1475,10 +1488,11 @@ StreamOutPrimary::StreamOutPrimary(
                         struct audio_config *config,
                         const char *address,
                         offload_effects_start_output start_offload_effect,
-                        offload_effects_stop_output stop_offload_effect) {
-
+                        offload_effects_stop_output stop_offload_effect):
+    StreamPrimary(handle, devices, config),
+    flags_(flags)
+{
     stream_ = std::shared_ptr<audio_stream_out> (new audio_stream_out());
-    qal_stream_handle_ = NULL;
     if (!stream_) {
         ALOGE("%s: No memory allocated for stream_",__func__);
     }
@@ -1514,7 +1528,7 @@ StreamOutPrimary::~StreamOutPrimary() {
     ALOGD("%s: close stream, handle(%x), qal_stream_handle (%p)", __func__,
           handle_, qal_stream_handle_);
 
-    if (streamAttributes.type == QAL_STREAM_COMPRESSED)
+    if (streamAttributes_.type == QAL_STREAM_COMPRESSED)
         StopOffloadEffects(handle_, qal_stream_handle_);
 
     if (qal_stream_handle_) {
@@ -1696,17 +1710,17 @@ int StreamInPrimary::Open() {
       ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
     }
 
-    //streamAttributes.type = QAL_STREAM_COMPRESSED;
-    //streamAttributes.info  //Optional
-    streamAttributes.type = StreamInPrimary::GetQalStreamType(flags_);;
-    streamAttributes.flags = (qal_stream_flags_t)0;
-    streamAttributes.direction = QAL_AUDIO_INPUT;
-    streamAttributes.in_media_config.sample_rate = config_.sample_rate;
-    streamAttributes.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
-    streamAttributes.in_media_config.ch_info = ch_info;
+    //streamAttributes_.type = QAL_STREAM_COMPRESSED;
+    //streamAttributes_.info  //Optional
+    streamAttributes_.type = StreamInPrimary::GetQalStreamType(flags_);;
+    streamAttributes_.flags = (qal_stream_flags_t)0;
+    streamAttributes_.direction = QAL_AUDIO_INPUT;
+    streamAttributes_.in_media_config.sample_rate = config_.sample_rate;
+    streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    streamAttributes_.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    streamAttributes_.in_media_config.ch_info = ch_info;
 
-    if (streamAttributes.type == QAL_STREAM_VOIP_TX) {
+    if (streamAttributes_.type == QAL_STREAM_VOIP_TX) {
         dev_ch_info =(struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*3);
         qalDevice.id = QAL_DEVICE_IN_TRI_MIC;
         dev_ch_info->channels = 3;
@@ -1726,7 +1740,7 @@ int StreamInPrimary::Open() {
     qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
 
     ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
-    ret = qal_stream_open(&streamAttributes,
+    ret = qal_stream_open(&streamAttributes_,
                           1,
                           &qalDevice,
                           0,
@@ -1744,7 +1758,7 @@ int StreamInPrimary::Open() {
     }
 
     inBufSize = StreamInPrimary::GetBufferSize();
-    if (streamAttributes.type != QAL_STREAM_VOIP_TX) {
+    if (streamAttributes_.type != QAL_STREAM_VOIP_TX) {
         inBufSize = inBufSize/NO_OF_BUF;
     }
     ret = qal_stream_set_buffer_size(qal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
@@ -1764,10 +1778,10 @@ error_open:
 
 
 uint32_t StreamInPrimary::GetBufferSize() {
-    struct qal_stream_attributes streamAttributes;
+    struct qal_stream_attributes streamAttributes_;
 
-    streamAttributes.type = StreamInPrimary::GetQalStreamType(flags_);
-    if (streamAttributes.type == QAL_STREAM_VOIP_TX) {
+    streamAttributes_.type = StreamInPrimary::GetQalStreamType(flags_);
+    if (streamAttributes_.type == QAL_STREAM_VOIP_TX) {
         return voip_get_buffer_size(config_.sample_rate);
     } else {
        return BUF_SIZE_CAPTURE * NO_OF_BUF;
@@ -1813,6 +1827,13 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
     if (!stream_started_) {
         ret = qal_stream_start(qal_stream_handle_);
         stream_started_ = true;
+        /* set cached volume if any, dont return failure back up */
+        if (volume_) {
+            ret = qal_stream_set_volume(qal_stream_handle_, volume_);
+            if (ret) {
+                ALOGE("Qal Stream volume Error (%x)", ret);
+            }
+        }
     }
 
     local_bytes_read = qal_stream_read(qal_stream_handle_, &qalBuffer);
@@ -1821,14 +1842,35 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
     return local_bytes_read;
 }
 
-StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
-                                 audio_devices_t devices,
-                                 audio_input_flags_t flags,
-                                 struct audio_config *config,
-                                 audio_source_t source) {
+StreamPrimary::StreamPrimary(audio_io_handle_t handle,
+    audio_devices_t devices, struct audio_config *config):
+    qal_stream_handle_(NULL),
+    handle_(handle),
+    qal_device_id_(GetQalDeviceId(devices)),
+    config_(*config),
+    volume_(NULL)
+{
+    memset(&streamAttributes_, 0, sizeof(streamAttributes_));
+    memset(&address_, 0, sizeof(address_));
+}
 
+StreamPrimary::~StreamPrimary(void)
+{
+    if (volume_) {
+        free(volume_);
+        volume_ = NULL;
+    }
+}
+
+StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
+    audio_devices_t devices,
+    audio_input_flags_t flags,
+    struct audio_config *config,
+    audio_source_t source) :
+    StreamPrimary(handle, devices, config),
+    flags_(flags)
+{
     stream_ = std::shared_ptr<audio_stream_in> (new audio_stream_in());
-    qal_stream_handle_ = NULL;
 
     if (config) {
         ALOGD("%s: enter: handle (%x) format(%#x) sample_rate(%d)\
@@ -1839,10 +1881,6 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     } else {
         ALOGD("%s: enter: devices(%#x) flags(%#x)", __func__,devices, flags);
     }
-
-    handle_ = handle;
-    qal_device_id_ = GetQalDeviceId(devices);
-    flags_ = flags;
     source_ = source;
     config_ = *config;
     usecase_ = GetInputUseCase(flags, source);
