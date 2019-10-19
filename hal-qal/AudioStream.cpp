@@ -1079,6 +1079,8 @@ int StreamOutPrimary::Flush() {
     ALOGD("%s: Enter \n", __func__);
     if (qal_stream_handle_) {
         ret = qal_stream_flush(qal_stream_handle_);
+        if (!ret)
+            ret = qal_stream_resume(qal_stream_handle_);
     }
 
     if (ret)
