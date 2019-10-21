@@ -49,6 +49,7 @@
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
 #define ULL_PLATFORM_DELAY         (3*1000LL)
+#define DEFAULT_OUTPUT_SAMPLING_RATE    48000
 #define BUF_SIZE_PLAYBACK 1024
 #define BUF_SIZE_CAPTURE 960
 #define NO_OF_BUF 4
@@ -204,9 +205,10 @@ public:
     uint32_t        GetBufferSize();
     audio_format_t  GetFormat();
     uint32_t        GetChannels();
-    static qal_device_id_t GetQalDeviceId(audio_devices_t halDeviceId);
+    int getQalDeviceIds(const audio_devices_t halDeviceId, qal_device_id_t* qalOutDeviceIds);
     audio_io_handle_t GetHandle();
     int             GetUseCase();
+    void fillAndroidDeviceMap();
     std::mutex write_wait_mutex_;
     std::condition_variable write_condition_;
     bool write_ready_;
@@ -227,9 +229,24 @@ protected:
     bool                      stream_started_ = false;
     int usecase_;
     struct qal_volume_data *volume_; /* used to cache volume */
+    std::map <audio_devices_t, qal_device_id_t> mAndroidDeviceMap;
+private:
+    int mNoOfOutDevices;
+    struct qal_device* mQalOutDevice;
+    qal_device_id_t* mQalOutDeviceIds;
+    audio_devices_t mAndroidOutDevices;
+    bool mInitialized;
 };
 
 class StreamOutPrimary : public StreamPrimary {
+
+private:
+    int mNoOfOutDevices;
+    struct qal_device* mQalOutDevice;
+    qal_device_id_t* mQalOutDeviceIds;
+    audio_devices_t mAndroidOutDevices;
+    bool mInitialized;
+
 public:
     StreamOutPrimary(audio_io_handle_t handle,
                      audio_devices_t devices,
@@ -242,8 +259,8 @@ public:
     ~StreamOutPrimary();
     int Standby();
     int SetVolume(float left, float right);
-    int SetParameters(struct str_parms *parms);
     int64_t GetFramesWritten(struct timespec *timestamp);
+    int SetParameters(const char *kvpairs);
     int Pause();
     int Resume();
     int Drain(audio_drain_type_t type);
@@ -275,6 +292,13 @@ protected:
 };
 
 class StreamInPrimary : public StreamPrimary{
+
+private:
+     int mNoOfInDevices;
+     struct qal_device* mQalInDevice;
+     qal_device_id_t* mQalInDeviceIds;
+     audio_devices_t mAndroidInDevices;
+     bool mInitialized;
 public:
     StreamInPrimary(audio_io_handle_t handle,
                     audio_devices_t devices,
@@ -292,6 +316,7 @@ public:
     static qal_stream_type_t GetQalStreamType(audio_input_flags_t halStreamFlags);
     int GetInputUseCase(audio_input_flags_t halStreamFlags, audio_source_t source);
     int addRemoveAudioEffect(const struct audio_stream *stream, effect_handle_t effect,bool enable);
+    int SetParameters(const char *kvpairs);
     bool is_st_session;
     bool is_st_session_active;
     audio_input_flags_t                 flags_;

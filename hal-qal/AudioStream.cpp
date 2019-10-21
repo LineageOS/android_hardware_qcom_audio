@@ -517,7 +517,6 @@ static int out_get_render_position(const struct audio_stream_out *stream,
 static int astream_out_set_parameters(struct audio_stream *stream,
                                       const char *kvpairs) {
     int ret = 0;
-    struct str_parms *parms;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
 	if (adevice) {
@@ -531,20 +530,13 @@ static int astream_out_set_parameters(struct audio_stream *stream,
     ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, astream_out->GetUseCase(), use_case_table[astream_out->GetUseCase()], kvpairs);
 
-    parms = str_parms_create_str(kvpairs);
-    if (!parms) {
-       ret = -EINVAL;
-       goto exit;
-    }
-    if(astream_out->flags_ ==
-            (AUDIO_OUTPUT_FLAG_DIRECT | AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD |
-             AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
-       ret = astream_out->SetParameters(parms);
+   // if(astream_out->flags_ == (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
+       ret = astream_out->SetParameters(kvpairs);
        if (ret) {
           ALOGE("Stream SetParameters Error (%x)", ret);
           goto exit;
        }
-    }
+   // }
 exit:
     return ret;
 }
@@ -684,7 +676,8 @@ static int astream_in_set_microphone_direction(
     std::ignore = stream;
     std::ignore = dir;
     ALOGD("%s: function not implemented",__func__);
-    return 0;
+    //No plans to implement audiozoom
+    return -1;
 }
 
 static int in_set_microphone_field_dimension(
@@ -693,7 +686,8 @@ static int in_set_microphone_field_dimension(
     std::ignore = stream;
     std::ignore = zoom;
     ALOGD("%s: function not implemented",__func__);
-    return 0;
+    //No plans to implement audiozoom
+    return -1;
 }
 
 static int astream_in_add_audio_effect(
@@ -846,12 +840,31 @@ static int astream_in_standby(struct audio_stream *stream) {
     }
 }
 
-static int astream_in_set_parameters(struct audio_stream *stream,
-                                     const char *kvpairs) {
-    std::ignore = stream;
-    std::ignore = kvpairs;
-    ALOGD("%s: function not implemented",__func__);
-    return 0;
+static int astream_in_set_parameters(struct audio_stream *stream, const char *kvpairs) {
+    int ret = -EINVAL;
+
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamInPrimary> astream_in;
+
+
+    if (!stream || !kvpairs) {
+        ret = 0;
+        goto error;
+    }
+
+    if (adevice) {
+        astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    } else {
+        ALOGE("%s: unable to get audio device",__func__);
+        return -EINVAL;
+    }
+
+    if (astream_in) {
+        return astream_in->SetParameters(kvpairs);
+    }
+
+error:
+    return ret;
 }
 
 static char* astream_in_get_parameters(const struct audio_stream *stream,
@@ -892,91 +905,100 @@ static size_t astream_in_get_buffer_size(const struct audio_stream *stream) {
         return 0;
 }
 
-qal_device_id_t StreamPrimary::GetQalDeviceId(audio_devices_t halDeviceId) {
-    qal_device_id_t qalDeviceId = QAL_DEVICE_NONE;
-    switch (halDeviceId) {
-        case AUDIO_DEVICE_OUT_SPEAKER:
-            qalDeviceId = QAL_DEVICE_OUT_SPEAKER;
-            break;
-        case AUDIO_DEVICE_OUT_EARPIECE:
-            qalDeviceId = QAL_DEVICE_OUT_HANDSET;
-            break;
-        case AUDIO_DEVICE_OUT_WIRED_HEADSET:
-            qalDeviceId = QAL_DEVICE_OUT_WIRED_HEADSET;
-            break;
-        case AUDIO_DEVICE_OUT_WIRED_HEADPHONE:
-            qalDeviceId = QAL_DEVICE_OUT_WIRED_HEADPHONE;
-            break;
-        case AUDIO_DEVICE_OUT_BLUETOOTH_SCO:
-            qalDeviceId = QAL_DEVICE_OUT_BLUETOOTH_SCO;
-            break;
-        case AUDIO_DEVICE_OUT_BLUETOOTH_A2DP:
-            qalDeviceId = QAL_DEVICE_OUT_BLUETOOTH_A2DP;
-            break;
-        case AUDIO_DEVICE_OUT_HDMI:
-            qalDeviceId = QAL_DEVICE_OUT_HDMI;
-            break;
-        case AUDIO_DEVICE_OUT_USB_DEVICE:
-            qalDeviceId = QAL_DEVICE_OUT_USB_DEVICE;
-            break;
-        case AUDIO_DEVICE_OUT_LINE:
-            qalDeviceId = QAL_DEVICE_OUT_LINE;
-            break;
-        case AUDIO_DEVICE_OUT_AUX_LINE:
-            qalDeviceId = QAL_DEVICE_OUT_AUX_LINE;
-            break;
-        case AUDIO_DEVICE_OUT_PROXY:
-            qalDeviceId = QAL_DEVICE_OUT_PROXY;
-            break;
-        case AUDIO_DEVICE_OUT_USB_HEADSET:
-            qalDeviceId = QAL_DEVICE_OUT_USB_HEADSET;
-            break;
-        case AUDIO_DEVICE_OUT_FM:
-            qalDeviceId = QAL_DEVICE_OUT_FM;
-            break;
-        case AUDIO_DEVICE_IN_BUILTIN_MIC:
-            qalDeviceId = QAL_DEVICE_IN_HANDSET_MIC;
-            break;
-        case AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET:
-            qalDeviceId = QAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
-            break;
-        case AUDIO_DEVICE_IN_WIRED_HEADSET:
-            qalDeviceId = QAL_DEVICE_IN_WIRED_HEADSET;
-            break;
-        case AUDIO_DEVICE_IN_HDMI:
-            qalDeviceId =QAL_DEVICE_IN_HDMI;
-            break;
-        case AUDIO_DEVICE_IN_BACK_MIC:
-            qalDeviceId = QAL_DEVICE_IN_SPEAKER_MIC;
-            break;
-        case AUDIO_DEVICE_IN_USB_ACCESSORY:
-            qalDeviceId = QAL_DEVICE_IN_USB_ACCESSORY;
-            break;
-        case AUDIO_DEVICE_IN_USB_DEVICE:
-            qalDeviceId = QAL_DEVICE_IN_USB_DEVICE;
-            break;
-        case AUDIO_DEVICE_IN_FM_TUNER:
-            qalDeviceId = QAL_DEVICE_IN_FM_TUNER;
-            break;
-        case AUDIO_DEVICE_IN_LINE:
-            qalDeviceId = QAL_DEVICE_IN_LINE;
-            break;
-        case AUDIO_DEVICE_IN_SPDIF:
-            qalDeviceId = QAL_DEVICE_IN_SPDIF;
-            break;
-        case AUDIO_DEVICE_IN_PROXY:
-            qalDeviceId = QAL_DEVICE_IN_PROXY;
-            break;
-        case AUDIO_DEVICE_IN_USB_HEADSET:
-            qalDeviceId = QAL_DEVICE_IN_USB_HEADSET;
-            break;
-        default:
-            qalDeviceId = QAL_DEVICE_NONE;
-            ALOGE("%s: unsupported Device Id of %d\n", __func__, halDeviceId);
-            break;
-     }
+void StreamPrimary::fillAndroidDeviceMap () {
 
-     return qalDeviceId;
+    mAndroidDeviceMap.clear();
+    /* go through all devices and pushback */
+
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_EARPIECE, QAL_DEVICE_OUT_HANDSET));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_SPEAKER, QAL_DEVICE_OUT_SPEAKER));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADSET, QAL_DEVICE_OUT_WIRED_HEADSET));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADPHONE, QAL_DEVICE_OUT_WIRED_HEADPHONE));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO, QAL_DEVICE_OUT_BLUETOOTH_SCO));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET, QAL_DEVICE_OUT_BLUETOOTH_SCO_HEADSET));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT, QAL_DEVICE_OUT_BLUETOOTH_SCO_CARKIT));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP, QAL_DEVICE_OUT_BLUETOOTH_A2DP));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES, QAL_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER, QAL_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_DIGITAL, QAL_AUDIO_DEVICE_OUT_AUX_DIGITAL));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_HDMI, QAL_DEVICE_OUT_HDMI));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, QAL_DEVICE_OUT_ANLG_DOCK_HEADSET));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET, QAL_DEVICE_OUT_DGTL_DOCK_HEADSET));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_ACCESSORY, QAL_DEVICE_OUT_USB_ACCESSORY));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_DEVICE, QAL_DEVICE_OUT_USB_DEVICE));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_REMOTE_SUBMIX, QAL_DEVICE_OUT_REMOTE_SUBMIX));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_TELEPHONY_TX, QAL_DEVICE_NONE));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_LINE, QAL_DEVICE_OUT_LINE));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_HDMI_ARC, QAL_DEVICE_OUT_HDMI_ARC));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_SPDIF, QAL_DEVICE_OUT_SPDIF));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_FM, QAL_DEVICE_OUT_FM));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_LINE, QAL_DEVICE_OUT_AUX_LINE));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_SPEAKER_SAFE, QAL_DEVICE_OUT_SPEAKER_SAFE));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_IP, QAL_DEVICE_OUT_IP));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BUS, QAL_DEVICE_OUT_BUS));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_PROXY, QAL_DEVICE_OUT_PROXY));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_HEADSET, QAL_DEVICE_OUT_USB_HEADSET));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_DEFAULT, QAL_DEVICE_OUT_SPEAKER));
+
+    /* go through all in devices and pushback */
+
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BUILTIN_MIC, QAL_DEVICE_IN_HANDSET_MIC));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BACK_MIC, QAL_DEVICE_IN_SPEAKER_MIC));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_COMMUNICATION, QAL_DEVICE_IN_COMMUNICATION));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_AMBIENT, QAL_DEVICE_IN_AMBIENT);
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET, QAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_WIRED_HEADSET, QAL_DEVICE_IN_WIRED_HEADSET));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_AUX_DIGITAL, QAL_DEVICE_IN_AUX_DIGITAL));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_HDMI, QAL_DEVICE_IN_HDMI));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_VOICE_CALL, QAL_DEVICE_IN_HANDSET_MIC));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_TELEPHONY_RX, QAL_DEVICE_IN_TELEPHONY_RX);
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_REMOTE_SUBMIX, QAL_DEVICE_IN_REMOTE_SUBMIX);
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET, QAL_DEVICE_IN_ANLG_DOCK_HEADSET);
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET, QAL_DEVICE_IN_DGTL_DOCK_HEADSET);
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_USB_ACCESSORY, QAL_DEVICE_IN_USB_ACCESSORY));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_USB_DEVICE, QAL_DEVICE_IN_USB_DEVICE));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_FM_TUNER, QAL_DEVICE_IN_FM_TUNER));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_TV_TUNER, QAL_DEVICE_IN_TV_TUNER);
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_LINE, QAL_DEVICE_IN_LINE));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_SPDIF, QAL_DEVICE_IN_SPDIF));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_A2DP, QAL_DEVICE_IN_BLUETOOTH_A2DP);
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_LOOPBACK, QAL_DEVICE_IN_LOOPBACK);
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_IP, QAL_DEVICE_IN_IP);
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BUS, QAL_DEVICE_IN_BUS);
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_PROXY, QAL_DEVICE_IN_PROXY));
+    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_USB_HEADSET, QAL_DEVICE_IN_USB_HEADSET));
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_HDMI_ARC, QAL_DEVICE_IN_HDMI_ARC);
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_BLE, QAL_DEVICE_IN_BLUETOOTH_BLE);
+    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_DEFAULT, QAL_DEVICE_IN_DEFAULT));
+}
+
+int StreamPrimary::getQalDeviceIds(const audio_devices_t halDeviceIds, qal_device_id_t* qualIds) {
+
+    int noDeviceIdsAllocated = popcount(halDeviceIds & ~AUDIO_DEVICE_BIT_IN);
+    int noDeviceIdsUsed = 0;
+    std::map<audio_devices_t, qal_device_id_t>::iterator it = mAndroidDeviceMap.begin();
+
+    if (!qualIds) {
+        ALOGE("%s: failed ", __func__);
+        goto error;
+    }
+    //qualids is supposed to have to space for the new ids
+    ALOGD("%s: haldeviceIds: %x, devices allocated %d, qal device ids %d", __func__, halDeviceIds, noDeviceIdsAllocated, noDeviceIdsUsed);
+
+    while(it != mAndroidDeviceMap.end() && (noDeviceIdsUsed != noDeviceIdsAllocated)) {
+        ALOGV("%s: halDeviceIds %x it->first %x, it->second %d", __func__, halDeviceIds, it->first, it->second);
+
+        if ((halDeviceIds & it->first) == halDeviceIds) {
+            ALOGD("%s: haldeviceId: %x and QAL Device ID %d", __func__, it->first, it->second);
+            qualIds[noDeviceIdsUsed] = it->second;
+            noDeviceIdsUsed = (noDeviceIdsUsed + 1);
+        }
+        it = std::next(it, 1);
+    }
+    ALOGD("%s: haldeviceIds: %x, devices allocated %d, qal device ids before returning %d", __func__, halDeviceIds, noDeviceIdsAllocated, noDeviceIdsUsed);
+
+error:
+    return noDeviceIdsUsed;
 }
 
 qal_stream_type_t StreamInPrimary::GetQalStreamType(
@@ -1185,14 +1207,95 @@ int StreamOutPrimary::Standby() {
         return ret;
 }
 
-int StreamOutPrimary::SetParameters(struct str_parms *parms) {
-   int ret = -EINVAL;
-   ALOGE("%s: g\n", __func__);
+int StreamOutPrimary::SetParameters(const char* kvpairs) {
 
+    struct str_parms *parms = (str_parms *)NULL;
+    char value[64];
+    int ret = 0, val = 0, noQalDevices = 0;
+    qal_device_id_t * deviceId;
+    struct qal_device* deviceIdConfigs;
+    int err =  -EINVAL;
+    struct qal_channel_info *ch_info;
+    int channels = 0;
+
+    ALOGD("%s: enter: kvpairs=%s", __func__, kvpairs);
+    parms = str_parms_create_str(kvpairs);
+    if (!parms)
+        goto error;
+
+    if (!mInitialized)
+        goto error;
+
+#if 0
+    if (!qal_stream_handle_){
+        ALOGD("%s: No stream handle, going to call open", __func__);
+        ret = Open();
+        if (ret) {
+            ALOGE("%s: failed to open stream.\n", __func__);
+            return -EINVAL;
+        }
+    }
+#endif
+
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
+    if (err >= 0) {
+
+        val = atoi(value);
+        ALOGV("%s: Found routing for output stream with value %x", __func__, val);
+        channels = audio_channel_count_from_out_mask(config_.channel_mask);
+        ch_info = (struct qal_channel_info *) calloc(1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
+        if (ch_info == NULL) {
+          ALOGE("Allocation failed for channel map");
+          ret = -ENOMEM;
+          goto error;
+        }
+
+        //need to convert channel mask to qal channel mask
+        ch_info->channels = 2; //TBD: Hard code number of channels to 2 for now.
+        ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+        if (ch_info->channels > 1 )
+            ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+        ALOGD("%s: mAndroidOutDevicese %d, mNoOfOutDevices %d", __func__, mAndroidOutDevices, mNoOfOutDevices);
+        /* If its the same device as what was already routed to, dont bother */
+        if ((mAndroidOutDevices != val) && (val != 0)) {
+            //re-allocate mQalOutDevice and mQalOutDeviceIds
+            if (popcount(val) != mNoOfOutDevices) {
+                deviceId = (qal_device_id_t*) realloc(mQalOutDeviceIds, popcount(val)* sizeof(qal_device_id_t));
+                deviceIdConfigs = (struct qal_device*) realloc(mQalOutDevice, popcount(val) * sizeof(struct qal_device));
+                if (!deviceId || !deviceIdConfigs) {
+                    ret = -ENOMEM;
+                    goto error;
+                }
+                mQalOutDeviceIds = deviceId;
+                mQalOutDevice = deviceIdConfigs;
+            }
+            noQalDevices = getQalDeviceIds(val, mQalOutDeviceIds);
+
+            if (noQalDevices != popcount(val)) {
+                ret = -EINVAL;
+                goto error;
+            }
+            ALOGD("%s: noQalDevices %d", __func__, noQalDevices);
+            mNoOfOutDevices = noQalDevices;
+            for (int i = 0; i < mNoOfOutDevices; i++) {
+                mQalOutDevice[i].id = mQalOutDeviceIds[i];
+                mQalOutDevice[i].config.sample_rate = mQalOutDevice[0].config.sample_rate;
+                mQalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+                mQalOutDevice[i].config.ch_info = ch_info; //is there a reason to have two different ch_info for device/stream?
+                mQalOutDevice[i].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+            }
+            mAndroidOutDevices = val;
+            ret = qal_stream_set_device(qal_stream_handle_, mNoOfOutDevices, mQalOutDevice);
+        }
+    }
+   
+     //TBD: check if its offload and check call the following
    ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &qparam_payload, parms, &msample_rate, &mchannels);
    if (ret) {
       ALOGE("parse_compress_metadata Error (%x)", ret);
    }
+error:
    ALOGE("%s: exit %d\n", __func__, ret);
    return ret;
 }
@@ -1344,13 +1447,11 @@ uint32_t StreamOutPrimary::GetBufferSize() {
 int StreamOutPrimary::Open() {
     int ret = -EINVAL;
     uint8_t channels = 0;
-    struct qal_device qalDevice;
     struct qal_channel_info *ch_info = NULL;
     uint32_t inBufSize = 0;
     uint32_t outBufSize = 0;
     uint32_t inBufCount = NO_OF_BUF;
     uint32_t outBufCount = NO_OF_BUF;
-    memset(&qalDevice, 0, sizeof(qalDevice));
 /*
     ret = qal_init();
     if ( ret ) {
@@ -1358,11 +1459,13 @@ int StreamOutPrimary::Open() {
       return -EINVAL;
     }
 */
-
-    /* TODO: Update channels based on device */
-    qalDevice.id = qal_device_id_; //To-Do: convert into QAL Device
-    qalDevice.config.sample_rate = config_.sample_rate;
-
+    if (!mInitialized) {
+        ALOGE("%s: Not initialized, returning error", __func__);
+        goto error_open;
+    }
+    ALOGD("%s: no_of_devices %d, android Device id %x ",__func__, mNoOfOutDevices, mAndroidOutDevices);
+    //need to convert channel mask to qal channel mask
+    // Stream channel mask 
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
     ch_info = (struct qal_channel_info *)calloc(
                             1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
@@ -1402,15 +1505,14 @@ int StreamOutPrimary::Open() {
         if (streamAttributes_.out_media_config.bit_width == 0)
             streamAttributes_.out_media_config.bit_width = 16;
     }
-    ALOGE("channels %d samplerate %d format id %d \n",
-            streamAttributes_.out_media_config.ch_info->channels,
-            streamAttributes_.out_media_config.sample_rate,
-          streamAttributes_.out_media_config.aud_fmt_id);
-    ALOGE("chanels %d \n", streamAttributes_.out_media_config.ch_info->channels);
+    
+    ALOGE("channels %d samplerate %d format id %d, stream type %d \n", streamAttributes_.out_media_config.ch_info->channels, streamAttributes_.out_media_config.sample_rate,
+          streamAttributes_.out_media_config.aud_fmt_id, streamAttributes_.type);
     ALOGE("msample_rate %d mchannels %d \n", msample_rate, mchannels);
+    ALOGE("mNoOfOutDevices %d\n", mNoOfOutDevices);
     ret = qal_stream_open (&streamAttributes_,
-                          1,
-                          &qalDevice,
+                          mNoOfOutDevices,
+                          mQalOutDevice,
                           0,
                           NULL,
                           &qal_callback,
@@ -1588,25 +1690,21 @@ StreamOutPrimary::StreamOutPrimary(
     flags_(flags)
 {
     stream_ = std::shared_ptr<audio_stream_out> (new audio_stream_out());
+    mInitialized = false;
+    int channels = 0;
+    struct qal_channel_info *ch_info;
+    int noQalDevices = 0;
+
     if (!stream_) {
-        ALOGE("%s: No memory allocated for stream_",__func__);
+      ALOGE("%s: No memory allocated for stream_",__func__);
+      goto error;
     }
+    ALOGE("%s: enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)\
+          address(%s)", __func__, handle, config->format, config->sample_rate, config->channel_mask,
+          devices, flags, address);
 
-    handle_ = handle;
-    qal_device_id_ = GetQalDeviceId(devices);
-    flags_ = flags;
     usecase_ = GetOutputUseCase(flags);
-
-    if (config) {
-        ALOGD("%s: enter: handle (%x) format(%#x) sample_rate(%d)\
-            channel_mask(%#x) devices(%#x) flags(%#x) address(%s)",
-            __func__, handle, config->format, config->sample_rate,
-            config->channel_mask, devices, flags, address);
-        memcpy(&config_, config, sizeof(struct audio_config));
-    } else {
-        ALOGD("%s: enter: devices(%#x) flags(%#x)", __func__,devices, flags);
-    }
-
+    fillAndroidDeviceMap();
     if (address) {
         strlcpy((char *)&address_, address, AUDIO_DEVICE_MAX_ADDRESS_LEN);
     } else {
@@ -1619,7 +1717,53 @@ StreamOutPrimary::StreamOutPrimary(
     writeAt.tv_nsec = 0;
     total_bytes_written_ = 0;
 
+    mNoOfOutDevices = popcount(devices);
+    if (!mNoOfOutDevices) {
+        mNoOfOutDevices = 1;
+        devices = AUDIO_DEVICE_OUT_DEFAULT;
+    }
+    ALOGD("%s: No of Android devices %d", __func__, mNoOfOutDevices);
+
+    mQalOutDeviceIds = new qal_device_id_t[mNoOfOutDevices];
+    if (!mQalOutDeviceIds) {
+           goto error;
+    }
+    noQalDevices = getQalDeviceIds(devices, mQalOutDeviceIds);
+    if (noQalDevices != mNoOfOutDevices) {
+        ALOGE("%s: mismatched qal no of devices %d and hal devices %d", __func__, noQalDevices, mNoOfOutDevices);
+        goto error;
+    }
+    mQalOutDevice = new qal_device [mNoOfOutDevices];
+    if (!mQalOutDevice) {
+        goto error;
+    }
+
+    channels = audio_channel_count_from_out_mask(config_.channel_mask);
+    ch_info = (struct qal_channel_info *) calloc(1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
+    if (ch_info == NULL) {
+      ALOGE("Allocation failed for channel map");
+      goto error;
+    }
+
+    //need to convert channel mask to qal channel mask
+    ch_info->channels = 2; //TBD: Hard code number of channels to 2 for now.
+    ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+    if (ch_info->channels > 1 )
+        ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+
+
+    /* TODO: how to update based on stream parameters and see if device is supported */
+    for (int i = 0; i < mNoOfOutDevices; i++) {
+        mQalOutDevice[i].id = mQalOutDeviceIds[i];
+        mQalOutDevice[i].config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        mQalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+        mQalOutDevice[i].config.ch_info = ch_info; //is there a reason to have two different ch_info for device/stream? TBD: free this
+        mQalOutDevice[i].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    }
     (void)FillHalFnPtrs();
+    mInitialized = true;
+error:
+    return;
 }
 
 StreamOutPrimary::~StreamOutPrimary() {
@@ -1776,17 +1920,110 @@ int StreamInPrimary::SetGain(float gain) {
     return ret;
 }
 
+int StreamInPrimary::SetParameters(const char* kvpairs) {
+
+    struct str_parms *parms = (str_parms *)NULL;
+    char value[64];
+    int ret = 0, val = 0, noQalDevices = 0;
+    qal_device_id_t * deviceId;
+    struct qal_device* deviceIdConfigs;
+    int err =  -EINVAL;
+    struct qal_channel_info *ch_info;
+    int channels = 0;
+
+    ALOGD("%s: enter: kvpairs=%s", __func__, kvpairs);
+    parms = str_parms_create_str(kvpairs);
+    if (!parms)
+        goto exit;
+
+    if (!mInitialized)
+        goto exit;
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
+    if (err >= 0) {
+
+        val = atoi(value);
+        ALOGV("%s: Found routing for input stream with value %x", __func__, val);
+        channels = audio_channel_count_from_out_mask(config_.channel_mask);
+        ch_info = (struct qal_channel_info *) calloc(1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
+        if (ch_info == NULL) {
+          ALOGE("Allocation failed for channel map");
+          ret = -ENOMEM;
+          goto exit;
+        }
+
+        //need to convert channel mask to qal channel mask
+        ch_info->channels = 2; //TBD: Hard code number of channels to 2 for now.
+        ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+        if (ch_info->channels > 1 )
+            ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+
+
+
+        /* If its the same device as what was already routed to, dont bother */
+
+        if ((mAndroidInDevices != val) && (val != 0) && audio_is_input_device(val)) {
+            //re-allocate mQalOutDevice and mQalOutDeviceIds
+            if (popcount(val & ~AUDIO_DEVICE_BIT_IN) != mNoOfInDevices) {
+                deviceId = (qal_device_id_t*) realloc(mQalInDeviceIds, popcount(val & ~AUDIO_DEVICE_BIT_IN));
+                deviceIdConfigs = (struct qal_device*) realloc(mQalInDevice, noQalDevices);
+                if (!deviceId || !deviceIdConfigs) {
+                    ret = -ENOMEM;
+                    goto exit;
+                }
+                mQalInDeviceIds = deviceId;
+            }
+
+            noQalDevices = getQalDeviceIds(val, mQalInDeviceIds);
+
+
+            if (noQalDevices != popcount(val & ~AUDIO_DEVICE_BIT_IN)) {
+                ret = -EINVAL;
+                goto exit;
+            }
+
+            mNoOfInDevices = noQalDevices;
+            for (int i = 0; i < mNoOfInDevices; i++) {
+                mQalInDevice[i].id = mQalInDeviceIds[i];
+                mQalInDevice[i].config.sample_rate = mQalInDevice[0].config.sample_rate;
+                mQalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+                mQalInDevice[i].config.ch_info = ch_info; //is there a reason to have two different ch_info for device/stream?
+                mQalInDevice[i].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+            }
+
+            ret = qal_stream_set_device(qal_stream_handle_, mNoOfInDevices, mQalInDevice);
+        }
+    }
+
+#if 0
+   //TBD: check if its offload and check call the following
+
+   ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &qparam_payload, parms);
+   if (ret) {
+          ALOGE("parse_compress_metadata Error (%x)", ret);
+          goto exit;
+       }
+   ret = qal_stream_set_param(qal_stream_handle_, 0, &qparam_payload);
+   if (ret) {
+      ALOGE("Qal Set Param Error (%x)\n", ret);
+   }
+#endif
+exit:
+   return ret;
+}
+
 int StreamInPrimary::Open() {
     int ret = -EINVAL;
     uint8_t channels = 0;
-    struct qal_device qalDevice;
     struct qal_channel_info *ch_info = NULL;
     uint32_t inBufSize = 0;
     uint32_t outBufSize = 0;
     uint32_t inBufCount = NO_OF_BUF;
     uint32_t outBufCount = NO_OF_BUF;
-    memset(&streamAttributes_, 0, sizeof(streamAttributes_));
-    memset(&qalDevice, 0, sizeof(qalDevice));
+    if(!mInitialized) {
+        ALOGE("%s: Not initialized, returning error", __func__);
+        goto error_open;
+    }
 
     audio_extn_sound_trigger_check_and_get_session(this);
     if (is_st_session) {
@@ -1820,14 +2057,11 @@ int StreamInPrimary::Open() {
     streamAttributes_.in_media_config.sample_rate = config_.sample_rate;
     streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     streamAttributes_.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
-
     streamAttributes_.in_media_config.ch_info = ch_info;
-    qalDevice.id = qal_device_id_;
-
     ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
-    ret = qal_stream_open(&streamAttributes_,
-                          1,
-                          &qalDevice,
+    ret = qal_stream_open (&streamAttributes_,
+                          mNoOfInDevices,
+                          mQalInDevice,
                           0,
                           NULL,
                           &qal_callback,
@@ -1925,55 +2159,6 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
     return local_bytes_read;
 }
 
-StreamPrimary::StreamPrimary(audio_io_handle_t handle,
-    audio_devices_t devices, struct audio_config *config):
-    qal_stream_handle_(NULL),
-    handle_(handle),
-    qal_device_id_(GetQalDeviceId(devices)),
-    config_(*config),
-    volume_(NULL)
-{
-    memset(&streamAttributes_, 0, sizeof(streamAttributes_));
-    memset(&address_, 0, sizeof(address_));
-}
-
-StreamPrimary::~StreamPrimary(void)
-{
-    if (volume_) {
-        free(volume_);
-        volume_ = NULL;
-    }
-}
-
-StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
-    audio_devices_t devices,
-    audio_input_flags_t flags,
-    struct audio_config *config,
-    audio_source_t source) :
-    StreamPrimary(handle, devices, config),
-    flags_(flags)
-{
-    stream_ = std::shared_ptr<audio_stream_in> (new audio_stream_in());
-
-    if (config) {
-        ALOGD("%s: enter: handle (%x) format(%#x) sample_rate(%d)\
-            channel_mask(%#x) devices(%#x) flags(%#x)", __func__,
-            handle, config->format, config->sample_rate, config->channel_mask,
-            devices, flags);
-        memcpy(&config_, config, sizeof(struct audio_config));
-    } else {
-        ALOGD("%s: enter: devices(%#x) flags(%#x)", __func__,devices, flags);
-    }
-    source_ = source;
-    config_ = *config;
-    usecase_ = GetInputUseCase(flags, source);
-
-    (void)FillHalFnPtrs();
-}
-
-StreamInPrimary::~StreamInPrimary() {
-}
-
 int StreamInPrimary::FillHalFnPtrs() {
     int ret = 0;
 
@@ -2001,5 +2186,100 @@ int StreamInPrimary::FillHalFnPtrs() {
     stream_.get()->update_sink_metadata = in_update_sink_metadata;
 
     return ret;
+}
+
+StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
+    audio_devices_t devices,
+    audio_input_flags_t flags,
+    struct audio_config *config,
+    audio_source_t source) :
+    StreamPrimary(handle, devices, config),
+    flags_(flags)
+{
+    stream_ = std::shared_ptr<audio_stream_in> (new audio_stream_in());
+    qal_stream_handle_ = NULL;
+    struct qal_channel_info *ch_info;
+    mInitialized = false;
+    int channels = 0;
+    int noQalDevices = 0;
+
+    ALOGD("%s: enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)"\
+          , __func__, handle, config->format, config->sample_rate, config->channel_mask,
+          devices, flags);
+
+    source_ = source;
+    fillAndroidDeviceMap();
+
+    usecase_ = GetInputUseCase(flags, source);
+    mAndroidInDevices = devices;
+    mNoOfInDevices = popcount(devices & ~AUDIO_DEVICE_BIT_IN);
+    if (!mNoOfInDevices) {
+        mNoOfInDevices = 1;
+        devices = AUDIO_DEVICE_IN_DEFAULT;
+    }
+
+    ALOGD("%s: No of devices %d", __func__, mNoOfInDevices);
+    mQalInDeviceIds = new qal_device_id_t[mNoOfInDevices];
+    if (!mQalInDeviceIds) {
+           goto error;
+    }
+
+    noQalDevices = getQalDeviceIds(devices, mQalInDeviceIds);
+    if (noQalDevices != mNoOfInDevices) {
+        ALOGE("%s: mismatched qal %d and hal devices %d", __func__, noQalDevices, mNoOfInDevices);
+        goto error;
+    }
+    mQalInDevice = new qal_device [mNoOfInDevices];
+    if (!mQalInDevice) {
+        goto error;
+    }
+
+    channels = audio_channel_count_from_out_mask(config_.channel_mask);
+     ch_info = (struct qal_channel_info *) calloc(1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
+     if (ch_info == NULL) {
+       ALOGE("Allocation failed for channel map");
+       goto error;
+     }
+
+     //need to convert channel mask to qal channel mask
+     ch_info->channels = 2; //TBD: Hard code number of channels to 2 for now.
+     ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+     if (ch_info->channels > 1 )
+         ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+
+    for (int i = 0; i < mNoOfInDevices; i++) {
+        mQalInDevice[i].id = mQalInDeviceIds[i];
+        mQalInDevice[i].config.sample_rate = config->sample_rate;
+        mQalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+        mQalInDevice[i].config.ch_info = ch_info; //is there a reason to have two different ch_info for device/stream?
+        mQalInDevice[i].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    }
+
+    (void)FillHalFnPtrs();
+    mInitialized = true;
+error:
+    return;
+}
+
+StreamInPrimary::~StreamInPrimary() {
+}
+
+StreamPrimary::StreamPrimary(audio_io_handle_t handle,
+    audio_devices_t devices __unused, struct audio_config *config):
+    qal_stream_handle_(NULL),
+    handle_(handle),
+    config_(*config),
+    volume_(NULL)
+{
+    memset(&streamAttributes_, 0, sizeof(streamAttributes_));
+    memset(&address_, 0, sizeof(address_));
+}
+
+StreamPrimary::~StreamPrimary(void)
+{
+    if (volume_) {
+        free(volume_);
+        volume_ = NULL;
+    }
 }
 

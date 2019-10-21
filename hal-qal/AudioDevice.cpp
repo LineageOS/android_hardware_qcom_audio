@@ -524,6 +524,7 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* strea
             break;
         }
     }
+    ALOGE("%s: astream_in(%p)",__func__, astream_in->stream_.get());
     return astream_in;
 }
 
