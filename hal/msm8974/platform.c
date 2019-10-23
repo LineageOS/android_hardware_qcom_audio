@@ -8397,16 +8397,20 @@ uint32_t platform_get_compress_offload_buffer_size(audio_offload_info_t* info)
     }
 
     /* Use client specified buffer size if mentioned */
-    if ((info != NULL) &&
-        (info->duration_us >= MIN_OFFLOAD_BUFFER_DURATION_MS) &&
-        (info->duration_us <= MAX_OFFLOAD_BUFFER_DURATION_MS)) {
-        duration_ms = info->duration_us / 1000;
-        channel_count = audio_channel_count_from_in_mask(info->channel_mask);
+    if (property_get_bool("vendor.audio.offload.buffer.duration.enabled", false)) {
+        if ((info != NULL) &&
+            (info->duration_us >= MIN_OFFLOAD_BUFFER_DURATION_MS) &&
+            (info->duration_us <= MAX_OFFLOAD_BUFFER_DURATION_MS)) {
+            duration_ms = info->duration_us / 1000;
+            channel_count = audio_channel_count_from_in_mask(info->channel_mask);
 
-        new_fragment_size = (duration_ms * info->sample_rate * channel_count * audio_bytes_per_sample(info->format)) / 1000;
-        ALOGI("%s:: Overwriting offload buffer size with client requested size old:%d new:%d", __func__, fragment_size, new_fragment_size);
+            new_fragment_size = (duration_ms * info->sample_rate * channel_count *
+                                     audio_bytes_per_sample(info->format)) / 1000;
+            ALOGI("%s:: Overwriting offload buffer size with client requested size old:%d new:%d",
+                                                       __func__, fragment_size, new_fragment_size);
 
-        fragment_size = new_fragment_size;
+            fragment_size = new_fragment_size;
+        }
     }
 
     if (info != NULL) {

@@ -7653,9 +7653,11 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
             out->compr_config.fragments = DIRECT_PCM_NUM_FRAGMENTS;
 
-            if ((config->offload_info.duration_us >= MIN_OFFLOAD_BUFFER_DURATION_MS * 1000) &&
-                   (config->offload_info.duration_us <= MAX_OFFLOAD_BUFFER_DURATION_MS * 1000))
-                out->info.duration_us = (int64_t)config->offload_info.duration_us;
+            if (property_get_bool("vendor.audio.offload.buffer.duration.enabled", false)) {
+                if ((config->offload_info.duration_us >= MIN_OFFLOAD_BUFFER_DURATION_MS * 1000) &&
+                       (config->offload_info.duration_us <= MAX_OFFLOAD_BUFFER_DURATION_MS * 1000))
+                    out->info.duration_us = (int64_t)config->offload_info.duration_us;
+            }
 
             /* Check if alsa session is configured with the same format as HAL input format,
              * if not then derive correct fragment size needed to accomodate the
