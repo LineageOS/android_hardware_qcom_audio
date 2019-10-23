@@ -176,6 +176,7 @@
 #define AUDIO_PARAMETER_KEY_DP_FOR_VOICE_USECASE "dp_for_voice"
 #define AUDIO_PARAMETER_KEY_DP_CHANNEL_MASK "dp_channel_mask"
 #define AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP "spkr_device_chmap"
+#define AUDIO_PARAMETER_KEY_HFP_ZONE "hfp_zone"
 
 #define EVENT_EXTERNAL_SPK_1 "qc_ext_spk_1"
 #define EVENT_EXTERNAL_SPK_2 "qc_ext_spk_2"
@@ -773,6 +774,9 @@ static struct audio_effect_config effect_config_table[GET_IN_DEVICE_INDEX(SND_DE
     [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_HANDSET_MIC_SB)][EFFECT_AEC] = {TX_VOICE_FLUENCE_SM_SB, 0x8000, 0x10EAF, 0x01},
     [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_HANDSET_MIC_SB)][EFFECT_NS] = {TX_VOICE_FLUENCE_SM_SB, 0x8000, 0x10EAF, 0x02},
 };
+
+static struct audio_fluence_mmsecns_config fluence_mmsecns_table = {TOPOLOGY_ID_MM_HFP_ECNS, MODULE_ID_MM_HFP_ECNS,
+                                                                    INSTANCE_ID_MM_HFP_ECNS, PARAM_ID_MM_HFP_ZONE};
 
 /* ACDB IDs (audio DSP path configuration IDs) for each sound device */
 static int acdb_device_table[SND_DEVICE_MAX] = {
@@ -4628,6 +4632,26 @@ void platform_add_external_specific_device(snd_device_t snd_device,
             platform_get_snd_device_name(snd_device), usbid, acdb_id);
 }
 
+static int platform_get_fluence_mmsecns_config_data(struct audio_fluence_mmsecns_config *fluence_mmsecns_config)
+{
+    int ret = 0;
+
+    if (fluence_mmsecns_config == NULL) {
+        ALOGE("%s: Invalid fluence_mmsecns_config", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ALOGV("%s: topology_id = 0x%x, module_id = 0x%x, instance_id = 0x%x, param_id = 0x%x",
+           __func__, fluence_mmsecns_table.topology_id, fluence_mmsecns_table.module_id,
+           fluence_mmsecns_table.instance_id, fluence_mmsecns_table.param_id);
+    memcpy(fluence_mmsecns_config, &fluence_mmsecns_table,
+           sizeof(struct audio_fluence_mmsecns_config));
+
+done:
+    return ret;
+}
+
 int platform_set_snd_device_acdb_id(snd_device_t snd_device, unsigned int acdb_id)
 {
     int ret = 0;
@@ -4666,6 +4690,18 @@ int platform_set_effect_config_data(snd_device_t snd_device,
     effect_config_table[GET_IN_DEVICE_INDEX(snd_device)][effect_type] = effect_config;
 
 done:
+    return ret;
+}
+
+int platform_set_fluence_mmsecns_config(struct audio_fluence_mmsecns_config fluence_mmsecns_config)
+{
+    int ret = 0;
+
+    ALOGV("%s: topology_id = 0x%x, module_id = 0x%x, instance_id = 0x%x, param_id = 0x%x",
+           __func__, fluence_mmsecns_config.topology_id, fluence_mmsecns_config.module_id,
+           fluence_mmsecns_config.instance_id, fluence_mmsecns_config.param_id);
+    fluence_mmsecns_table = fluence_mmsecns_config;
+
     return ret;
 }
 
@@ -7334,6 +7370,141 @@ static int update_external_device_status(struct platform_data *my_data,
     return ret;
 }
 
+static int platform_set_hfp_zone(struct platform_data *my_data, uint32_t zone)
+{
+    int ret = 0;
+    int acdb_dev_id = -1;
+    struct audio_usecase *usecase = NULL;
+    struct audio_device *adev = (struct audio_device *)(my_data->adev);
+    struct audio_fluence_mmsecns_config fluence_mmsecns_config;
+    acdb_audio_cal_cfg_t cal = {0};
+    ALOGV("Setting HFP Zone: %d", zone);
+
+    /* Zone control is available only when EC car state is set. */
+    if (!platform_get_eccarstate((void *) my_data)) {
+        ALOGE("%s: EC State should be enabled first.", __func__);
+        return -EINVAL;
+    }
+
+    usecase = get_usecase_from_list(adev, audio_extn_hfp_get_usecase());
+    if (usecase == NULL) {
+        ALOGE("%s: Could not find the usecase.", __func__);
+        return -EINVAL;
+    }
+
+    acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(usecase->in_snd_device)];
+    if (acdb_dev_id < 0) {
+        ALOGE("%s: Could not find acdb id for device(%d)",
+              __func__, usecase->in_snd_device);
+        return -EINVAL;
+    }
+
+    if (platform_get_fluence_mmsecns_config_data(&fluence_mmsecns_config) < 0) {
+        ALOGE("%s: Failed to get fluence mmsecns config data.", __func__);
+        return -EINVAL;
+    }
+
+    cal.acdb_dev_id = acdb_dev_id;
+    cal.app_type = DEFAULT_APP_TYPE_TX_PATH;
+    cal.topo_id = fluence_mmsecns_config.topology_id;
+    cal.module_id = fluence_mmsecns_config.module_id;
+    cal.instance_id = fluence_mmsecns_config.instance_id;
+    cal.param_id = fluence_mmsecns_config.param_id;
+
+    if (my_data->acdb_set_audio_cal) {
+        ret = my_data->acdb_set_audio_cal((void *)&cal, (void *)&zone, sizeof(uint32_t));
+    }
+
+    if (ret < 0)
+        ALOGE("%s: Could not set hfp zone calibration to zone %d",
+              __func__, zone);
+    else
+        ALOGV("%s: Successfully set hfp zone calibration to zone %d",
+              __func__, zone);
+
+    return ret;
+}
+
+static int platform_get_hfp_zone(struct platform_data *my_data)
+{
+    int ret = 0;
+    int acdb_dev_id = -1;
+    struct audio_usecase *usecase = NULL;
+    struct audio_device *adev = (struct audio_device *)(my_data->adev);
+    struct audio_fluence_mmsecns_config fluence_mmsecns_config;
+    acdb_audio_cal_cfg_t cal = {0};
+    uint8_t *dptr = NULL;
+    uint32_t zone = 0;
+    uint32_t param_len = MAX_SET_CAL_BYTE_SIZE;
+    ALOGV("Getting HFP Zone");
+
+    /* Zone control is available only when EC car state is set. */
+    if (!platform_get_eccarstate((void *) my_data)) {
+        ALOGE("%s: EC State should be enabled first.", __func__);
+        return -EINVAL;
+    }
+
+    usecase = get_usecase_from_list(adev, audio_extn_hfp_get_usecase());
+    if (usecase == NULL) {
+        ALOGE("%s: Could not find the usecase.", __func__);
+        return -EINVAL;
+    }
+
+    acdb_dev_id = acdb_device_table[platform_get_spkr_prot_snd_device(usecase->in_snd_device)];
+    if (acdb_dev_id < 0) {
+        ALOGE("%s: Could not find acdb id for device(%d)",
+              __func__, usecase->in_snd_device);
+        return -EINVAL;
+    }
+
+    if (platform_get_fluence_mmsecns_config_data(&fluence_mmsecns_config) < 0) {
+        ALOGE("%s: Failed to get fluence mmsecns config data.", __func__);
+        return -EINVAL;
+    }
+
+    cal.acdb_dev_id = acdb_dev_id;
+    cal.app_type = DEFAULT_APP_TYPE_TX_PATH;
+    cal.topo_id = fluence_mmsecns_config.topology_id;
+    cal.module_id = fluence_mmsecns_config.module_id;
+    cal.instance_id = fluence_mmsecns_config.instance_id;
+    cal.param_id = fluence_mmsecns_config.param_id;
+
+    dptr = (uint8_t*)calloc(param_len, sizeof(uint8_t));
+    if (!dptr) {
+        ALOGE("%s: Failed to allocate memory.", __func__);
+        return -ENOMEM;
+    }
+
+    if (my_data->acdb_get_audio_cal) {
+        ret = my_data->acdb_get_audio_cal((void *)&cal, (void *)dptr, &param_len);
+        if (ret == 0) {
+            if ((param_len == 0) || (param_len == MAX_SET_CAL_BYTE_SIZE)) {
+                ret = -EINVAL;
+            } else if (param_len > 16) {
+                /* returned data structure:
+                 *  u32 module_id
+                 *  u32 instance_id
+                 *  u32 parameter_id
+                 *  u32 payload_size
+                 *  u8  payload[payload_size]
+                 */
+                zone = *(uint32_t *)(dptr + 16);
+            }
+        }
+    }
+
+    if (ret < 0)
+        ALOGE("%s: Could not get hfp zone calibration to zone %d",
+              __func__, zone);
+    else
+        ALOGV("%s: Successfully get hfp zone calibration to zone %d",
+              __func__, zone);
+
+    if (dptr)
+        free(dptr);
+    return zone;
+}
+
 static int parse_audiocal_cfg(struct str_parms *parms, acdb_audio_cal_cfg_t *cal)
 {
     int err;
@@ -7832,6 +8003,18 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         ALOGV("%s: max_mic_count %d", __func__, my_data->max_mic_count);
     }
 
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HFP_ZONE,
+                            value, len);
+    if (err >= 0) {
+        uint32_t zone = atoi(value);
+
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_HFP_ZONE);
+        if (zone > 6)
+            ALOGE("%s: Only Zones 0 through 6 are supported", __func__);
+        else
+            platform_set_hfp_zone(my_data, zone);
+    }
+
     platform_set_fluence_params(platform, parms, value, len);
 
     /* handle audio calibration parameters */
@@ -8158,6 +8341,13 @@ void platform_get_parameters(void *platform,
         if (ret == 0 && info != NULL) {
             str_parms_add_int(reply, AUDIO_PARAMETER_KEY_DP_CHANNEL_MASK, info->channel_mask);
         }
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_HFP_ZONE,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        snprintf(value, sizeof(value), "%d", platform_get_hfp_zone(my_data));
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_HFP_ZONE, value);
     }
 
     /* Handle audio calibration keys */
