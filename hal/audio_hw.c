@@ -9501,12 +9501,10 @@ static int adev_dump(const audio_hw_device_t *device __unused,
 static int adev_close(hw_device_t *device)
 {
     size_t i;
-    struct audio_device *adev_temp = (struct audio_device *)device;
-
-    if (!adev_temp)
-        return 0;
 
     pthread_mutex_lock(&adev_init_lock);
+    if (!device || ((struct audio_device *)device != adev))
+        goto done;
 
     if ((--audio_device_ref_count) == 0) {
          if (audio_extn_spkr_prot_is_enabled())
@@ -9548,6 +9546,8 @@ static int adev_close(hw_device_t *device)
         free(device);
         adev = NULL;
     }
+
+done:
     pthread_mutex_unlock(&adev_init_lock);
     enable_gcov();
     return 0;
