@@ -1223,7 +1223,7 @@ int64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
         audio_channel_count_from_out_mask(config_.channel_mask), config_.format);
     ALOGE("%s: total_bytes_written_ %lld, written %lld",__func__, ((long long) total_bytes_written_), ((long long) written));
     signed_frames = written; //- kernel_buffer_size + avail;
-    signed_frames -= (platform_render_latency(flags_) * (streamAttributes.out_media_config.sample_rate) / 1000000LL);
+    signed_frames -= (platform_render_latency(flags_) * (streamAttributes_.out_media_config.sample_rate) / 1000000LL);
     
     if (signed_frames < 0) {
        ALOGE("%s: signed_frames -ve %lld",__func__, ((long long) signed_frames));
@@ -1410,7 +1410,7 @@ int StreamOutPrimary::GetFrames(uint64_t *frames) {
     ALOGE("%s: session msw %u",__func__, tstamp.session_time.value_msw);
     ALOGE("%s: session lsw %u",__func__, tstamp.session_time.value_lsw);
     ALOGE("%s: session timespec %lld",__func__, ((long long) timestamp));
-    timestamp *= (streamAttributes.out_media_config.sample_rate);
+    timestamp *= (streamAttributes_.out_media_config.sample_rate);
     ALOGE("%s: timestamp %lld",__func__, ((long long) timestamp));
     *frames = timestamp/1000000;
 exit:
@@ -1570,8 +1570,10 @@ StreamOutPrimary::~StreamOutPrimary() {
     ALOGD("%s: close stream, handle(%x), qal_stream_handle (%p)", __func__,
           handle_, qal_stream_handle_);
 
-    if (streamAttributes_.type == QAL_STREAM_COMPRESSED)
-        StopOffloadEffects(handle_, qal_stream_handle_);
+    if (qal_stream_handle_) {
+        if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
+            StopOffloadEffects(handle_, qal_stream_handle_);
+        }
 
     if (qal_stream_handle_) {
         qal_stream_close(qal_stream_handle_);
