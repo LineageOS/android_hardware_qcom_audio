@@ -7751,6 +7751,8 @@ static int adev_close(hw_device_t *device)
         return 0;
 
     pthread_mutex_lock(&adev_init_lock);
+    if (!device || ((struct audio_device *)device != adev))
+        goto done;
 
     if ((--audio_device_ref_count) == 0) {
         if (amplifier_close() != 0)
@@ -7786,6 +7788,7 @@ static int adev_close(hw_device_t *device)
         adev = NULL;
     }
 
+done:
     us_deinit();
 
     pthread_mutex_unlock(&adev_init_lock);
