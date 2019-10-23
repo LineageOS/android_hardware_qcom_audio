@@ -44,6 +44,11 @@
 #include <mutex>
 #include <map>
 
+#define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
+#define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
+#define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
+#define MMAP_PLATFORM_DELAY        (3*1000LL)
+#define ULL_PLATFORM_DELAY         (3*1000LL)
 #define BUF_SIZE_PLAYBACK 1024
 #define BUF_SIZE_CAPTURE 960
 #define NO_OF_BUF 4
@@ -232,7 +237,7 @@ public:
     int Standby();
     int SetVolume(float left, float right);
     int SetParameters(struct str_parms *parms);
-    int GetFramesWritten();
+    int64_t GetFramesWritten(struct timespec *timestamp);
     int Pause();
     int Resume();
     int Drain(audio_drain_type_t type);
@@ -241,14 +246,16 @@ public:
     int Open();
     void GetStreamHandle(audio_stream_out** stream);
     uint32_t GetBufferSize();
-    int GetTimestamp(uint64_t *timestp);
+    int GetFrames(uint64_t *frames);
     static qal_stream_type_t GetQalStreamType(audio_output_flags_t halStreamFlags);
     int GetOutputUseCase(audio_output_flags_t halStreamFlags);
     int StartOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     int StopOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     audio_output_flags_t flags_;
 protected:
+    struct timespec writeAt;
     int get_compressed_buffer_size();
+    int64_t platform_render_latency(audio_output_flags_t flags_);
     qal_param_payload qparam_payload;
     uint32_t msample_rate;
     uint16_t mchannels;

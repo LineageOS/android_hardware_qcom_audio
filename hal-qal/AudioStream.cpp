@@ -462,34 +462,32 @@ static int astream_out_get_presentation_position(
     std::ignore = timestamp;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
-    uint64_t timestp = 0;
     int ret = 0;
-    ALOGE("%s: Enter",__func__);
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
         ALOGE("%s: unable to get audio device",__func__);
         return -EINVAL;
     }
-
+    if (!timestamp) {
+       ALOGE("%s: timestamp NULL",__func__);
+       return -EINVAL;
+    }
     if (astream_out) {
-       ALOGE("%s: flag %x",__func__, (astream_out->GetQalStreamType(astream_out->flags_)));
+       ALOGD("%s: flag %x",__func__, (astream_out->GetQalStreamType(astream_out->flags_)));
        switch (astream_out->GetQalStreamType(astream_out->flags_)) {
        case QAL_STREAM_COMPRESSED:
-          ALOGE("%s: switch compress flag %x",__func__, (astream_out->GetQalStreamType(astream_out->flags_)));
-          ret = astream_out->GetTimestamp(&timestp);
-          if (ret != 0){
+          ret = astream_out->GetFrames(frames);
+          if (ret != 0) {
              ALOGE("%s: GetTimestamp failed %d",__func__, ret);
              return ret;
           }
-          ALOGE("%s: timestp %lld",__func__, ((long long) timestp));
-          *frames = timestp/1000000;
           ALOGE("%s: frames %lld ",__func__, ((long long) *frames));
           clock_gettime(CLOCK_MONOTONIC, timestamp);
           break;
        default:
           ALOGE("%s: entered default",__func__);
-          *frames = astream_out->GetFramesWritten();
+          *frames = astream_out->GetFramesWritten(timestamp);
           ALOGE("%s: frames %lld ",__func__, ((long long) *frames));
           break;
        }
@@ -1189,15 +1187,57 @@ int StreamOutPrimary::SetVolume(float left , float right) {
     return ret;
 }
 
-int StreamOutPrimary::GetFramesWritten() {
-    return total_bytes_written_/audio_bytes_per_frame(
-        audio_channel_mask_get_bits(config_.channel_mask), config_.format);
+/* Delay in Us */
+/* Delay in Us, only to be used for PCM formats */
+int64_t StreamOutPrimary::platform_render_latency(audio_output_flags_t flags_)
+{
+    struct qal_stream_attributes streamAttributes;
+    streamAttributes.type = StreamOutPrimary::GetQalStreamType(flags_);
+    ALOGE("%s:%d type %d", __func__, __LINE__, streamAttributes.type);
+    switch (streamAttributes.type) {
+         case QAL_STREAM_DEEP_BUFFER:
+             return DEEP_BUFFER_PLATFORM_DELAY;
+         case QAL_STREAM_LOW_LATENCY:
+             return LOW_LATENCY_PLATFORM_DELAY;
+         case QAL_STREAM_COMPRESSED:
+              return PCM_OFFLOAD_PLATFORM_DELAY;
+    //TODO: Add more usecases/type as in current hal, once they are available in qal
+         default:
+             return 0;
+     }
+}
+
+int64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
+{
+    int64_t signed_frames = 0;
+    int64_t written = 0;
+    if (!qal_stream_handle_) {
+       ALOGE("%s: qal_stream_handle_ NULL",__func__);
+       return 0;
+    }
+    if (!timestamp) {
+       ALOGE("%s: timestamp NULL",__func__);
+       return 0;
+    }
+    written = total_bytes_written_/audio_bytes_per_frame(
+        audio_channel_count_from_out_mask(config_.channel_mask), config_.format);
+    ALOGE("%s: total_bytes_written_ %lld, written %lld",__func__, ((long long) total_bytes_written_), ((long long) written));
+    signed_frames = written; //- kernel_buffer_size + avail;
+    signed_frames -= (platform_render_latency(flags_) * (streamAttributes.out_media_config.sample_rate) / 1000000LL);
+    
+    if (signed_frames < 0) {
+       ALOGE("%s: signed_frames -ve %lld",__func__, ((long long) signed_frames));
+       clock_gettime(CLOCK_MONOTONIC, timestamp);
+       signed_frames = 0;
+    } else {
+       *timestamp = writeAt;
+    }
+    return signed_frames;
 }
 
 int StreamOutPrimary::get_compressed_buffer_size()
 {
-    
-    ALOGE("%s:%d config_ %x", __func__, __LINE__, config_.format);
+	ALOGE("%s:%d config_ %x", __func__, __LINE__, config_.format);
     return COMPRESS_OFFLOAD_FRAGMENT_SIZE;
 }
 
@@ -1351,11 +1391,11 @@ error_open_devc:
 }
 
 
-int StreamOutPrimary::GetTimestamp(uint64_t *timestp) {
+int StreamOutPrimary::GetFrames(uint64_t *frames) {
     int ret = 0;
     if (!qal_stream_handle_) {
        ALOGE("%s: qal_stream_handle_ NULL",__func__);
-       *timestp = 0;
+       *frames = 0;
        return 0;
     }
     qal_session_time tstamp;
@@ -1370,8 +1410,9 @@ int StreamOutPrimary::GetTimestamp(uint64_t *timestp) {
     ALOGE("%s: session msw %u",__func__, tstamp.session_time.value_msw);
     ALOGE("%s: session lsw %u",__func__, tstamp.session_time.value_lsw);
     ALOGE("%s: session timespec %lld",__func__, ((long long) timestamp));
-    timestamp *= (streamAttributes_.out_media_config.sample_rate);
-    *timestp = timestamp;
+    timestamp *= (streamAttributes.out_media_config.sample_rate);
+    ALOGE("%s: timestamp %lld",__func__, ((long long) timestamp));
+    *frames = timestamp/1000000;
 exit:
     return ret;
 }
@@ -1443,7 +1484,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
 
     local_bytes_written = qal_stream_write(qal_stream_handle_, &qalBuffer);
     total_bytes_written_ += local_bytes_written;
-
+    clock_gettime(CLOCK_MONOTONIC, &writeAt);
     return local_bytes_written;
 }
 
@@ -1520,7 +1561,8 @@ StreamOutPrimary::StreamOutPrimary(
 
     fnp_offload_effect_start_output_ = start_offload_effect;
     fnp_offload_effect_stop_output_ = stop_offload_effect;
-
+    writeAt.tv_sec = 0;
+    writeAt.tv_nsec = 0;
     (void)FillHalFnPtrs();
 }
 
