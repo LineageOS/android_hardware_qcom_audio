@@ -7576,12 +7576,9 @@ static int adev_dump(const audio_hw_device_t *device __unused,
 
 static int adev_close(hw_device_t *device)
 {
-    struct audio_device *adev_temp = (struct audio_device *)device;
-
-    if (!adev_temp)
-        return 0;
-
     pthread_mutex_lock(&adev_init_lock);
+    if (!device || ((struct audio_device *)device != adev))
+        goto done;
 
     if ((--audio_device_ref_count) == 0) {
         if (amplifier_close() != 0)
@@ -7615,6 +7612,7 @@ static int adev_close(hw_device_t *device)
         adev = NULL;
     }
 
+done:
     us_deinit();
 
     pthread_mutex_unlock(&adev_init_lock);
