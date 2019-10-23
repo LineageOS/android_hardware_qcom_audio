@@ -286,9 +286,12 @@ int32_t ext_hw_plugin_usecase_start(void *plugin, struct audio_usecase *usecase)
             }
         }
 
-        if ((usecase->type == PCM_CAPTURE) &&
-            (usecase->id ==  USECASE_AUDIO_RECORD) &&
-            (usecase->in_snd_device == SND_DEVICE_IN_SPEAKER_QMIC_AEC)) {
+        if (((usecase->type == PCM_CAPTURE) &&
+            (usecase->id == USECASE_AUDIO_RECORD) &&
+            (usecase->in_snd_device == SND_DEVICE_IN_SPEAKER_QMIC_AEC)) ||
+            ((usecase->type == PCM_HFP_CALL) &&
+            ((usecase->id == USECASE_AUDIO_HFP_SCO) || (usecase->id == USECASE_AUDIO_HFP_SCO_WB)) &&
+            (usecase->in_snd_device == SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP_MMSECNS))) {
             audio_hal_plugin_codec_enable_t codec_enable_ec = {0,};
             codec_enable_ec.snd_dev = usecase->in_snd_device;
             // TODO - below should be related with in_snd_dev

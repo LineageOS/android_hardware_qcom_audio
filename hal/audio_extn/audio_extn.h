@@ -696,6 +696,7 @@ typedef int (*fp_audio_extn_auto_hal_start_hfp_downlink_t)(struct audio_device *
                                                         struct audio_usecase *);
 typedef int (*fp_audio_extn_auto_hal_stop_hfp_downlink_t)(struct audio_device *,
                                                         struct audio_usecase *);
+typedef bool (*fp_platform_get_eccarstate_t)(void *);
 
 typedef struct hfp_init_config {
     fp_platform_set_mic_mute_t                   fp_platform_set_mic_mute;
@@ -1360,6 +1361,7 @@ typedef struct auto_hal_init_config {
     fp_disable_snd_device_t                      fp_disable_snd_device;
     fp_adev_get_active_input_t                   fp_adev_get_active_input;
     fp_platform_set_echo_reference_t             fp_platform_set_echo_reference;
+    fp_platform_get_eccarstate_t                 fp_platform_get_eccarstate;
 } auto_hal_init_config_t;
 // END: AUTO_HAL FEATURE ==================================================
 
