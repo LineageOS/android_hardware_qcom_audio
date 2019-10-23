@@ -264,6 +264,12 @@ vendor.audio.use.sw.ape.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
 
+#enable hardware decoders for WMA & APE by default
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.use.hw.wma.decoder=true
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.use.hw.ape.decoder=true
+
 #audio becoming noisy intent broadcast delay
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.sys.noisy.broadcast.delay=600
