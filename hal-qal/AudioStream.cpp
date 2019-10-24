@@ -459,7 +459,6 @@ static int astream_out_get_presentation_position(
                                const struct audio_stream_out *stream,
                                uint64_t *frames, struct timespec *timestamp){
     std::ignore = stream;
-    std::ignore = timestamp;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
     int ret = 0;
@@ -474,7 +473,6 @@ static int astream_out_get_presentation_position(
        return -EINVAL;
     }
     if (astream_out) {
-       ALOGD("%s: flag %x",__func__, (astream_out->GetQalStreamType(astream_out->flags_)));
        switch (astream_out->GetQalStreamType(astream_out->flags_)) {
        case QAL_STREAM_COMPRESSED:
           ret = astream_out->GetFrames(frames);
@@ -482,19 +480,17 @@ static int astream_out_get_presentation_position(
              ALOGE("%s: GetTimestamp failed %d",__func__, ret);
              return ret;
           }
-          ALOGE("%s: frames %lld ",__func__, ((long long) *frames));
           clock_gettime(CLOCK_MONOTONIC, timestamp);
           break;
        default:
-          ALOGE("%s: entered default",__func__);
           *frames = astream_out->GetFramesWritten(timestamp);
-          ALOGE("%s: frames %lld ",__func__, ((long long) *frames));
           break;
        }
     } else {
         ALOGE("%s: unable to get audio stream",__func__);
         return -EINVAL;
     }
+    ALOGV("%s: frames %lld played at %lld ",__func__, ((long long) *frames), timestamp->tv_sec * 1000000LL + timestamp->tv_nsec / 1000);
 
     return ret;
 }
@@ -503,8 +499,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
                                    uint32_t *dsp_frames) {
     std::ignore = stream;
     std::ignore = dsp_frames;
-    ALOGE("%s: enter",__func__);
-
+    ALOGD("%s: enter",__func__);
     return 0;
 }
 
@@ -1379,8 +1374,6 @@ int StreamOutPrimary::Open() {
         ALOGE("Qal Stream set buffer size Error  (%x)", ret);
     }
 
-    total_bytes_written_ = 0; // reset at each open
-
 error_open:
     if (ch_info)
         free(ch_info);
@@ -1563,6 +1556,8 @@ StreamOutPrimary::StreamOutPrimary(
     fnp_offload_effect_stop_output_ = stop_offload_effect;
     writeAt.tv_sec = 0;
     writeAt.tv_nsec = 0;
+    total_bytes_written_ = 0;
+
     (void)FillHalFnPtrs();
 }
 
@@ -1574,11 +1569,10 @@ StreamOutPrimary::~StreamOutPrimary() {
         if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
             StopOffloadEffects(handle_, qal_stream_handle_);
         }
-
-    if (qal_stream_handle_) {
-        qal_stream_close(qal_stream_handle_);
-        qal_stream_handle_ = nullptr;
     }
+
+    qal_stream_close(qal_stream_handle_);
+    qal_stream_handle_ = nullptr;
 }
 
 int StreamInPrimary::Standby() {
