@@ -5677,6 +5677,7 @@ int audio_extn_auto_hal_init(struct audio_device *adev)
         auto_hal_init_config.fp_disable_snd_device = disable_snd_device;
         auto_hal_init_config.fp_adev_get_active_input = adev_get_active_input;
         auto_hal_init_config.fp_platform_set_echo_reference = platform_set_echo_reference;
+        auto_hal_init_config.fp_platform_get_eccarstate = platform_get_eccarstate;
         return auto_hal_init(adev, auto_hal_init_config);
     }
     else

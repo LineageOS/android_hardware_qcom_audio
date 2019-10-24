@@ -1600,12 +1600,6 @@
         <path name="incall-rec-uplink-and-downlink-compress" />
     </path>
 
-    <path name="hfp-sco">
-        <ctl name="AUX_PCM_RX Audio Mixer MultiMedia6" value="1" />
-        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
-        <ctl name="MultiMedia6 Mixer TERT_TDM_TX_0" value="1" />
-    </path>
-
     <path name="icc-call">
         <ctl name="SEC_TDM_RX_0 SampleRate" value="KHZ_16" />
         <ctl name="SEC_TDM_RX_0 Channels" value="Four" />
@@ -1624,11 +1618,26 @@
     <path name="hfp-sco headphones">
     </path>
 
+    <path name="hfp-sco-wb headphones">
+        <path name="hfp-sco headphones" />
+    </path>
+
     <path name="hfp-sco headset">
         <path name="hfp-sco headphones" />
     </path>
 
+    <path name="hfp-sco">
+        <ctl name="AUX_PCM_RX Audio Mixer MultiMedia6" value="1" />
+        <ctl name="MultiMedia6 Mixer TERT_TDM_TX_0" value="1" />
+    </path>
+
     <path name="hfp-sco bt-sco">
+        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
+        <path name="hfp-sco" />
+    </path>
+
+    <path name="hfp-sco bt-sco-mmsecns">
+        <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
         <path name="hfp-sco" />
     </path>
 
@@ -1638,11 +1647,13 @@
     </path>
 
     <path name="hfp-sco-wb bt-sco-wb">
+        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
         <path name="hfp-sco-wb" />
     </path>
 
-    <path name="hfp-sco-wb headphones">
-        <path name="hfp-sco headphones" />
+    <path name="hfp-sco-wb bt-sco-mmsecns">
+        <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
+        <path name="hfp-sco-wb" />
     </path>
 
 
@@ -2142,6 +2153,10 @@
     </path>
 
     <path name="voice-speaker-mic-hfp">
+        <path name="speaker-mic" />
+    </path>
+
+    <path name="voice-speaker-mic-hfp-mmsecns">
         <path name="speaker-mic" />
     </path>
 

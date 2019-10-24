@@ -121,6 +121,13 @@ struct audio_effect_config {
     uint32_t param_value;
 };
 
+struct audio_fluence_mmsecns_config {
+    uint32_t topology_id;
+    uint32_t module_id;
+    uint32_t instance_id;
+    uint32_t param_id;
+};
+
 #define MAX_MIXER_PATH_LEN 64
 
 typedef enum card_status_t {

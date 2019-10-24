@@ -515,11 +515,11 @@ void offload_eq_set_bands_level(struct eq_params *eq, int num_bands,
         eq->per_band_cfg[i].freq_millihertz = band_freq_list[i] * 1000;
         eq->per_band_cfg[i].gain_millibels = band_gain_list[i] * 100;
         eq->per_band_cfg[i].quality_factor = Q8_UNITY;
-    }
-
 #ifdef DTS_EAGLE
         update_effects_node(PCM_DEV_ID, EFFECT_TYPE_EQ, EFFECT_SET_PARAM, EFFECT_NO_OP, EFFECT_NO_OP, i, band_gain_list[i] * 100);
 #endif
+    }
+
 }
 
 static int eq_send_params(eff_mode_t mode, void *ctl, struct eq_params *eq,

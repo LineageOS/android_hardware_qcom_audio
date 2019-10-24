@@ -17,6 +17,10 @@ if SVA_AUDIO_CONCURRENCY
 AM_CFLAGS += -DSVA_AUDIO_CONC
 endif
 
+if QAHW_V1
+AM_CFLAGS += -DQAHW_V1
+endif
+
 libqahwwrapper_la_CFLAGS  = $(AM_CFLAGS)
 libqahwwrapper_la_CFLAGS += -include stddef.h
 libqahwwrapper_la_CFLAGS += -Dstrlcpy=g_strlcpy $(GLIB_CFLAGS) -include glib.h

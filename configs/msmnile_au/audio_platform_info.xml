@@ -49,6 +49,7 @@
         <device name="SND_DEVICE_IN_VOICE_HEADSET_MIC" acdb_id="95"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" acdb_id="95"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP" acdb_id="95"/>
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP_MMSECNS" acdb_id="131"/>
         <device name="SND_DEVICE_IN_BT_SCO_MIC" acdb_id="20"/>
         <device name="SND_DEVICE_IN_BT_SCO_MIC_WB" acdb_id="38"/>
         <device name="SND_DEVICE_IN_HANDSET_DMIC" acdb_id="80"/>
@@ -74,6 +75,10 @@
             <device name="SND_DEVICE_IN_HANDSET_DMIC_AEC_NS" module_id="0x10F0A" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
             <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS" module_id="0x10F09" instance_id="0x0" param_id="0x10EAF" param_value="0x02"/>
         </ns>
+        <mmsecns>
+            <!-- multi-mic surround ECNS zone control -->
+            <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP_MMSECNS" topology_id="0x1FFF0002" module_id="0x10F3B" instance_id="0x8000" param_id="0x109F0"/>
+        </mmsecns>
     </module_ids>
 
     <bit_width_configs>
@@ -174,6 +179,8 @@
         <device name="SND_DEVICE_IN_SPEAKER_DMIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_QUAD_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_HANDSET_QMIC" interface="TERT_TDM_TX_0"/>
+        <!-- multi-mic surround ECNS mixer path definition -->
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP_MMSECNS" backend="bt-sco-mmsecns" interface="TERT_TDM_TX_0"/>
     </backend_names>
     <!-- below values are for ref purpose to OEM, doesn't contain actual hardware info on MTP -->
     <microphone_characteristics>
