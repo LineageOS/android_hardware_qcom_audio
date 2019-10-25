@@ -2077,6 +2077,11 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
             ALOGD("Opening %s\n", name);
             read_line_from_file(name, buf, sizeof(buf));
             if (strstr(buf, file)) {
+                if (property_get_bool("vendor.audio.read.wsatz.type", false)) {
+                    struct str_parms *parms = NULL;
+                    buf[strlen(buf) - 1] = '\0';
+                    audio_extn_spkr_prot_set_parameters(parms, buf, 0);
+                }
                 wsa_count++;
             }
             tzn++;
