@@ -487,6 +487,8 @@ static const struct string_to_enum out_sample_rates_name_to_enum_table[] = {
     STRING_TO_ENUM(96000),
     STRING_TO_ENUM(176400),
     STRING_TO_ENUM(192000),
+    STRING_TO_ENUM(352800),
+    STRING_TO_ENUM(384000),
 };
 
 struct in_effect_list {
