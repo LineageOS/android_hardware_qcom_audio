@@ -302,6 +302,7 @@ struct platform_data {
     bool ec_ref_enabled;
     bool is_wsa_speaker;
     bool hifi_audio;
+    bool is_cls_ab_only_supported;
     bool is_i2s_ext_modem;
     bool is_acdb_initialized;
     bool ec_car_state;
@@ -3253,7 +3254,6 @@ void *platform_init(struct audio_device *adev)
         my_data->hifi_audio = true;
     set_platform_defaults(my_data);
 
-
     /* Initialize ACDB ID's */
     if (my_data->is_i2s_ext_modem && !is_auto_snd_card(snd_card_name))
         platform_info_init(PLATFORM_INFO_XML_PATH_I2S, my_data, PLATFORM);
@@ -3757,6 +3757,11 @@ acdb_init_fail:
     ret = audio_extn_utils_get_codec_version(snd_card_name,
                                              my_data->adev->snd_card,
                                              my_data->codec_version);
+
+    /* WCD9370 codec variant only supports Class AB power mode */
+    if (strstr(my_data->codec_variant, "WCD9370")) {
+        my_data->is_cls_ab_only_supported = true;
+    }
 
     if (NATIVE_AUDIO_MODE_INVALID != platform_get_native_support()) {
         /*
@@ -9469,13 +9474,18 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
 
     if (snd_device == SND_DEVICE_OUT_HEADPHONES || snd_device ==
         SND_DEVICE_OUT_HEADPHONES_44_1 || snd_device == SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER) {
-        if (sample_rate > 48000 ||
-            (bit_width >= 24 && (sample_rate == 48000  || sample_rate == 44100))) {
-            ALOGI("%s: apply HPH HQ mode\n", __func__);
-            audio_route_apply_and_update_path(adev->audio_route, "hph-highquality-mode");
+        if (my_data->is_cls_ab_only_supported) {
+           ALOGI("%s: apply CLS AB HPH power mode\n", __func__);
+           audio_route_apply_and_update_path(adev->audio_route, "hph-class-ab-mode");
         } else {
-            ALOGI("%s: apply HPH LP mode\n", __func__);
-            audio_route_apply_and_update_path(adev->audio_route, "hph-lowpower-mode");
+            if (sample_rate > 48000 ||
+                (bit_width >= 24 && (sample_rate == 48000  || sample_rate == 44100))) {
+                ALOGI("%s: apply HPH HQ mode\n", __func__);
+                audio_route_apply_and_update_path(adev->audio_route, "hph-highquality-mode");
+            } else {
+                ALOGI("%s: apply HPH LP mode\n", __func__);
+                audio_route_apply_and_update_path(adev->audio_route, "hph-lowpower-mode");
+            }
         }
     }
 
