@@ -1,1 +1,1 @@
-../msm8974/Android.mk
+../../msm8974/audio/Android.mk
