@@ -1712,7 +1712,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
          !strncmp(snd_card_name, "atoll-idp-snd-card",
                    sizeof("atoll-idp-snd-card")) ||
          !strncmp(snd_card_name, "atoll-qrd-snd-card",
-                   sizeof("atoll-qrd-snd-card"))) {
+                   sizeof("atoll-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "bengal-idp-snd-card",
+                   sizeof("bengal-idp-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -3540,7 +3542,8 @@ acdb_init_fail:
             !strncmp(snd_card_name, "kona", strlen("kona")) ||
             !strncmp(snd_card_name, "lito", strlen("lito")) ||
             !strncmp(snd_card_name, "atoll", strlen("atoll")) ||
-            !strncmp(snd_card_name, "trinket", strlen("trinket"))) {
+            !strncmp(snd_card_name, "trinket", strlen("trinket"))||
+            !strncmp(snd_card_name, "bengal", strlen("bengal"))) {
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
@@ -3568,6 +3571,13 @@ acdb_init_fail:
             if (default_rx_backend)
                 free(default_rx_backend);
             default_rx_backend = strdup("WSA_CDC_DMA_RX_0");
+            if(!strncmp(snd_card_name, "bengal", strlen("bengal"))) {
+                my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+                        strdup("RX_CDC_DMA_RX_1 Format");
+                my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+                        strdup("RX_CDC_DMA_RX_1 SampleRate");
+                default_rx_backend = strdup("RX_CDC_DMA_RX_1");
+            }
         } else if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
                !strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
                !strncmp(snd_card_name, "qcs605", strlen("qcs605"))) {
