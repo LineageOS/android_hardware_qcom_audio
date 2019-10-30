@@ -202,6 +202,7 @@ typedef enum {
     APTX_AD_SR_UNCHANGED = 0x0,
     APTX_AD_48 = 0x1,  // 48 KHz default
     APTX_AD_44_1 = 0x2, // 44.1kHz
+    APTX_AD_96 = 0x3,  // 96KHz
 } enc_aptx_ad_s_rate;
 
 typedef void (*bt_audio_pre_init_t)(void);
@@ -1701,7 +1702,7 @@ static int update_aptx_ad_dsp_config(struct aptx_ad_enc_cfg_t *aptx_dsp_cfg,
              a2dp.enc_channels = CH_MONO;
              aptx_dsp_cfg->custom_cfg.num_channels = CH_MONO;
              aptx_dsp_cfg->custom_cfg.channel_mapping[0] = PCM_CHANNEL_C;
-            break;
+             break;
     }
     switch(aptx_dsp_cfg->aptx_ad_cfg.sampling_freq) {
         case APTX_AD_SR_UNCHANGED:
@@ -1713,7 +1714,7 @@ static int update_aptx_ad_dsp_config(struct aptx_ad_enc_cfg_t *aptx_dsp_cfg,
         case APTX_AD_44_1:
             a2dp.enc_sampling_rate = SAMPLING_RATE_441K;
             aptx_dsp_cfg->custom_cfg.sample_rate = SAMPLING_RATE_441K;
-        break;
+            break;
     }
     ALOGV("Successfully updated APTX AD enc format with \
                samplingrate: %d channels:%d",
@@ -1774,7 +1775,7 @@ static int update_aptx_ad_dsp_config_r2(struct aptx_ad_enc_cfg_r2_t *aptx_dsp_cf
              a2dp.enc_channels = CH_MONO;
              aptx_dsp_cfg->custom_cfg.num_channels = CH_MONO;
              aptx_dsp_cfg->custom_cfg.channel_mapping[0] = PCM_CHANNEL_C;
-            break;
+             break;
     }
     switch(aptx_dsp_cfg->aptx_ad_cfg.sampling_freq) {
         case APTX_AD_SR_UNCHANGED:
@@ -1786,7 +1787,11 @@ static int update_aptx_ad_dsp_config_r2(struct aptx_ad_enc_cfg_r2_t *aptx_dsp_cf
         case APTX_AD_44_1:
             a2dp.enc_sampling_rate = SAMPLING_RATE_441K;
             aptx_dsp_cfg->custom_cfg.sample_rate = SAMPLING_RATE_441K;
-        break;
+            break;
+        case APTX_AD_96:
+            a2dp.enc_sampling_rate = SAMPLING_RATE_96K;
+            aptx_dsp_cfg->custom_cfg.sample_rate = SAMPLING_RATE_96K;
+            break;
     }
     ALOGV("Successfully updated APTX AD enc format with \
                samplingrate: %d channels:%d",
