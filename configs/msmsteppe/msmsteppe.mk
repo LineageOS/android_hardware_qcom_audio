@@ -402,7 +402,6 @@ vendor.audio.feature.maxx_audio.enable=false \
 vendor.audio.feature.ras.enable=true \
 vendor.audio.feature.record_play_concurency.enable=false \
 vendor.audio.feature.src_trkn.enable=true \
-vendor.audio.feature.spkr_prot.enable=true \
 vendor.audio.feature.ssrec.enable=true \
 vendor.audio.feature.usb_offload.enable=true \
 vendor.audio.feature.usb_offload_burst_mode.enable=true \
@@ -412,6 +411,12 @@ vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=true
+
+ifeq ($(TARGET_FWK_SUPPORTS_FULL_VALUEADDS),true)
+PRODUCT_PROPERTY_OVERRIDES += vendor.audio.feature.spkr_prot.enable=true
+else
+PRODUCT_PROPERTY_OVERRIDES += vendor.audio.feature.spkr_prot.enable=false
+endif
 
 #enable AAC frame ctl for A2DP sinks
 PRODUCT_PROPERTY_OVERRIDES += \
