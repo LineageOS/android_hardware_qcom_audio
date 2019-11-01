@@ -2533,6 +2533,8 @@ void *platform_init(struct audio_device *adev)
         } else {
             my_data->is_acdb_initialized = false;
             ALOGD("ACDB initialization failed");
+            if (my_data->acdb_deallocate)
+                my_data->acdb_deallocate();
         }
     }
     audio_extn_pm_vote();

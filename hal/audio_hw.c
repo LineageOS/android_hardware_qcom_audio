@@ -1128,7 +1128,9 @@ int enable_audio_route(struct audio_device *adev,
                 in->ec_opened = true;
             }
         }
-    } else if (usecase->type == TRANSCODE_LOOPBACK_TX) {
+    } else if ((usecase->type == TRANSCODE_LOOPBACK_TX) || ((usecase->type == PCM_HFP_CALL) &&
+        ((usecase->id == USECASE_AUDIO_HFP_SCO) || (usecase->id == USECASE_AUDIO_HFP_SCO_WB)) &&
+        (usecase->in_snd_device == SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP_MMSECNS))) {
         snd_device = usecase->in_snd_device;
     } else {
         snd_device = usecase->out_snd_device;
@@ -2775,6 +2777,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                     usecase->stream.out->sample_rate,
                     &usecase->stream.out->app_type_cfg.sample_rate);
         } else if (((out_snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+                     out_snd_device != SND_DEVICE_OUT_HEADPHONES &&
+                     out_snd_device != SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER &&
                      !audio_is_true_native_stream_active(adev)) &&
                     usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
                     (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
@@ -3042,10 +3046,11 @@ int start_input_stream(struct stream_in *in)
                     pcm_close(in->pcm);
                     in->pcm = NULL;
                 }
-                if (pcm_open_retry_count-- == 0) {
+                if (pcm_open_retry_count == 0) {
                     ret = -EIO;
                     goto error_open;
                 }
+                pcm_open_retry_count--;
                 usleep(PROXY_OPEN_WAIT_TIME * 1000);
                 continue;
             }
@@ -3534,9 +3539,10 @@ struct pcm* pcm_open_prepare_helper(unsigned int snd_card, unsigned int pcm_devi
                 pcm_close(pcm);
                 pcm = NULL;
             }
-            if (pcm_open_retry_count-- == 0)
+            if (pcm_open_retry_count == 0)
                 return NULL;
 
+            pcm_open_retry_count--;
             usleep(PROXY_OPEN_WAIT_TIME * 1000);
             continue;
         }
@@ -7647,9 +7653,11 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
             out->compr_config.fragments = DIRECT_PCM_NUM_FRAGMENTS;
 
-            if ((config->offload_info.duration_us >= MIN_OFFLOAD_BUFFER_DURATION_MS * 1000) &&
-                   (config->offload_info.duration_us <= MAX_OFFLOAD_BUFFER_DURATION_MS * 1000))
-                out->info.duration_us = (int64_t)config->offload_info.duration_us;
+            if (property_get_bool("vendor.audio.offload.buffer.duration.enabled", false)) {
+                if ((config->offload_info.duration_us >= MIN_OFFLOAD_BUFFER_DURATION_MS * 1000) &&
+                       (config->offload_info.duration_us <= MAX_OFFLOAD_BUFFER_DURATION_MS * 1000))
+                    out->info.duration_us = (int64_t)config->offload_info.duration_us;
+            }
 
             /* Check if alsa session is configured with the same format as HAL input format,
              * if not then derive correct fragment size needed to accomodate the
@@ -8394,21 +8402,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 ALOGV("detected USB disconnect .. enable proxy");
                 adev->allow_afe_proxy_usage = true;
             }
-        }
-        if (audio_is_a2dp_out_device(device)) {
-           struct audio_usecase *usecase;
-           struct listnode *node;
-           list_for_each(node, &adev->usecase_list) {
-               usecase = node_to_item(node, struct audio_usecase, list);
-               if (PCM_PLAYBACK == usecase->type && usecase->stream.out &&
-                  (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-                   usecase->stream.out->a2dp_compress_mute) {
-                   struct stream_out *out = usecase->stream.out;
-                   ALOGD("Unmuting the stream when Bt-A2dp disconnected and stream is mute");
-                   out->a2dp_compress_mute = false;
-                   out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
-               }
-           }
         }
     }
 
@@ -9589,10 +9582,10 @@ static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *ou
 
     if (restore) {
         // restore A2DP device for active usecases and unmute if required
-        if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
-            (uc_info->out_snd_device != SND_DEVICE_OUT_BT_A2DP)) {
+        if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
             ALOGD("%s: restoring A2dp and unmuting stream", __func__);
-            select_devices(adev, uc_info->id);
+            if (uc_info->out_snd_device != SND_DEVICE_OUT_BT_A2DP)
+                select_devices(adev, uc_info->id);
             pthread_mutex_lock(&out->compr_mute_lock);
             if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
                 (out->a2dp_compress_mute) && (uc_info->out_snd_device == SND_DEVICE_OUT_BT_A2DP)) {

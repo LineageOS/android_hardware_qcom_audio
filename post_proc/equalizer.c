@@ -517,6 +517,8 @@ int equalizer_init(effect_context_t *context)
     set_config(context, &context->config);
 
     eq_ctxt->hw_acc_fd = -1;
+    for (int i = 0; i < NUM_EQ_BANDS; i++)
+        eq_ctxt->band_levels[i] = 0;
     memset(&(eq_ctxt->offload_eq), 0, sizeof(struct eq_params));
     offload_eq_set_preset(&(eq_ctxt->offload_eq), INVALID_PRESET);
     enable_gcov();

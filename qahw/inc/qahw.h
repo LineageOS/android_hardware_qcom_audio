@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2011 The Android Open Source Project *
@@ -45,6 +45,9 @@ __BEGIN_DECLS
 /* First generation of audio devices had version hardcoded to 0. all devices with
  * versions < 1.0 will be considered of first generation API.
  */
+#if QAHW_V1
+#define QAHW_MODULE_API_VERSION_1_0 QAHW_MAKE_API_VERSION(1, 0)
+#endif
 #define QAHW_MODULE_API_VERSION_0_0 QAHW_MAKE_API_VERSION(0, 0)
 
 /* Minimal QTI audio HAL version supported by the audio framework */

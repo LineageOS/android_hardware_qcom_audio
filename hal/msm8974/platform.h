@@ -231,6 +231,7 @@ enum {
     SND_DEVICE_IN_VOICE_SPEAKER_MIC,
     SND_DEVICE_IN_VOICE_SPEAKER_MIC_SB,
     SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP,
+    SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP_MMSECNS,
     SND_DEVICE_IN_VOICE_HEADSET_MIC,
     SND_DEVICE_IN_SPDIF,
     SND_DEVICE_IN_HDMI_MIC,
@@ -497,7 +498,7 @@ enum {
     defined (PLATFORM_MSMNILE) || defined (PLATFORM_KONA) || \
     defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || \
     defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || \
-    defined (PLATFORM_ATOLL)
+    defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL)
 #define PLAYBACK_OFFLOAD_DEVICE2 17
 #elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
 #define PLAYBACK_OFFLOAD_DEVICE2 24
@@ -510,7 +511,8 @@ enum {
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
-    defined (PLATFORM_MSM8937) || defined (PLATFORM_ATOLL)
+    defined (PLATFORM_MSM8937) || defined (PLATFORM_ATOLL) || \
+    defined (PLATFORM_BENGAL)
 #define PLAYBACK_OFFLOAD_DEVICE3 18
 #define PLAYBACK_OFFLOAD_DEVICE4 34
 #define PLAYBACK_OFFLOAD_DEVICE5 35
@@ -642,6 +644,7 @@ enum {
 #elif PLATFORM_AUTO
 #define HFP_SCO_RX 29
 #define HFP_ASM_RX_TX 36
+#define HFP_EXT_EC_REF_TX 1
 #elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
 #define HFP_SCO_RX 17
 #define HFP_ASM_RX_TX 18
@@ -674,7 +677,7 @@ enum {
 #define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
 #elif defined (PLATFORM_MSM8996) || defined (PLATFORM_KONA)
 #define FM_RX_VOLUME "Tert MI2S LOOPBACK Volume"
-#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || defined (PLATFORM_ATOLL)
+#elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || defined (PLATFORM_ATOLL) ||defined (PLATFORM_BENGAL)
 #define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
 #else
 #define FM_RX_VOLUME "Internal FM RX Volume"
@@ -692,6 +695,12 @@ enum {
 #define TX_VOICE_FV5ECNS_DM 0x10F0A
 #define TX_VOICE_FLUENCE_SM_SB 0x10F38
 #define TX_VOICE_FLUENCE_MM_SB 0x10F39
+
+/* multi-mic surround ECNS zone control */
+#define TOPOLOGY_ID_MM_HFP_ECNS 0x1FFF0002
+#define MODULE_ID_MM_HFP_ECNS   0x10F3B
+#define PARAM_ID_MM_HFP_ZONE    0x109F0
+#define INSTANCE_ID_MM_HFP_ECNS 0x8000
 
 #define LIB_CSD_CLIENT "libcsd-client.so"
 

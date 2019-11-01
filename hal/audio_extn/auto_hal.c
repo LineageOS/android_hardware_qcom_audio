@@ -59,6 +59,7 @@ static fp_disable_audio_route_t                     fp_disable_audio_route;
 static fp_disable_snd_device_t                      fp_disable_snd_device;
 static fp_adev_get_active_input_t                   fp_adev_get_active_input;
 static fp_platform_set_echo_reference_t             fp_platform_set_echo_reference;
+static fp_platform_get_eccarstate_t                 fp_platform_get_eccarstate;
 
 /* Auto hal module struct */
 static struct auto_hal_module *auto_hal = NULL;
@@ -827,7 +828,11 @@ snd_device_t auto_hal_get_input_snd_device(struct audio_device *adev,
         switch (usecase->id) {
         case USECASE_AUDIO_HFP_SCO:
         case USECASE_AUDIO_HFP_SCO_WB:
-            snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP;
+            if (fp_platform_get_eccarstate((void *) adev->platform)) {
+                snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP_MMSECNS;
+            } else {
+                snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP;
+            }
             if (adev->enable_hfp)
                 fp_platform_set_echo_reference(adev, true, out_device);
             break;
@@ -971,6 +976,7 @@ int auto_hal_init(struct audio_device *adev, auto_hal_init_config_t init_config)
     fp_disable_snd_device = init_config.fp_disable_snd_device;
     fp_adev_get_active_input = init_config.fp_adev_get_active_input;
     fp_platform_set_echo_reference = init_config.fp_platform_set_echo_reference;
+    fp_platform_get_eccarstate = init_config.fp_platform_get_eccarstate;
 
     return ret;
 }
