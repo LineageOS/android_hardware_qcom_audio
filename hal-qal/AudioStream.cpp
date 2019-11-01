@@ -498,7 +498,7 @@ static int astream_out_get_presentation_position(
           break;
        }
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        //ALOGE("%s: unable to get audio stream",__func__);
         return -EINVAL;
     }
     ALOGV("%s: frames %lld played at %lld ",__func__, ((long long) *frames), timestamp->tv_sec * 1000000LL + timestamp->tv_nsec / 1000);
@@ -1259,7 +1259,7 @@ int64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
     int64_t signed_frames = 0;
     int64_t written = 0;
     if (!qal_stream_handle_) {
-       ALOGE("%s: qal_stream_handle_ NULL",__func__);
+       //ALOGE("%s: qal_stream_handle_ NULL",__func__);
        return 0;
     }
     if (!timestamp) {
