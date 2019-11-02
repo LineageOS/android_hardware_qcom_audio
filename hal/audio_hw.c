@@ -44,7 +44,7 @@
 #else
 #define ALOGVV(a...) do { } while(0)
 #endif
-
+#include <limits.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -6365,7 +6365,8 @@ static int in_standby(struct audio_stream *stream)
     if (!in->standby && in->is_st_session) {
         ALOGD("%s: sound trigger pcm stop lab", __func__);
         audio_extn_sound_trigger_stop_lab(in);
-        adev->num_va_sessions--;
+        if (adev->num_va_sessions > 0)
+            adev->num_va_sessions--;
         in->standby = 1;
     }
 
@@ -6406,8 +6407,10 @@ static int in_standby(struct audio_stream *stream)
         if (do_stop)
             status = stop_input_stream(in);
 
-        if (in->source == AUDIO_SOURCE_VOICE_RECOGNITION)
-            adev->num_va_sessions--;
+        if (in->source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+            if (adev->num_va_sessions > 0)
+                adev->num_va_sessions--;
+        }
 
         pthread_mutex_unlock(&adev->lock);
     }
@@ -6661,7 +6664,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         /* Read from sound trigger HAL */
         audio_extn_sound_trigger_read(in, buffer, bytes);
         if (in->standby) {
-            adev->num_va_sessions++;
+            if (adev->num_va_sessions < UINT_MAX)
+                adev->num_va_sessions++;
             in->standby = 0;
         }
         pthread_mutex_unlock(&in->lock);
@@ -6685,8 +6689,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ret = voice_extn_compress_voip_start_input_stream(in);
         else
             ret = start_input_stream(in);
-        if (!ret && in->source == AUDIO_SOURCE_VOICE_RECOGNITION)
-            adev->num_va_sessions++;
+        if (!ret && in->source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+            if (adev->num_va_sessions < UINT_MAX)
+                adev->num_va_sessions++;
+        }
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0) {
             goto exit;
