@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -835,6 +835,8 @@ bool audio_extn_utils_is_vendor_enhanced_fwk();
 int audio_extn_utils_get_vendor_enhanced_info();
 int audio_extn_utils_get_app_sample_rate_for_device(struct audio_device *adev,
                                     struct audio_usecase *usecase, int snd_device);
+int audio_extn_utils_hash_fn(void *key);
+bool audio_extn_utils_hash_eq(void *key1, void *key2);
 
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"

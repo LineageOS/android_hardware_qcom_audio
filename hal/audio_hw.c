@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -94,6 +94,7 @@
 #define PCM_PLAYBACK_VOLUME_MAX 0x2000
 #define DSD_VOLUME_MIN_DB (-110)
 #define INVALID_OUT_VOLUME -1
+#define AUDIO_IO_PORTS_MAX 32
 
 #define RECORD_GAIN_MIN 0.0f
 #define RECORD_GAIN_MAX 1.0f
@@ -664,6 +665,93 @@ static inline void adjust_frames_for_device_delay(struct stream_out *out,
                 (audio_extn_a2dp_get_encoder_latency() * out->sample_rate / 1000);
         *dsp_frames = (*dsp_frames > offset) ? (*dsp_frames - offset) : 0;
     }
+}
+
+static inline bool free_entry(void *key  __unused,
+                              void *value, void *context __unused)
+{
+    free(value);
+    return true;
+}
+
+static inline void free_map(Hashmap *map)
+{
+    if (map) {
+        hashmapForEach(map, free_entry, (void *) NULL);
+        hashmapFree(map);
+    }
+}
+
+static inline void patch_map_remove(struct audio_device *adev,
+                                audio_patch_handle_t patch_handle)
+{
+    if (patch_handle == AUDIO_PATCH_HANDLE_NONE)
+        return;
+
+    pthread_mutex_lock(&adev->lock);
+    struct audio_patch_info *p_info =
+        hashmapGet(adev->patch_map, (void *) (intptr_t) patch_handle);
+    if (p_info) {
+        ALOGV("%s: Remove patch %d", __func__, patch_handle);
+        hashmapRemove(adev->patch_map, (void *) (intptr_t) patch_handle);
+        free(p_info->patch);
+        pthread_mutex_destroy(&p_info->lock);
+        free(p_info);
+    }
+    pthread_mutex_unlock(&adev->lock);
+}
+
+static inline int io_streams_map_insert(struct audio_device *adev,
+                                    struct audio_stream *stream,
+                                    audio_io_handle_t handle,
+                                    audio_patch_handle_t patch_handle)
+{
+    struct audio_stream_info *s_info =
+            (struct audio_stream_info *) calloc(1, sizeof(struct audio_stream_info));
+
+    if (s_info == NULL) {
+        ALOGE("%s: Could not allocate stream info", __func__);
+        return -ENOMEM;
+    }
+    s_info->stream = stream;
+    s_info->patch_handle = patch_handle;
+    pthread_mutex_init(&s_info->lock, (const pthread_mutexattr_t *) NULL);
+
+    pthread_mutex_lock(&adev->lock);
+    struct audio_stream_info *stream_info =
+            hashmapPut(adev->io_streams_map, (void *) (intptr_t) handle, (void *) s_info);
+    pthread_mutex_unlock(&adev->lock);
+    if (stream_info != NULL)
+        free(stream_info);
+    ALOGD("%s: Added stream in io_streams_map with handle %d", __func__, handle);
+    return 0;
+}
+
+static inline void io_streams_map_remove(struct audio_device *adev,
+                                     audio_io_handle_t handle)
+{
+    pthread_mutex_lock(&adev->lock);
+    struct audio_stream_info *s_info =
+            hashmapRemove(adev->io_streams_map, (void *) (intptr_t) handle);
+    pthread_mutex_unlock(&adev->lock);
+    if (s_info == NULL)
+        return;
+    ALOGD("%s: Removed stream with handle %d", __func__, handle);
+    patch_map_remove(adev, s_info->patch_handle);
+    pthread_mutex_destroy(&s_info->lock);
+    free(s_info);
+    return;
+}
+
+static struct audio_patch_info* fetch_patch_info(struct audio_device *adev,
+                                    audio_patch_handle_t handle)
+{
+    struct audio_patch_info *p_info = NULL;
+    pthread_mutex_lock(&adev->lock);
+    p_info = (struct audio_patch_info *)
+                 hashmapGet(adev->patch_map, (void *) (intptr_t) handle);
+    pthread_mutex_unlock(&adev->lock);
+    return p_info;
 }
 
 __attribute__ ((visibility ("default")))
@@ -4508,18 +4596,206 @@ static int get_alive_usb_card(struct str_parms* parms) {
     return -ENODEV;
 }
 
+int route_output_stream(struct stream_out *out,
+                        audio_devices_t devices,
+                        char *address)
+{
+    struct audio_device *adev = out->dev;
+    struct str_parms *addr;
+    int ret = 0;
+    audio_devices_t new_devices = devices;
+    bool bypass_a2dp = false;
+    bool reconfig = false;
+    unsigned long service_interval = 0;
+
+    ALOGD("%s: enter: usecase(%d: %s) devices %x",
+          __func__, out->usecase, use_case_table[out->usecase], devices);
+    addr = str_parms_create_str(address);
+    if (!addr)
+        goto error;
+
+    lock_output_stream(out);
+    pthread_mutex_lock(&adev->lock);
+
+    /*
+     * When HDMI cable is unplugged the music playback is paused and
+     * the policy manager sends routing=0. But the audioflinger continues
+     * to write data until standby time (3sec). As the HDMI core is
+     * turned off, the write gets blocked.
+     * Avoid this by routing audio to speaker until standby.
+     */
+    if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+            (new_devices == AUDIO_DEVICE_NONE) &&
+            !audio_extn_passthru_is_passthrough_stream(out) &&
+            (platform_get_edid_info(adev->platform) != 0) /* HDMI disconnected */) {
+        new_devices = AUDIO_DEVICE_OUT_SPEAKER;
+    }
+    /*
+     * When A2DP is disconnected the
+     * music playback is paused and the policy manager sends routing=0
+     * But the audioflinger continues to write data until standby time
+     * (3sec). As BT is turned off, the write gets blocked.
+     * Avoid this by routing audio to speaker until standby.
+     */
+    if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
+            (new_devices == AUDIO_DEVICE_NONE) &&
+            !audio_extn_a2dp_source_is_ready() &&
+            !adev->bt_sco_on) {
+            new_devices = AUDIO_DEVICE_OUT_SPEAKER;
+    }
+    /*
+     * When USB headset is disconnected the music platback paused
+     * and the policy manager send routing=0. But if the USB is connected
+     * back before the standby time, AFE is not closed and opened
+     * when USB is connected back. So routing to speker will guarantee
+     * AFE reconfiguration and AFE will be opend once USB is connected again
+     */
+    if ((out->devices & AUDIO_DEVICE_OUT_ALL_USB) &&
+            (new_devices == AUDIO_DEVICE_NONE) &&
+            !audio_extn_usb_connected(addr))
+        new_devices = AUDIO_DEVICE_OUT_SPEAKER;
+
+    /* To avoid a2dp to sco overlapping / BT device improper state
+     * check with BT lib about a2dp streaming support before routing
+     */
+    if (new_devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+        if (!audio_extn_a2dp_source_is_ready()) {
+            if (new_devices &
+                (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
+                //combo usecase just by pass a2dp
+                ALOGW("%s: A2DP profile is not ready,routing to speaker only", __func__);
+                bypass_a2dp = true;
+            } else {
+                ALOGE("%s: A2DP profile is not ready,ignoring routing request", __func__);
+                /* update device to a2dp and don't route as BT returned error
+                 * However it is still possible a2dp routing called because
+                 * of current active device disconnection (like wired headset)
+                 */
+                out->devices = new_devices;
+                pthread_mutex_unlock(&adev->lock);
+                pthread_mutex_unlock(&out->lock);
+                goto error;
+            }
+        }
+    }
+
+
+    // Workaround: If routing to an non existing usb device, fail gracefully
+    // The routing request will otherwise block during 10 second
+    int card;
+    if (audio_is_usb_out_device(new_devices) &&
+        (card = get_alive_usb_card(addr)) >= 0) {
+        ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d", card);
+        pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&out->lock);
+        ret = -ENOSYS;
+        goto error;
+    }
+
+    /*
+     * select_devices() call below switches all the usecases on the same
+     * backend to the new device. Refer to check_usecases_codec_backend() in
+     * the select_devices(). But how do we undo this?
+     *
+     * For example, music playback is active on headset (deep-buffer usecase)
+     * and if we go to ringtones and select a ringtone, low-latency usecase
+     * will be started on headset+speaker. As we can't enable headset+speaker
+     * and headset devices at the same time, select_devices() switches the music
+     * playback to headset+speaker while starting low-lateny usecase for ringtone.
+     * So when the ringtone playback is completed, how do we undo the same?
+     *
+     * We are relying on the out_set_parameters() call on deep-buffer output,
+     * once the ringtone playback is ended.
+     * NOTE: We should not check if the current devices are same as new devices.
+     *       Because select_devices() must be called to switch back the music
+     *       playback to headset.
+     */
+    if (new_devices != AUDIO_DEVICE_NONE) {
+        bool same_dev = out->devices == new_devices;
+        out->devices = new_devices;
+
+        if (output_drives_call(adev, out)) {
+            if (!voice_is_call_state_active(adev)) {
+                if (adev->mode == AUDIO_MODE_IN_CALL) {
+                    adev->current_call_output = out;
+                    if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
+                        service_interval =
+                            audio_extn_usb_find_service_interval(true, true /*playback*/);
+                        audio_extn_usb_set_service_interval(true /*playback*/,
+                                                            service_interval,
+                                                            &reconfig);
+                        ALOGD("%s, svc_int(%ld),reconfig(%d)",__func__,service_interval, reconfig);
+                    }
+                    ret = voice_start_call(adev);
+                }
+            } else {
+                adev->current_call_output = out;
+                voice_update_devices_for_all_voice_usecases(adev);
+            }
+        }
+
+        if (!out->standby) {
+            if (!same_dev) {
+                ALOGV("update routing change");
+                audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
+                                             adev->perf_lock_opts,
+                                             adev->perf_lock_opts_size);
+                if (adev->adm_on_routing_change)
+                    adev->adm_on_routing_change(adev->adm_data,
+                                                out->handle);
+            }
+            if (!bypass_a2dp) {
+                select_devices(adev, out->usecase);
+            } else {
+                if (new_devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE)
+                    out->devices = AUDIO_DEVICE_OUT_SPEAKER_SAFE;
+                else
+                    out->devices = AUDIO_DEVICE_OUT_SPEAKER;
+                select_devices(adev, out->usecase);
+                out->devices = new_devices;
+            }
+
+            if (!same_dev) {
+                // on device switch force swap, lower functions will make sure
+                // to check if swap is allowed or not.
+                platform_set_swap_channels(adev, true);
+                audio_extn_perf_lock_release(&adev->perf_lock_handle);
+            }
+            if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+                 out->a2dp_compress_mute &&
+                 (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) || audio_extn_a2dp_source_is_ready())) {
+                pthread_mutex_lock(&out->compr_mute_lock);
+                out->a2dp_compress_mute = false;
+                out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
+                pthread_mutex_unlock(&out->compr_mute_lock);
+            } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
+                out_set_voip_volume(&out->stream, out->volume_l, out->volume_r);
+            }
+        }
+    }
+
+    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&out->lock);
+
+    /*handles device and call state changes*/
+    audio_extn_extspk_update(adev->extspk);
+
+error:
+    if (addr)
+        str_parms_destroy(addr);
+    ALOGV("%s: exit: code(%d)", __func__, ret);
+    return ret;
+}
+
 static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
     struct str_parms *parms;
     char value[32];
-    int ret = 0, val = 0, err;
+    int ret = 0, err;
     int ext_controller = -1;
     int ext_stream = -1;
-    bool bypass_a2dp = false;
-    bool reconfig = false;
-    unsigned long service_interval = 0;
 
     ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, out->usecase, use_case_table[out->usecase], kvpairs);
@@ -4536,182 +4812,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
               use_case_table[out->usecase], out->extconn.cs.controller,
               out->extconn.cs.stream);
     }
-
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
-    if (err >= 0) {
-        val = atoi(value);
-        lock_output_stream(out);
-        pthread_mutex_lock(&adev->lock);
-
-        /*
-         * When HDMI cable is unplugged the music playback is paused and
-         * the policy manager sends routing=0. But the audioflinger continues
-         * to write data until standby time (3sec). As the HDMI core is
-         * turned off, the write gets blocked.
-         * Avoid this by routing audio to speaker until standby.
-         */
-        if ((out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
-                (val == AUDIO_DEVICE_NONE) &&
-                !audio_extn_passthru_is_passthrough_stream(out) &&
-                (platform_get_edid_info_v2(adev->platform,
-                                           out->extconn.cs.controller,
-                                           out->extconn.cs.stream) != 0)) {
-            out->extconn.cs.controller = out->extconn.cs.stream = -1;
-            val = AUDIO_DEVICE_OUT_SPEAKER;
-        }
-        /*
-         * When A2DP is disconnected the
-         * music playback is paused and the policy manager sends routing=0
-         * But the audioflinger continues to write data until standby time
-         * (3sec). As BT is turned off, the write gets blocked.
-         * Avoid this by routing audio to speaker until standby.
-         */
-        if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
-                (val == AUDIO_DEVICE_NONE) &&
-                !audio_extn_a2dp_source_is_ready() &&
-                !adev->bt_sco_on) {
-                val = AUDIO_DEVICE_OUT_SPEAKER;
-        }
-        /*
-        * When USB headset is disconnected the music platback paused
-        * and the policy manager send routing=0. But if the USB is connected
-        * back before the standby time, AFE is not closed and opened
-        * when USB is connected back. So routing to speker will guarantee
-        * AFE reconfiguration and AFE will be opend once USB is connected again
-        */
-        if ((out->devices & AUDIO_DEVICE_OUT_ALL_USB) &&
-                (val == AUDIO_DEVICE_NONE) &&
-                 !audio_extn_usb_connected(parms)) {
-                 val = AUDIO_DEVICE_OUT_SPEAKER;
-         }
-        /* To avoid a2dp to sco overlapping / BT device improper state
-         * check with BT lib about a2dp streaming support before routing
-         */
-        if (val & AUDIO_DEVICE_OUT_ALL_A2DP) {
-            if (!audio_extn_a2dp_source_is_ready()) {
-                if (val &
-                    (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
-                    //combo usecase just by pass a2dp
-                    ALOGW("%s: A2DP profile is not ready,routing to speaker only", __func__);
-                    bypass_a2dp = true;
-                } else {
-                    ALOGE("%s: A2DP profile is not ready,ignoring routing request", __func__);
-                    /* update device to a2dp and don't route as BT returned error
-                     * However it is still possible a2dp routing called because
-                     * of current active device disconnection (like wired headset)
-                     */
-                    out->devices = val;
-                    pthread_mutex_unlock(&out->lock);
-                    pthread_mutex_unlock(&adev->lock);
-                    goto error;
-                }
-            }
-        }
-
-        audio_devices_t new_dev = val;
-
-        // Workaround: If routing to an non existing usb device, fail gracefully
-        // The routing request will otherwise block during 10 second
-        int card;
-        if (audio_is_usb_out_device(new_dev) &&
-            (card = get_alive_usb_card(parms)) >= 0) {
-
-            ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d", card);
-            pthread_mutex_unlock(&adev->lock);
-            pthread_mutex_unlock(&out->lock);
-            ret = -ENOSYS;
-            goto routing_fail;
-        }
-
-        /*
-         * select_devices() call below switches all the usecases on the same
-         * backend to the new device. Refer to check_usecases_codec_backend() in
-         * the select_devices(). But how do we undo this?
-         *
-         * For example, music playback is active on headset (deep-buffer usecase)
-         * and if we go to ringtones and select a ringtone, low-latency usecase
-         * will be started on headset+speaker. As we can't enable headset+speaker
-         * and headset devices at the same time, select_devices() switches the music
-         * playback to headset+speaker while starting low-lateny usecase for ringtone.
-         * So when the ringtone playback is completed, how do we undo the same?
-         *
-         * We are relying on the out_set_parameters() call on deep-buffer output,
-         * once the ringtone playback is ended.
-         * NOTE: We should not check if the current devices are same as new devices.
-         *       Because select_devices() must be called to switch back the music
-         *       playback to headset.
-         */
-        if (val != 0) {
-            audio_devices_t new_dev = val;
-            bool same_dev = out->devices == new_dev;
-            out->devices = new_dev;
-
-            if (output_drives_call(adev, out)) {
-                if (!voice_is_call_state_active(adev)) {
-                    if (adev->mode == AUDIO_MODE_IN_CALL) {
-                        adev->current_call_output = out;
-                        if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
-                            service_interval = audio_extn_usb_find_service_interval(true, true /*playback*/);
-                            audio_extn_usb_set_service_interval(true /*playback*/,
-                                                                service_interval,
-                                                                &reconfig);
-                            ALOGD("%s, svc_int(%ld),reconfig(%d)",__func__,service_interval, reconfig);
-                         }
-                         ret = voice_start_call(adev);
-                    }
-                } else {
-                    adev->current_call_output = out;
-                    voice_update_devices_for_all_voice_usecases(adev);
-                }
-            }
-
-            if (!out->standby) {
-                if (!same_dev) {
-                    ALOGV("update routing change");
-                    audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
-                                                 adev->perf_lock_opts,
-                                                 adev->perf_lock_opts_size);
-                    if (adev->adm_on_routing_change)
-                        adev->adm_on_routing_change(adev->adm_data,
-                                                    out->handle);
-                }
-                if (!bypass_a2dp) {
-                    select_devices(adev, out->usecase);
-                } else {
-                    if (new_dev & AUDIO_DEVICE_OUT_SPEAKER_SAFE)
-                        out->devices = AUDIO_DEVICE_OUT_SPEAKER_SAFE;
-                    else
-                        out->devices = AUDIO_DEVICE_OUT_SPEAKER;
-                    select_devices(adev, out->usecase);
-                    out->devices = new_dev;
-                }
-
-                if (!same_dev) {
-                    // on device switch force swap, lower functions will make sure
-                    // to check if swap is allowed or not.
-                    platform_set_swap_channels(adev, true);
-                    audio_extn_perf_lock_release(&adev->perf_lock_handle);
-                }
-                if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-                    out->a2dp_compress_mute &&
-                    (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) || audio_extn_a2dp_source_is_ready())) {
-                    pthread_mutex_lock(&out->compr_mute_lock);
-                    out->a2dp_compress_mute = false;
-                    out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
-                    pthread_mutex_unlock(&out->compr_mute_lock);
-                } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
-                    out_set_voip_volume(&out->stream, out->volume_l, out->volume_r);
-                }
-            }
-        }
-
-        pthread_mutex_unlock(&adev->lock);
-        pthread_mutex_unlock(&out->lock);
-
-        /*handles device and call state changes*/
-        audio_extn_extspk_update(adev->extspk);
-    }
-    routing_fail:
 
     if (out == adev->primary_output) {
         pthread_mutex_lock(&adev->lock);
@@ -6482,13 +6582,78 @@ static void in_snd_mon_cb(void * stream, struct str_parms * parms)
     return;
 }
 
+int route_input_stream(struct stream_in *in,
+                       audio_devices_t devices,
+                       char *address,
+                       audio_source_t source)
+{
+    struct audio_device *adev = in->dev;
+    int ret = 0;
+
+    lock_input_stream(in);
+    pthread_mutex_lock(&adev->lock);
+
+    /* no audio source uses val == 0 */
+    if ((in->source != source) && (source != AUDIO_SOURCE_DEFAULT)) {
+        in->source = source;
+        if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
+            (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
+            (voice_extn_compress_voip_is_format_supported(in->format)) &&
+            (in->config.rate == 8000 || in->config.rate == 16000 ||
+             in->config.rate == 32000 || in->config.rate == 48000 ) &&
+            (audio_channel_count_from_in_mask(in->channel_mask) == 1)) {
+            ret = voice_extn_compress_voip_open_input_stream(in);
+            if (ret != 0) {
+                ALOGE("%s: Compress voip input cannot be opened, error:%d",
+                      __func__, ret);
+            }
+        }
+    }
+
+    if ((in->device != devices) && (devices != AUDIO_DEVICE_NONE) &&
+          audio_is_input_device(devices)) {
+        // Workaround: If routing to an non existing usb device, fail gracefully
+        // The routing request will otherwise block during 10 second
+        int card;
+        struct str_parms *addr = str_parms_create_str(address);
+
+        if (!addr)
+            return ret;
+        if (audio_is_usb_in_device(devices) &&
+            (card = get_alive_usb_card(addr)) >= 0) {
+            ALOGW("%s: ignoring rerouting to non existing USB card %d", __func__, card);
+            ret = -ENOSYS;
+        } else {
+            in->device = devices;
+            /* If recording is in progress, change the tx device to new device */
+            if (!in->standby && !in->is_st_session) {
+                ALOGV("update input routing change");
+                // inform adm before actual routing to prevent glitches.
+                if (adev->adm_on_routing_change) {
+                    adev->adm_on_routing_change(adev->adm_data,
+                                                in->capture_handle);
+                    ret = select_devices(adev, in->usecase);
+                    if (in->usecase == USECASE_AUDIO_RECORD_LOW_LATENCY)
+                        adev->adm_routing_changed = true;
+                }
+            }
+        }
+        str_parms_destroy(addr);
+    }
+    pthread_mutex_unlock(&adev->lock);
+    pthread_mutex_unlock(&in->lock);
+
+    ALOGD("%s: exit: status(%d)", __func__, ret);
+    return ret;
+}
+
 static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
     struct stream_in *in = (struct stream_in *)stream;
     struct audio_device *adev = in->dev;
     struct str_parms *parms;
     char value[32];
-    int ret = 0, val = 0, err;
+    int ret = 0;
 
     ALOGD("%s: enter: kvpairs=%s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -6498,61 +6663,8 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     lock_input_stream(in);
     pthread_mutex_lock(&adev->lock);
 
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_INPUT_SOURCE, value, sizeof(value));
-    if (err >= 0) {
-        val = atoi(value);
-        /* no audio source uses val == 0 */
-        if ((in->source != val) && (val != 0)) {
-            in->source = val;
-            if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
-                (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
-                (voice_extn_compress_voip_is_format_supported(in->format)) &&
-                (in->config.rate == 8000 || in->config.rate == 16000 ||
-                 in->config.rate == 32000 || in->config.rate == 48000 ) &&
-                (audio_channel_count_from_in_mask(in->channel_mask) == 1)) {
-                err = voice_extn_compress_voip_open_input_stream(in);
-                if (err != 0) {
-                    ALOGE("%s: Compress voip input cannot be opened, error:%d",
-                          __func__, err);
-                }
-            }
-        }
-    }
-
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
-    if (err >= 0) {
-        val = atoi(value);
-        if (((int)in->device != val) && (val != 0) && audio_is_input_device(val) ) {
-
-            // Workaround: If routing to an non existing usb device, fail gracefully
-            // The routing request will otherwise block during 10 second
-            int card;
-            if (audio_is_usb_in_device(val) &&
-                (card = get_alive_usb_card(parms)) >= 0) {
-
-                ALOGW("in_set_parameters() ignoring rerouting to non existing USB card %d", card);
-                ret = -ENOSYS;
-            } else {
-
-                in->device = val;
-                /* If recording is in progress, change the tx device to new device */
-                if (!in->standby && !in->is_st_session) {
-                    ALOGV("update input routing change");
-                    // inform adm before actual routing to prevent glitches.
-                    if (adev->adm_on_routing_change) {
-                        adev->adm_on_routing_change(adev->adm_data,
-                                                    in->capture_handle);
-                        ret = select_devices(adev, in->usecase);
-                        if (in->usecase == USECASE_AUDIO_RECORD_LOW_LATENCY)
-                            adev->adm_routing_changed = true;
-                    }
-                }
-            }
-        }
-    }
-
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_PROFILE, value, sizeof(value));
-    if (err >= 0) {
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_PROFILE, value, sizeof(value));
+    if (ret >= 0) {
         strlcpy(in->profile, value, sizeof(in->profile));
         ALOGV("updating stream profile with value '%s'", in->profile);
         audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
@@ -8112,6 +8224,11 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         }
     }
 
+    ret = io_streams_map_insert(adev, &out->stream.common,
+                            out->handle, AUDIO_PATCH_HANDLE_NONE);
+    if (ret != 0)
+        goto error_open;
+
     streams_output_ctxt_t *out_ctxt = (streams_output_ctxt_t *)
         calloc(1, sizeof(streams_output_ctxt_t));
     if (out_ctxt == NULL) {
@@ -8145,6 +8262,8 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
     int ret = 0;
 
     ALOGD("%s: enter:stream_handle(%s)",__func__, use_case_table[out->usecase]);
+
+    io_streams_map_remove(adev, out->handle);
 
     // must deregister from sndmonitor first to prevent races
     // between the callback and close_stream
@@ -9177,6 +9296,11 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     *stream_in = &in->stream;
 
+    ret = io_streams_map_insert(adev, &in->stream.common,
+                            handle, AUDIO_PATCH_HANDLE_NONE);
+    if (ret != 0)
+        goto err_open;
+
     streams_input_ctxt_t *in_ctxt = (streams_input_ctxt_t *)
         calloc(1, sizeof(streams_input_ctxt_t));
     if (in_ctxt == NULL) {
@@ -9212,6 +9336,8 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     struct audio_device *adev = (struct audio_device *)dev;
 
     ALOGD("%s: enter:stream_handle(%p)",__func__, in);
+
+    io_streams_map_remove(adev, in->capture_handle);
 
     /* must deregister from sndmonitor first to prevent races
      * between the callback and close_stream
@@ -9410,6 +9536,50 @@ static int adev_verify_devices(struct audio_device *adev)
     return 0;
 }
 
+int update_patch(unsigned int num_sources,
+                 const struct audio_port_config *sources,
+                 unsigned int num_sinks,
+                 const struct audio_port_config *sinks,
+                 audio_patch_handle_t handle,
+                 struct audio_patch_info *p_info,
+                 patch_type_t patch_type, bool new_patch)
+{
+    ALOGD("%s: enter", __func__);
+
+    if (p_info == NULL) {
+        ALOGE("%s: Invalid patch pointer", __func__);
+        return -EINVAL;
+    }
+
+    if (new_patch) {
+        p_info->patch = (struct audio_patch *) calloc(1, sizeof(struct audio_patch));
+        if (p_info->patch == NULL) {
+            ALOGE("%s: Could not allocate patch", __func__);
+            return -ENOMEM;
+        }
+    }
+
+    p_info->patch->id = handle;
+    p_info->patch->num_sources = num_sources;
+    p_info->patch->num_sinks = num_sinks;
+
+    for (int i = 0; i < num_sources; i++)
+        p_info->patch->sources[i] = sources[i];
+    for (int i = 0; i < num_sinks; i++)
+        p_info->patch->sinks[i] = sinks[i];
+
+    p_info->patch_type = patch_type;
+    return 0;
+}
+
+audio_patch_handle_t generate_patch_handle()
+{
+    static audio_patch_handle_t patch_handle = AUDIO_PATCH_HANDLE_NONE;
+    if (++patch_handle < 0)
+        patch_handle = AUDIO_PATCH_HANDLE_NONE + 1;
+    return patch_handle;
+}
+
 int adev_create_audio_patch(struct audio_hw_device *dev,
                             unsigned int num_sources,
                             const struct audio_port_config *sources,
@@ -9417,15 +9587,169 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
                             const struct audio_port_config *sinks,
                             audio_patch_handle_t *handle)
 {
-    int ret;
+    int ret = 0;
+    struct audio_device *adev = (struct audio_device *)dev;
+    struct audio_patch_info *p_info = NULL;
+    patch_type_t patch_type = PATCH_NONE;
+    audio_io_handle_t io_handle = AUDIO_IO_HANDLE_NONE;
+    audio_source_t input_source = AUDIO_SOURCE_DEFAULT;
+    struct audio_stream_info *s_info = NULL;
+    struct audio_stream *stream = NULL;
+    audio_devices_t device_type = AUDIO_DEVICE_NONE;
+    bool new_patch = false;
+    char addr[AUDIO_DEVICE_MAX_ADDRESS_LEN];
 
-    ret = audio_extn_hw_loopback_create_audio_patch(dev,
+    ALOGD("%s: enter: num sources %d, num_sinks %d, handle %d", __func__,
+           num_sources, num_sinks, *handle);
+
+    if (num_sources == 0 || num_sources > AUDIO_PATCH_PORTS_MAX ||
+        num_sinks == 0 || num_sinks > AUDIO_PATCH_PORTS_MAX) {
+        ALOGE("%s: Invalid patch arguments", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if (num_sources > 1) {
+        ALOGE("%s: Multiple sources are not supported", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if (sources == NULL || sinks == NULL) {
+        ALOGE("%s: Invalid sources or sinks port config", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ALOGV("%s: source role %d, source type %d", __func__,
+           sources[0].type, sources[0].role);
+
+    // Populate source/sink information and fetch stream info
+    switch (sources[0].type) {
+        case AUDIO_PORT_TYPE_DEVICE: // Patch for audio capture or loopback
+            device_type = sources[0].ext.device.type;
+            strlcpy(&addr[0], &sources[0].ext.device.address[0], AUDIO_DEVICE_MAX_ADDRESS_LEN);
+            if (sinks[0].type == AUDIO_PORT_TYPE_MIX) {
+                patch_type = PATCH_CAPTURE;
+                io_handle = sinks[0].ext.mix.handle;
+                input_source = sinks[0].ext.mix.usecase.source;
+                ALOGV("%s: Capture patch from device %x to mix %d",
+                       __func__, device_type, io_handle);
+            } else {
+                // Device to device patch is not implemented.
+                // This space will need changes if audio HAL
+                // handles device to device patches in the future.
+                patch_type = PATCH_DEVICE_LOOPBACK;
+            }
+            break;
+        case AUDIO_PORT_TYPE_MIX: // Patch for audio playback
+            io_handle = sources[0].ext.mix.handle;
+            for (int i = 0; i < num_sinks; i++) {
+                if (sinks[i].type == AUDIO_PORT_TYPE_MIX) {
+                    ALOGE("%s: mix to mix patches are not supported", __func__);
+                    ret = -EINVAL;
+                    goto done;
+                }
+                device_type |= sinks[i].ext.device.type;
+                strlcpy(&addr[0], &sinks[i].ext.device.address[0], AUDIO_DEVICE_MAX_ADDRESS_LEN);
+            }
+            patch_type = PATCH_PLAYBACK;
+            ALOGV("%s: Playback patch from mix handle %d to device %x",
+                   __func__, io_handle, device_type);
+            break;
+        case AUDIO_PORT_TYPE_SESSION:
+        case AUDIO_PORT_TYPE_NONE:
+            break;
+    }
+
+    pthread_mutex_lock(&adev->lock);
+    s_info = hashmapGet(adev->io_streams_map, (void *) (intptr_t) io_handle);
+    pthread_mutex_unlock(&adev->lock);
+    if (s_info == NULL) {
+        ALOGE("%s: Failed to obtain stream info", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+    ALOGV("%s: Fetched stream info with io_handle %d", __func__, io_handle);
+
+    pthread_mutex_lock(&s_info->lock);
+    // Generate patch info and update patch
+    if (*handle == AUDIO_PATCH_HANDLE_NONE) {
+        if (s_info->patch_handle != AUDIO_PATCH_HANDLE_NONE) {
+            // Use patch handle cached in s_info to update patch
+            *handle = s_info->patch_handle;
+            p_info = fetch_patch_info(adev, *handle);
+            if (p_info == NULL) {
+                ALOGE("%s: Unable to fetch patch for stream patch handle %d",
+                      __func__, *handle);
+                pthread_mutex_unlock(&s_info->lock);
+                ret = -EINVAL;
+                goto done;
+            }
+        } else {
+            *handle = generate_patch_handle();
+            p_info = (struct audio_patch_info *) calloc(1, sizeof(struct audio_patch_info));
+            if (p_info == NULL) {
+                ALOGE("%s: Failed to allocate memory", __func__);
+                pthread_mutex_unlock(&s_info->lock);
+                ret = -ENOMEM;
+                goto done;
+            }
+            new_patch = true;
+            pthread_mutex_init(&p_info->lock, (const pthread_mutexattr_t *) NULL);
+            s_info->patch_handle = *handle;
+        }
+    } else {
+        p_info = fetch_patch_info(adev, *handle);
+        if (p_info == NULL) {
+            ALOGE("%s: Unable to fetch patch for received patch handle %d",
+                  __func__, *handle);
+            pthread_mutex_unlock(&s_info->lock);
+            ret = -EINVAL;
+            goto done;
+        }
+        s_info->patch_handle = *handle;
+    }
+    pthread_mutex_lock(&p_info->lock);
+    update_patch(num_sources, sources, num_sinks, sinks,
+                 *handle, p_info, patch_type, new_patch);
+    stream = s_info->stream;
+
+    // Update routing for stream
+    if (stream != NULL) {
+        if (p_info->patch_type == PATCH_PLAYBACK)
+            ret = route_output_stream((struct stream_out *) stream, device_type, &addr[0]);
+        else if (p_info->patch_type == PATCH_CAPTURE)
+            ret = route_input_stream((struct stream_in *) stream,
+                                     device_type, &addr[0], input_source);
+    }
+
+    if (ret < 0) {
+        s_info->patch_handle = AUDIO_PATCH_HANDLE_NONE;
+        ALOGE("%s: Stream routing failed for io_handle %d", __func__, io_handle);
+        pthread_mutex_unlock(&p_info->lock);
+        pthread_mutex_unlock(&s_info->lock);
+        goto done;
+    }
+
+    // Add new patch to patch map
+    if (!ret && new_patch) {
+        pthread_mutex_lock(&adev->lock);
+        hashmapPut(adev->patch_map, (void *) (intptr_t) *handle, (void *) p_info);
+        pthread_mutex_unlock(&adev->lock);
+        ALOGD("%s: Added a new patch with handle %d", __func__, *handle);
+    }
+
+    pthread_mutex_unlock(&p_info->lock);
+    pthread_mutex_unlock(&s_info->lock);
+done:
+    audio_extn_hw_loopback_create_audio_patch(dev,
                                         num_sources,
                                         sources,
                                         num_sinks,
                                         sinks,
                                         handle);
-    ret |= audio_extn_auto_hal_create_audio_patch(dev,
+    audio_extn_auto_hal_create_audio_patch(dev,
                                         num_sources,
                                         sources,
                                         num_sinks,
@@ -9437,10 +9761,81 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
 int adev_release_audio_patch(struct audio_hw_device *dev,
                            audio_patch_handle_t handle)
 {
-    int ret;
+    struct audio_device *adev = (struct audio_device *) dev;
+    int ret = 0;
+    char *addr = "";
+    audio_source_t input_source = AUDIO_SOURCE_DEFAULT;
 
-    ret = audio_extn_hw_loopback_release_audio_patch(dev, handle);
-    ret |= audio_extn_auto_hal_release_audio_patch(dev, handle);
+    if (handle == AUDIO_PATCH_HANDLE_NONE) {
+        ALOGE("%s: Invalid patch handle %d", __func__, handle);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ALOGD("%s: Remove patch with handle %d", __func__, handle);
+    struct audio_patch_info *p_info = fetch_patch_info(adev, handle);
+    if (p_info == NULL) {
+        ALOGE("%s: Patch info not found with handle %d", __func__, handle);
+        ret = -EINVAL;
+        goto done;
+    }
+    pthread_mutex_lock(&p_info->lock);
+    struct audio_patch *patch = p_info->patch;
+    if (patch == NULL) {
+        ALOGE("%s: Patch not found for handle %d", __func__, handle);
+        ret = -EINVAL;
+        pthread_mutex_unlock(&p_info->lock);
+        goto done;
+    }
+    pthread_mutex_unlock(&p_info->lock);
+    audio_io_handle_t io_handle = AUDIO_IO_HANDLE_NONE;
+    switch (patch->sources[0].type) {
+        case AUDIO_PORT_TYPE_MIX:
+            io_handle = patch->sources[0].ext.mix.handle;
+            break;
+        case AUDIO_PORT_TYPE_DEVICE:
+            io_handle = patch->sinks[0].ext.mix.handle;
+            break;
+        case AUDIO_PORT_TYPE_SESSION:
+        case AUDIO_PORT_TYPE_NONE:
+            break;
+    }
+
+    // Remove patch and reset patch handle in stream info
+    pthread_mutex_lock(&adev->lock);
+    struct audio_stream_info *s_info =
+        hashmapGet(adev->io_streams_map, (void *) (intptr_t) io_handle);
+    pthread_mutex_unlock(&adev->lock);
+    if (s_info == NULL) {
+        ALOGE("%s: stream for io_handle %d is not available", __func__, io_handle);
+        goto done;
+    }
+    pthread_mutex_lock(&s_info->lock);
+    s_info->patch_handle = AUDIO_PATCH_HANDLE_NONE;
+    struct audio_stream *stream = s_info->stream;
+
+    pthread_mutex_lock(&p_info->lock);
+    if (stream != NULL) {
+        if (p_info->patch_type == PATCH_PLAYBACK)
+            ret = route_output_stream((struct stream_out *)stream, AUDIO_DEVICE_NONE, addr);
+        else if (p_info->patch_type == PATCH_CAPTURE)
+            ret = route_input_stream((struct stream_in *)stream,
+                                      AUDIO_DEVICE_NONE, addr, input_source);
+    }
+
+    if (ret < 0)
+        ALOGW("%s: Stream routing failed for io_handle %d", __func__, io_handle);
+
+    pthread_mutex_unlock(&p_info->lock);
+    pthread_mutex_unlock(&s_info->lock);
+
+    // Remove patch entry from map
+    patch_map_remove(adev, handle);
+done:
+    audio_extn_hw_loopback_release_audio_patch(dev, handle);
+    audio_extn_auto_hal_release_audio_patch(dev, handle);
+
+    ALOGV("%s: Successfully released patch %d", __func__, handle);
     return ret;
 }
 
@@ -9516,6 +9911,8 @@ static int adev_close(hw_device_t *device)
         if(adev->ext_hw_plugin)
             audio_extn_ext_hw_plugin_deinit(adev->ext_hw_plugin);
         audio_extn_auto_hal_deinit();
+        free_map(adev->patch_map);
+        free_map(adev->io_streams_map);
         free(device);
         adev = NULL;
     }
@@ -9703,7 +10100,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 #endif
 
     /* default audio HAL major version */
-    uint32_t maj_version = 2;
+    uint32_t maj_version = 3;
     if(property_get("vendor.audio.hal.maj.version", value, NULL))
         maj_version = atoi(value);
 
@@ -9754,6 +10151,20 @@ static int adev_open(const hw_module_t *module, const char *name,
     list_init(&adev->active_outputs_list);
     list_init(&adev->audio_patch_record_list);
     adev->audio_patch_index = 0;
+    adev->io_streams_map = hashmapCreate(AUDIO_IO_PORTS_MAX, audio_extn_utils_hash_fn,
+                                         audio_extn_utils_hash_eq);
+    if (!adev->io_streams_map) {
+        ALOGE("%s: Could not create io streams map", __func__);
+        ret = -ENOMEM;
+        goto adev_open_err;
+    }
+    adev->patch_map = hashmapCreate(AUDIO_PATCH_PORTS_MAX, audio_extn_utils_hash_fn,
+                                    audio_extn_utils_hash_eq);
+    if (!adev->patch_map) {
+        ALOGE("%s: Could not create audio patch map", __func__);
+        ret = -ENOMEM;
+        goto adev_open_err;
+    }
     adev->cur_wfd_channels = 2;
     adev->offload_usecases_state = 0;
     adev->pcm_record_uc_state = 0;
@@ -9769,27 +10180,17 @@ static int adev_open(const hw_module_t *module, const char *name,
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
     if (!adev->platform) {
-        pthread_mutex_destroy(&adev->lock);
-        free(adev->snd_dev_ref_cnt);
-        free(adev);
-        adev = NULL;
         ALOGE("%s: Failed to init platform data, aborting.", __func__);
-        *device = NULL;
-        pthread_mutex_unlock(&adev_init_lock);
-        return -EINVAL;
+        ret = -EINVAL;
+        goto adev_open_err;
     }
 
     adev->extspk = audio_extn_extspk_init(adev);
     if (audio_extn_qap_is_enabled()) {
         ret = audio_extn_qap_init(adev);
         if (ret < 0) {
-            pthread_mutex_destroy(&adev->lock);
-            free(adev);
-            adev = NULL;
             ALOGE("%s: Failed to init platform data, aborting.", __func__);
-            *device = NULL;
-            pthread_mutex_unlock(&adev_init_lock);
-            return ret;
+            goto adev_open_err;
         }
         adev->device.open_output_stream = audio_extn_qap_open_output_stream;
         adev->device.close_output_stream = audio_extn_qap_close_output_stream;
@@ -9798,13 +10199,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     if (audio_extn_qaf_is_enabled()) {
         ret = audio_extn_qaf_init(adev);
         if (ret < 0) {
-            pthread_mutex_destroy(&adev->lock);
-            free(adev);
-            adev = NULL;
             ALOGE("%s: Failed to init platform data, aborting.", __func__);
-            *device = NULL;
-            pthread_mutex_unlock(&adev_init_lock);
-            return ret;
+            goto adev_open_err;
         }
 
         adev->device.open_output_stream = audio_extn_qaf_open_output_stream;
@@ -10003,6 +10399,18 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     ALOGV("%s: exit", __func__);
     return 0;
+
+adev_open_err:
+    free_map(adev->patch_map);
+    free_map(adev->io_streams_map);
+    if (adev->snd_dev_ref_cnt)
+        free(adev->snd_dev_ref_cnt);
+    pthread_mutex_destroy(&adev->lock);
+    free(adev);
+    adev = NULL;
+    *device = NULL;
+    pthread_mutex_unlock(&adev_init_lock);
+    return ret;
 }
 
 static struct hw_module_methods_t hal_module_methods = {
