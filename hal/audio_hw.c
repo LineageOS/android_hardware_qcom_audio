@@ -8767,6 +8767,7 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     voice_get_parameters(adev, query, reply);
     audio_extn_a2dp_get_parameters(query, reply);
     platform_get_parameters(adev->platform, query, reply);
+    audio_extn_ma_get_parameters(adev, query, reply);
     pthread_mutex_unlock(&adev->lock);
 
 exit:
