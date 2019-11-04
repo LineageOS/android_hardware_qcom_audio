@@ -297,6 +297,8 @@
     <path name="echo-reference">
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="TERT_TDM_RX_2" />
         <ctl name="EC Reference Channels" value="One" />
+        <ctl name="EC Reference Bit Format" value="S16_LE" />
+        <ctl name="EC Reference SampleRate" value="48000" />
     </path>
 
     <path name="echo-reference headphones">
