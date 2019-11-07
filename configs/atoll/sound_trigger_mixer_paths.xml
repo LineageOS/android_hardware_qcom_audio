@@ -81,6 +81,7 @@
     <ctl name="EC Reference Channels" value="Zero"/>
     <ctl name="EC Reference Bit Format" value="0"/>
     <ctl name="EC Reference SampleRate" value="0"/>
+    <ctl name="ADC2_MIXER Switch" value="0" />
 
     <path name="listen-voice-wakeup-1">
         <ctl name="LSM1 Mixer VA_CDC_DMA_TX_0" value="1" />
