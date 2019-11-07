@@ -62,6 +62,16 @@ const std::map<uint32_t, qal_audio_fmt_t> getFormatId {
         {AUDIO_FORMAT_FLAC,                QAL_AUDIO_FMT_FLAC}
 };
 
+const uint32_t format_to_bitwidth_table[] = {
+    [AUDIO_FORMAT_DEFAULT] = 0,
+    [AUDIO_FORMAT_PCM_16_BIT] = 16,
+    [AUDIO_FORMAT_PCM_8_BIT] = 8,
+    [AUDIO_FORMAT_PCM_32_BIT] = 32,
+    [AUDIO_FORMAT_PCM_8_24_BIT] = 32,
+    [AUDIO_FORMAT_PCM_FLOAT] = sizeof(float) * 8,
+    [AUDIO_FORMAT_PCM_24_BIT_PACKED] = 24,
+};
+
 const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = "deep-buffer-playback",
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
@@ -334,6 +344,7 @@ static int astream_pause(struct audio_stream_out *stream)
         return -EINVAL;
     }
 
+    ALOGD("%s: pause",__func__);
     return astream_out->Pause();
 }
 
@@ -540,10 +551,52 @@ exit:
 
 static char* astream_out_get_parameters(const struct audio_stream *stream,
                                         const char *keys) {
-    std::ignore = stream;
-    std::ignore = keys;
-    ALOGD("%s: function not implemented keys: %s",__func__,keys);
 
+    int ret = 0;
+    struct str_parms *query = str_parms_create_str(keys);
+    char value[256];
+    char *str = (char*) nullptr;
+    std::shared_ptr<StreamOutPrimary> astream_out;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    struct str_parms *reply = str_parms_create();
+
+    if (adevice) {
+        astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    } else {
+        ret = -EINVAL;
+        ALOGE("%s: unable to get audio device",__func__);
+        goto exit;
+    }
+
+    if (!query || !reply) {
+        if (reply)
+            str_parms_destroy(reply);
+        if (query)
+            str_parms_destroy(query);
+        ALOGE("out_get_parameters: failed to allocate mem for query or reply");
+        return nullptr;
+    }
+    ALOGD("%s: keys: %s",__func__,keys);
+
+    ret = str_parms_get_str(query, "is_direct_pcm_track", value, sizeof(value));
+    if (ret >= 0) {
+        value[0] = '\0';
+
+        if (astream_out->flags_ & AUDIO_OUTPUT_FLAG_DIRECT &&
+             !(astream_out->flags_ & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
+            ALOGV("in direct_pcm");
+            strlcat(value, "true", sizeof(value));
+        } else {
+            ALOGV("not in direct_pcm");
+            strlcat(value, "false", sizeof(value));
+        }
+        str_parms_add_str(reply, "is_direct_pcm_track", value);
+        if (str)
+            free(str);
+         str = str_parms_to_str(reply);
+    }
+exit:
+    /* do we need new hooks inside qal? */
     return 0;
 }
 
@@ -985,12 +1038,10 @@ qal_stream_type_t StreamOutPrimary::GetQalStreamType(
         // hifi: to be confirmed
         qalStreamType = QAL_STREAM_COMPRESSED;
     } else if (halStreamFlags == AUDIO_OUTPUT_FLAG_DIRECT) {
-        // low latency for now as a workaround
-        qalStreamType = QAL_STREAM_LOW_LATENCY;//QAL_STREAM_COMPRESSED
+        qalStreamType = QAL_STREAM_PCM_OFFLOAD;
     } else if (halStreamFlags == (AUDIO_OUTPUT_FLAG_DIRECT|
                                       AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|
                                   AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
-        // low latency for now
         qalStreamType = QAL_STREAM_COMPRESSED;
     } else if (halStreamFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
         // dsd_compress_passthrough
@@ -1186,15 +1237,16 @@ int StreamOutPrimary::SetVolume(float left , float right) {
 /* Delay in Us, only to be used for PCM formats */
 int64_t StreamOutPrimary::platform_render_latency(audio_output_flags_t flags_)
 {
-    struct qal_stream_attributes streamAttributes;
-    streamAttributes.type = StreamOutPrimary::GetQalStreamType(flags_);
-    ALOGE("%s:%d type %d", __func__, __LINE__, streamAttributes.type);
-    switch (streamAttributes.type) {
+    struct qal_stream_attributes streamAttributes_;
+    streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
+    ALOGE("%s:%d type %d", __func__, __LINE__, streamAttributes_.type);
+    switch (streamAttributes_.type) {
          case QAL_STREAM_DEEP_BUFFER:
              return DEEP_BUFFER_PLATFORM_DELAY;
          case QAL_STREAM_LOW_LATENCY:
              return LOW_LATENCY_PLATFORM_DELAY;
          case QAL_STREAM_COMPRESSED:
+         case QAL_STREAM_PCM_OFFLOAD:
               return PCM_OFFLOAD_PLATFORM_DELAY;
     //TODO: Add more usecases/type as in current hal, once they are available in qal
          default:
@@ -1236,6 +1288,30 @@ int StreamOutPrimary::get_compressed_buffer_size()
     return COMPRESS_OFFLOAD_FRAGMENT_SIZE;
 }
 
+int StreamOutPrimary::get_pcm_offload_buffer_size()
+{
+    uint8_t channels = audio_channel_count_from_out_mask(config_.channel_mask);
+    uint8_t bytes_per_sample = audio_bytes_per_sample(config_.format);
+    uint32_t fragment_size = 0;
+
+    ALOGE("%s:%d config_ format:%x, SR %d ch_mask 0x%x",
+            __func__, __LINE__, config_.format, config_.sample_rate,
+            config_.channel_mask);
+    fragment_size = PCM_OFFLOAD_BUFFER_DURATION *
+        config_.sample_rate * bytes_per_sample * channels;
+    fragment_size /= 1000;
+
+    if (fragment_size < MIN_PCM_OFFLOAD_FRAGMENT_SIZE)
+        fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
+    else if (fragment_size > MAX_PCM_OFFLOAD_FRAGMENT_SIZE)
+        fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
+
+    fragment_size = ALIGN(fragment_size, (bytes_per_sample * channels * 32));
+
+    ALOGE("%s: fragment size: %d", __func__, fragment_size);
+    return fragment_size;
+}
+
 static int voip_get_buffer_size(uint32_t sample_rate)
 {
     if (sample_rate == 48000)
@@ -1258,6 +1334,8 @@ uint32_t StreamOutPrimary::GetBufferSize() {
         return voip_get_buffer_size(config_.sample_rate);
     } else if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
         return get_compressed_buffer_size();
+    } else if (streamAttributes_.type == QAL_STREAM_PCM_OFFLOAD) {
+        return get_pcm_offload_buffer_size();
     } else {
        return BUF_SIZE_PLAYBACK * NO_OF_BUF;
     }
@@ -1337,6 +1415,10 @@ int StreamOutPrimary::Open() {
        if (mchannels)
           streamAttributes_.out_media_config.ch_info->channels = mchannels;
        streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
+    } else if (streamAttributes_.type == QAL_STREAM_PCM_OFFLOAD) {
+        streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[config_.format];
+        if (streamAttributes_.out_media_config.bit_width == 0)
+            streamAttributes_.out_media_config.bit_width = 16;
     }
     ALOGE("channels %d samplerate %d format id %d \n",
             streamAttributes_.out_media_config.ch_info->channels,

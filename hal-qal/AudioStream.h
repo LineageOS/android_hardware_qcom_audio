@@ -56,11 +56,17 @@
 #define LOW_LATENCY_CAPTURE_PERIOD_SIZE 240
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
 #define LOW_LATENCY_CAPTURE_USE_CASE 1
+#define PCM_OFFLOAD_BUFFER_DURATION 80 /** millisec */
+#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE 512
+#define MAX_PCM_OFFLOAD_FRAGMENT_SIZE (240 * 1024)
 #define MMAP_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE/1000)
 #define MMAP_PERIOD_COUNT_MIN 32
 #define MMAP_PERIOD_COUNT_MAX 512
 #define MMAP_PERIOD_COUNT_DEFAULT (MMAP_PERIOD_COUNT_MAX)
 #define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
+
+#define DIV_ROUND_UP(x, y) (((x) + (y) - 1)/(y))
+#define ALIGN(x, y) ((y) * DIV_ROUND_UP((x), (y)))
 
 #if LINUX_ENABLED
 #if defined(__LP64__)
@@ -255,6 +261,7 @@ public:
 protected:
     struct timespec writeAt;
     int get_compressed_buffer_size();
+    int get_pcm_offload_buffer_size();
     int64_t platform_render_latency(audio_output_flags_t flags_);
     qal_param_payload qparam_payload;
     uint32_t msample_rate;
