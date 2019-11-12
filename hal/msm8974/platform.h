@@ -644,7 +644,6 @@ enum {
 #elif PLATFORM_AUTO
 #define HFP_SCO_RX 29
 #define HFP_ASM_RX_TX 36
-#define HFP_EXT_EC_REF_TX 1
 #elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
 #define HFP_SCO_RX 17
 #define HFP_ASM_RX_TX 18
