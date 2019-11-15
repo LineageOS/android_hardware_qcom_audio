@@ -101,38 +101,6 @@ const int map_reverb_opensl_preset_2_offload_preset
     {6, 20}
 };
 
-int offload_update_mixer_and_effects_ctl(int card, int device_id,
-                                         struct mixer **mixer,
-                                         struct mixer_ctl **ctl)
-{
-    char mixer_string[128];
-
-    snprintf(mixer_string, sizeof(mixer_string),
-             "%s %d", "Audio Effects Config", device_id);
-    ALOGV("%s: mixer_string: %s", __func__, mixer_string);
-    *mixer = mixer_open(card);
-    if (!(*mixer)) {
-        ALOGE("Failed to open mixer");
-        *ctl = NULL;
-        return -EINVAL;
-    } else {
-        *ctl = mixer_get_ctl_by_name(*mixer, mixer_string);
-        if (!*ctl) {
-            ALOGE("mixer_get_ctl_by_name failed");
-            mixer_close(*mixer);
-            *mixer = NULL;
-            return -EINVAL;
-        }
-    }
-    ALOGV("mixer: %p, ctl: %p", *mixer, *ctl);
-    return 0;
-}
-
-void offload_close_mixer(struct mixer **mixer)
-{
-    mixer_close(*mixer);
-}
-
 void offload_bassboost_set_device(struct bass_boost_params *bassboost,
                                   uint32_t device)
 {
@@ -175,67 +143,96 @@ void offload_bassboost_set_mode(struct bass_boost_params *bassboost,
     bassboost->mode = mode;
 }
 
-static int bassboost_send_params(eff_mode_t mode, void *ctl,
+static int bassboost_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_handle,
                                   struct bass_boost_params *bassboost,
                                  unsigned param_send_flags)
 {
-    long param_values[128] = {0};
-    long *p_param_values = param_values;
+    qal_param_payload qal_payload;
+    int ret = 0;
+    effect_qal_payload_t effect_payload;
+    qal_effect_custom_payload_t custom_payload;
 
-    ALOGV("%s: flags 0x%x", __func__, param_send_flags);
-    *p_param_values++ = BASS_BOOST_MODULE;
-    *p_param_values++ = bassboost->device;
-    *p_param_values++ = 0; /* num of commands*/
+    if (!qal_stream_handle) {
+        ALOGE("%s: qal stream handle is null.\n", __func__);
+        return -EINVAL;
+    }
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG) {
-        *p_param_values++ = BASS_BOOST_ENABLE;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = BASS_BOOST_ENABLE_PARAM_LEN;
-        *p_param_values++ = bassboost->enable_flag;
-        param_values[2] += 1;
+        qal_key_value_pair_t tkvpair;
+        tkvpair.key = TAG_BASSBOOST_KEY;
+        tkvpair.value = bassboost->enable_flag;
+
+        qal_key_vector_t qal_key_vector;
+        qal_key_vector.num_tkvs = 1;
+        qal_key_vector.kvp = &tkvpair;
+
+        effect_payload.isTKV = PARAM_TKV;
+        effect_payload.tag = TAG_BASSBOOST;
+        effect_payload.payloadSize = sizeof(uint32_t) + sizeof(qal_key_value_pair_t);
+        effect_payload.payload = (uint32_t *)&qal_key_vector;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
+
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_STRENGTH) {
-        *p_param_values++ = BASS_BOOST_STRENGTH;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = BASS_BOOST_STRENGTH_PARAM_LEN;
-        *p_param_values++ = bassboost->strength;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_BASSBOOST;
+        // +1 means memory allocation for paramId
+        effect_payload.payloadSize = (BASS_BOOST_STRENGTH_PARAM_LEN + 1) * sizeof(uint32_t);
+
+        custom_payload.paramId = PARAM_ID_BASS_BOOST_STRENGTH;
+        custom_payload.data = (uint32_t *)malloc(BASS_BOOST_STRENGTH_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = bassboost->strength;;
+        effect_payload.payload = (uint32_t *)&custom_payload;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
+
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_MODE) {
-        *p_param_values++ = BASS_BOOST_MODE;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = BASS_BOOST_MODE_PARAM_LEN;
-        *p_param_values++ = bassboost->mode;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_BASSBOOST;
+        // +1 means memory allocation for paramId
+        effect_payload.payloadSize = (BASS_BOOST_STRENGTH_PARAM_LEN + 1) * sizeof(uint32_t);
+
+        custom_payload.paramId = PARAM_ID_BASS_BOOST_MODE;
+        custom_payload.data = (uint32_t *)malloc(BASS_BOOST_MODE_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = bassboost->strength;;
+        effect_payload.payload = (uint32_t *)&custom_payload;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
 
-    if ((mode == OFFLOAD) && param_values[2] && ctl) {
-        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
-                            ARRAY_SIZE(param_values));
-    } else if ((mode == HW_ACCELERATOR) && param_values[2] &&
-               ctl && *(int *)ctl) {
-        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
-            ALOGE("%s: sending h/w acc effects params fail[%d]", __func__, errno);
-    }
-
-    return 0;
+    return ret;
 }
 
-int offload_bassboost_send_params(struct mixer_ctl *ctl,
+int offload_bassboost_send_params_qal(qal_stream_handle_t *qal_handle,
                                   struct bass_boost_params *bassboost,
                                   unsigned param_send_flags)
 {
-    return bassboost_send_params(OFFLOAD, (void *)ctl, bassboost,
+    return bassboost_send_params_qal(OFFLOAD, qal_handle, bassboost,
                                  param_send_flags);
-}
-
-int hw_acc_bassboost_send_params(int fd, struct bass_boost_params *bassboost,
-                                 unsigned param_send_flags)
-{
-    return bassboost_send_params(HW_ACCELERATOR, (void *)&fd,
-                                 bassboost, param_send_flags);
 }
 
 void offload_pbe_set_device(struct pbe_params *pbe,
@@ -258,59 +255,80 @@ int offload_pbe_get_enable_flag(struct pbe_params *pbe)
     return pbe->enable_flag;
 }
 
-static int pbe_send_params(eff_mode_t mode, void *ctl,
+static int pbe_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_handle,
                             struct pbe_params *pbe,
                             unsigned param_send_flags)
 {
-    long  param_values[128] = {0};
-    long *p_param_values = param_values;
-    int i;
+    int i = 0, index = 0;
     int32_t *p_coeffs = NULL;
     uint32_t lpf_len = 0, hpf_len = 0, bpf_len = 0;
     uint32_t bsf_len = 0, tsf_len = 0, total_coeffs_len = 0;
+    qal_param_payload qal_payload;
+    int ret = 0;
+    effect_qal_payload_t effect_payload;
+    qal_effect_custom_payload_t custom_payload;
+
+    if (!qal_stream_handle) {
+        ALOGE("%s: qal stream handle is null.\n", __func__);
+        return -EINVAL;
+    }
 
     ALOGV("%s: enabled=%d", __func__, pbe->enable_flag);
-    *p_param_values++ = PBE_MODULE;
-    *p_param_values++ = pbe->device;
-    *p_param_values++ = 0; /* num of commands*/
     if (param_send_flags & OFFLOAD_SEND_PBE_ENABLE_FLAG) {
-        *p_param_values++ = PBE_ENABLE;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = PBE_ENABLE_PARAM_LEN;
-        *p_param_values++ = pbe->enable_flag;
-        param_values[2] += 1;
-    }
-    if (param_send_flags & OFFLOAD_SEND_PBE_CONFIG) {
-        *p_param_values++ = PBE_CONFIG;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = pbe->cfg_len;
-        *p_param_values++ = pbe->config.real_bass_mix;
-        *p_param_values++ = pbe->config.bass_color_control;
-        *p_param_values++ = pbe->config.main_chain_delay;
-        *p_param_values++ = pbe->config.xover_filter_order;
-        *p_param_values++ = pbe->config.bandpass_filter_order;
-        *p_param_values++ = pbe->config.drc_delay;
-        *p_param_values++ = pbe->config.rms_tav;
-        *p_param_values++ = pbe->config.exp_threshold;
-        *p_param_values++ = pbe->config.exp_slope;
-        *p_param_values++ = pbe->config.comp_threshold;
-        *p_param_values++ = pbe->config.comp_slope;
-        *p_param_values++ = pbe->config.makeup_gain;
-        *p_param_values++ = pbe->config.comp_attack;
-        *p_param_values++ = pbe->config.comp_release;
-        *p_param_values++ = pbe->config.exp_attack;
-        *p_param_values++ = pbe->config.exp_release;
-        *p_param_values++ = pbe->config.limiter_bass_threshold;
-        *p_param_values++ = pbe->config.limiter_high_threshold;
-        *p_param_values++ = pbe->config.limiter_bass_makeup_gain;
-        *p_param_values++ = pbe->config.limiter_high_makeup_gain;
-        *p_param_values++ = pbe->config.limiter_bass_gc;
-        *p_param_values++ = pbe->config.limiter_high_gc;
-        *p_param_values++ = pbe->config.limiter_delay;
-        *p_param_values++ = pbe->config.reserved;
+        qal_key_value_pair_t tkvpair;
+        tkvpair.key = TAG_PBE_KEY;
+        tkvpair.value = pbe->enable_flag;;
 
+        qal_key_vector_t qal_key_vector;
+        qal_key_vector.num_tkvs = 1;
+        qal_key_vector.kvp = &tkvpair;
+
+        effect_payload.isTKV = PARAM_TKV;
+        effect_payload.tag = TAG_PBE;
+        effect_payload.payloadSize = sizeof(uint32_t) + sizeof(qal_key_value_pair_t);
+        effect_payload.payload = (uint32_t *)&qal_key_vector;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
+    }
+
+    if (param_send_flags & OFFLOAD_SEND_PBE_CONFIG) {
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_PBE;
+        effect_payload.payloadSize = pbe->cfg_len + sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_PBE_PARAMS_CONFIG;
+        custom_payload.data = (uint32_t *)malloc(pbe->cfg_len);
+
+        custom_payload.data[index++] = pbe->config.real_bass_mix;
+        custom_payload.data[index++] = pbe->config.bass_color_control;
+        custom_payload.data[index++] = pbe->config.main_chain_delay;
+        custom_payload.data[index++] = pbe->config.xover_filter_order;
+        custom_payload.data[index++] = pbe->config.bandpass_filter_order;
+        custom_payload.data[index++] = pbe->config.drc_delay;
+        custom_payload.data[index++] = pbe->config.rms_tav;
+        custom_payload.data[index++] = pbe->config.exp_threshold;
+        custom_payload.data[index++] = pbe->config.exp_slope;
+        custom_payload.data[index++] = pbe->config.comp_threshold;
+        custom_payload.data[index++] = pbe->config.comp_slope;
+        custom_payload.data[index++] = pbe->config.makeup_gain;
+        custom_payload.data[index++] = pbe->config.comp_attack;
+        custom_payload.data[index++] = pbe->config.comp_release;
+        custom_payload.data[index++] = pbe->config.exp_attack;
+        custom_payload.data[index++] = pbe->config.exp_release;
+        custom_payload.data[index++] = pbe->config.limiter_bass_threshold;
+        custom_payload.data[index++] = pbe->config.limiter_high_threshold;
+        custom_payload.data[index++] = pbe->config.limiter_bass_makeup_gain;
+        custom_payload.data[index++] = pbe->config.limiter_high_makeup_gain;
+        custom_payload.data[index++] = pbe->config.limiter_bass_gc;
+        custom_payload.data[index++] = pbe->config.limiter_high_gc;
+        custom_payload.data[index++] = pbe->config.limiter_delay;
+        custom_payload.data[index++] = pbe->config.reserved;
         p_coeffs = &pbe->config.p1LowPassCoeffs[0];
         lpf_len = (pbe->config.xover_filter_order == 3) ? 10 : 5;
         hpf_len = (pbe->config.xover_filter_order == 3) ? 10 : 5;
@@ -320,36 +338,30 @@ static int pbe_send_params(eff_mode_t mode, void *ctl,
         total_coeffs_len = lpf_len + hpf_len + bpf_len + bsf_len + tsf_len;
 
         for (i = 0; i < total_coeffs_len; i++) {
-            *p_param_values++ = *p_coeffs++;
+            custom_payload.data[index++] = *p_coeffs++;
         }
-        param_values[2] += 1;
-    }
 
-    if ((mode == OFFLOAD) && param_values[2] && ctl) {
-        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
-                            ARRAY_SIZE(param_values));
-    } else if ((mode == HW_ACCELERATOR) && param_values[2] &&
-               ctl && *(int *)ctl) {
-        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
-            ALOGE("%s: sending h/w acc effects params fail[%d]", __func__, errno);
+        effect_payload.payload = (uint32_t *)&custom_payload;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
 
     return 0;
 }
 
-int offload_pbe_send_params(struct mixer_ctl *ctl,
+int offload_pbe_send_params_qal(qal_stream_handle_t *qal_handle,
                                   struct pbe_params *pbe,
                                   unsigned param_send_flags)
 {
-    return pbe_send_params(OFFLOAD, (void *)ctl, pbe,
+    return pbe_send_params_qal(OFFLOAD, qal_handle, pbe,
                                  param_send_flags);
-}
-
-int hw_acc_pbe_send_params(int fd, struct pbe_params *pbe,
-                                 unsigned param_send_flags)
-{
-    return pbe_send_params(HW_ACCELERATOR, (void *)&fd,
-                                 pbe, param_send_flags);
 }
 
 void offload_virtualizer_set_device(struct virtualizer_params *virtualizer,
@@ -401,76 +413,107 @@ void offload_virtualizer_set_gain_adjust(struct virtualizer_params *virtualizer,
     virtualizer->gain_adjust = gain_adjust;
 }
 
-static int virtualizer_send_params(eff_mode_t mode, void *ctl,
+static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_handle,
                                     struct virtualizer_params *virtualizer,
                                    unsigned param_send_flags)
 {
-    long param_values[128] = {0};
-    long *p_param_values = param_values;
+    qal_param_payload qal_payload;
+    int ret = 0;
+    effect_qal_payload_t effect_payload;
+    qal_effect_custom_payload_t custom_payload;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
-    *p_param_values++ = VIRTUALIZER_MODULE;
-    *p_param_values++ = virtualizer->device;
-    *p_param_values++ = 0; /* num of commands*/
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG) {
-        *p_param_values++ = VIRTUALIZER_ENABLE;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = VIRTUALIZER_ENABLE_PARAM_LEN;
-        *p_param_values++ = virtualizer->enable_flag;
-        param_values[2] += 1;
+
+        qal_key_value_pair_t tkvpair;
+        tkvpair.key = TAG_VIRTUALIZER_KEY;
+        tkvpair.value = virtualizer->enable_flag;
+
+        qal_key_vector_t qal_key_vector;
+        qal_key_vector.num_tkvs = 1;
+        qal_key_vector.kvp = &tkvpair;
+
+        effect_payload.isTKV = PARAM_TKV;
+        effect_payload.tag = TAG_VIRTUALIZER;
+        effect_payload.payloadSize = sizeof(uint32_t) + sizeof(qal_key_value_pair_t);
+        effect_payload.payload = (uint32_t *)&qal_key_vector;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_STRENGTH) {
-        *p_param_values++ = VIRTUALIZER_STRENGTH;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = VIRTUALIZER_STRENGTH_PARAM_LEN;
-        *p_param_values++ = virtualizer->strength;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_VIRTUALIZER;
+        effect_payload.payloadSize = (VIRTUALIZER_STRENGTH_PARAM_LEN + 1) * sizeof(uint32_t);
+
+        custom_payload.paramId = PARAM_ID_VIRTUALIZER_STRENGTH;
+        custom_payload.data = (uint32_t *)malloc(VIRTUALIZER_STRENGTH_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = virtualizer->strength;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_OUT_TYPE) {
-        *p_param_values++ = VIRTUALIZER_OUT_TYPE;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = VIRTUALIZER_OUT_TYPE_PARAM_LEN;
-        *p_param_values++ = virtualizer->out_type;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_VIRTUALIZER;
+        effect_payload.payloadSize = (VIRTUALIZER_OUT_TYPE_PARAM_LEN + 1) * sizeof(uint32_t);
+
+        custom_payload.paramId = PARAM_ID_VIRTUALIZER_OUT_TYPE;
+        custom_payload.data = (uint32_t *)malloc(VIRTUALIZER_OUT_TYPE_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = virtualizer->out_type;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_GAIN_ADJUST) {
-        *p_param_values++ = VIRTUALIZER_GAIN_ADJUST;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = VIRTUALIZER_GAIN_ADJUST_PARAM_LEN;
-        *p_param_values++ = virtualizer->gain_adjust;
-        param_values[2] += 1;
-    }
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_VIRTUALIZER;
+        effect_payload.payloadSize = (VIRTUALIZER_GAIN_ADJUST_PARAM_LEN + 1) * sizeof(uint32_t);
 
-    if ((mode == OFFLOAD) && param_values[2] && ctl) {
-        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
-                            ARRAY_SIZE(param_values));
-    } else if ((mode == HW_ACCELERATOR) && param_values[2] &&
-               ctl && *(int *)ctl) {
-        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
-            ALOGE("%s: sending h/w acc effects params fail[%d]", __func__, errno);
+        custom_payload.paramId = PARAM_ID_VIRTUALIZER_GAIN_ADJUST;
+        custom_payload.data = (uint32_t *)malloc(VIRTUALIZER_GAIN_ADJUST_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = virtualizer->gain_adjust;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
 
     return 0;
 }
 
-int offload_virtualizer_send_params(struct mixer_ctl *ctl,
+int offload_virtualizer_send_params_qal(qal_stream_handle_t *qal_stream_handle,
                                     struct virtualizer_params *virtualizer,
                                     unsigned param_send_flags)
 {
-    return virtualizer_send_params(OFFLOAD, (void *)ctl, virtualizer,
+    return virtualizer_send_params_qal(OFFLOAD, qal_stream_handle, virtualizer,
                                    param_send_flags);
-}
-
-int hw_acc_virtualizer_send_params(int fd,
-                                   struct virtualizer_params *virtualizer,
-                                   unsigned param_send_flags)
-{
-    return virtualizer_send_params(HW_ACCELERATOR, (void *)&fd,
-                                   virtualizer, param_send_flags);
 }
 
 void offload_eq_set_device(struct eq_params *eq, uint32_t device)
@@ -522,83 +565,117 @@ void offload_eq_set_bands_level(struct eq_params *eq, int num_bands,
 #endif
 }
 
-static int eq_send_params(eff_mode_t mode, void *ctl, struct eq_params *eq,
+static int eq_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_handle, struct eq_params *eq,
                           unsigned param_send_flags)
 {
-    long param_values[128] = {0};
-    long *p_param_values = param_values;
-    uint32_t i;
+    uint32_t i = 0, index = 0;
+    qal_param_payload qal_payload;
+    int ret = 0;
+    effect_qal_payload_t effect_payload;
+    qal_effect_custom_payload_t custom_payload;
 
+    if (!qal_stream_handle) {
+        ALOGE("%s: qal stream handle is null.\n", __func__);
+        return -EINVAL;
+    }
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
     if ((eq->config.preset_id < -1) ||
             ((param_send_flags & OFFLOAD_SEND_EQ_PRESET) && (eq->config.preset_id == -1))) {
         ALOGV("No Valid preset to set");
         return 0;
     }
-    *p_param_values++ = EQ_MODULE;
-    *p_param_values++ = eq->device;
-    *p_param_values++ = 0; /* num of commands*/
+
     if (param_send_flags & OFFLOAD_SEND_EQ_ENABLE_FLAG) {
-        *p_param_values++ = EQ_ENABLE;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = EQ_ENABLE_PARAM_LEN;
-        *p_param_values++ = eq->enable_flag;
-        param_values[2] += 1;
-    }
-    if (param_send_flags & OFFLOAD_SEND_EQ_PRESET) {
-        *p_param_values++ = EQ_CONFIG;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = EQ_CONFIG_PARAM_LEN;
-        *p_param_values++ = eq->config.eq_pregain;
-        *p_param_values++ =
-                     map_eq_opensl_preset_2_offload_preset[eq->config.preset_id];
-        *p_param_values++ = 0;
-        param_values[2] += 1;
-    }
-    if (param_send_flags & OFFLOAD_SEND_EQ_BANDS_LEVEL) {
-        *p_param_values++ = EQ_CONFIG;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = EQ_CONFIG_PARAM_LEN +
-                            eq->config.num_bands * EQ_CONFIG_PER_BAND_PARAM_LEN;
-        *p_param_values++ = eq->config.eq_pregain;
-        *p_param_values++ = CUSTOM_OPENSL_PRESET;
-        *p_param_values++ = eq->config.num_bands;
-        for (i=0; i<eq->config.num_bands; i++) {
-            *p_param_values++ = eq->per_band_cfg[i].band_idx;
-            *p_param_values++ = eq->per_band_cfg[i].filter_type;
-            *p_param_values++ = eq->per_band_cfg[i].freq_millihertz;
-            *p_param_values++ = eq->per_band_cfg[i].gain_millibels;
-            *p_param_values++ = eq->per_band_cfg[i].quality_factor;
+        qal_key_value_pair_t tkvpair;
+        tkvpair.key = TAG_EQUALIZER_KEY;
+        tkvpair.value = eq->enable_flag;
+
+        qal_key_vector_t qal_key_vector;
+        qal_key_vector.num_tkvs = 1;
+        qal_key_vector.kvp = &tkvpair;
+
+        effect_payload.isTKV = PARAM_TKV;
+        effect_payload.tag = TAG_EQUALIZER;
+        effect_payload.payloadSize = sizeof(uint32_t) + sizeof(qal_key_value_pair_t);
+        effect_payload.payload = (uint32_t *)&qal_key_vector;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
         }
-        param_values[2] += 1;
+
     }
 
-    if ((mode == OFFLOAD) && param_values[2] && ctl) {
-        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
-                            ARRAY_SIZE(param_values));
-    } else if ((mode == HW_ACCELERATOR) && param_values[2] &&
-               ctl && *(int *)ctl) {
-        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
-            ALOGE("%s: sending h/w acc effects params fail[%d]", __func__, errno);
+    if (param_send_flags & OFFLOAD_SEND_EQ_PRESET) {
+        // param_id + actual payload
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_EQUALIZER;
+        effect_payload.payloadSize = (EQ_CONFIG_PARAM_LEN + 1) * sizeof(uint32_t);
+
+        custom_payload.paramId = PARAM_ID_EQ_CONFIG;
+        custom_payload.data = (uint32_t *)malloc(EQ_CONFIG_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = eq->config.eq_pregain;
+        custom_payload.data[1] =
+            map_eq_opensl_preset_2_offload_preset[eq->config.preset_id];
+        custom_payload.data[2] = 0;    // num_of_band must be 0 for preset
+        effect_payload.payload = (uint32_t *)&custom_payload;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
+
     }
 
-    return 0;
+    if (param_send_flags & OFFLOAD_SEND_EQ_BANDS_LEVEL) {
+        // param_id + actual payload
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_EQUALIZER;
+        effect_payload.payloadSize = (1 + EQ_CONFIG_PARAM_LEN + eq->config.num_bands * EQ_CONFIG_PER_BAND_PARAM_LEN) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_EQ_CONFIG;
+        index = 0;
+        custom_payload.data = (uint32_t *)malloc((EQ_CONFIG_PARAM_LEN + eq->config.num_bands * EQ_CONFIG_PER_BAND_PARAM_LEN)
+                                * sizeof(uint32_t));
+        custom_payload.data[index++] = eq->config.eq_pregain;
+        custom_payload.data[index++] = CUSTOM_OPENSL_PRESET;
+        custom_payload.data[index++] = eq->config.num_bands;
+        for (i = 0; i < eq->config.num_bands; i++) {
+            custom_payload.data[index++] = eq->per_band_cfg[i].filter_type;
+            custom_payload.data[index++] = eq->per_band_cfg[i].freq_millihertz;
+            custom_payload.data[index++] = eq->per_band_cfg[i].gain_millibels;
+            custom_payload.data[index++] = eq->per_band_cfg[i].quality_factor;
+            custom_payload.data[index++] = eq->per_band_cfg[i].band_idx;
+        }
+        effect_payload.payload = (uint32_t *)&custom_payload;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+
+        ret = qal_stream_set_param(qal_stream_handle,
+           (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
+
+    }
+
+    return ret;
 }
 
-int offload_eq_send_params(struct mixer_ctl *ctl, struct eq_params *eq,
+int offload_eq_send_params_qal(qal_stream_handle_t *qal_handle, struct eq_params *eq,
                            unsigned param_send_flags)
 {
-    return eq_send_params(OFFLOAD, (void *)ctl, eq, param_send_flags);
-}
-
-int hw_acc_eq_send_params(int fd, struct eq_params *eq,
-                          unsigned param_send_flags)
-{
-    return eq_send_params(HW_ACCELERATOR, (void *)&fd, eq,
-                          param_send_flags);
+    return eq_send_params_qal(OFFLOAD, qal_handle, eq, param_send_flags);
 }
 
 void offload_reverb_set_device(struct reverb_params *reverb, uint32_t device)
@@ -710,165 +787,306 @@ void offload_reverb_set_density(struct reverb_params *reverb, int density)
     reverb->density = density;
 }
 
-static int reverb_send_params(eff_mode_t mode, void *ctl,
+static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_handle,
                                struct reverb_params *reverb,
                               unsigned param_send_flags)
 {
-    long param_values[128] = {0};
-    long *p_param_values = param_values;
+    qal_param_payload qal_payload;
+    int ret = 0;
+    effect_qal_payload_t effect_payload;
+    qal_effect_custom_payload_t custom_payload;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
-    *p_param_values++ = REVERB_MODULE;
-    *p_param_values++ = reverb->device;
-    *p_param_values++ = 0; /* num of commands*/
 
     if (param_send_flags & OFFLOAD_SEND_REVERB_ENABLE_FLAG) {
-        *p_param_values++ = REVERB_ENABLE;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_ENABLE_PARAM_LEN;
-        *p_param_values++ = reverb->enable_flag;
-        param_values[2] += 1;
+        qal_key_value_pair_t tkvpair;
+        tkvpair.key = TAG_REVERB_KEY;
+        tkvpair.value = reverb->enable_flag;
+
+        qal_key_vector_t qal_key_vector;
+        qal_key_vector.num_tkvs = 1;
+        qal_key_vector.kvp = &tkvpair;
+
+        effect_payload.isTKV = PARAM_TKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = sizeof(uint32_t) + sizeof(qal_key_value_pair_t);
+        effect_payload.payload = (uint32_t *)&qal_key_vector;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
+
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_MODE) {
-        *p_param_values++ = REVERB_MODE;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_MODE_PARAM_LEN;
-        *p_param_values++ = reverb->mode;
-        param_values[2] += 1;
+        // param_id + actual payload
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_MODE_PARAM_LEN + 1) * sizeof(uint32_t);
+
+        custom_payload.paramId = PARAM_ID_REVERB_MODE;
+        custom_payload.data = (uint32_t *)malloc(REVERB_MODE_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->mode;;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_PRESET) {
-        *p_param_values++ = REVERB_PRESET;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_PRESET_PARAM_LEN;
-        *p_param_values++ = reverb->preset;
-        param_values[2] += 1;
+        // param_id + actual payload
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_PRESET_PARAM_LEN + 1) * sizeof(uint32_t);
+
+        custom_payload.paramId = PARAM_ID_REVERB_PRESET;
+        custom_payload.data = (uint32_t *)malloc(REVERB_PRESET_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->preset;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_WET_MIX) {
-        *p_param_values++ = REVERB_WET_MIX;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_WET_MIX_PARAM_LEN;
-        *p_param_values++ = reverb->wet_mix;
-        param_values[2] += 1;
+        // param_id + actual payload
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_WET_MIX_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_WET_MIX;
+        custom_payload.data = (uint32_t *)malloc(REVERB_WET_MIX_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->wet_mix;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_GAIN_ADJUST) {
-        *p_param_values++ = REVERB_GAIN_ADJUST;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_GAIN_ADJUST_PARAM_LEN;
-        *p_param_values++ = reverb->gain_adjust;
-        param_values[2] += 1;
+        // param_id + actual payload
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_GAIN_ADJUST_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_GAIN_ADJUST;
+        custom_payload.data = (uint32_t *)malloc(REVERB_GAIN_ADJUST_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->gain_adjust;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_ROOM_LEVEL) {
-        *p_param_values++ = REVERB_ROOM_LEVEL;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_ROOM_LEVEL_PARAM_LEN;
-        *p_param_values++ = reverb->room_level;
-        param_values[2] += 1;
+        // param_id + actual payload
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_ROOM_LEVEL_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_ROOM_LEVEL;
+        custom_payload.data = (uint32_t *)malloc(REVERB_ROOM_LEVEL_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->room_level;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_ROOM_HF_LEVEL) {
-        *p_param_values++ = REVERB_ROOM_HF_LEVEL;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_ROOM_HF_LEVEL_PARAM_LEN;
-        *p_param_values++ = reverb->room_hf_level;
-        param_values[2] += 1;
+        // param_id + actual payload
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_ROOM_HF_LEVEL_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_ROOM_HF_LEVEL;
+        custom_payload.data = (uint32_t *)malloc(REVERB_ROOM_HF_LEVEL_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->room_hf_level;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
+
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DECAY_TIME) {
-        *p_param_values++ = REVERB_DECAY_TIME;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_DECAY_TIME_PARAM_LEN;
-        *p_param_values++ = reverb->decay_time;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_DECAY_TIME_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_DECAY_TIME;
+        custom_payload.data = (uint32_t *)malloc(REVERB_DECAY_TIME_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->decay_time;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DECAY_HF_RATIO) {
-        *p_param_values++ = REVERB_DECAY_HF_RATIO;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_DECAY_HF_RATIO_PARAM_LEN;
-        *p_param_values++ = reverb->decay_hf_ratio;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_DECAY_HF_RATIO_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_DECAY_HF_RATIO;
+        custom_payload.data = (uint32_t *)malloc(REVERB_DECAY_HF_RATIO_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->decay_hf_ratio;
+
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_REFLECTIONS_LEVEL) {
-        *p_param_values++ = REVERB_REFLECTIONS_LEVEL;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_REFLECTIONS_LEVEL_PARAM_LEN;
-        *p_param_values++ = reverb->reflections_level;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_REFLECTIONS_LEVEL_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_REFLECTIONS_LEVEL;
+        custom_payload.data = (uint32_t *)malloc(REVERB_REFLECTIONS_LEVEL_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->reflections_level;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_REFLECTIONS_DELAY) {
-        *p_param_values++ = REVERB_REFLECTIONS_DELAY;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_REFLECTIONS_DELAY_PARAM_LEN;
-        *p_param_values++ = reverb->reflections_delay;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_REFLECTIONS_DELAY_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_REFLECTIONS_DELAY;
+        custom_payload.data = (uint32_t *)malloc(REVERB_REFLECTIONS_DELAY_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->reflections_delay;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_LEVEL) {
-        *p_param_values++ = REVERB_LEVEL;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_LEVEL_PARAM_LEN;
-        *p_param_values++ = reverb->level;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_LEVEL_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_LEVEL;
+        custom_payload.data = (uint32_t *)malloc(REVERB_LEVEL_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->level;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
+
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DELAY) {
-        *p_param_values++ = REVERB_DELAY;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_DELAY_PARAM_LEN;
-        *p_param_values++ = reverb->delay;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_DELAY_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_DELAY;
+        custom_payload.data = (uint32_t *)malloc(REVERB_DELAY_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->delay;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DIFFUSION) {
-        *p_param_values++ = REVERB_DIFFUSION;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_DIFFUSION_PARAM_LEN;
-        *p_param_values++ = reverb->diffusion;
-        param_values[2] += 1;
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_DIFFUSION_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_DIFFUSION;
+        custom_payload.data = (uint32_t *)malloc(REVERB_DIFFUSION_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->diffusion;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DENSITY) {
-        *p_param_values++ = REVERB_DENSITY;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = REVERB_DENSITY_PARAM_LEN;
-        *p_param_values++ = reverb->density;
-        param_values[2] += 1;
-    }
-
-    if ((mode == OFFLOAD) && param_values[2] && ctl) {
-        mixer_ctl_set_array((struct mixer_ctl *)ctl, param_values,
-                            ARRAY_SIZE(param_values));
-    } else if ((mode == HW_ACCELERATOR) && param_values[2] &&
-               ctl && *(int *)ctl) {
-        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
-            ALOGE("%s: sending h/w acc effects params fail[%d]", __func__, errno);
+        // param_id + actual payload
+        effect_payload.isTKV = PARAM_NONTKV;
+        effect_payload.tag = TAG_REVERB;
+        effect_payload.payloadSize = (REVERB_DENSITY_PARAM_LEN + 1) * sizeof(uint32_t);
+        custom_payload.paramId = PARAM_ID_REVERB_DENSITY;
+        custom_payload.data = (uint32_t *)malloc(REVERB_DENSITY_PARAM_LEN * sizeof(uint32_t));
+        custom_payload.data[0] = reverb->density;
+        qal_payload.has_effect = 0x01;
+        qal_payload.effect_payload = (uint32_t *)&effect_payload;
+        ret = qal_stream_set_param(qal_stream_handle,
+                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
+        free(custom_payload.data);
+        if (ret) {
+            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            return ret;
+        }
     }
 
     return 0;
 }
 
-int offload_reverb_send_params(struct mixer_ctl *ctl,
+int offload_reverb_send_params_qal(qal_stream_handle_t *qal_stream_handle,
                                struct reverb_params *reverb,
                                unsigned param_send_flags)
 {
-    return reverb_send_params(OFFLOAD, (void *)ctl, reverb,
+    return reverb_send_params_qal(OFFLOAD, qal_stream_handle, reverb,
                               param_send_flags);
 }
 
-int hw_acc_reverb_send_params(int fd, struct reverb_params *reverb,
-                              unsigned param_send_flags)
-{
-    return reverb_send_params(HW_ACCELERATOR, (void *)&fd,
-                              reverb, param_send_flags);
-}
 
 void offload_soft_volume_set_enable(struct soft_volume_params *vol, bool enable)
 {
@@ -888,49 +1106,6 @@ void offload_soft_volume_set_gain_2ch(struct soft_volume_params *vol,
     ALOGV("%s", __func__);
     vol->left_gain = l_gain;
     vol->right_gain = r_gain;
-}
-
-int offload_soft_volume_send_params(struct mixer_ctl *ctl,
-                                    struct soft_volume_params vol,
-                                    unsigned param_send_flags)
-{
-    long param_values[128] = {0};
-    long *p_param_values = param_values;
-
-    ALOGV("%s", __func__);
-    *p_param_values++ = SOFT_VOLUME_MODULE;
-    *p_param_values++ = 0;
-    *p_param_values++ = 0; /* num of commands*/
-    if (param_send_flags & OFFLOAD_SEND_SOFT_VOLUME_ENABLE_FLAG) {
-        *p_param_values++ = SOFT_VOLUME_ENABLE;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = SOFT_VOLUME_ENABLE_PARAM_LEN;
-        *p_param_values++ = vol.enable_flag;
-        param_values[2] += 1;
-    }
-    if (param_send_flags & OFFLOAD_SEND_SOFT_VOLUME_GAIN_MASTER) {
-        *p_param_values++ = SOFT_VOLUME_GAIN_MASTER;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = SOFT_VOLUME_GAIN_MASTER_PARAM_LEN;
-        *p_param_values++ = vol.master_gain;
-        param_values[2] += 1;
-    }
-    if (param_send_flags & OFFLOAD_SEND_SOFT_VOLUME_GAIN_2CH) {
-        *p_param_values++ = SOFT_VOLUME_GAIN_2CH;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = SOFT_VOLUME_GAIN_2CH_PARAM_LEN;
-        *p_param_values++ = vol.left_gain;
-        *p_param_values++ = vol.right_gain;
-        param_values[2] += 1;
-    }
-
-    if (param_values[2] && ctl)
-        mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
-
-    return 0;
 }
 
 void offload_transition_soft_volume_set_enable(struct soft_volume_params *vol,
@@ -953,86 +1128,4 @@ void offload_transition_soft_volume_set_gain_2ch(struct soft_volume_params *vol,
     ALOGV("%s", __func__);
     vol->left_gain = l_gain;
     vol->right_gain = r_gain;
-}
-
-int offload_transition_soft_volume_send_params(struct mixer_ctl *ctl,
-                                               struct soft_volume_params vol,
-                                               unsigned param_send_flags)
-{
-    long param_values[128] = {0};
-    long *p_param_values = param_values;
-
-    ALOGV("%s", __func__);
-    *p_param_values++ = SOFT_VOLUME2_MODULE;
-    *p_param_values++ = 0;
-    *p_param_values++ = 0; /* num of commands*/
-    if (param_send_flags & OFFLOAD_SEND_TRANSITION_SOFT_VOLUME_ENABLE_FLAG) {
-        *p_param_values++ = SOFT_VOLUME2_ENABLE;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = SOFT_VOLUME2_ENABLE_PARAM_LEN;
-        *p_param_values++ = vol.enable_flag;
-        param_values[2] += 1;
-    }
-    if (param_send_flags & OFFLOAD_SEND_TRANSITION_SOFT_VOLUME_GAIN_MASTER) {
-        *p_param_values++ = SOFT_VOLUME2_GAIN_MASTER;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = SOFT_VOLUME2_GAIN_MASTER_PARAM_LEN;
-        *p_param_values++ = vol.master_gain;
-        param_values[2] += 1;
-    }
-    if (param_send_flags & OFFLOAD_SEND_TRANSITION_SOFT_VOLUME_GAIN_2CH) {
-        *p_param_values++ = SOFT_VOLUME2_GAIN_2CH;
-        *p_param_values++ = CONFIG_SET;
-        *p_param_values++ = 0; /* start offset if param size if greater than 128  */
-        *p_param_values++ = SOFT_VOLUME2_GAIN_2CH_PARAM_LEN;
-        *p_param_values++ = vol.left_gain;
-        *p_param_values++ = vol.right_gain;
-        param_values[2] += 1;
-    }
-
-    if (param_values[2] && ctl)
-        mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
-
-    return 0;
-}
-
-static int hpx_send_params(eff_mode_t mode, void *ctl,
-                           unsigned param_send_flags)
-{
-    long param_values[128] = {0};
-    long *p_param_values = param_values;
-
-    ALOGV("%s", __func__);
-    if (!ctl) {
-        ALOGE("%s: ctl is NULL, return invalid", __func__);
-        return -EINVAL;
-    }
-
-    if (param_send_flags & OFFLOAD_SEND_HPX_STATE_OFF) {
-        *p_param_values++ = DTS_EAGLE_MODULE_ENABLE;
-        *p_param_values++ = 0; /* hpx off*/
-    } else if (param_send_flags & OFFLOAD_SEND_HPX_STATE_ON) {
-        *p_param_values++ = DTS_EAGLE_MODULE_ENABLE;
-        *p_param_values++ = 1; /* hpx on*/
-    }
-
-    if (mode == OFFLOAD)
-        mixer_ctl_set_array(ctl, param_values, ARRAY_SIZE(param_values));
-    else {
-        if (ioctl(*(int *)ctl, AUDIO_EFFECTS_SET_PP_PARAMS, param_values) < 0)
-            ALOGE("%s: sending h/w acc hpx state params fail[%d]", __func__, errno);
-    }
-    return 0;
-}
-
-int offload_hpx_send_params(struct mixer_ctl *ctl, unsigned param_send_flags)
-{
-    return hpx_send_params(OFFLOAD, (void *)ctl, param_send_flags);
-}
-
-int hw_acc_hpx_send_params(int fd, unsigned param_send_flags)
-{
-    return hpx_send_params(HW_ACCELERATOR, (void *)&fd, param_send_flags);
 }

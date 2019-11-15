@@ -23,6 +23,8 @@
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include "effect_api.h"
+#include "QalApi.h"
+
 
 /* Retry for delay for mixer open */
 #define RETRY_NUMBER 10
@@ -48,9 +50,7 @@ struct output_context_s {
     struct listnode effects_list;
     /* pcm device id */
     int pcm_device_id;
-    struct mixer *mixer;
-    struct mixer_ctl *ctl;
-    struct mixer_ctl *ref_ctl;
+    qal_stream_handle_t *qal_stream_handle;
 };
 
 /* effect specific operations.

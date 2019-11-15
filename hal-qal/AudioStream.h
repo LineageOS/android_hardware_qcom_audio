@@ -83,6 +83,7 @@ public:
     static qal_device_id_t GetQalDeviceId(audio_devices_t halDeviceId);
 
 protected:
+    struct qal_stream_attributes streamAttributes_;
     qal_stream_handle_t* qal_stream_handle_;
     audio_io_handle_t handle_;
     qal_device_id_t qal_device_id_;

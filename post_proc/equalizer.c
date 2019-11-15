@@ -124,14 +124,13 @@ int equalizer_set_band_level(equalizer_context_t *context, int32_t band,
                                NUM_EQ_BANDS,
                                equalizer_band_presets_freq,
                                context->band_levels);
-    if (context->ctl)
-        offload_eq_send_params(context->ctl, &context->offload_eq,
+    if (context->qal_stream_handle)
+        offload_eq_send_params_qal(context->qal_stream_handle, &context->offload_eq,
                                OFFLOAD_SEND_EQ_ENABLE_FLAG |
                                OFFLOAD_SEND_EQ_BANDS_LEVEL);
     if (context->hw_acc_fd > 0)
-        hw_acc_eq_send_params(context->hw_acc_fd, &context->offload_eq,
-                              OFFLOAD_SEND_EQ_ENABLE_FLAG |
-                              OFFLOAD_SEND_EQ_BANDS_LEVEL);
+        ALOGE("%s: hw_acc_fd is not supported.", __func__);
+
     return 0;
 }
 
@@ -185,14 +184,13 @@ int equalizer_set_preset(equalizer_context_t *context, int preset)
                                NUM_EQ_BANDS,
                                equalizer_band_presets_freq,
                                context->band_levels);
-    if(context->ctl)
-        offload_eq_send_params(context->ctl, &context->offload_eq,
+    if(context->qal_stream_handle)
+        offload_eq_send_params_qal(context->qal_stream_handle, &context->offload_eq,
                                OFFLOAD_SEND_EQ_ENABLE_FLAG |
                                OFFLOAD_SEND_EQ_PRESET);
-    if(context->hw_acc_fd > 0)
-        hw_acc_eq_send_params(context->hw_acc_fd, &context->offload_eq,
-                              OFFLOAD_SEND_EQ_ENABLE_FLAG |
-                              OFFLOAD_SEND_EQ_PRESET);
+    if (context->hw_acc_fd > 0)
+        ALOGE("%s: hw_acc_fd is not supported.", __func__);
+
     return 0;
 }
 
@@ -531,14 +529,13 @@ int equalizer_enable(effect_context_t *context)
 
     if (!offload_eq_get_enable_flag(&(eq_ctxt->offload_eq))) {
         offload_eq_set_enable_flag(&(eq_ctxt->offload_eq), true);
-        if (eq_ctxt->ctl)
-            offload_eq_send_params(eq_ctxt->ctl, &eq_ctxt->offload_eq,
+        if (eq_ctxt->qal_stream_handle)
+            offload_eq_send_params_qal(eq_ctxt->qal_stream_handle, &eq_ctxt->offload_eq,
                                    OFFLOAD_SEND_EQ_ENABLE_FLAG |
                                    OFFLOAD_SEND_EQ_BANDS_LEVEL);
         if (eq_ctxt->hw_acc_fd > 0)
-            hw_acc_eq_send_params(eq_ctxt->hw_acc_fd, &eq_ctxt->offload_eq,
-                                  OFFLOAD_SEND_EQ_ENABLE_FLAG |
-                                  OFFLOAD_SEND_EQ_BANDS_LEVEL);
+            ALOGE("%s: hw_acc_fd is not supported.", __func__);
+
     }
     enable_gcov();
     return 0;
@@ -551,12 +548,11 @@ int equalizer_disable(effect_context_t *context)
     ALOGV("%s:ctxt %p", __func__, eq_ctxt);
     if (offload_eq_get_enable_flag(&(eq_ctxt->offload_eq))) {
         offload_eq_set_enable_flag(&(eq_ctxt->offload_eq), false);
-        if (eq_ctxt->ctl)
-            offload_eq_send_params(eq_ctxt->ctl, &eq_ctxt->offload_eq,
+        if (eq_ctxt->qal_stream_handle)
+            offload_eq_send_params_qal(eq_ctxt->qal_stream_handle, &eq_ctxt->offload_eq,
                                    OFFLOAD_SEND_EQ_ENABLE_FLAG);
         if (eq_ctxt->hw_acc_fd > 0)
-            hw_acc_eq_send_params(eq_ctxt->hw_acc_fd, &eq_ctxt->offload_eq,
-                                  OFFLOAD_SEND_EQ_ENABLE_FLAG);
+            ALOGE("%s: hw_acc_fd is not supported.", __func__);
     }
     enable_gcov();
     return 0;
@@ -566,17 +562,13 @@ int equalizer_start(effect_context_t *context, output_context_t *output)
 {
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
 
-    ALOGV("%s: ctxt %p, ctl %p", __func__, eq_ctxt, output->ctl);
-    eq_ctxt->ctl = output->ctl;
+    ALOGV("%s: ctxt %p, qal_stream_handle %p", __func__, eq_ctxt, output->qal_stream_handle);
+    eq_ctxt->qal_stream_handle = output->qal_stream_handle;
     if (offload_eq_get_enable_flag(&(eq_ctxt->offload_eq))) {
-        if (eq_ctxt->ctl)
-            offload_eq_send_params(eq_ctxt->ctl, &eq_ctxt->offload_eq,
+        if (eq_ctxt->qal_stream_handle)
+            offload_eq_send_params_qal(eq_ctxt->qal_stream_handle, &eq_ctxt->offload_eq,
                                    OFFLOAD_SEND_EQ_ENABLE_FLAG |
                                    OFFLOAD_SEND_EQ_BANDS_LEVEL);
-        if (eq_ctxt->hw_acc_fd > 0)
-            hw_acc_eq_send_params(eq_ctxt->hw_acc_fd, &eq_ctxt->offload_eq,
-                                  OFFLOAD_SEND_EQ_ENABLE_FLAG |
-                                  OFFLOAD_SEND_EQ_BANDS_LEVEL);
     }
     enable_gcov();
     return 0;
@@ -588,12 +580,12 @@ int equalizer_stop(effect_context_t *context, output_context_t *output __unused)
 
     ALOGV("%s: ctxt %p", __func__, eq_ctxt);
     if (offload_eq_get_enable_flag(&(eq_ctxt->offload_eq)) &&
-        eq_ctxt->ctl) {
+        eq_ctxt->qal_stream_handle) {
         struct eq_params eq;
         eq.enable_flag = false;
-        offload_eq_send_params(eq_ctxt->ctl, &eq, OFFLOAD_SEND_EQ_ENABLE_FLAG);
+        offload_eq_send_params_qal(eq_ctxt->qal_stream_handle, &eq, OFFLOAD_SEND_EQ_ENABLE_FLAG);
     }
-    eq_ctxt->ctl = NULL;
+    eq_ctxt->qal_stream_handle = NULL;
     enable_gcov();
     return 0;
 }
@@ -602,12 +594,8 @@ int equalizer_set_mode(effect_context_t *context, int32_t hw_acc_fd)
 {
     equalizer_context_t *eq_ctxt = (equalizer_context_t *)context;
 
-    ALOGV("%s: ctxt %p", __func__, eq_ctxt);
     eq_ctxt->hw_acc_fd = hw_acc_fd;
-    if ((eq_ctxt->hw_acc_fd > 0) &&
-        (offload_eq_get_enable_flag(&(eq_ctxt->offload_eq))))
-        hw_acc_eq_send_params(eq_ctxt->hw_acc_fd, &eq_ctxt->offload_eq,
-                              OFFLOAD_SEND_EQ_ENABLE_FLAG |
-                              OFFLOAD_SEND_EQ_BANDS_LEVEL);
+    ALOGE("%s: ctxt %p hw_acc_fd=%#x is not supported.", __func__, eq_ctxt, hw_acc_fd);
+
     return 0;
 }

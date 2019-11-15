@@ -715,6 +715,8 @@ int StreamOutPrimary::Standby() {
     }
 
     stream_started_ = false;
+    if (streamAttributes_.type == QAL_STREAM_COMPRESSED)
+        ret = StopOffloadEffects(handle_, qal_stream_handle_);
 
     if (qal_stream_handle_) {
         ret = qal_stream_close(qal_stream_handle_);
@@ -768,7 +770,7 @@ int StreamOutPrimary::GetFramesWritten() {
 
 int StreamOutPrimary::Open() {
     int ret = -EINVAL;
-    struct qal_stream_attributes streamAttributes;
+
     uint8_t channels = 0;
     struct qal_device qalDevice;
     struct qal_channel_info *ch_info;
@@ -792,18 +794,16 @@ int StreamOutPrimary::Open() {
     qalDevice.config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     qalDevice.config.ch_info = ch_info;
     qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
-
-    streamAttributes.type = QAL_STREAM_LOW_LATENCY;
-    streamAttributes.flags = (qal_stream_flags_t)flags_;
-    streamAttributes.direction = QAL_AUDIO_OUTPUT;
-    streamAttributes.out_media_config.sample_rate = config_.sample_rate;
-    streamAttributes.out_media_config.bit_width =
-                                            CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes.out_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
-    streamAttributes.out_media_config.ch_info = ch_info;
+    streamAttributes_.type = QAL_STREAM_LOW_LATENCY;
+    streamAttributes_.flags = (qal_stream_flags_t)flags_;
+    streamAttributes_.direction = QAL_AUDIO_OUTPUT;
+    streamAttributes_.out_media_config.sample_rate = config_.sample_rate;
+    streamAttributes_.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    streamAttributes_.out_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    streamAttributes_.out_media_config.ch_info = ch_info;
 
     ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
-    ret = qal_stream_open (&streamAttributes,
+    ret = qal_stream_open(&streamAttributes_,
                           1,
                           &qalDevice,
                           0,
@@ -840,7 +840,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
     qalBuffer.size = bytes;
     qalBuffer.offset = 0;
 
-    ALOGD("%s: Bytes:(%zu)",__func__,bytes);
+    ALOGD("%s: handle_ %x Bytes:(%zu)",__func__,handle_, bytes);
     if (!qal_stream_handle_){
         ret = Open();
         if (ret) {
@@ -854,9 +854,13 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
         if (ret) {
             ALOGE("%s:failed to start stream. ret=%d\n", __func__, ret);
             qal_stream_close(qal_stream_handle_);
+            qal_stream_handle_ = NULL;
             return -EINVAL;
         }
+
         stream_started_ = true;
+        if (streamAttributes_.type == QAL_STREAM_COMPRESSED)
+            ret = StartOffloadEffects(handle_, qal_stream_handle_);
     }
 
     local_bytes_written = qal_stream_write(qal_stream_handle_, &qalBuffer);
@@ -943,6 +947,10 @@ StreamOutPrimary::StreamOutPrimary(
 StreamOutPrimary::~StreamOutPrimary() {
     ALOGD("%s: close stream, handle(%x), qal_stream_handle (%p)", __func__,
           handle_, qal_stream_handle_);
+
+    if (streamAttributes_.type == QAL_STREAM_COMPRESSED)
+        StopOffloadEffects(handle_, qal_stream_handle_);
+
     if (qal_stream_handle_) {
         qal_stream_close(qal_stream_handle_);
         qal_stream_handle_ = nullptr;
@@ -1014,16 +1022,14 @@ int StreamInPrimary::Open() {
     qalDevice.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
 
     streamAttributes.type = QAL_STREAM_LOW_LATENCY;
-    streamAttributes.flags = (qal_stream_flags_t)0;
-    streamAttributes.direction = QAL_AUDIO_INPUT;
-    streamAttributes.in_media_config.sample_rate = config_.sample_rate;
-    streamAttributes.in_media_config.bit_width =
-                                            CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
-    streamAttributes.in_media_config.ch_info = ch_info;
-
+    streamAttributes_.flags = (qal_stream_flags_t)0;
+    streamAttributes_.direction = QAL_AUDIO_INPUT;
+    streamAttributes_.in_media_config.sample_rate = config_.sample_rate;
+    streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    streamAttributes_.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    streamAttributes_.in_media_config.ch_info = ch_info;
     ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
-    ret = qal_stream_open(&streamAttributes,
+    ret = qal_stream_open(&streamAttributes_,
                           1,
                           &qalDevice,
                           0,

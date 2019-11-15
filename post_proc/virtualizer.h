@@ -30,9 +30,8 @@ typedef struct virtualizer_context_s {
     effect_context_t common;
 
     int strength;
-
     // Offload vars
-    struct mixer_ctl *ctl;
+    qal_stream_handle_t *qal_stream_handle;
     int hw_acc_fd;
     bool enabled_by_client;
     bool temp_disabled;

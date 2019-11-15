@@ -243,7 +243,6 @@ int bass_init(effect_context_t *context)
 
     bass_ctxt->active_index = BASS_BOOST;
 
-
     bassboost_init((effect_context_t *)&(bass_ctxt->bassboost_ctxt));
     pbe_init((effect_context_t *)&(bass_ctxt->pbe_ctxt));
     enable_gcov();
@@ -329,15 +328,13 @@ int bassboost_set_strength(bassboost_context_t *context, uint32_t strength)
     context->strength = strength;
 
     offload_bassboost_set_strength(&(context->offload_bass), strength);
-    if (context->ctl)
-        offload_bassboost_send_params(context->ctl, &context->offload_bass,
+    if (context->qal_stream_handle)
+        offload_bassboost_send_params_qal(context->qal_stream_handle, &context->offload_bass,
                                       OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
                                       OFFLOAD_SEND_BASSBOOST_STRENGTH);
     if (context->hw_acc_fd > 0)
-        hw_acc_bassboost_send_params(context->hw_acc_fd,
-                                     &context->offload_bass,
-                                     OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
-                                     OFFLOAD_SEND_BASSBOOST_STRENGTH);
+        ALOGI("%s: hw_acc is not supported.", __func__);
+
     return 0;
 }
 
@@ -357,14 +354,13 @@ int bassboost_set_device(effect_context_t *context, uint32_t device)
         if (bass_ctxt->temp_disabled) {
             if (effect_is_active(&bass_ctxt->common)) {
                 offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), true);
-                if (bass_ctxt->ctl)
-                    offload_bassboost_send_params(bass_ctxt->ctl,
+                if (bass_ctxt->qal_stream_handle)
+                    offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle,
                                                   &bass_ctxt->offload_bass,
                                                   OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
                 if (bass_ctxt->hw_acc_fd > 0)
-                    hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
-                                                 &bass_ctxt->offload_bass,
-                                                 OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
+                    ALOGI("%s: hw_acc is not supported.", __func__);
+
             }
             bass_ctxt->temp_disabled = false;
         }
@@ -372,14 +368,12 @@ int bassboost_set_device(effect_context_t *context, uint32_t device)
         if (!bass_ctxt->temp_disabled) {
             if (effect_is_active(&bass_ctxt->common)) {
                 offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), false);
-                if (bass_ctxt->ctl)
-                    offload_bassboost_send_params(bass_ctxt->ctl,
+                if (bass_ctxt->qal_stream_handle)
+                    offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle,
                                                   &bass_ctxt->offload_bass,
                                                   OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
                 if (bass_ctxt->hw_acc_fd > 0)
-                    hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
-                                                 &bass_ctxt->offload_bass,
-                                                 OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
+                    ALOGI("%s: hw_acc is not supported.", __func__);
             }
             bass_ctxt->temp_disabled = true;
         }
@@ -435,16 +429,13 @@ int bassboost_enable(effect_context_t *context)
     if (!offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass)) &&
         !(bass_ctxt->temp_disabled)) {
         offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), true);
-        if (bass_ctxt->ctl && bass_ctxt->strength)
-            offload_bassboost_send_params(bass_ctxt->ctl,
+        if (bass_ctxt->qal_stream_handle && bass_ctxt->strength)
+            offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle,
                                           &bass_ctxt->offload_bass,
                                           OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
                                           OFFLOAD_SEND_BASSBOOST_STRENGTH);
         if ((bass_ctxt->hw_acc_fd > 0) && (bass_ctxt->strength))
-            hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
-                                         &bass_ctxt->offload_bass,
-                                         OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
-                                         OFFLOAD_SEND_BASSBOOST_STRENGTH);
+            ALOGI("%s: hw_acc is not supported.", __func__);
     }
     return 0;
 }
@@ -456,14 +447,12 @@ int bassboost_disable(effect_context_t *context)
     ALOGV("%s: ctxt %p", __func__, bass_ctxt);
     if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass))) {
         offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), false);
-        if (bass_ctxt->ctl)
-            offload_bassboost_send_params(bass_ctxt->ctl,
+        if (bass_ctxt->qal_stream_handle)
+            offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle,
                                           &bass_ctxt->offload_bass,
                                           OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
         if (bass_ctxt->hw_acc_fd > 0)
-            hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
-                                         &bass_ctxt->offload_bass,
-                                         OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
+            ALOGI("%s: hw_acc is not supported.", __func__);
     }
     return 0;
 }
@@ -472,19 +461,16 @@ int bassboost_start(effect_context_t *context, output_context_t *output)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
 
-    ALOGV("%s: ctxt %p, ctl %p, strength %d", __func__, bass_ctxt,
-                                   output->ctl, bass_ctxt->strength);
-    bass_ctxt->ctl = output->ctl;
+    ALOGV("%s: ctxt %p, qal_stream_handle %p, strength %d", __func__, bass_ctxt,
+                                   output->qal_stream_handle, bass_ctxt->strength);
+    bass_ctxt->qal_stream_handle = output->qal_stream_handle;
     if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass))) {
-        if (bass_ctxt->ctl)
-            offload_bassboost_send_params(bass_ctxt->ctl, &bass_ctxt->offload_bass,
+        if (bass_ctxt->qal_stream_handle)
+            offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle, &bass_ctxt->offload_bass,
                                           OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
                                           OFFLOAD_SEND_BASSBOOST_STRENGTH);
         if (bass_ctxt->hw_acc_fd > 0)
-            hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
-                                         &bass_ctxt->offload_bass,
-                                         OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
-                                         OFFLOAD_SEND_BASSBOOST_STRENGTH);
+            ALOGI("%s: hw_acc is not supported.", __func__);
     }
     return 0;
 }
@@ -495,13 +481,13 @@ int bassboost_stop(effect_context_t *context, output_context_t *output __unused)
 
     ALOGV("%s: ctxt %p", __func__, bass_ctxt);
     if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass)) &&
-        bass_ctxt->ctl) {
+        bass_ctxt->qal_stream_handle) {
         struct bass_boost_params bassboost;
         bassboost.enable_flag = false;
-        offload_bassboost_send_params(bass_ctxt->ctl, &bassboost,
+        offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle, &bassboost,
                                       OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
     }
-    bass_ctxt->ctl = NULL;
+    bass_ctxt->qal_stream_handle = NULL;
     return 0;
 }
 
@@ -513,10 +499,8 @@ int bassboost_set_mode(effect_context_t *context, int32_t hw_acc_fd)
     bass_ctxt->hw_acc_fd = hw_acc_fd;
     if ((bass_ctxt->hw_acc_fd > 0) &&
         (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass))))
-        hw_acc_bassboost_send_params(bass_ctxt->hw_acc_fd,
-                                     &bass_ctxt->offload_bass,
-                                     OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
-                                     OFFLOAD_SEND_BASSBOOST_STRENGTH);
+            ALOGI("%s: hw_acc is not supported.", __func__);
+
     return 0;
 }
 
@@ -544,16 +528,13 @@ int pbe_set_device(effect_context_t *context, uint32_t device)
         if (pbe_ctxt->temp_disabled) {
             if (effect_is_active(&pbe_ctxt->common)) {
                 offload_pbe_set_enable_flag(&(pbe_ctxt->offload_pbe), true);
-                if (pbe_ctxt->ctl)
-                    offload_pbe_send_params(pbe_ctxt->ctl,
+                if (pbe_ctxt->qal_stream_handle)
+                    offload_pbe_send_params_qal(pbe_ctxt->qal_stream_handle,
                                         &pbe_ctxt->offload_pbe,
                                         OFFLOAD_SEND_PBE_ENABLE_FLAG |
                                         OFFLOAD_SEND_PBE_CONFIG);
                 if (pbe_ctxt->hw_acc_fd > 0)
-                    hw_acc_pbe_send_params(pbe_ctxt->hw_acc_fd,
-                                        &pbe_ctxt->offload_pbe,
-                                        OFFLOAD_SEND_PBE_ENABLE_FLAG |
-                                        OFFLOAD_SEND_PBE_CONFIG);
+                    ALOGI("%s: hw_acc is not supported.", __func__);
             }
             pbe_ctxt->temp_disabled = false;
         }
@@ -561,14 +542,12 @@ int pbe_set_device(effect_context_t *context, uint32_t device)
         if (!pbe_ctxt->temp_disabled) {
             if (effect_is_active(&pbe_ctxt->common)) {
                 offload_pbe_set_enable_flag(&(pbe_ctxt->offload_pbe), false);
-                if (pbe_ctxt->ctl)
-                    offload_pbe_send_params(pbe_ctxt->ctl,
+                if (pbe_ctxt->qal_stream_handle)
+                    offload_pbe_send_params_qal(pbe_ctxt->qal_stream_handle,
                                         &pbe_ctxt->offload_pbe,
                                         OFFLOAD_SEND_PBE_ENABLE_FLAG);
                 if (pbe_ctxt->hw_acc_fd > 0)
-                    hw_acc_pbe_send_params(pbe_ctxt->hw_acc_fd,
-                                        &pbe_ctxt->offload_pbe,
-                                        OFFLOAD_SEND_PBE_ENABLE_FLAG);
+                    ALOGI("%s: hw_acc is not supported.", __func__);
             }
             pbe_ctxt->temp_disabled = true;
         }
@@ -623,16 +602,13 @@ int pbe_enable(effect_context_t *context)
     if (!offload_pbe_get_enable_flag(&(pbe_ctxt->offload_pbe)) &&
         !(pbe_ctxt->temp_disabled)) {
         offload_pbe_set_enable_flag(&(pbe_ctxt->offload_pbe), true);
-        if (pbe_ctxt->ctl)
-            offload_pbe_send_params(pbe_ctxt->ctl,
+        if (pbe_ctxt->qal_stream_handle)
+            offload_pbe_send_params_qal(pbe_ctxt->qal_stream_handle,
                                     &pbe_ctxt->offload_pbe,
                                     OFFLOAD_SEND_PBE_ENABLE_FLAG |
                                     OFFLOAD_SEND_PBE_CONFIG);
         if (pbe_ctxt->hw_acc_fd > 0)
-            hw_acc_pbe_send_params(pbe_ctxt->hw_acc_fd,
-                                   &pbe_ctxt->offload_pbe,
-                                   OFFLOAD_SEND_PBE_ENABLE_FLAG |
-                                   OFFLOAD_SEND_PBE_CONFIG);
+            ALOGI("%s: hw_acc is not supported.", __func__);
     }
     return 0;
 }
@@ -644,14 +620,12 @@ int pbe_disable(effect_context_t *context)
     ALOGV("%s", __func__);
     if (offload_pbe_get_enable_flag(&(pbe_ctxt->offload_pbe))) {
         offload_pbe_set_enable_flag(&(pbe_ctxt->offload_pbe), false);
-        if (pbe_ctxt->ctl)
-            offload_pbe_send_params(pbe_ctxt->ctl,
+        if (pbe_ctxt->qal_stream_handle)
+            offload_pbe_send_params_qal(pbe_ctxt->qal_stream_handle,
                                     &pbe_ctxt->offload_pbe,
                                     OFFLOAD_SEND_PBE_ENABLE_FLAG);
         if (pbe_ctxt->hw_acc_fd > 0)
-            hw_acc_pbe_send_params(pbe_ctxt->hw_acc_fd,
-                                   &pbe_ctxt->offload_pbe,
-                                   OFFLOAD_SEND_PBE_ENABLE_FLAG);
+            ALOGI("%s: hw_acc is not supported.", __func__);
     }
     return 0;
 }
@@ -661,18 +635,16 @@ int pbe_start(effect_context_t *context, output_context_t *output)
     pbe_context_t *pbe_ctxt = (pbe_context_t *)context;
 
     ALOGV("%s", __func__);
-    pbe_ctxt->ctl = output->ctl;
-    ALOGV("output->ctl: %p", output->ctl);
+    pbe_ctxt->qal_stream_handle = output->qal_stream_handle;
+    ALOGV("output->qal_stream_handle: %p", output->qal_stream_handle);
     if (offload_pbe_get_enable_flag(&(pbe_ctxt->offload_pbe))) {
-        if (pbe_ctxt->ctl)
-            offload_pbe_send_params(pbe_ctxt->ctl, &pbe_ctxt->offload_pbe,
+        if (pbe_ctxt->qal_stream_handle)
+            offload_pbe_send_params_qal(pbe_ctxt->qal_stream_handle,
+                                    &pbe_ctxt->offload_pbe,
                                     OFFLOAD_SEND_PBE_ENABLE_FLAG |
                                     OFFLOAD_SEND_PBE_CONFIG);
         if (pbe_ctxt->hw_acc_fd > 0)
-            hw_acc_pbe_send_params(pbe_ctxt->hw_acc_fd,
-                                   &pbe_ctxt->offload_pbe,
-                                   OFFLOAD_SEND_PBE_ENABLE_FLAG |
-                                   OFFLOAD_SEND_PBE_CONFIG);
+            ALOGI("%s: hw_acc is not supported.", __func__);
     }
     return 0;
 }
@@ -682,7 +654,7 @@ int pbe_stop(effect_context_t *context, output_context_t *output  __unused)
     pbe_context_t *pbe_ctxt = (pbe_context_t *)context;
 
     ALOGV("%s", __func__);
-    pbe_ctxt->ctl = NULL;
+    pbe_ctxt->qal_stream_handle = NULL;
     return 0;
 }
 
@@ -694,10 +666,8 @@ int pbe_set_mode(effect_context_t *context, int32_t hw_acc_fd)
     pbe_ctxt->hw_acc_fd = hw_acc_fd;
     if ((pbe_ctxt->hw_acc_fd > 0) &&
         (offload_pbe_get_enable_flag(&(pbe_ctxt->offload_pbe))))
-        hw_acc_pbe_send_params(pbe_ctxt->hw_acc_fd,
-                               &pbe_ctxt->offload_pbe,
-                               OFFLOAD_SEND_PBE_ENABLE_FLAG |
-                               OFFLOAD_SEND_PBE_CONFIG);
+        ALOGI("%s: hw_acc is not supported.", __func__);
+
     return 0;
 }
 
