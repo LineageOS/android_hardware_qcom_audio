@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -53,9 +53,8 @@
 #define MINOR_VERSION(ver) ((ver) & 0x00ff)
 
 /* Proprietary interface version used for compatibility with STHAL */
-#define STHAL_PROP_API_VERSION_1_0 MAKE_HAL_VERSION(1, 0)
-#define STHAL_PROP_API_VERSION_1_1 MAKE_HAL_VERSION(1, 1)
-#define STHAL_PROP_API_CURRENT_VERSION STHAL_PROP_API_VERSION_1_1
+#define STHAL_PROP_API_VERSION_2_0 MAKE_HAL_VERSION(2, 0)
+#define STHAL_PROP_API_CURRENT_VERSION STHAL_PROP_API_VERSION_2_0
 
 #define ST_EVENT_CONFIG_MAX_STR_VALUE 32
 #define ST_DEVICE_HANDSET_MIC 1
@@ -129,7 +128,7 @@ struct sound_trigger_event_info {
 typedef struct sound_trigger_event_info sound_trigger_event_info_t;
 
 struct sound_trigger_device_info {
-    int device;
+    struct listnode devices;
 };
 
 struct sound_trigger_get_param_data {
@@ -571,7 +570,7 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
     struct audio_event_info ev_info;
     audio_event_type_t ev;
     /*Initialize to invalid device*/
-    ev_info.device_info.device = -1;
+    list_init(&ev_info.device_info.devices);
 
     if (!st_dev)
        return;
@@ -581,14 +580,10 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
         return;
     }
 
-    if ((st_dev->sthal_prop_api_version < STHAL_PROP_API_VERSION_1_0) &&
-        (uc_info->type != PCM_PLAYBACK))
-        return;
-
     if ((uc_info->in_snd_device >= SND_DEVICE_IN_BEGIN &&
         uc_info->in_snd_device < SND_DEVICE_IN_END)) {
         if (is_same_as_st_device(uc_info->in_snd_device))
-            ev_info.device_info.device = ST_DEVICE_HANDSET_MIC;
+            update_device_list(&ev_info.device_info.devices, ST_DEVICE_HANDSET_MIC, "", true);
     } else {
         ALOGE("%s: invalid input device 0x%x, for event %d",
                     __func__, uc_info->in_snd_device, event);
@@ -599,9 +594,10 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
     if (raise_event) {
         if (uc_info->type == PCM_PLAYBACK) {
             if (uc_info->stream.out)
-                ev_info.device_info.device = uc_info->stream.out->devices;
+                assign_devices(&ev_info.device_info.devices, &uc_info->stream.out->device_list);
             else
-                ev_info.device_info.device = AUDIO_DEVICE_OUT_SPEAKER;
+                reassign_device_list(&ev_info.device_info.devices,
+                                     AUDIO_DEVICE_OUT_SPEAKER, "");
             switch(event) {
             case ST_EVENT_STREAM_FREE:
                 st_dev->st_callback(AUDIO_EVENT_PLAYBACK_STREAM_INACTIVE, &ev_info);
@@ -629,9 +625,9 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
 
 void audio_extn_sound_trigger_update_battery_status(bool charging)
 {
-    struct audio_event_info ev_info;
+    struct audio_event_info ev_info = {{0}, {0}};
 
-    if (!st_dev || st_dev->sthal_prop_api_version < STHAL_PROP_API_VERSION_1_0)
+    if (!st_dev)
         return;
 
     ev_info.u.value = charging;

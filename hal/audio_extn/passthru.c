@@ -256,7 +256,7 @@ bool passthru_should_drop_data(struct stream_out * out)
 #else
     compr_passthr = out->compr_config.codec->compr_passthr;
 #endif
-    if ((out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+    if (compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
         (((out->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM) ||
         ((out->compr_config.codec != NULL) && (compr_passthr == LEGACY_PCM)))) {
         if (android_atomic_acquire_load(&compress_passthru_active) > 0) {
@@ -292,7 +292,7 @@ void passthru_on_start(struct stream_out * out)
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if (usecase->stream.out && usecase->type == PCM_PLAYBACK &&
-                usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+                compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
                 o = usecase->stream.out;
                 temp = o->config.period_size * 1000000LL / o->sample_rate;
                 if (temp > max_period_us)
@@ -321,7 +321,7 @@ void passthru_on_stop(struct stream_out * out)
         android_atomic_dec(&compress_passthru_active);
     }
 
-    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+    if (compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
         ALOGD("%s: passthru on aux digital, start keep alive", __func__);
         fp_audio_extn_keep_alive_start(KEEP_ALIVE_OUT_HDMI);
     }
@@ -502,7 +502,7 @@ bool passthru_is_passthrough_stream(struct stream_out *out)
     }
 
     //check supported device, currently only on HDMI.
-    if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+    if (compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
         //passthrough flag
         if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH)
             return true;

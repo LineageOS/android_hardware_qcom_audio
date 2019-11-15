@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -209,7 +209,6 @@ char dsp_only_decoders_mime[][MAX_MIME_TYPE_LENGTH] = {
     "audio/alac"  /*alac */ ,
     "audio/x-ape" /*ape */,
 };
-
 
 enum {
     VOICE_FEATURE_SET_DEFAULT,
@@ -1862,7 +1861,7 @@ void platform_set_gsm_mode(void *platform, bool enable)
 }
 
 void platform_set_echo_reference(struct audio_device *adev, bool enable,
-                                 audio_devices_t out_device)
+                                 struct listnode *out_devices)
 {
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     char ec_ref_mixer_path[MIXER_PATH_MAX_LENGTH] = "echo-reference";
@@ -1898,16 +1897,16 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
         else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_DISPLAY_PORT1] > 0)
             strlcat(ec_ref_mixer_path, " display-port1",
                     MIXER_PATH_MAX_LENGTH);
-        else if (out_device & AUDIO_DEVICE_OUT_EARPIECE)
+        else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_EARPIECE))
             strlcat(ec_ref_mixer_path, " handset",
                     MIXER_PATH_MAX_LENGTH);
-        else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
+        else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE))
             strlcat(ec_ref_mixer_path, " headphones",
                     MIXER_PATH_MAX_LENGTH);
-        else if (out_device & AUDIO_DEVICE_OUT_USB_HEADSET)
+        else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_HEADSET))
             strlcat(ec_ref_mixer_path, " usb-headphones",
                     MIXER_PATH_MAX_LENGTH);
-        else if (out_device & AUDIO_DEVICE_OUT_BUS)
+        else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_BUS))
             strlcpy(ec_ref_mixer_path, "multi-mic-echo-reference",
                     MIXER_PATH_MAX_LENGTH);
 
@@ -2971,14 +2970,6 @@ void *platform_init(struct audio_device *adev)
 
     list_init(&operator_info_list);
     list_init(&app_type_entry_list);
-
-    if(audio_extn_is_concurrent_capture_enabled())
-        AUDIO_DEVICE_IN_ALL_CODEC_BACKEND = (AUDIO_DEVICE_IN_BUILTIN_MIC | \
-            AUDIO_DEVICE_IN_BACK_MIC | AUDIO_DEVICE_IN_VOICE_CALL) & ~AUDIO_DEVICE_BIT_IN;
-    else
-        AUDIO_DEVICE_IN_ALL_CODEC_BACKEND = (AUDIO_DEVICE_IN_BUILTIN_MIC | \
-            AUDIO_DEVICE_IN_BACK_MIC | AUDIO_DEVICE_IN_WIRED_HEADSET | \
-            AUDIO_DEVICE_IN_VOICE_CALL) & ~AUDIO_DEVICE_BIT_IN;
 
     adev->snd_card = audio_extn_utils_open_snd_mixer(&adev->mixer);
     if (adev->snd_card < 0) {
@@ -4954,14 +4945,16 @@ int native_audio_set_params(struct platform_data *platform,
                  usecase = node_to_item(node, struct audio_usecase, list);
 
                  if (usecase->stream.out && is_offload_usecase(usecase->id) &&
-                    (usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                    usecase->stream.out->devices & AUDIO_DEVICE_OUT_WIRED_HEADSET) &&
-                    OUTPUT_SAMPLING_RATE_44100 == usecase->stream.out->sample_rate) {
+                     (compare_device_type(&usecase->stream.out->device_list,
+                                        AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+                     compare_device_type(&usecase->stream.out->device_list,
+                                         AUDIO_DEVICE_OUT_WIRED_HEADSET)) &&
+                     OUTPUT_SAMPLING_RATE_44100 == usecase->stream.out->sample_rate) {
                          ALOGD("%s:napb: triggering dynamic device switch for usecase %d, %s"
                                " stream %p, device (%u)", __func__, usecase->id,
                                use_case_table[usecase->id],
                                (void*) usecase->stream.out,
-                               usecase->stream.out->devices);
+                               get_device_types(&usecase->stream.out->device_list));
                          select_devices(platform->adev, usecase->id);
                  }
             }
@@ -4987,14 +4980,14 @@ int check_hdset_combo_device(snd_device_t snd_device)
     return ret;
 }
 
-int codec_device_supports_native_playback(audio_devices_t out_device)
+int codec_device_supports_native_playback(struct listnode *out_devices)
 {
     int ret = false;
 
-    if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-        out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
-        out_device & AUDIO_DEVICE_OUT_LINE ||
-        out_device & AUDIO_DEVICE_OUT_USB_HEADSET)
+    if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+        compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADSET) ||
+        compare_device_type(out_devices, AUDIO_DEVICE_OUT_LINE) ||
+        compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_HEADSET))
         ret = true;
 
     return ret;
@@ -5072,7 +5065,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     if (voice_is_in_call(my_data->adev))
         is_incall_rec_usecase = voice_is_in_call_rec_stream(usecase->stream.in);
 
-    if (usecase->devices & AUDIO_DEVICE_OUT_BUS)
+    if (compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_BUS))
         is_bus_dev_usecase = true;
 
     if (usecase->type == PCM_PLAYBACK)
@@ -5155,7 +5148,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         /* Notify device change info to effect clients registered */
         if (usecase->type == PCM_PLAYBACK) {
             audio_extn_gef_notify_device_config(
-                    usecase->stream.out->devices,
+                    &usecase->stream.out->device_list,
                     usecase->stream.out->channel_mask,
                     sample_rate,
                     acdb_dev_id,
@@ -5937,7 +5930,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     struct audio_device *adev = my_data->adev;
     audio_mode_t mode = adev->mode;
     snd_device_t snd_device = SND_DEVICE_NONE;
-    audio_devices_t devices = out->devices;
+    struct listnode devices;
     unsigned int sample_rate = out->sample_rate;
     int na_mode = platform_get_native_support();
     struct stream_in *in = adev_get_active_input(adev);
@@ -5948,14 +5941,17 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
     int controller = -1;
     int stream = -1;
 
-    ALOGV("%s: enter: output devices(%#x)", __func__, devices);
-    if (devices == AUDIO_DEVICE_NONE ||
-        devices & AUDIO_DEVICE_BIT_IN) {
-        ALOGV("%s: Invalid output devices (%#x)", __func__, devices);
+    list_init(&devices);
+    assign_devices(&devices, &out->device_list);
+
+    ALOGV("%s: enter: output devices(%#x)", __func__, get_device_types(&devices));
+    if (list_empty(&devices) ||
+        compare_device_type(&devices, AUDIO_DEVICE_BIT_IN)) {
+        ALOGV("%s: Invalid output devices (%#x)", __func__, get_device_types(&devices));
         goto exit;
     }
 
-    if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+    if (compare_device_type(&devices, AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
         controller = out->extconn.cs.controller;
         stream = out->extconn.cs.stream;
 
@@ -5967,7 +5963,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         }
     }
 
-    if (popcount(devices) == 2) {
+    if (list_length(&devices) == 2) {
         bool is_active_voice_call = false;
 
         /*
@@ -5980,8 +5976,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             voice_extn_compress_voip_is_active(adev))
                 is_active_voice_call = true;
 
-        if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
-                        AUDIO_DEVICE_OUT_SPEAKER)) {
+        if (compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) &&
+            compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER)) {
             if (my_data->external_spk_1)
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_EXTERNAL_1;
             else if (my_data->external_spk_2)
@@ -5993,11 +5989,11 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES_HIFI_FILTER;
             else
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
-        } else if (devices == (AUDIO_DEVICE_OUT_LINE |
-                               AUDIO_DEVICE_OUT_SPEAKER)) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_LINE) &&
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER)) {
                 snd_device = SND_DEVICE_OUT_SPEAKER_AND_LINE;
-        } else if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADSET |
-                               AUDIO_DEVICE_OUT_SPEAKER)) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADSET) &&
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER)) {
             if (audio_extn_get_anc_enabled()) {
                 if (audio_extn_should_use_fb_anc()) {
                     if (is_active_voice_call)
@@ -6023,19 +6019,19 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 else
                     snd_device = SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES;
             }
-        } else if (devices == (AUDIO_DEVICE_OUT_LINE |
-                               AUDIO_DEVICE_OUT_SPEAKER)) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_LINE) &&
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_LINE;
-        } else if (devices == (AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
-                               AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
-                   devices == (AUDIO_DEVICE_OUT_WIRED_HEADSET |
-                               AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
+        } else if ((compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) &&
+                    compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) ||
+                   (compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADSET) &&
+                    compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE))) {
             snd_device = SND_DEVICE_OUT_SPEAKER_SAFE_AND_HEADPHONES;
-        } else if (devices == (AUDIO_DEVICE_OUT_LINE |
-                               AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_LINE) &&
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_SAFE_AND_LINE;
-        } else if (devices == (AUDIO_DEVICE_OUT_AUX_DIGITAL |
-                               AUDIO_DEVICE_OUT_SPEAKER)) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER)) {
             switch(my_data->ext_disp[controller][stream].type) {
                 case EXT_DISPLAY_TYPE_HDMI:
                     snd_device = SND_DEVICE_OUT_SPEAKER_AND_HDMI;
@@ -6049,22 +6045,22 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                           my_data->ext_disp[controller][stream].type);
                     goto exit;
             }
-        } else if (devices == (AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET |
-                               AUDIO_DEVICE_OUT_SPEAKER)) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET) &&
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
-        } else if ((devices == (AUDIO_DEVICE_OUT_USB_DEVICE |
-                               AUDIO_DEVICE_OUT_SPEAKER)) ||
-                   (devices == (AUDIO_DEVICE_OUT_USB_HEADSET |
-                               AUDIO_DEVICE_OUT_SPEAKER))) {
+        } else if ((compare_device_type(&devices, AUDIO_DEVICE_OUT_USB_DEVICE) &&
+                    compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER)) ||
+                   (compare_device_type(&devices, AUDIO_DEVICE_OUT_USB_HEADSET) &&
+                    compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER))) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_USB_HEADSET;
-        } else if ((devices & AUDIO_DEVICE_OUT_SPEAKER) &&
-                   (devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER) &&
+                   is_a2dp_out_device_type(&devices)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP;
-        }  else if ((devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) &&
-                   (devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
+        }  else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE) &&
+                   is_a2dp_out_device_type(&devices)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP;
-        } else if ((devices & AUDIO_DEVICE_OUT_ALL_SCO) &&
-                   ((devices & ~AUDIO_DEVICE_OUT_ALL_SCO) == AUDIO_DEVICE_OUT_SPEAKER)) {
+        } else if (is_sco_out_device_type(&devices) &&
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER)) {
             if (my_data->is_wsa_speaker) {
                 if (adev->swb_speech_mode != SPEECH_MODE_INVALID)
                     snd_device = SND_DEVICE_OUT_SPEAKER_WSA_AND_BT_SCO_SWB;
@@ -6080,21 +6076,21 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                             SND_DEVICE_OUT_SPEAKER_AND_BT_SCO_WB :
                             SND_DEVICE_OUT_SPEAKER_AND_BT_SCO;
             }
-        } else if ((devices & AUDIO_DEVICE_OUT_ALL_SCO) &&
-                         ((devices & ~AUDIO_DEVICE_OUT_ALL_SCO) == AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
+        } else if (is_sco_out_device_type(&devices) &&
+                         compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
             if (adev->swb_speech_mode != SPEECH_MODE_INVALID)
                 snd_device = SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_SCO_SWB;
             else
                 snd_device = adev->bt_wb_speech_enabled ?
                         SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_SCO_WB :
                         SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_SCO;
-        } else if ((devices == (AUDIO_DEVICE_OUT_USB_DEVICE |
-                               AUDIO_DEVICE_OUT_SPEAKER_SAFE)) ||
-                (devices == (AUDIO_DEVICE_OUT_USB_HEADSET |
-                                               AUDIO_DEVICE_OUT_SPEAKER_SAFE))) {
+        } else if ((compare_device_type(&devices, AUDIO_DEVICE_OUT_USB_DEVICE) &&
+                    compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) ||
+                   (compare_device_type(&devices, AUDIO_DEVICE_OUT_USB_HEADSET) &&
+                    compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE))) {
             snd_device = SND_DEVICE_OUT_SPEAKER_SAFE_AND_USB_HEADSET;
         } else {
-            ALOGE("%s: Invalid combo device(%#x)", __func__, devices);
+            ALOGE("%s: Invalid combo device(%#x)", __func__, get_device_types(&devices));
             goto exit;
         }
         if (snd_device != SND_DEVICE_NONE) {
@@ -6102,8 +6098,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         }
     }
 
-    if (popcount(devices) != 1) {
-        ALOGE("%s: Invalid output devices(%#x)", __func__, devices);
+    if (list_length(&devices) != 1) {
+        ALOGE("%s: Invalid output devices(%#x)", __func__, get_device_types(&devices));
         goto exit;
     }
 
@@ -6112,15 +6108,15 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         voice_extn_compress_voip_is_active(adev) ||
         adev->enable_voicerx ||
         audio_extn_hfp_is_active(adev)) {
-        if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-            devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
-            devices & AUDIO_DEVICE_OUT_LINE) {
+        if (compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+            compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADSET) ||
+            compare_device_type(&devices, AUDIO_DEVICE_OUT_LINE)) {
             if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
                 !voice_extn_compress_voip_is_active(adev)) {
                 switch (adev->voice.tty_mode) {
                 case TTY_MODE_FULL:
                     if (audio_extn_is_concurrent_capture_enabled() &&
-                         (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
+                         compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
                         //Separate backend is added for headset-mic as part of concurrent capture
                         snd_device = SND_DEVICE_OUT_VOICE_TTY_FULL_HEADSET;
                     } else {
@@ -6129,7 +6125,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                     break;
                 case TTY_MODE_VCO:
                     if (audio_extn_is_concurrent_capture_enabled() &&
-                         (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
+                         compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
                         //Separate backend is added for headset-mic as part of concurrent capture
                         snd_device = SND_DEVICE_OUT_VOICE_TTY_VCO_HEADSET;
                     } else {
@@ -6143,7 +6139,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                     ALOGE("%s: Invalid TTY mode (%#x)",
                           __func__, adev->voice.tty_mode);
                 }
-            } else if (devices & AUDIO_DEVICE_OUT_LINE) {
+            } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_LINE)) {
                 snd_device = SND_DEVICE_OUT_VOICE_LINE;
             } else if (audio_extn_get_anc_enabled()) {
                 if (audio_extn_should_use_fb_anc())
@@ -6151,15 +6147,14 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 else
                     snd_device = SND_DEVICE_OUT_VOICE_ANC_HEADSET;
             } else if (audio_extn_is_concurrent_capture_enabled() &&
-                        (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
+                        compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
                 //Separate backend is added for headset-mic as part of concurrent capture
                 snd_device = SND_DEVICE_OUT_VOICE_HEADSET;
             } else {
                 snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
             }
-        } else if (devices &
-                    (AUDIO_DEVICE_OUT_USB_DEVICE |
-                     AUDIO_DEVICE_OUT_USB_HEADSET)) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_USB_DEVICE) ||
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_USB_HEADSET)) {
             if (voice_is_in_call(adev)) {
                 switch (adev->voice.tty_mode) {
                     case TTY_MODE_FULL:
@@ -6184,14 +6179,15 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                                  SND_DEVICE_OUT_VOICE_USB_HEADSET :
                                  SND_DEVICE_OUT_VOICE_USB_HEADPHONES;
             }
-        } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+        } else if (is_sco_out_device_type(&devices)) {
             if (adev->swb_speech_mode != SPEECH_MODE_INVALID)
                 snd_device = SND_DEVICE_OUT_BT_SCO_SWB;
             else if (adev->bt_wb_speech_enabled)
                 snd_device = SND_DEVICE_OUT_BT_SCO_WB;
             else
                 snd_device = SND_DEVICE_OUT_BT_SCO;
-        } else if (devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER) ||
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
             if (my_data->is_vbat_speaker || my_data->is_bcl_speaker) {
                 if (hw_info_is_stereo_spkr(my_data->hw_info)) {
                     if (my_data->mono_speaker == SPKR_1)
@@ -6222,12 +6218,12 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 else
                     snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
             }
-        } else if (devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+        } else if (is_a2dp_out_device_type(&devices)) {
             snd_device = SND_DEVICE_OUT_BT_A2DP;
-        } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
-                   devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET) ||
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET)) {
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
-        } else if ((devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
                    adev->dp_allowed_for_voice) {
             switch(my_data->ext_disp[controller][stream].type) {
                 case EXT_DISPLAY_TYPE_DP:
@@ -6239,9 +6235,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                            my_data->ext_disp[controller][stream].type);
                     goto exit;
             }
-        } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_FM_TX)) {
             snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
-        } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_EARPIECE)) {
             if(adev->voice.hac)
                 snd_device = SND_DEVICE_OUT_VOICE_HAC_HANDSET;
             else if (is_operator_tmus())
@@ -6250,9 +6246,9 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                 snd_device = SND_DEVICE_OUT_ANC_HANDSET;
             else
                 snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
-        } else if (devices & AUDIO_DEVICE_OUT_TELEPHONY_TX) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_TELEPHONY_TX)) {
             snd_device = SND_DEVICE_OUT_VOICE_TX;
-        } else if (devices & AUDIO_DEVICE_OUT_HEARING_AID) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_HEARING_AID)) {
             snd_device = SND_DEVICE_OUT_VOICE_HEARING_AID;
         }
 
@@ -6261,16 +6257,16 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         }
     }
 
-    if (devices & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-        devices & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
-        devices & AUDIO_DEVICE_OUT_LINE) {
+    if (compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+        compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADSET) ||
+        compare_device_type(&devices, AUDIO_DEVICE_OUT_LINE)) {
         if (OUTPUT_SAMPLING_RATE_44100 == sample_rate &&
             NATIVE_AUDIO_MODE_SRC == na_mode &&
             !audio_extn_get_anc_enabled()) {
 
             snd_device = SND_DEVICE_OUT_HEADPHONES_44_1;
 
-        } else if (devices & AUDIO_DEVICE_OUT_WIRED_HEADSET
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_WIRED_HEADSET)
             && audio_extn_get_anc_enabled()) {
                 if (audio_extn_should_use_fb_anc())
                     snd_device = SND_DEVICE_OUT_ANC_FB_HEADSET;
@@ -6288,15 +6284,15 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         } else if (audio_extn_is_hifi_filter_enabled(adev, out, snd_device,
              my_data->codec_variant, channel_count, 1)) {
                 snd_device = SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER;
-        } else if (devices & AUDIO_DEVICE_OUT_LINE) {
+        } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_LINE)) {
                 snd_device = SND_DEVICE_OUT_LINE;
         } else
                 snd_device = SND_DEVICE_OUT_HEADPHONES;
-    } else if (devices & AUDIO_DEVICE_OUT_LINE) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_LINE)) {
         snd_device = SND_DEVICE_OUT_LINE;
-    } else if (devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
         snd_device = SND_DEVICE_OUT_SPEAKER_SAFE;
-    } else if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER)) {
         if (my_data->external_spk_1)
             snd_device = SND_DEVICE_OUT_SPEAKER_EXTERNAL_1;
         else if (my_data->external_spk_2)
@@ -6319,16 +6315,16 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             snd_device = SND_DEVICE_OUT_SPEAKER_WSA;
         else
             snd_device = SND_DEVICE_OUT_SPEAKER;
-    } else if (devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+    } else if (is_sco_out_device_type(&devices)) {
         if (adev->swb_speech_mode != SPEECH_MODE_INVALID)
                 snd_device = SND_DEVICE_OUT_BT_SCO_SWB;
         else if (adev->bt_wb_speech_enabled)
             snd_device = SND_DEVICE_OUT_BT_SCO_WB;
         else
             snd_device = SND_DEVICE_OUT_BT_SCO;
-    } else if (devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+    } else if (is_a2dp_out_device_type(&devices)) {
         snd_device = SND_DEVICE_OUT_BT_A2DP;
-    } else if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
             switch(my_data->ext_disp[controller][stream].type) {
                 case EXT_DISPLAY_TYPE_HDMI:
                     snd_device = SND_DEVICE_OUT_HDMI;
@@ -6342,37 +6338,36 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                           my_data->ext_disp[controller][stream].type);
                     goto exit;
             }
-    } else if (devices & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
-               devices & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET) ||
+               compare_device_type(&devices, AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET)) {
         ALOGD("%s: setting USB hadset channel capability(2) for Proxy", __func__);
         snd_device = SND_DEVICE_OUT_USB_HEADSET;
         audio_extn_set_afe_proxy_channel_mixer(adev, 2, snd_device);
-    } else if (devices &
-                (AUDIO_DEVICE_OUT_USB_DEVICE |
-                 AUDIO_DEVICE_OUT_USB_HEADSET)) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_USB_DEVICE) ||
+               compare_device_type(&devices, AUDIO_DEVICE_OUT_USB_HEADSET)) {
         if (audio_extn_qdsp_supported_usb())
             snd_device = SND_DEVICE_OUT_USB_HEADSET_SPEC;
         else if (audio_extn_usb_is_capture_supported())
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
         else
             snd_device = SND_DEVICE_OUT_USB_HEADPHONES;
-    } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_FM_TX)) {
         snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
-    } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_EARPIECE)) {
         /*HAC support for voice-ish audio (eg visual voicemail)*/
         if(adev->voice.hac)
             snd_device = SND_DEVICE_OUT_VOICE_HAC_HANDSET;
         else
             snd_device = SND_DEVICE_OUT_HANDSET;
-    } else if (devices & AUDIO_DEVICE_OUT_PROXY) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_PROXY)) {
         channel_count = audio_extn_get_afe_proxy_channel_count();
         ALOGD("%s: setting sink capability(%d) for Proxy", __func__, channel_count);
         snd_device = SND_DEVICE_OUT_AFE_PROXY;
         audio_extn_set_afe_proxy_channel_mixer(adev, channel_count, snd_device);
-    } else if (devices & AUDIO_DEVICE_OUT_BUS) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_BUS)) {
         snd_device = audio_extn_auto_hal_get_output_snd_device(adev, out->usecase);
     } else {
-        ALOGE("%s: Unknown device(s) %#x", __func__, devices);
+        ALOGE("%s: Unknown device(s) %#x", __func__, get_device_types(&devices));
     }
 exit:
     ALOGV("%s: exit: snd_device(%s)", __func__, device_table[snd_device]);
@@ -6381,13 +6376,13 @@ exit:
 
 static snd_device_t get_snd_device_for_voice_comm_ecns_enabled(struct platform_data *my_data,
                                                   struct stream_in *in,
-                                                  audio_devices_t out_device __unused,
-                                                  audio_devices_t in_device)
+                                                  struct listnode *out_devices __unused,
+                                                  struct listnode *in_devices)
 {
     struct audio_device *adev = my_data->adev;
     snd_device_t snd_device = SND_DEVICE_NONE;
 
-    if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+    if (compare_device_type(in_devices, AUDIO_DEVICE_IN_BACK_MIC)) {
         if (my_data->fluence_in_spkr_mode) {
             if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                 (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
@@ -6409,7 +6404,7 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_enabled(struct platform_d
             snd_device = my_data->fluence_sb_enabled ?
                              SND_DEVICE_IN_SPEAKER_MIC_SB
                              : SND_DEVICE_IN_SPEAKER_MIC;
-    } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+    } else if (compare_device_type(in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC)) {
         if ((my_data->fluence_type & FLUENCE_TRI_MIC) &&
             (my_data->source_mic_type & SOURCE_THREE_MIC)) {
             snd_device = SND_DEVICE_IN_HANDSET_TMIC_AEC_NS;
@@ -6424,7 +6419,7 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_enabled(struct platform_d
             snd_device = my_data->fluence_sb_enabled ?
                              SND_DEVICE_IN_HANDSET_MIC_SB
                              : SND_DEVICE_IN_HANDSET_MIC;
-    } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+    } else if (compare_device_type(in_devices, AUDIO_DEVICE_IN_WIRED_HEADSET)) {
         snd_device = SND_DEVICE_IN_HEADSET_MIC;
     }
     in->enable_ec_port = true;
@@ -6434,14 +6429,14 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_enabled(struct platform_d
 
 static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_data *my_data,
                                                   struct stream_in *in,
-                                                  audio_devices_t out_device,
-                                                  audio_devices_t in_device)
+                                                  struct listnode *out_devices,
+                                                  struct listnode *in_devices)
 {
     struct audio_device *adev = my_data->adev;
     snd_device_t snd_device = SND_DEVICE_NONE;
 
     if (in != NULL && in->enable_aec && in->enable_ns) {
-        if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+        if (compare_device_type(in_devices, AUDIO_DEVICE_IN_BACK_MIC)) {
             if (my_data->fluence_in_spkr_mode) {
                 if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                     (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
@@ -6464,7 +6459,7 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_
                 snd_device = my_data->fluence_sb_enabled ?
                                  SND_DEVICE_IN_SPEAKER_MIC_AEC_NS_SB
                                  : SND_DEVICE_IN_SPEAKER_MIC_AEC_NS;
-        } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+        } else if (compare_device_type(in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC)) {
             if ((my_data->fluence_type & FLUENCE_TRI_MIC) &&
                 (my_data->source_mic_type & SOURCE_THREE_MIC)) {
                 snd_device = SND_DEVICE_IN_HANDSET_TMIC_AEC_NS;
@@ -6480,13 +6475,14 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_
                 snd_device = my_data->fluence_sb_enabled ?
                                  SND_DEVICE_IN_HANDSET_MIC_AEC_NS_SB
                                  : SND_DEVICE_IN_HANDSET_MIC_AEC_NS;
-        } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+        } else if (compare_device_type(in_devices, AUDIO_DEVICE_IN_WIRED_HEADSET)) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
-        } else if (audio_extn_usb_connected(NULL) && audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
+        } else if (audio_extn_usb_connected(NULL) &&
+                   is_usb_in_device_type(in_devices)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
         }
     } else if (in != NULL && in->enable_aec) {
-        if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+        if (compare_device_type(in_devices, AUDIO_DEVICE_IN_BACK_MIC)) {
             if (my_data->fluence_in_spkr_mode) {
                 if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                     (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
@@ -6509,7 +6505,7 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_
                 snd_device = my_data->fluence_sb_enabled ?
                                  SND_DEVICE_IN_SPEAKER_MIC_AEC_SB
                                  : SND_DEVICE_IN_SPEAKER_MIC_AEC;
-        } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+        } else if (compare_device_type(in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC)) {
             if ((my_data->fluence_type & FLUENCE_TRI_MIC) &&
                 (my_data->source_mic_type & SOURCE_THREE_MIC)) {
                 snd_device = SND_DEVICE_IN_HANDSET_TMIC_AEC;
@@ -6523,13 +6519,13 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_
                 adev->acdb_settings |= DMIC_FLAG;
             } else
                 snd_device = SND_DEVICE_IN_HANDSET_MIC_AEC;
-        } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+        } else if (compare_device_type(in_devices, AUDIO_DEVICE_IN_WIRED_HEADSET)) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
-        } else if (audio_extn_usb_connected(NULL) && audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
+        } else if (audio_extn_usb_connected(NULL) && is_usb_in_device_type(in_devices)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC_AEC;
         }
     } else if (in != NULL && in->enable_ns) {
-        if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+        if (compare_device_type(in_devices, AUDIO_DEVICE_IN_BACK_MIC)) {
             if (my_data->fluence_in_spkr_mode) {
                 if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                     (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
@@ -6552,7 +6548,7 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_
                 snd_device = my_data->fluence_sb_enabled ?
                                  SND_DEVICE_IN_SPEAKER_MIC_NS_SB
                                  : SND_DEVICE_IN_SPEAKER_MIC_NS;
-        } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+        } else if (compare_device_type(in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC)) {
             if ((my_data->fluence_type & FLUENCE_TRI_MIC) &&
                 (my_data->source_mic_type & SOURCE_THREE_MIC)) {
                 snd_device = SND_DEVICE_IN_HANDSET_TMIC_NS;
@@ -6566,42 +6562,45 @@ static snd_device_t get_snd_device_for_voice_comm_ecns_disabled(struct platform_
                 adev->acdb_settings |= DMIC_FLAG;
             } else
                 snd_device = SND_DEVICE_IN_HANDSET_MIC_NS;
-        } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+        } else if (compare_device_type(in_devices, AUDIO_DEVICE_IN_WIRED_HEADSET)) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC_FLUENCE;
         }
-        platform_set_echo_reference(adev, false, out_device);
+        platform_set_echo_reference(adev, false, out_devices);
     } else
-        platform_set_echo_reference(adev, false, out_device);
+        platform_set_echo_reference(adev, false, out_devices);
 
     return snd_device;
 }
 
 static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
                                                   struct stream_in *in,
-                                                  audio_devices_t out_device,
-                                                  audio_devices_t in_device)
+                                                  struct listnode *out_devices,
+                                                  struct listnode *in_devices)
 {
     if(voice_extn_is_dynamic_ecns_enabled())
-        return get_snd_device_for_voice_comm_ecns_enabled(my_data, in, out_device, in_device);
+        return get_snd_device_for_voice_comm_ecns_enabled(my_data, in, out_devices, in_devices);
     else
-        return get_snd_device_for_voice_comm_ecns_disabled(my_data, in, out_device, in_device);
+        return get_snd_device_for_voice_comm_ecns_disabled(my_data, in, out_devices, in_devices);
 }
 
 snd_device_t platform_get_input_snd_device(void *platform,
                                            struct stream_in *in,
-                                           audio_devices_t out_device)
+                                           struct listnode *out_devices)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
     audio_mode_t mode = adev->mode;
     snd_device_t snd_device = SND_DEVICE_NONE;
+    struct listnode in_devices;
+    char *address = "";
 
     if (in == NULL)
         in = adev_get_active_input(adev);
 
     audio_source_t source = (in == NULL) ? AUDIO_SOURCE_DEFAULT : in->source;
-    audio_devices_t in_device =
-        ((in == NULL) ? AUDIO_DEVICE_NONE : in->device) & ~AUDIO_DEVICE_BIT_IN;
+    list_init(&in_devices);
+    if (in != NULL)
+        assign_devices(&in_devices, &in->device_list);
     audio_channel_mask_t channel_mask = (in == NULL) ? AUDIO_CHANNEL_IN_MONO : in->channel_mask;
     int channel_count = audio_channel_count_from_in_mask(channel_mask);
     int str_bitwidth = (in == NULL) ? CODEC_BACKEND_DEFAULT_BIT_WIDTH : in->bit_width;
@@ -6610,18 +6609,19 @@ snd_device_t platform_get_input_snd_device(void *platform,
     audio_usecase_t uc_id = (in == NULL) ? USECASE_AUDIO_RECORD : in->usecase;
 
     ALOGV("%s: enter: out_device(%#x) in_device(%#x) channel_count (%d) channel_mask (0x%x)",
-          __func__, out_device, in_device, channel_count, channel_mask);
+          __func__, get_device_types(out_devices), get_device_types(&in_devices),
+          channel_count, channel_mask);
     if (my_data->external_mic) {
-        if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) ||
+        if (!list_empty(out_devices) && ((mode == AUDIO_MODE_IN_CALL) ||
             voice_check_voicecall_usecases_active(adev) ||
             voice_extn_compress_voip_is_active(adev) ||
             audio_extn_hfp_is_active(adev))) {
-            if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-               out_device & AUDIO_DEVICE_OUT_EARPIECE ||
-               out_device & AUDIO_DEVICE_OUT_SPEAKER )
+            if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+               compare_device_type(out_devices, AUDIO_DEVICE_OUT_EARPIECE) ||
+               compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER))
                 snd_device = SND_DEVICE_IN_HANDSET_MIC_EXTERNAL;
-        } else if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
-                   in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) ||
+                   compare_device_type(&in_devices, AUDIO_DEVICE_IN_BACK_MIC)) {
             snd_device = SND_DEVICE_IN_HANDSET_MIC_EXTERNAL;
         }
     }
@@ -6629,15 +6629,15 @@ snd_device_t platform_get_input_snd_device(void *platform,
     if (snd_device != AUDIO_DEVICE_NONE)
         goto exit;
 
-    if ((out_device != AUDIO_DEVICE_NONE) && ((mode == AUDIO_MODE_IN_CALL) ||
+    if (!list_empty(out_devices) && ((mode == AUDIO_MODE_IN_CALL) ||
         voice_check_voicecall_usecases_active(adev) ||
         voice_extn_compress_voip_is_active(adev) ||
         audio_extn_hfp_is_active(adev))) {
         if ((adev->voice.tty_mode != TTY_MODE_OFF) &&
             !voice_extn_compress_voip_is_active(adev)) {
-            if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET ||
-                out_device & AUDIO_DEVICE_OUT_LINE) {
+            if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+                compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADSET) ||
+                compare_device_type(out_devices, AUDIO_DEVICE_OUT_LINE)) {
                 switch (adev->voice.tty_mode) {
                     case TTY_MODE_FULL:
                         snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC;
@@ -6652,9 +6652,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
                         ALOGE("%s: Invalid TTY mode (%#x)", __func__, adev->voice.tty_mode);
                 }
                 goto exit;
-            } else if (out_device &
-                        (AUDIO_DEVICE_OUT_USB_DEVICE |
-                         AUDIO_DEVICE_OUT_USB_HEADSET)) {
+            } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_DEVICE) ||
+                       compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_HEADSET)) {
                 switch (adev->voice.tty_mode) {
                     case TTY_MODE_FULL:
                         snd_device = SND_DEVICE_IN_VOICE_TTY_FULL_USB_MIC;
@@ -6672,10 +6671,10 @@ snd_device_t platform_get_input_snd_device(void *platform,
                 goto exit;
             }
         }
-        if (out_device & AUDIO_DEVICE_OUT_EARPIECE ||
-            out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                out_device & AUDIO_DEVICE_OUT_LINE) {
-            if (out_device & AUDIO_DEVICE_OUT_EARPIECE &&
+        if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_EARPIECE) ||
+            compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+            compare_device_type(out_devices, AUDIO_DEVICE_OUT_LINE)) {
+            if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_EARPIECE) &&
                 audio_extn_should_use_handset_anc(channel_count)) {
                 if ((my_data->fluence_type != FLUENCE_NONE) &&
                     (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
@@ -6688,7 +6687,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
             } else if (my_data->fluence_type == FLUENCE_NONE ||
                 (my_data->fluence_in_voice_call == false &&
                  my_data->fluence_in_hfp_call == false)) {
-                 if (out_device & AUDIO_DEVICE_OUT_LINE &&
+                 if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_LINE) &&
                      audio_extn_hfp_is_active(adev)) {
                      snd_device = my_data->fluence_sb_enabled ?
                                       SND_DEVICE_IN_VOICE_SPEAKER_MIC_SB
@@ -6699,7 +6698,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
                                      : SND_DEVICE_IN_HANDSET_MIC;
                  }
                  if (audio_extn_hfp_is_active(adev))
-                     platform_set_echo_reference(adev, true, out_device);
+                     platform_set_echo_reference(adev, true, out_devices);
             } else {
                 if ((my_data->fluence_type & FLUENCE_TRI_MIC) &&
                     (my_data->source_mic_type & SOURCE_THREE_MIC)) {
@@ -6714,11 +6713,11 @@ snd_device_t platform_get_input_snd_device(void *platform,
                     adev->acdb_settings |= DMIC_FLAG;
                 }
             }
-        } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
             snd_device = SND_DEVICE_IN_VOICE_HEADSET_MIC;
             if (audio_extn_hfp_is_active(adev))
-                platform_set_echo_reference(adev, true, out_device);
-        } else if (out_device & AUDIO_DEVICE_OUT_ALL_SCO) {
+                platform_set_echo_reference(adev, true, out_devices);
+        } else if (is_sco_out_device_type(out_devices)) {
             if (adev->swb_speech_mode != SPEECH_MODE_INVALID) {
                 if (adev->bluetooth_nrec)
                     snd_device = SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC;
@@ -6735,7 +6734,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
                 else
                     snd_device = SND_DEVICE_IN_BT_SCO_MIC;
             }
-        } else if ((out_device & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
                    adev->dp_allowed_for_voice) {
             if (audio_extn_usb_is_capture_supported())
                 snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
@@ -6745,11 +6744,11 @@ snd_device_t platform_get_input_snd_device(void *platform,
                                  : SND_DEVICE_IN_HANDSET_MIC;
 
             if (voice_is_in_call(adev))
-                platform_set_echo_reference(adev, true, out_device);
-        } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER ||
-                   out_device & AUDIO_DEVICE_OUT_SPEAKER_SAFE ||
-                   out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                   out_device & AUDIO_DEVICE_OUT_LINE) {
+                platform_set_echo_reference(adev, true, out_devices);
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER) ||
+                   compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
+                   compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+                   compare_device_type(out_devices, AUDIO_DEVICE_OUT_LINE)) {
             if (my_data->fluence_type != FLUENCE_NONE &&
                 (my_data->fluence_in_voice_call ||
                  my_data->fluence_in_hfp_call) &&
@@ -6772,24 +6771,23 @@ snd_device_t platform_get_input_snd_device(void *platform,
                                         : SND_DEVICE_IN_VOICE_SPEAKER_DMIC;
                 }
                 if (audio_extn_hfp_is_active(adev))
-                    platform_set_echo_reference(adev, true, out_device);
+                    platform_set_echo_reference(adev, true, out_devices);
             } else {
                 if (adev->enable_hfp) {
                     snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP;
-                    platform_set_echo_reference(adev, true, out_device);
+                    platform_set_echo_reference(adev, true, out_devices);
                 } else {
                     snd_device = my_data->fluence_sb_enabled ?
                                      SND_DEVICE_IN_VOICE_SPEAKER_MIC_SB
                                      : SND_DEVICE_IN_VOICE_SPEAKER_MIC;
                     if (audio_extn_hfp_is_active(adev))
-                        platform_set_echo_reference(adev, true, out_device);
+                        platform_set_echo_reference(adev, true, out_devices);
                 }
             }
-        } else if (out_device & AUDIO_DEVICE_OUT_TELEPHONY_TX) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_TELEPHONY_TX)) {
             snd_device = SND_DEVICE_IN_VOICE_RX;
-        } else if (out_device &
-                    (AUDIO_DEVICE_OUT_USB_DEVICE |
-                     AUDIO_DEVICE_OUT_USB_HEADSET)) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_DEVICE) ||
+                   compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_HEADSET)) {
             if (audio_extn_usb_is_capture_supported()) {
                 snd_device = SND_DEVICE_IN_VOICE_USB_HEADSET_MIC;
             } else if (my_data->fluence_in_voice_call && my_data->fluence_in_spkr_mode) {
@@ -6801,25 +6799,25 @@ snd_device_t platform_get_input_snd_device(void *platform,
             } else {
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
             }
-        } else if (out_device & AUDIO_DEVICE_OUT_HEARING_AID) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_HEARING_AID)) {
             snd_device = SND_DEVICE_IN_VOICE_HEARING_AID;
         }
     } else if (my_data->use_generic_handset == true &&  //     system prop is enabled
                (my_data->source_mic_type & SOURCE_QUAD_MIC) &&  // AND 4mic is available
-               ((in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) ||    // AND device is buit-in mic or back mic
-                (in_device & AUDIO_DEVICE_IN_BACK_MIC)) &&
+               (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) ||    // AND device is buit-in mic or back mic
+                compare_device_type(&in_devices, AUDIO_DEVICE_IN_BACK_MIC)) &&
                (my_data->fluence_in_audio_rec == true &&       //  AND fluencepro is enabled
                 my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                (source == AUDIO_SOURCE_CAMCORDER ||           // AND source is cam/mic/unprocessed
                 source == AUDIO_SOURCE_UNPROCESSED ||
                 source == AUDIO_SOURCE_MIC)) {
                 snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
-                platform_set_echo_reference(adev, true, out_device);
+                platform_set_echo_reference(adev, true, out_devices);
     } else if (my_data->use_generic_handset == true &&          // System prop is enabled
                (my_data->ambisonic_capture == true) &&          // Enable Ambisonic capture
                (my_data->source_mic_type & SOURCE_QUAD_MIC) &&  // AND 4mic is available
-               ((in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) ||    // AND device is Built-in
-               (in_device & AUDIO_DEVICE_IN_BACK_MIC)) &&       // OR Back-mic
+               (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) ||    // AND device is Built-in
+                compare_device_type(&in_devices, AUDIO_DEVICE_IN_BACK_MIC)) &&       // OR Back-mic
                (source == AUDIO_SOURCE_MIC ||                   // AND source is MIC for 16bit
                 source == AUDIO_SOURCE_UNPROCESSED ||           // OR unprocessed for 24bit
                 source == AUDIO_SOURCE_CAMCORDER) &&            // OR camera usecase
@@ -6847,8 +6845,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
                     }
                 }
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
-        if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
-            in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+        if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) ||
+            compare_device_type(&in_devices, AUDIO_DEVICE_IN_BACK_MIC)) {
             switch (adev->camera_orientation) {
             case CAMERA_BACK_LANDSCAPE:
                 snd_device = SND_DEVICE_IN_CAMCORDER_LANDSCAPE;
@@ -6902,7 +6900,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
            }
        }
     }  else if (source == AUDIO_SOURCE_VOICE_RECOGNITION) {
-        if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+        if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC)) {
             if (my_data->fluence_in_voice_rec && channel_count == 1) {
                 if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                     (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
@@ -6947,15 +6945,15 @@ snd_device_t platform_get_input_snd_device(void *platform,
                 else
                     snd_device = SND_DEVICE_IN_VOICE_REC_MIC;
             }
-        } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_WIRED_HEADSET)) {
             snd_device = SND_DEVICE_IN_VOICE_REC_HEADSET_MIC;
-        } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
+        } else if (is_usb_in_device_type(&in_devices)) {
             snd_device = fixup_usb_headset_mic_snd_device(platform,
                                       SND_DEVICE_IN_VOICE_RECOG_USB_HEADSET_MIC,
                                       SND_DEVICE_IN_VOICE_RECOG_USB_HEADSET_MULTI_CHANNEL_MIC);
         }
     } else if (source == AUDIO_SOURCE_UNPROCESSED) {
-         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+         if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC)) {
              if (((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
                  (channel_mask == AUDIO_CHANNEL_IN_STEREO)) &&
                  (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
@@ -6969,40 +6967,43 @@ snd_device_t platform_get_input_snd_device(void *platform,
              } else {
                  snd_device = SND_DEVICE_IN_UNPROCESSED_MIC;
              }
-         } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+         } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_WIRED_HEADSET)) {
                  snd_device = SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC;
-         } else if (audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
+         } else if (is_usb_in_device_type(&in_devices)) {
              snd_device = fixup_usb_headset_mic_snd_device(platform,
                                           SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC,
                                           SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MULTI_CHANNEL_MIC);
          }
     } else if ((source == AUDIO_SOURCE_VOICE_COMMUNICATION) ||
               (mode == AUDIO_MODE_IN_COMMUNICATION)) {
-        if (out_device & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
-            out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-            (out_device & (AUDIO_DEVICE_OUT_USB_DEVICE | AUDIO_DEVICE_OUT_USB_HEADSET) &&
+        if ((compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER) ||
+             compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) ||
+            compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+            ((compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_DEVICE) ||
+              compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_HEADSET)) &&
             !audio_extn_usb_is_capture_supported()))
-            in_device = AUDIO_DEVICE_IN_BACK_MIC;
-        else if (out_device & AUDIO_DEVICE_OUT_EARPIECE)
-            in_device = AUDIO_DEVICE_IN_BUILTIN_MIC;
-        else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET)
-            in_device = AUDIO_DEVICE_IN_WIRED_HEADSET;
-        else if (out_device & AUDIO_DEVICE_OUT_USB_DEVICE)
-            in_device = AUDIO_DEVICE_IN_USB_DEVICE;
+            reassign_device_list(&in_devices, AUDIO_DEVICE_IN_BACK_MIC, address);
+        else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_EARPIECE))
+            reassign_device_list(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC, address);
+        else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADSET))
+            reassign_device_list(&in_devices, AUDIO_DEVICE_IN_WIRED_HEADSET, address);
+        else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_DEVICE))
+            reassign_device_list(&in_devices, AUDIO_DEVICE_IN_USB_DEVICE, address);
 
-        in_device = ((out_device == AUDIO_DEVICE_NONE) ?
-                      AUDIO_DEVICE_IN_BUILTIN_MIC : in_device) & ~AUDIO_DEVICE_BIT_IN;
+        if (list_empty(out_devices))
+            reassign_device_list(&in_devices, (AUDIO_DEVICE_IN_BUILTIN_MIC & ~AUDIO_DEVICE_BIT_IN),
+                                 address);
 
         if (in)
-            snd_device = get_snd_device_for_voice_comm(my_data, in, out_device, in_device);
+            snd_device = get_snd_device_for_voice_comm(my_data, in, out_devices, &in_devices);
     } else if (source == AUDIO_SOURCE_MIC) {
-        if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC &&
+        if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) &&
                 channel_count == 1 ) {
             if(my_data->fluence_in_audio_rec) {
                if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                     (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
                     snd_device = SND_DEVICE_IN_HANDSET_QMIC;
-                    platform_set_echo_reference(adev, true, out_device);
+                    platform_set_echo_reference(adev, true, out_devices);
                 } else if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                     (my_data->source_mic_type & SOURCE_THREE_MIC)) {
                     snd_device = SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO;
@@ -7012,11 +7013,11 @@ snd_device_t platform_get_input_snd_device(void *platform,
                 } else if ((my_data->fluence_type & FLUENCE_DUAL_MIC) &&
                     (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
                     snd_device = SND_DEVICE_IN_HANDSET_DMIC;
-                    platform_set_echo_reference(adev, true, out_device);
+                    platform_set_echo_reference(adev, true, out_devices);
                 }
             }
-        } else if (in_device & AUDIO_DEVICE_IN_LOOPBACK) {
-            if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_LOOPBACK)) {
+            if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC)) {
                 usecase = get_usecase_from_list(adev, uc_id);
                 if (usecase == NULL) {
                     ALOGE("%s: Could not find the record usecase", __func__);
@@ -7043,10 +7044,10 @@ snd_device_t platform_get_input_snd_device(void *platform,
         goto exit;
     }
 
-    if (in_device != AUDIO_DEVICE_NONE &&
-            !(in_device & AUDIO_DEVICE_IN_VOICE_CALL) &&
-            !(in_device & AUDIO_DEVICE_IN_COMMUNICATION)) {
-        if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
+    if (!list_empty(&in_devices) &&
+            !(compare_device_type(&in_devices, AUDIO_DEVICE_IN_VOICE_CALL)) &&
+            !(compare_device_type(&in_devices, AUDIO_DEVICE_IN_COMMUNICATION))) {
+        if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC)) {
             if ((in && (audio_extn_ssr_get_stream() == in)) ||
                 ((my_data->source_mic_type & SOURCE_QUAD_MIC) &&
                  channel_mask == AUDIO_CHANNEL_INDEX_MASK_4))
@@ -7060,7 +7061,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
             else
                 snd_device = my_data->fluence_sb_enabled ? SND_DEVICE_IN_HANDSET_MIC_SB
                                  : SND_DEVICE_IN_HANDSET_MIC;
-        } else if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BACK_MIC)) {
             if ((my_data->source_mic_type & SOURCE_DUAL_MIC) &&
                     channel_count == 2)
                 snd_device = SND_DEVICE_IN_SPEAKER_DMIC_STEREO;
@@ -7068,11 +7069,11 @@ snd_device_t platform_get_input_snd_device(void *platform,
                 snd_device = my_data->fluence_sb_enabled ?
                                  SND_DEVICE_IN_SPEAKER_MIC_SB
                                  : SND_DEVICE_IN_SPEAKER_MIC;
-        } else if (in_device & AUDIO_DEVICE_IN_LINE) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_LINE)) {
             snd_device = SND_DEVICE_IN_LINE;
-        } else if (in_device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_WIRED_HEADSET)) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC;
-        } else if (in_device & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET)) {
             if (adev->swb_speech_mode != SPEECH_MODE_INVALID) {
                 if (adev->bluetooth_nrec)
                     snd_device = SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC;
@@ -7089,37 +7090,38 @@ snd_device_t platform_get_input_snd_device(void *platform,
                 else
                     snd_device = SND_DEVICE_IN_BT_SCO_MIC;
             }
-        } else if (in_device & AUDIO_DEVICE_IN_SPDIF) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_SPDIF)) {
             snd_device = SND_DEVICE_IN_SPDIF;
-        } else if (in_device & AUDIO_DEVICE_IN_BLUETOOTH_A2DP) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BLUETOOTH_A2DP)) {
             snd_device = SND_DEVICE_IN_BT_A2DP;
-        } else if (in_device & AUDIO_DEVICE_IN_AUX_DIGITAL) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_AUX_DIGITAL)) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
-        } else if (in_device & AUDIO_DEVICE_IN_HDMI_ARC) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_HDMI_ARC)) {
             snd_device = SND_DEVICE_IN_HDMI_ARC;
-        } else if (in_device & AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET ||
-                   in_device & AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET) ||
+                   compare_device_type(&in_devices, AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
-        } else if (in_device & AUDIO_DEVICE_IN_FM_TUNER) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_FM_TUNER)) {
             snd_device = SND_DEVICE_IN_CAPTURE_FM;
-        } else if (audio_extn_usb_connected(NULL) && audio_is_usb_in_device(in_device | AUDIO_DEVICE_BIT_IN)) {
+        } else if (audio_extn_usb_connected(NULL) &&
+                   is_usb_in_device_type(&in_devices)) {
             snd_device = fixup_usb_headset_mic_snd_device(platform,
                                                   SND_DEVICE_IN_USB_HEADSET_MIC,
                                                   SND_DEVICE_IN_USB_HEADSET_MULTI_CHANNEL_MIC);
         } else {
-            ALOGE("%s: Unknown input device(s) %#x", __func__, in_device);
+            ALOGE("%s: Unknown input device(s) %#x", __func__, get_device_types(&in_devices));
             ALOGW("%s: Using default handset-mic", __func__);
             snd_device = my_data->fluence_sb_enabled ? SND_DEVICE_IN_HANDSET_MIC_SB
                              : SND_DEVICE_IN_HANDSET_MIC;
         }
     } else {
-        if (out_device & AUDIO_DEVICE_OUT_EARPIECE) {
+        if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_EARPIECE)) {
             snd_device = my_data->fluence_sb_enabled ? SND_DEVICE_IN_HANDSET_MIC_SB
                              : SND_DEVICE_IN_HANDSET_MIC;
-        } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADSET) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADSET)) {
             snd_device = SND_DEVICE_IN_HEADSET_MIC;
-        } else if (out_device & AUDIO_DEVICE_OUT_SPEAKER ||
-                   out_device & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER) ||
+                   compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
             if ((my_data->source_mic_type & SOURCE_DUAL_MIC) &&
                 (channel_count == 2)) {
                 snd_device = SND_DEVICE_IN_SPEAKER_DMIC_STEREO;
@@ -7136,11 +7138,11 @@ snd_device_t platform_get_input_snd_device(void *platform,
                                  SND_DEVICE_IN_SPEAKER_MIC_SB
                                  : SND_DEVICE_IN_SPEAKER_MIC;
             }
-        } else if (out_device & AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                        out_device & AUDIO_DEVICE_OUT_LINE) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+                   compare_device_type(out_devices, AUDIO_DEVICE_OUT_LINE)) {
             snd_device = my_data->fluence_sb_enabled ? SND_DEVICE_IN_HANDSET_MIC_SB
                              : SND_DEVICE_IN_HANDSET_MIC;
-        } else if (out_device & AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET)) {
             if (adev->swb_speech_mode != SPEECH_MODE_INVALID) {
                 if (adev->bluetooth_nrec)
                     snd_device = SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC;
@@ -7157,14 +7159,13 @@ snd_device_t platform_get_input_snd_device(void *platform,
                 else
                     snd_device = SND_DEVICE_IN_BT_SCO_MIC;
             }
-        } else if (out_device & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
             snd_device = SND_DEVICE_IN_HDMI_MIC;
-        } else if (out_device & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET ||
-                   out_device & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET) ||
+                   compare_device_type(out_devices, AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET)) {
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
-        } else if (out_device &
-                    (AUDIO_DEVICE_OUT_USB_DEVICE |
-                     AUDIO_DEVICE_OUT_USB_HEADSET)) {
+        } else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_DEVICE) ||
+                   compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_HEADSET)) {
             if (audio_extn_usb_is_capture_supported() && audio_extn_usb_connected(NULL))
                 snd_device = fixup_usb_headset_mic_snd_device(platform,
                                                       SND_DEVICE_IN_USB_HEADSET_MIC,
@@ -7173,7 +7174,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
               snd_device = SND_DEVICE_IN_HANDSET_MIC;
 
         } else {
-            ALOGE("%s: Unknown output device(s) %#x", __func__, out_device);
+            ALOGE("%s: Unknown output device(s) %#x", __func__, get_device_types(out_devices));
             ALOGW("%s: Using default handset-mic", __func__);
             snd_device = my_data->fluence_sb_enabled ? SND_DEVICE_IN_HANDSET_MIC_SB
                              : SND_DEVICE_IN_HANDSET_MIC;
@@ -7606,6 +7607,7 @@ static void set_audiocal(void *platform, struct str_parms *parms, char *value, i
     uint8_t *dptr = NULL;
     int32_t dlen;
     int err, ret;
+    char *address = "";
     if(value == NULL || platform == NULL || parms == NULL) {
         ALOGE("[%s] received null pointer, failed",__func__);
         goto done_key_audcal;
@@ -7635,13 +7637,17 @@ static void set_audiocal(void *platform, struct str_parms *parms, char *value, i
             goto done_key_audcal;
         }
 
+        list_init(&out.device_list);
         if (cal.dev_id) {
           if (audio_is_input_device(cal.dev_id)) {
               // FIXME: why pass an input device whereas
               // platform_get_input_snd_device() expects as an output device?
-              cal.snd_dev_id = platform_get_input_snd_device(platform, NULL, cal.dev_id);
+              struct listnode cal_devices;
+              list_init(&cal_devices);
+              update_device_list(&cal_devices, cal.dev_id, address, true);
+              cal.snd_dev_id = platform_get_input_snd_device(platform, NULL, &cal_devices);
           } else {
-              out.devices = cal.dev_id;
+              reassign_device_list(&out.device_list, cal.dev_id, address);
               out.sample_rate = cal.sampling_rate;
               cal.snd_dev_id = platform_get_output_snd_device(platform, &out);
           }
@@ -8198,6 +8204,7 @@ static void get_audiocal(void *platform, void *keys, void *pReply) {
     char *rparms=NULL;
     int ret=0, err;
     uint32_t param_len;
+    char *address = "";
 
     if(query==NULL || platform==NULL || reply==NULL) {
         ALOGE("[%s] received null pointer",__func__);
@@ -8219,10 +8226,14 @@ static void get_audiocal(void *platform, void *keys, void *pReply) {
         goto done;
     }
 
+    list_init(&out.device_list);
     if (cal.dev_id & AUDIO_DEVICE_BIT_IN) {
-        cal.snd_dev_id = platform_get_input_snd_device(platform, NULL, cal.dev_id);
-    } else if(cal.dev_id) {
-        out.devices = cal.dev_id;
+        struct listnode devices;
+        list_init(&devices);
+        update_device_list(&devices, cal.dev_id, address, true);
+        cal.snd_dev_id = platform_get_input_snd_device(platform, NULL, &devices);
+    } else if (cal.dev_id) {
+        reassign_device_list(&out.device_list, cal.dev_id, address);
         out.sample_rate = cal.sampling_rate;
         cal.snd_dev_id = platform_get_output_snd_device(platform, &out);
     }
@@ -9249,7 +9260,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     }
 
     /* Native playback is preferred for Headphone/HS device over 192Khz */
-    if (!voice_call_active && codec_device_supports_native_playback(usecase->devices)) {
+    if (!voice_call_active && codec_device_supports_native_playback(&usecase->device_list)) {
         if (audio_is_true_native_stream_active(adev)) {
             if (check_hdset_combo_device(snd_device)) {
                 /*
@@ -9378,7 +9389,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
      * Handset and speaker may have diffrent backend. Check if the device is speaker or handset,
      * and these devices are restricited to 48kHz.
      */
-    if (!codec_device_supports_native_playback(usecase->devices) &&
+    if (!codec_device_supports_native_playback(&usecase->device_list) &&
         (platform_check_backends_match(SND_DEVICE_OUT_SPEAKER, snd_device) ||
          platform_check_backends_match(SND_DEVICE_OUT_HANDSET, snd_device))) {
         int bw = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
@@ -9714,7 +9725,8 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
         backend_cfg.bit_width= usecase->stream.in->bit_width;
         backend_cfg.format= usecase->stream.in->format;
         backend_cfg.channels = audio_channel_count_from_in_mask(usecase->stream.in->channel_mask);
-        if (is_loopback_input_device(usecase->stream.in->device)) {
+        if (is_loopback_input_device(
+                    get_device_types(&usecase->stream.in->device_list))) {
             int bw = platform_get_snd_device_bit_width(snd_device);
             if ((-ENOSYS != bw) && (backend_cfg.bit_width > (uint32_t)bw)) {
                 backend_cfg.bit_width = bw;
@@ -11394,7 +11406,8 @@ int platform_set_swap_channels(struct audio_device *adev, bool swap_channels)
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
         if (usecase->stream.out && usecase->type == PCM_PLAYBACK &&
-                usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+            compare_device_type(&usecase->stream.out->device_list,
+                                AUDIO_DEVICE_OUT_SPEAKER)) {
             /*
              * If acdb tuning is different for SPEAKER_REVERSE, it is must
              * to perform device switch to disable the current backend to
@@ -11641,9 +11654,11 @@ int platform_get_active_microphones(void *platform, unsigned int channels,
     }
     size_t max_mic_count = my_data->declared_mic_count;
     size_t actual_mic_count = 0;
+    struct listnode devices;
+    list_init(&devices);
 
     snd_device_t active_input_snd_device =
-            platform_get_input_snd_device(platform, usecase->stream.in, AUDIO_DEVICE_NONE);
+            platform_get_input_snd_device(platform, usecase->stream.in, &devices);
     if (active_input_snd_device == SND_DEVICE_NONE) {
         ALOGI("%s: No active microphones found", __func__);
         goto end;

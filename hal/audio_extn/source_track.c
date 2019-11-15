@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -230,7 +230,7 @@ static int derive_mixer_ctl_from_usecase_intf(const struct audio_device *adev,
 
     if (usecase && (usecase->id != USECASE_AUDIO_SPKR_CALIB_TX)) {
         if (is_stt_supported_snd_device(usecase->in_snd_device)) {
-             in_device = get_input_audio_device(usecase->devices);
+             in_device = get_input_audio_device(get_device_types(&usecase->device_list));
              ret = add_audio_intf_name_to_mixer_ctl(in_device, mixer_ctl_name,
                 audio_device_to_interface_table, audio_device_to_interface_table_len);
         } else {

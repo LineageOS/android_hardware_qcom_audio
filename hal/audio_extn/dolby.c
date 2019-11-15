@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, 2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2010 The Android Open Source Project
@@ -246,7 +246,7 @@ void send_ddp_endp_params(struct audio_device *adev,
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
         if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
-            (usecase->devices & ddp_dev) &&
+            (compare_device_type(&usecase->device_list, ddp_dev)) &&
             (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
             ((usecase->stream.out->format == AUDIO_FORMAT_AC3) ||
              (usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
@@ -264,7 +264,7 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev)
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
         if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
-            (usecase->devices & AUDIO_DEVICE_OUT_ALL) &&
+            is_audio_out_device_type(&usecase->device_list) &&
             (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
             ((usecase->stream.out->format == AUDIO_FORMAT_AC3) ||
              (usecase->stream.out->format == AUDIO_FORMAT_E_AC3) ||
@@ -273,11 +273,14 @@ void audio_extn_dolby_send_ddp_endp_params(struct audio_device *adev)
              * Use wfd /hdmi sink channel cap for dolby params if device is wfd
              * or hdmi. Otherwise use stereo configuration
              */
-            int channel_cap = usecase->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL ?
+            int channel_cap = compare_device_type(&usecase->device_list,
+                                                  AUDIO_DEVICE_OUT_AUX_DIGITAL) ?
                               adev->cur_hdmi_channels :
-                              usecase->devices & AUDIO_DEVICE_OUT_PROXY ?
+                              compare_device_type(&usecase->device_list,
+                                                  AUDIO_DEVICE_OUT_PROXY) ?
                               adev->cur_wfd_channels : 2;
-            send_ddp_endp_params_stream(usecase->stream.out, usecase->devices,
+            send_ddp_endp_params_stream(usecase->stream.out,
+                                        get_device_types(&usecase->device_list),
                                         channel_cap, false /* set cache */);
         }
     }
@@ -302,7 +305,7 @@ void audio_extn_ddp_set_parameters(struct audio_device *adev,
                             sizeof(value));
     if (ret >= 0) {
         ddp_dev = atoi(value);
-        if (!(AUDIO_DEVICE_OUT_ALL & ddp_dev))
+        if (!audio_is_output_device(ddp_dev))
             return;
     } else
         return;
@@ -376,7 +379,7 @@ void audio_extn_dolby_set_endpoint(struct audio_device *adev)
         usecase = node_to_item(node, struct audio_usecase, list);
         if ((usecase->type == PCM_PLAYBACK) &&
             (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY)) {
-            endpoint |= usecase->devices & AUDIO_DEVICE_OUT_ALL;
+            endpoint |= is_audio_out_device_type(&usecase->device_list);
             send = true;
         }
     }
@@ -528,7 +531,7 @@ void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev) {
         usecase = node_to_item(node, struct audio_usecase, list);
         if ((usecase->type == PCM_PLAYBACK) &&
             (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY)) {
-            endpoint |= usecase->devices & AUDIO_DEVICE_OUT_ALL;
+            endpoint |= is_audio_out_device_type(&usecase->device_list);
             send = true;
         }
     }

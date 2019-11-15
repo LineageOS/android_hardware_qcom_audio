@@ -1247,12 +1247,12 @@ void audio_extn_set_anc_parameters(struct audio_device *adev,
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if (usecase->stream.out && usecase->type != PCM_CAPTURE) {
-                if (usecase->stream.out->devices == \
-                    AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
-                    usecase->stream.out->devices ==  \
-                    AUDIO_DEVICE_OUT_WIRED_HEADSET ||
-                    usecase->stream.out->devices ==  \
-                    AUDIO_DEVICE_OUT_EARPIECE) {
+                if (is_single_device_type_equal(&usecase->stream.out->device_list,
+                                AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
+                    is_single_device_type_equal(&usecase->stream.out->device_list,
+                                AUDIO_DEVICE_OUT_WIRED_HEADSET) ||
+                    is_single_device_type_equal(&usecase->stream.out->device_list,
+                                AUDIO_DEVICE_OUT_EARPIECE)) {
                         select_devices(adev, usecase->id);
                         ALOGV("%s: switching device completed", __func__);
                         break;
@@ -3387,7 +3387,7 @@ static int audio_extn_set_multichannel_mask(struct audio_device *adev,
     /* validate input params. Avoid updated channel mask if loopback device */
     if ((channel_count == 6) &&
         (in->format == AUDIO_FORMAT_PCM_16_BIT) &&
-        (!is_loopback_input_device(in->device))) {
+        (!is_loopback_input_device(get_device_types(&in->device_list)))) {
         switch (max_mic_count) {
             case 4:
                 config->channel_mask = AUDIO_CHANNEL_INDEX_MASK_4;
@@ -3662,13 +3662,13 @@ int audio_extn_set_device_cfg_params(struct audio_device *adev,
 
     adev_device_cfg_ptr = adev->device_cfg_params;
     /* Create an out stream to get snd device from audio device */
-    out.devices = device_cfg_params->device;
+    reassign_device_list(&out.device_list, device_cfg_params->device, "");
     out.sample_rate = device_cfg_params->sample_rate;
     snd_device = platform_get_output_snd_device(adev->platform, &out);
     backend_idx = platform_get_backend_index(snd_device);
 
     ALOGV("%s:: device %d sample_rate %d snd_device %d backend_idx %d",
-                __func__, out.devices, out.sample_rate, snd_device, backend_idx);
+                __func__, get_device_types(&out.device_list), out.sample_rate, snd_device, backend_idx);
 
     ALOGV("%s:: Device Config Params from Client samplerate %d  channels %d"
           " bit_width %d  format %d  device %d  channel_map[0] %d channel_map[1] %d"
