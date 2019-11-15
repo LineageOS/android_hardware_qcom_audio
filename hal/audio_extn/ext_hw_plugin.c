@@ -62,7 +62,11 @@ struct ext_hw_plugin_data {
 };
 
 /* This can be defined in platform specific file or use compile flag */
+#ifdef DAEMON_SUPPORT_AUTO
+#define LIB_PLUGIN_DRIVER "libaudiohalpluginclient.so"
+#else
 #define LIB_PLUGIN_DRIVER "libaudiohalplugin.so"
+#endif
 
 void* ext_hw_plugin_init(struct audio_device *adev, ext_hw_plugin_init_config_t init_config)
 {
