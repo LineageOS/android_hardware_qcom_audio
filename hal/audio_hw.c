@@ -8162,16 +8162,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0){
             adev->bt_sco_on = true;
         } else {
-            ALOGD("sco is off, reset sco and route device to handset/mic");
+            ALOGD("sco is off, reset sco and route device to handset mic");
             adev->bt_sco_on = false;
             audio_extn_sco_reset_configuration();
             list_for_each(node, &adev->usecase_list) {
                 usecase = node_to_item(node, struct audio_usecase, list);
-                if ((usecase->type == PCM_PLAYBACK) && usecase->stream.out &&
-                    (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_SCO))
-                    usecase->stream.out->devices = AUDIO_DEVICE_OUT_EARPIECE;
-                else if ((usecase->type == PCM_CAPTURE) && usecase->stream.in &&
-                         (usecase->stream.in->device & AUDIO_DEVICE_IN_ALL_SCO))
+                if ((usecase->type == PCM_CAPTURE) && usecase->stream.in &&
+                    (usecase->stream.in->device & AUDIO_DEVICE_IN_ALL_SCO))
                     usecase->stream.in->device = AUDIO_DEVICE_IN_BUILTIN_MIC;
                 else
                     continue;
@@ -9509,11 +9506,10 @@ static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *ou
             pthread_mutex_unlock(&out->compr_mute_lock);
         }
     } else {
-        // mute compress stream if suspended
-        pthread_mutex_lock(&out->compr_mute_lock);
-        if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-            (!out->a2dp_compress_mute)) {
-            if (!out->standby) {
+        if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+            // mute compress stream if suspended
+            pthread_mutex_lock(&out->compr_mute_lock);
+            if (!out->a2dp_compress_mute && !out->standby) {
                 ALOGD("%s: selecting speaker and muting stream", __func__);
                 devices = out->devices;
                 out->devices = AUDIO_DEVICE_OUT_SPEAKER;
@@ -9530,8 +9526,12 @@ static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *ou
                 out->volume_l = left_p;
                 out->volume_r = right_p;
             }
+            pthread_mutex_unlock(&out->compr_mute_lock);
+        } else {
+            // tear down a2dp path for non offloaded streams
+            if (audio_extn_a2dp_source_is_suspended())
+                out_standby_l(&out->stream.common);
         }
-        pthread_mutex_unlock(&out->compr_mute_lock);
     }
     ALOGV("%s: exit", __func__);
     return 0;

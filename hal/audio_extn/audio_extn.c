@@ -192,6 +192,7 @@ static bool audio_extn_compress_in_enabled = false;
 static bool audio_extn_battery_listener_enabled = false;
 static bool audio_extn_maxx_audio_enabled = false;
 static bool audio_extn_audiozoom_enabled = false;
+static bool audio_extn_hifi_filter_enabled = false;
 
 #define AUDIO_PARAMETER_KEY_AANC_NOISE_LEVEL "aanc_noise_level"
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -5163,6 +5164,87 @@ bool audio_extn_battery_properties_is_charging()
     return (batt_prop_is_charging)? batt_prop_is_charging(): false;
 }
 // END: BATTERY_LISTENER ================================================================
+
+// START: HiFi Filter Feature ============================================================
+void audio_extn_enable_hifi_filter(struct audio_device *adev, bool value)
+{
+    const char *mixer_ctl_name = "HiFi Filter";
+    struct mixer_ctl *ctl = NULL;
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s, using default control",
+              __func__, mixer_ctl_name);
+        return;
+    } else {
+        mixer_ctl_set_value(ctl, 0, value);
+        ALOGD("%s: mixer_value set %d", __func__, value);
+    }
+    return;
+}
+
+void audio_extn_hifi_filter_set_params(struct str_parms *parms,
+                                        char *value, int len)
+{
+    int ret = 0;
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HIFI_AUDIO_FILTER, value,len);
+    if (ret >= 0) {
+        if (value && !strncmp(value, "true", sizeof("true")))
+            audio_extn_hifi_filter_enabled = true;
+        else
+            audio_extn_hifi_filter_enabled = false;
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_HIFI_AUDIO_FILTER);
+    }
+}
+
+bool audio_extn_hifi_check_usecase_params(int sample_rate, int usecase)
+{
+    if (sample_rate != 48000 && sample_rate != 44100)
+        return false;
+    if (usecase == USECASE_AUDIO_PLAYBACK_LOW_LATENCY || usecase == USECASE_AUDIO_PLAYBACK_ULL)
+        return false;
+    return true;
+}
+
+bool audio_extn_is_hifi_filter_enabled(struct audio_device* adev, struct stream_out *out,
+                                   snd_device_t snd_device, char *codec_variant,
+                                   int channels, int usecase_init)
+{
+    int na_mode = platform_get_native_support();
+    struct audio_usecase *uc = NULL;
+    struct listnode *node = NULL;
+    bool hifi_active = false;
+
+    if (audio_extn_hifi_filter_enabled) {
+        /*Restricting the feature for Tavil and WCD9375 codecs only*/
+        if ((strstr(codec_variant, "WCD9385") || strstr(codec_variant, "WCD9375"))
+            && (na_mode == NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_DSP) && channels <=2) {
+            /*Upsampling 8 time should be restricited to headphones playback only */
+            if (snd_device == SND_DEVICE_OUT_HEADPHONES
+                || snd_device == SND_DEVICE_OUT_HEADPHONES_44_1
+                || snd_device == SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER
+                || usecase_init) {
+                if (audio_extn_hifi_check_usecase_params(out->sample_rate,
+                    out->usecase) && !usecase_init)
+                    return true;
+
+                list_for_each(node, &adev->usecase_list) {
+                    /* checking if hifi_filter is already active to set */
+                    /* concurrent playback sessions with hifi_filter enabled*/
+                    uc = node_to_item(node, struct audio_usecase, list);
+                    struct stream_out *curr_out = (struct stream_out*) uc->stream.out;
+                    if (uc->type == PCM_PLAYBACK && curr_out
+                        && audio_extn_hifi_check_usecase_params(
+                        curr_out->sample_rate, curr_out->usecase) &&
+                        (curr_out->channel_mask == AUDIO_CHANNEL_OUT_STEREO ||
+                        curr_out->channel_mask == AUDIO_CHANNEL_OUT_MONO))
+                            hifi_active = true;
+                }
+            }
+        }
+    }
+    return hifi_active;
+}
+// END: HiFi Filter Feature ==============================================================
 
 // START: AUDIOZOOM_FEATURE =====================================================================
 #ifdef __LP64__
