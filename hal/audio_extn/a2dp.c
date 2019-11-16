@@ -1807,10 +1807,14 @@ static void audio_a2dp_update_tws_channel_mode()
 {
     char* channel_mode;
     struct mixer_ctl *ctl_channel_mode;
+
+    ALOGD("Update tws for mono_mode on=%d",a2dp.is_tws_mono_mode_on);
+
     if (a2dp.is_tws_mono_mode_on)
        channel_mode = "One";
     else
        channel_mode = "Two";
+
     ctl_channel_mode = mixer_get_ctl_by_name(a2dp.adev->mixer,MIXER_FMT_TWS_CHANNEL_MODE);
     if (!ctl_channel_mode) {
          ALOGE("failed to get tws mixer ctl");
@@ -1851,14 +1855,8 @@ static int update_aptx_dsp_config_v2(struct aptx_enc_cfg_t *aptx_dsp_cfg,
             break;
         case 2:
         default:
-            if (!a2dp.is_tws_mono_mode_on) {
                aptx_dsp_cfg->custom_cfg.channel_mapping[0] = PCM_CHANNEL_L;
                aptx_dsp_cfg->custom_cfg.channel_mapping[1] = PCM_CHANNEL_R;
-            }
-            else {
-               a2dp.is_tws_mono_mode_on = true;
-               ALOGD("Update tws for mono_mode_on: %d",a2dp.is_tws_mono_mode_on);
-            }
             break;
     }
     a2dp.enc_channels = aptx_dsp_cfg->custom_cfg.num_channels;
