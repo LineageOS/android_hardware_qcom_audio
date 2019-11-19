@@ -107,13 +107,10 @@ AUDIO_HARDWARE += audio.primary.msmnile
 AUDIO_WRAPPER := libqahw
 AUDIO_WRAPPER += libqahwwrapper
 
-<<<<<<< HEAD
-=======
 #QAL Module
 AUDIO_QAL := libqal
 AUDIO_QAL += catf
 
->>>>>>> 8df9823... Config : add catf and mcs to compile in build
 #HAL Test app
 AUDIO_HAL_TEST_APPS := hal_play_test
 AUDIO_HAL_TEST_APPS += hal_rec_test
