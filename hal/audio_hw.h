@@ -218,6 +218,9 @@ struct stream_out {
     bool send_next_track_params;
     bool is_compr_metadata_avail;
     unsigned int bit_width;
+    audio_format_t hal_ip_format;
+    audio_format_t hal_op_format;
+    void *convert_buffer;
 
     struct audio_device *dev;
 };

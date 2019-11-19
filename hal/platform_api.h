@@ -126,4 +126,5 @@ bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device);
 int platform_get_wsa_mode(void *adev);
 void platform_set_gsm_mode(void *platform, bool enable);
 int platform_get_max_mic_count(void *platform);
+bool platform_supports_true_32bit();
 #endif // AUDIO_PLATFORM_API_H
