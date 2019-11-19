@@ -82,7 +82,11 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::CreateStreamOut(
                                               fnp_offload_effect_stop_output_));
     astream->GetStreamHandle(stream_out);
     stream_out_list_.push_back(astream);
-    ALOGD("%s: output stream %d %p", __func__,(int)stream_out_list_.size(), stream_out);
+    ALOGE("%s: output stream %d %p", __func__,(int)stream_out_list_.size(), stream_out);
+    if (flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
+        if (voice_)
+            voice_->stream_out_primary_ = astream;
+    }
     return astream;
 }
 
@@ -131,10 +135,16 @@ static int adev_init_check(const struct audio_hw_device *dev __unused) {
 }
 
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume) {
-    std::ignore = dev;
-    std::ignore = volume;
 
-    return 0;
+    std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
+    if (!adevice) {
+        ALOGE("%s: invalid adevice object",__func__);
+        return -EINVAL;
+    }
+
+    return adevice->SetVoiceVolume(volume);
+
+
 }
 
 static int adev_open_output_stream(struct audio_hw_device *dev,
@@ -270,11 +280,13 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
 static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 {
-    std::ignore = dev;
-    std::ignore = mode;
-    ALOGD("%s: function not implemented",__func__);
+    std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
+    if (!adevice) {
+        ALOGE("%s: invalid adevice object",__func__);
+        return -EINVAL;
+    }
 
-    return 0;
+    return adevice->SetMode(mode);
 }
 
 static int adev_set_mic_mute(struct audio_hw_device *dev, bool state) {
@@ -460,8 +472,16 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
         }
     }
     audio_extn_sound_trigger_init(adev_);
+    voice_ = VoiceInit();
 
     return ret;
+}
+
+std::shared_ptr<AudioVoice> AudioDevice::VoiceInit() {
+    std::shared_ptr<AudioVoice> voice (new AudioVoice());
+
+    return voice;
+
 }
 
 std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(
@@ -529,19 +549,50 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* strea
 }
 
 int AudioDevice::SetMicMute(bool state) {
-    std::ignore = state;
-    return 0; //currently not implemented
+    int ret;
+
+    if (voice_)
+        ret = voice_->SetMicMute(state);
+
+    return 0;
 }
 
 int AudioDevice::GetMicMute(bool *state) {
-    std::ignore = state;
+    *state = false;
+
     return 0; //currently not implemented
+}
+
+int AudioDevice::SetMode(const audio_mode_t mode) {
+    int ret = 0;
+
+    ALOGD("%s: enter: %d", __func__, mode);
+    voice_->SetMode(mode);
+
+    return ret;
 }
 
 int AudioDevice::SetParameters(const char *kvpairs) {
     int ret = 0;
+    struct str_parms *parms;
+
     ALOGD("%s: enter: %s", __func__, kvpairs);
+
+    parms = str_parms_create_str(kvpairs);
+    ret = voice_->VoiceSetParameters(parms);
+    str_parms_destroy(parms);
+
     ALOGD("%s: exit: %s", __func__, kvpairs);
+
+    return ret;
+}
+
+
+int AudioDevice::SetVoiceVolume(float volume) {
+    int ret = 0;
+
+    ret = voice_->SetVoiceVolume(volume);
+
     return ret;
 }
 

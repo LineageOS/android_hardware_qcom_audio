@@ -14,6 +14,7 @@ LOCAL_HEADER_LIBRARIES := libhardware_headers
 LOCAL_SRC_FILES := \
     AudioStream.cpp \
     AudioDevice.cpp \
+    AudioVoice.cpp \
     audio_extn/soundtrigger.cpp \
     audio_extn/AudioExtn.cpp
 

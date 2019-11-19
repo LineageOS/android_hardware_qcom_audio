@@ -518,9 +518,10 @@ static int out_get_render_position(const struct audio_stream_out *stream,
 static int astream_out_set_parameters(struct audio_stream *stream,
                                       const char *kvpairs) {
     int ret = 0;
+    struct str_parms *parms = (str_parms *)NULL;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
-	if (adevice) {
+    if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
         ret = -EINVAL;
@@ -531,14 +532,27 @@ static int astream_out_set_parameters(struct audio_stream *stream,
     ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, astream_out->GetUseCase(), use_case_table[astream_out->GetUseCase()], kvpairs);
 
+    parms = str_parms_create_str(kvpairs);
+    if (!parms) {
+       ret = -EINVAL;
+       goto exit;
+    }
+
+    ret = astream_out->VoiceSetParameters(adevice, parms);
+    if (ret) {
+        ALOGE("Voice Stream SetParameters Error (%x)", ret);
+        goto exit;
+    }
+
    // if(astream_out->flags_ == (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
-       ret = astream_out->SetParameters(kvpairs);
+       ret = astream_out->SetParameters(parms);
        if (ret) {
           ALOGE("Stream SetParameters Error (%x)", ret);
           goto exit;
        }
    // }
 exit:
+    str_parms_destroy(parms);
     return ret;
 }
 
@@ -1208,9 +1222,7 @@ int StreamOutPrimary::Standby() {
         return ret;
 }
 
-int StreamOutPrimary::SetParameters(const char* kvpairs) {
-
-    struct str_parms *parms = (str_parms *)NULL;
+int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     char value[64];
     int ret = 0, val = 0, noQalDevices = 0;
     qal_device_id_t * deviceId;
@@ -1219,10 +1231,7 @@ int StreamOutPrimary::SetParameters(const char* kvpairs) {
     struct qal_channel_info *ch_info;
     int channels = 0;
 
-    ALOGD("%s: enter: kvpairs=%s", __func__, kvpairs);
-    parms = str_parms_create_str(kvpairs);
-    if (!parms)
-        goto error;
+    ALOGD("%s: enter ", __func__);
 
     if (!mInitialized)
         goto error;
@@ -1299,6 +1308,16 @@ int StreamOutPrimary::SetParameters(const char* kvpairs) {
 error:
    ALOGE("%s: exit %d\n", __func__, ret);
    return ret;
+}
+
+int StreamOutPrimary::VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, struct str_parms *parms) {
+    int ret = 0;
+
+    ALOGD("%s Enter", __func__);
+    if (adevice->voice_)
+        ret = adevice->voice_->VoiceOutSetParameters(parms);
+
+    return ret;
 }
 
 int StreamOutPrimary::SetVolume(float left , float right) {

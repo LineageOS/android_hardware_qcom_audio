@@ -40,6 +40,7 @@
 #include <system/audio.h>
 
 #include "AudioStream.h"
+#include "AudioVoice.h"
 
 #define COMPRESS_VOIP_IO_BUF_SIZE_NB 320
 #define COMPRESS_VOIP_IO_BUF_SIZE_WB 640
@@ -72,15 +73,19 @@ public:
     void CloseStreamIn(std::shared_ptr<StreamInPrimary> stream);
     std::shared_ptr<StreamInPrimary> InGetStream(audio_io_handle_t handle);
     std::shared_ptr<StreamInPrimary> InGetStream(audio_stream_t* stream_in);
+    std::shared_ptr<AudioVoice> voice_;
     int SetMicMute(bool state);
     int GetMicMute(bool *state);
     int SetParameters(const char *kvpairs);
     char* GetParameters(const char *keys);
+    int SetMode(const audio_mode_t mode);
+    int SetVoiceVolume(float volume);
 
 protected:
     AudioDevice(){
     }
 
+    std::shared_ptr<AudioVoice> VoiceInit();
     static std::shared_ptr<AudioDevice> adev_;
     static std::shared_ptr<audio_hw_device_t> device_;
     std::vector<std::shared_ptr<StreamOutPrimary>> stream_out_list_;
