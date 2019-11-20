@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--- Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.       -->
+<!--- Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.       -->
 <!---                                                                           -->
 <!--- Redistribution and use in source and binary forms, with or without        -->
 <!--- modification, are permitted provided that the following conditions are    -->
@@ -46,12 +46,14 @@
         <!-- Below backend params must match with port used in mixer path file -->
         <!-- param used to configure backend sample rate, format and channels -->
         <!-- uncomment TX_CDC_DMA_TX_3 values for internal codec and comment SLIM_0_TX values -->
-        <param backend_port_name="SLIM_0_TX" />
+        <param backend_port_name="TERT_TDM_TX_0" />
         <!-- param backend_port_name="TX_CDC_DMA_TX_3" /-->
         <!-- Param used to match and obtain device backend index -->
-        <param backend_dai_name="SLIMBUS_0_TX" />
+        <param backend_dai_name="TERT_TDM_TX_0" />
         <!-- param backend_dai_name="TX_CDC_DMA_TX_3" /-->
-
+        <param concurrent_capture="true" />
+        <param concurrent_voice_call="false" />
+        <param concurrent_voip_call="false" />
     </common_config>
     <acdb_ids>
         <!--For internal codec please enable below device-->
@@ -61,7 +63,7 @@
         <param DEVICE_HANDSET_MIC_ECPP_CPE="128" />
         <param DEVICE_HANDSET_TMIC_CPE="130" />
         <param DEVICE_HANDSET_MIC_PP_APE="135" />
-        <param DEVICE_HANDSET_QMIC_APE="137" />
+        <param DEVICE_HANDSET_QMIC_APE="132" />
         <param DEVICE_HEADSET_MIC_CPE="139" />
         <param DEVICE_HANDSET_DMIC_APE="149" />
         <param DEVICE_HANDSET_DMIC_CPE="153" />
@@ -72,7 +74,7 @@
     <!-- configuration. ISV must use their own unique vendor_uuid.          -->
     <sound_model_config>
         <param vendor_uuid="68ab2d40-e860-11e3-95ef-0002a5d5c51b" />
-        <param execution_type="WDSP" /> <!-- value: "WDSP" "ADSP" "DYNAMIC" -->
+        <param execution_type="ADSP" /> <!-- value: "WDSP" "ADSP" "DYNAMIC" -->
         <param library="libsmwrapper.so" />
         <param max_cpe_phrases="6" />
         <param max_cpe_users="3" />
@@ -85,9 +87,10 @@
         <!-- adm_cfg_profile should match with the one defined under adm_config -->
         <!-- Set it to NONE if LSM directly connects to AFE -->
         <param adm_cfg_profile="FFECNS" />
-        <!-- fluence_type: "FLUENCE", "FLUENCE_DMIC", "FLUENCE_TMIC", -->
-        <!-- "FLUENCE_QMIC". param value is valid when adm_cfg_profile="FLUENCE"-->
-        <param fluence_type="FLUENCE_TMIC" />
+        <!-- fluence_type: "FLUENCE", "FLUENCE_DMIC", "FLUENCE_TMIC"   -->
+        <!-- "FLUENCE_QMIC". Param value is valid when adm_cfg_profile -->
+        <!-- is one of FLUENCE, FLUENCE_STEREO, FFECNS values          -->
+        <param fluence_type="FLUENCE_QMIC" />
         <!-- wdsp_fluence_type: fluence disabled: "NONE" -->
         <!-- fluence enabled: "FLUENCE_DMIC", "FLUENCE_TMIC", "FLUENCE_QMIC" -->
         <param wdsp_fluence_type="NONE" />
@@ -158,7 +161,7 @@
         <lsm_usecase>
             <param execution_mode="ADSP" />
             <param app_type="2" /> <!-- app type used in ACDB -->
-            <param in_channels="5"/> <!-- Module input channels -->
+            <param in_channels="4"/> <!-- Module input channels -->
             <param load_sound_model_ids="0x00012C1C, 0x00012C14" />
             <param unload_sound_model_ids="0x00012C1C, 0x00012C15" />
             <param confidence_levels_ids="0x00012C1C, 0x00012C07" />
@@ -182,6 +185,10 @@
             transfer mode -->
         <param capture_keyword="PCM_packet, RT, 2000" />
         <param client_capture_read_delay="2000" />
+        <param lpi_enable="false" />
+        <param concurrent_capture="true" />
+        <param concurrent_voice_call="false" />
+        <param concurrent_voip_call="false" />
     </sound_model_config>
 
     <!-- QTI Music Detection !-->
@@ -324,28 +331,31 @@
         <param app_type="69938" />
         <param sample_rate="16000" />
         <param bit_width="16" />
+        <param out_channels="4"/>
     </adm_config>
 
     <adm_config>
         <param adm_cfg_profile="FLUENCE" />
-        <param app_type="69944" />
+        <param app_type="69938" />
         <param sample_rate="16000" />
         <param bit_width="16" />
+        <param out_channels="4"/>
     </adm_config>
 
     <adm_config>
         <param adm_cfg_profile="FLUENCE_STEREO" />
-        <param app_type="69948" />
+        <param app_type="69938" />
         <param sample_rate="16000" />
         <param bit_width="16" />
+        <param out_channels="4"/>
     </adm_config>
 
     <adm_config>
         <param adm_cfg_profile="FFECNS" />
-        <param app_type="69947" />
+        <param app_type="69938" />
         <param sample_rate="16000" />
         <param bit_width="16" />
-        <param out_channels="5"/>
+        <param out_channels="4"/>
     </adm_config>
 
     <!-- backend_type tag defines backend type for each device -->

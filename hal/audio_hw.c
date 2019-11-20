@@ -44,7 +44,7 @@
 #else
 #define ALOGVV(a...) do { } while(0)
 #endif
-
+#include <limits.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -490,6 +490,8 @@ static const struct string_to_enum out_sample_rates_name_to_enum_table[] = {
     STRING_TO_ENUM(96000),
     STRING_TO_ENUM(176400),
     STRING_TO_ENUM(192000),
+    STRING_TO_ENUM(352800),
+    STRING_TO_ENUM(384000),
 };
 
 struct in_effect_list {
@@ -1769,13 +1771,13 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
         if (usecase->type != PCM_PLAYBACK &&
                 usecase != uc_info &&
                 (usecase->in_snd_device != snd_device || force_routing) &&
-                ((uc_info->devices & backend_check_cond) &&
+                (((uc_info->devices & backend_check_cond) &&
                  (((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND) ||
-                  (usecase->type == VOIP_CALL))) &&
+                  (usecase->type == VOIP_CALL))) ||
                 ((uc_info->type == VOICE_CALL &&
                   usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL) ||
                  platform_check_backends_match(snd_device,\
-                                              usecase->in_snd_device)) &&
+                                              usecase->in_snd_device))) &&
                 (usecase->id != USECASE_AUDIO_SPKR_CALIB_TX)) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
@@ -6365,7 +6367,8 @@ static int in_standby(struct audio_stream *stream)
     if (!in->standby && in->is_st_session) {
         ALOGD("%s: sound trigger pcm stop lab", __func__);
         audio_extn_sound_trigger_stop_lab(in);
-        adev->num_va_sessions--;
+        if (adev->num_va_sessions > 0)
+            adev->num_va_sessions--;
         in->standby = 1;
     }
 
@@ -6406,8 +6409,10 @@ static int in_standby(struct audio_stream *stream)
         if (do_stop)
             status = stop_input_stream(in);
 
-        if (in->source == AUDIO_SOURCE_VOICE_RECOGNITION)
-            adev->num_va_sessions--;
+        if (in->source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+            if (adev->num_va_sessions > 0)
+                adev->num_va_sessions--;
+        }
 
         pthread_mutex_unlock(&adev->lock);
     }
@@ -6661,7 +6666,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         /* Read from sound trigger HAL */
         audio_extn_sound_trigger_read(in, buffer, bytes);
         if (in->standby) {
-            adev->num_va_sessions++;
+            if (adev->num_va_sessions < UINT_MAX)
+                adev->num_va_sessions++;
             in->standby = 0;
         }
         pthread_mutex_unlock(&in->lock);
@@ -6685,8 +6691,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             ret = voice_extn_compress_voip_start_input_stream(in);
         else
             ret = start_input_stream(in);
-        if (!ret && in->source == AUDIO_SOURCE_VOICE_RECOGNITION)
-            adev->num_va_sessions++;
+        if (!ret && in->source == AUDIO_SOURCE_VOICE_RECOGNITION) {
+            if (adev->num_va_sessions < UINT_MAX)
+                adev->num_va_sessions++;
+        }
         pthread_mutex_unlock(&adev->lock);
         if (ret != 0) {
             goto exit;

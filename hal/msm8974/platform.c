@@ -302,6 +302,7 @@ struct platform_data {
     bool ec_ref_enabled;
     bool is_wsa_speaker;
     bool hifi_audio;
+    bool is_cls_ab_only_supported;
     bool is_i2s_ext_modem;
     bool is_acdb_initialized;
     bool ec_car_state;
@@ -1711,7 +1712,11 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
          !strncmp(snd_card_name, "atoll-idp-snd-card",
                    sizeof("atoll-idp-snd-card")) ||
          !strncmp(snd_card_name, "atoll-qrd-snd-card",
-                   sizeof("atoll-qrd-snd-card"))) {
+                   sizeof("atoll-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "bengal-idp-snd-card",
+                   sizeof("bengal-idp-snd-card")) ||
+         !strncmp(snd_card_name, "bengal-qrd-snd-card",
+                   sizeof("bengal-qrd-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -1901,9 +1906,6 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
                     MIXER_PATH_MAX_LENGTH);
         else if (out_device & AUDIO_DEVICE_OUT_USB_HEADSET)
             strlcat(ec_ref_mixer_path, " usb-headphones",
-                    MIXER_PATH_MAX_LENGTH);
-        else if (out_device & AUDIO_DEVICE_OUT_BUS)
-            strlcpy(ec_ref_mixer_path, "multi-mic-echo-reference",
                     MIXER_PATH_MAX_LENGTH);
 
         if (audio_route_apply_and_update_path(adev->audio_route,
@@ -3253,7 +3255,6 @@ void *platform_init(struct audio_device *adev)
         my_data->hifi_audio = true;
     set_platform_defaults(my_data);
 
-
     /* Initialize ACDB ID's */
     if (my_data->is_i2s_ext_modem && !is_auto_snd_card(snd_card_name))
         platform_info_init(PLATFORM_INFO_XML_PATH_I2S, my_data, PLATFORM);
@@ -3277,6 +3278,9 @@ void *platform_init(struct audio_device *adev)
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "atoll-qrd-snd-card",
                sizeof("atoll-qrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "bengal-qrd-snd-card",
+               sizeof("bengal-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card")))
@@ -3540,7 +3544,8 @@ acdb_init_fail:
             !strncmp(snd_card_name, "kona", strlen("kona")) ||
             !strncmp(snd_card_name, "lito", strlen("lito")) ||
             !strncmp(snd_card_name, "atoll", strlen("atoll")) ||
-            !strncmp(snd_card_name, "trinket", strlen("trinket"))) {
+            !strncmp(snd_card_name, "trinket", strlen("trinket"))||
+            !strncmp(snd_card_name, "bengal", strlen("bengal"))) {
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
@@ -3568,6 +3573,13 @@ acdb_init_fail:
             if (default_rx_backend)
                 free(default_rx_backend);
             default_rx_backend = strdup("WSA_CDC_DMA_RX_0");
+            if(!strncmp(snd_card_name, "bengal", strlen("bengal"))) {
+                my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+                        strdup("RX_CDC_DMA_RX_1 Format");
+                my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+                        strdup("RX_CDC_DMA_RX_1 SampleRate");
+                default_rx_backend = strdup("RX_CDC_DMA_RX_1");
+            }
         } else if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
                !strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
                !strncmp(snd_card_name, "qcs605", strlen("qcs605"))) {
@@ -3757,6 +3769,11 @@ acdb_init_fail:
     ret = audio_extn_utils_get_codec_version(snd_card_name,
                                              my_data->adev->snd_card,
                                              my_data->codec_version);
+
+    /* WCD9370 codec variant only supports Class AB power mode */
+    if (strstr(my_data->codec_variant, "WCD9370")) {
+        my_data->is_cls_ab_only_supported = true;
+    }
 
     if (NATIVE_AUDIO_MODE_INVALID != platform_get_native_support()) {
         /*
@@ -9469,13 +9486,18 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
 
     if (snd_device == SND_DEVICE_OUT_HEADPHONES || snd_device ==
         SND_DEVICE_OUT_HEADPHONES_44_1 || snd_device == SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER) {
-        if (sample_rate > 48000 ||
-            (bit_width >= 24 && (sample_rate == 48000  || sample_rate == 44100))) {
-            ALOGI("%s: apply HPH HQ mode\n", __func__);
-            audio_route_apply_and_update_path(adev->audio_route, "hph-highquality-mode");
+        if (my_data->is_cls_ab_only_supported) {
+           ALOGI("%s: apply CLS AB HPH power mode\n", __func__);
+           audio_route_apply_and_update_path(adev->audio_route, "hph-class-ab-mode");
         } else {
-            ALOGI("%s: apply HPH LP mode\n", __func__);
-            audio_route_apply_and_update_path(adev->audio_route, "hph-lowpower-mode");
+            if (sample_rate > 48000 ||
+                (bit_width >= 24 && (sample_rate == 48000  || sample_rate == 44100))) {
+                ALOGI("%s: apply HPH HQ mode\n", __func__);
+                audio_route_apply_and_update_path(adev->audio_route, "hph-highquality-mode");
+            } else {
+                ALOGI("%s: apply HPH LP mode\n", __func__);
+                audio_route_apply_and_update_path(adev->audio_route, "hph-lowpower-mode");
+            }
         }
     }
 
@@ -11656,8 +11678,8 @@ int platform_get_controller_stream_from_params(struct str_parms *parms,
     str_parms_get_int(parms, "stream", stream);
     if (*controller < 0 || *controller >= MAX_CONTROLLERS ||
             *stream < 0 || *stream >= MAX_STREAMS_PER_CONTROLLER) {
-        controller = 0;
-        stream = 0;
+        *controller = 0;
+        *stream = 0;
         return -1;
     }
     return 0;

@@ -239,8 +239,8 @@
     <!-- RT Proxy Cal end -->
 
     <!-- Incall Recording -->
-    <ctl name="MultiMedia1 Mixer VOC_REC_UL" value="0" />
-    <ctl name="MultiMedia1 Mixer VOC_REC_DL" value="0" />
+    <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="0" />
+    <ctl name="MultiMedia9 Mixer VOC_REC_DL" value="0" />
     <ctl name="MultiMedia8 Mixer VOC_REC_UL" value="0" />
     <ctl name="MultiMedia8 Mixer VOC_REC_DL" value="0" />
     <!-- Incall Recording End -->
@@ -2088,7 +2088,7 @@
     </path>
 
     <path name="incall-rec-uplink">
-        <ctl name="MultiMedia1 Mixer VOC_REC_UL" value="1" />
+        <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="1" />
     </path>
 
     <path name="incall-rec-uplink bt-sco">
@@ -2144,7 +2144,7 @@
     </path>
 
     <path name="incall-rec-downlink">
-        <ctl name="MultiMedia1 Mixer VOC_REC_DL"  value="1" />
+        <ctl name="MultiMedia9 Mixer VOC_REC_DL"  value="1" />
     </path>
 
     <path name="incall-rec-downlink bt-sco">
@@ -2435,7 +2435,7 @@
 
     <path name="voicemmode2-call display-port1-and-usb-headset-mic">
         <ctl name="DISPLAY_PORT1_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer TX_CDC_DMA_TX_3_MMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer USB_AUDIO_TX_MMode2" value="1" />
     </path>
 
     <path name="voicemmode2-call display-port">
@@ -2445,7 +2445,7 @@
 
     <path name="voicemmode2-call display-port1">
         <ctl name="DISPLAY_PORT1_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer USB_AUDIO_TX_MMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer TX_CDC_DMA_TX_3_MMode2" value="1" />
    </path>
 
     <!-- VoIP Rx settings -->
@@ -2769,10 +2769,18 @@
     </path>
 
     <path name="hph-highquality-mode">
+        <ctl name="RX_HPH_PWR_MODE" value="LOHIFI" />
+        <ctl name="RX HPH Mode" value="CLS_H_LOHIFI" />
     </path>
 
     <path name="hph-lowpower-mode">
+        <ctl name="RX_HPH_PWR_MODE" value="ULP" />
+        <ctl name="RX HPH Mode" value="CLS_H_ULP" />
     </path>
+
+     <path name="hph-class-ab-mode">
+        <ctl name="RX HPH Mode" value="CLS_AB" />
+     </path>
 
     <path name="true-native-mode">
     </path>
@@ -2973,6 +2981,7 @@
         <ctl name="TX DMIC MUX1" value="DMIC0" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="TX DMIC MUX2" value="DMIC3" />
+        <ctl name="TX_DEC2 Volume" value="84" />
     </path>
 
     <path name="speaker-dmic-endfire">
@@ -2981,6 +2990,7 @@
         <ctl name="TX DMIC MUX1" value="DMIC0" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="TX DMIC MUX2" value="DMIC3" />
+        <ctl name="TX_DEC2 Volume" value="84" />
     </path>
 
     <path name="dmic-endfire">
@@ -3070,6 +3080,7 @@
         <ctl name="TX DMIC MUX2" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
         <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX_DEC3 Volume" value="84" />
     </path>
 
     <path name="speaker-tmic">
@@ -3080,6 +3091,7 @@
         <ctl name="TX DMIC MUX2" value="DMIC0" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
         <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX_DEC3 Volume" value="84" />
     </path>
 
     <path name="voice-speaker-tmic">
@@ -3095,6 +3107,7 @@
         <ctl name="TX DMIC MUX2" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
         <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX_DEC3 Volume" value="84" />
         <ctl name="TX_AIF1_CAP Mixer DEC4" value="1" />
         <ctl name="TX DMIC MUX4" value="DMIC4" />
     </path>
@@ -3610,6 +3623,10 @@
     </path>
 
     <path name="incall_music_uplink speaker-and-display-port1">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink speaker-safe-and-display-port1">
         <path name="incall_music_uplink" />
     </path>
 
