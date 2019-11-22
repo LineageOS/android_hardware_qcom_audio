@@ -105,6 +105,7 @@ static unsigned int configured_low_latency_capture_period_size =
 #define MMAP_PERIOD_COUNT_MIN 32
 #define MMAP_PERIOD_COUNT_MAX 512
 #define MMAP_PERIOD_COUNT_DEFAULT (MMAP_PERIOD_COUNT_MAX)
+#define MMAP_MIN_SIZE_FRAMES_MAX 64 * 1024
 
 /* This constant enables extended precision handling.
  * TODO The flag is off until more testing is done.
@@ -3811,6 +3812,7 @@ static int out_pause(struct audio_stream_out* stream)
     int status = -ENOSYS;
     ALOGV("%s", __func__);
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        status = -ENODATA;
         lock_output_stream(out);
         if (out->compr != NULL && out->offload_state == OFFLOAD_STATE_PLAYING) {
             status = compress_pause(out->compr);
@@ -3827,7 +3829,7 @@ static int out_resume(struct audio_stream_out* stream)
     int status = -ENOSYS;
     ALOGV("%s", __func__);
     if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
-        status = 0;
+        status = -ENODATA;
         lock_output_stream(out);
         if (out->compr != NULL && out->offload_state == OFFLOAD_STATE_PAUSED) {
             status = compress_resume(out->compr);
@@ -3952,7 +3954,7 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
     lock_output_stream(out);
     pthread_mutex_lock(&adev->lock);
 
-    if (info == NULL || min_size_frames == 0) {
+    if (info == NULL || min_size_frames <= 0 || min_size_frames > MMAP_MIN_SIZE_FRAMES_MAX) {
         ALOGE("%s: info = %p, min_size_frames = %d", __func__, info, min_size_frames);
         ret = -EINVAL;
         goto exit;
@@ -4690,7 +4692,7 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
     pthread_mutex_lock(&adev->lock);
     ALOGV("%s in %p", __func__, in);
 
-    if (info == NULL || min_size_frames == 0) {
+    if (info == NULL || min_size_frames <= 0 || min_size_frames > MMAP_MIN_SIZE_FRAMES_MAX) {
         ALOGE("%s invalid argument info %p min_size_frames %d", __func__, info, min_size_frames);
         ret = -EINVAL;
         goto exit;
