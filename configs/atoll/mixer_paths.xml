@@ -239,8 +239,8 @@
     <!-- RT Proxy Cal end -->
 
     <!-- Incall Recording -->
-    <ctl name="MultiMedia1 Mixer VOC_REC_UL" value="0" />
-    <ctl name="MultiMedia1 Mixer VOC_REC_DL" value="0" />
+    <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="0" />
+    <ctl name="MultiMedia9 Mixer VOC_REC_DL" value="0" />
     <ctl name="MultiMedia8 Mixer VOC_REC_UL" value="0" />
     <ctl name="MultiMedia8 Mixer VOC_REC_DL" value="0" />
     <!-- Incall Recording End -->
@@ -2087,7 +2087,7 @@
     </path>
 
     <path name="incall-rec-uplink">
-        <ctl name="MultiMedia1 Mixer VOC_REC_UL" value="1" />
+        <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="1" />
     </path>
 
     <path name="incall-rec-uplink bt-sco">
@@ -2143,7 +2143,7 @@
     </path>
 
     <path name="incall-rec-downlink">
-        <ctl name="MultiMedia1 Mixer VOC_REC_DL"  value="1" />
+        <ctl name="MultiMedia9 Mixer VOC_REC_DL"  value="1" />
     </path>
 
     <path name="incall-rec-downlink bt-sco">
@@ -2972,6 +2972,7 @@
         <ctl name="TX DMIC MUX1" value="DMIC0" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="TX DMIC MUX2" value="DMIC3" />
+        <ctl name="TX_DEC2 Volume" value="84" />
     </path>
 
     <path name="speaker-dmic-endfire">
@@ -2980,6 +2981,7 @@
         <ctl name="TX DMIC MUX1" value="DMIC0" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="TX DMIC MUX2" value="DMIC3" />
+        <ctl name="TX_DEC2 Volume" value="84" />
     </path>
 
     <path name="dmic-endfire">
@@ -3069,6 +3071,7 @@
         <ctl name="TX DMIC MUX2" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
         <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX_DEC3 Volume" value="84" />
     </path>
 
     <path name="speaker-tmic">
@@ -3079,6 +3082,7 @@
         <ctl name="TX DMIC MUX2" value="DMIC0" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
         <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX_DEC3 Volume" value="84" />
     </path>
 
     <path name="voice-speaker-tmic">
@@ -3094,6 +3098,7 @@
         <ctl name="TX DMIC MUX2" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
         <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX_DEC3 Volume" value="84" />
         <ctl name="TX_AIF1_CAP Mixer DEC4" value="1" />
         <ctl name="TX DMIC MUX4" value="DMIC4" />
     </path>

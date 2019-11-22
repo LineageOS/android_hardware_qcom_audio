@@ -490,6 +490,8 @@ static const struct string_to_enum out_sample_rates_name_to_enum_table[] = {
     STRING_TO_ENUM(96000),
     STRING_TO_ENUM(176400),
     STRING_TO_ENUM(192000),
+    STRING_TO_ENUM(352800),
+    STRING_TO_ENUM(384000),
 };
 
 struct in_effect_list {
@@ -1769,13 +1771,13 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
         if (usecase->type != PCM_PLAYBACK &&
                 usecase != uc_info &&
                 (usecase->in_snd_device != snd_device || force_routing) &&
-                ((uc_info->devices & backend_check_cond) &&
+                (((uc_info->devices & backend_check_cond) &&
                  (((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND) ||
-                  (usecase->type == VOIP_CALL))) &&
+                  (usecase->type == VOIP_CALL))) ||
                 ((uc_info->type == VOICE_CALL &&
                   usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL) ||
                  platform_check_backends_match(snd_device,\
-                                              usecase->in_snd_device)) &&
+                                              usecase->in_snd_device))) &&
                 (usecase->id != USECASE_AUDIO_SPKR_CALIB_TX)) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],

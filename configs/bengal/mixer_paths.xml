@@ -268,6 +268,7 @@
     <ctl name="RX INT2_1 MIX1 INP0" value="ZERO" />
     <ctl name="AUX_RDAC Switch" value="0" />
     <ctl name="SpkrMono WSA_RDAC" value="ZERO" />
+    <ctl name="SpkrMono BOOST Switch" value="1" />
 
     <!-- RX Controls -->
     <ctl name="RX_MACRO RX0 MUX" value="ZERO" />
