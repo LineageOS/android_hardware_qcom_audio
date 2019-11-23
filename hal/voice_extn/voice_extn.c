@@ -753,8 +753,9 @@ int voice_extn_check_and_set_incall_music_usecase(struct audio_device *adev,
         out->config.rate = out->sample_rate;
 
         ALOGV("%s: mode=%d, usecase id=%d", __func__, adev->mode, out->usecase);
+        return 0;
     }
-    return 0;
+    return -ENOSYS;
 }
 
 
