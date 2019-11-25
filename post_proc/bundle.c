@@ -359,6 +359,92 @@ int effect_lib_create(const effect_uuid_t *uuid,
 
         context->desc = &equalizer_descriptor;
         eq_ctxt->qal_stream_handle = NULL;
+    } else if (memcmp(uuid, &bassboost_descriptor.uuid,
+               sizeof(effect_uuid_t)) == 0) {
+        bass_context_t *bass_ctxt = (bass_context_t *)
+                                         calloc(1, sizeof(bass_context_t));
+        if (bass_ctxt == NULL) {
+            return -ENOMEM;
+        }
+        context = (effect_context_t *)bass_ctxt;
+        context->ops.init = bass_init;
+        context->ops.reset = bass_reset;
+        context->ops.set_parameter = bass_set_parameter;
+        context->ops.get_parameter = bass_get_parameter;
+        context->ops.set_device = bass_set_device;
+        context->ops.set_hw_acc_mode = bass_set_mode;
+        context->ops.enable = bass_enable;
+        context->ops.disable = bass_disable;
+        context->ops.start = bass_start;
+        context->ops.stop = bass_stop;
+
+        context->desc = &bassboost_descriptor;
+        bass_ctxt->bassboost_ctxt.qal_stream_handle = NULL;
+        bass_ctxt->pbe_ctxt.qal_stream_handle = NULL;
+    } else if (memcmp(uuid, &virtualizer_descriptor.uuid,
+               sizeof(effect_uuid_t)) == 0) {
+        virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)
+                                           calloc(1, sizeof(virtualizer_context_t));
+        if (virt_ctxt == NULL) {
+            return -ENOMEM;
+        }
+        context = (effect_context_t *)virt_ctxt;
+        context->ops.init = virtualizer_init;
+        context->ops.reset = virtualizer_reset;
+        context->ops.set_parameter = virtualizer_set_parameter;
+        context->ops.get_parameter = virtualizer_get_parameter;
+        context->ops.set_device = virtualizer_set_device;
+        context->ops.set_hw_acc_mode = virtualizer_set_mode;
+        context->ops.enable = virtualizer_enable;
+        context->ops.disable = virtualizer_disable;
+        context->ops.start = virtualizer_start;
+        context->ops.stop = virtualizer_stop;
+
+        context->desc = &virtualizer_descriptor;
+        virt_ctxt-> qal_stream_handle = NULL;
+    } else if ((memcmp(uuid, &aux_env_reverb_descriptor.uuid,
+                sizeof(effect_uuid_t)) == 0) ||
+               (memcmp(uuid, &ins_env_reverb_descriptor.uuid,
+                sizeof(effect_uuid_t)) == 0) ||
+               (memcmp(uuid, &aux_preset_reverb_descriptor.uuid,
+                sizeof(effect_uuid_t)) == 0) ||
+               (memcmp(uuid, &ins_preset_reverb_descriptor.uuid,
+                sizeof(effect_uuid_t)) == 0)) {
+        reverb_context_t *reverb_ctxt = (reverb_context_t *)
+                                        calloc(1, sizeof(reverb_context_t));
+        if (reverb_ctxt == NULL) {
+            return -ENOMEM;
+        }
+        context = (effect_context_t *)reverb_ctxt;
+        context->ops.init = reverb_init;
+        context->ops.reset = reverb_reset;
+        context->ops.set_parameter = reverb_set_parameter;
+        context->ops.get_parameter = reverb_get_parameter;
+        context->ops.set_device = reverb_set_device;
+        context->ops.set_hw_acc_mode = reverb_set_mode;
+        context->ops.enable = reverb_enable;
+        context->ops.disable = reverb_disable;
+        context->ops.start = reverb_start;
+        context->ops.stop = reverb_stop;
+
+        if (memcmp(uuid, &aux_env_reverb_descriptor.uuid,
+                   sizeof(effect_uuid_t)) == 0) {
+            context->desc = &aux_env_reverb_descriptor;
+            reverb_auxiliary_init(reverb_ctxt);
+        } else if (memcmp(uuid, &ins_env_reverb_descriptor.uuid,
+                   sizeof(effect_uuid_t)) == 0) {
+            context->desc = &ins_env_reverb_descriptor;
+            reverb_insert_init(reverb_ctxt);
+        } else if (memcmp(uuid, &aux_preset_reverb_descriptor.uuid,
+                   sizeof(effect_uuid_t)) == 0) {
+            context->desc = &aux_preset_reverb_descriptor;
+            reverb_auxiliary_init(reverb_ctxt);
+        } else if (memcmp(uuid, &ins_preset_reverb_descriptor.uuid,
+                   sizeof(effect_uuid_t)) == 0) {
+            context->desc = &ins_preset_reverb_descriptor;
+            reverb_preset_init(reverb_ctxt);
+        }
+        reverb_ctxt->qal_stream_handle = NULL;
     } else {
         return -EINVAL;
     }
