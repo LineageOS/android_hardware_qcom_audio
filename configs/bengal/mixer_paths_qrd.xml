@@ -2616,7 +2616,7 @@
     <!-- These are actual sound device specific mixer settings -->
     <path name="amic1">
         <ctl name="TX DEC0 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX0" value="ADC0" />
+        <ctl name="TX SMIC MUX0" value="SWR_MIC0" />
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
         <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="ADC1_MIXER Switch" value="1" />
@@ -2624,7 +2624,7 @@
 
     <path name="amic2">
         <ctl name="TX DEC0 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX0" value="ADC1" />
+        <ctl name="TX SMIC MUX0" value="SWR_MIC4" />
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
         <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="ADC2_MIXER Switch" value="1" />
@@ -2634,7 +2634,7 @@
 
     <path name="amic3">
         <ctl name="TX DEC0 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX0" value="ADC2" />
+        <ctl name="TX SMIC MUX0" value="SWR_MIC4" />
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
         <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="ADC2_MIXER Switch" value="1" />
@@ -2665,7 +2665,7 @@
         <ctl name="TX DMIC MUX0" value="DMIC3" />
     </path>
 	
-	<path name="dmic5">
+    <path name="dmic5">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
         <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="TX DMIC MUX0" value="DMIC4" />

@@ -189,7 +189,7 @@
     <path name="listen-ape-handset-mic">
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
-        <ctl name="VA DMIC MUX0" value="DMIC4" />
+        <ctl name="VA DMIC MUX0" value="DMIC1" />
     </path>
 
     <path name="listen-ape-handset-mic-preproc">
@@ -202,7 +202,7 @@
         <ctl name="VA_AIF1_CAP Mixer DEC1" value="1" />
         <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
         <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
-        <ctl name="VA DMIC MUX0" value="DMIC4" />
+        <ctl name="VA DMIC MUX0" value="DMIC1" />
         <ctl name="VA DMIC MUX1" value="DMIC0" />
     </path>
 
