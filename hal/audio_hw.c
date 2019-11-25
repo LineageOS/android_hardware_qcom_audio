@@ -7297,6 +7297,12 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         devices = AUDIO_DEVICE_OUT_SPEAKER;
         ALOGW("%s: ignore set device to non existing USB card, use output device(%#x)",
               __func__, devices);
+        if (config->format == AUDIO_FORMAT_DEFAULT)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+        if (config->sample_rate == 0)
+            config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        if (config->channel_mask == AUDIO_CHANNEL_NONE)
+            config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
     }
 
     *stream_out = NULL;
