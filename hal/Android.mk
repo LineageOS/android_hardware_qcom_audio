@@ -169,6 +169,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT)),true)
+  LOCAL_CFLAGS += -DENABLE_EXTENDED_COMPRESS_FORMAT
+endif
+
 LOCAL_CFLAGS += -DUSE_VENDOR_EXTN
 
 # Legacy feature
