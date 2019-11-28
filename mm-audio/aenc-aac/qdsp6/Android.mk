@@ -32,7 +32,6 @@ LOCAL_VENDOR_MODULE     := true
 LOCAL_CFLAGS            := $(libOmxAacEnc-def)
 LOCAL_CFLAGS            := -Wno-format -Wno-sign-compare -Wno-sign-conversion -Wno-self-assign -Wno-parentheses-equality
 LOCAL_C_INCLUDES        := $(libOmxAacEnc-inc)
-LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libutils liblog
 LOCAL_SRC_FILES         := src/aenc_svr.c
 LOCAL_SRC_FILES         += src/omx_aac_aenc.cpp
