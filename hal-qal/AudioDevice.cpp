@@ -49,6 +49,7 @@
 
 #include <dlfcn.h>
 #include <log/log.h>
+#include <cutils/str_parms.h>
 
 #include "QalApi.h"
 #include "audio_extn.h"
@@ -575,18 +576,35 @@ int AudioDevice::SetMode(const audio_mode_t mode) {
 int AudioDevice::SetParameters(const char *kvpairs) {
     int ret = 0;
     struct str_parms *parms;
+    char value[32];
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
-
     parms = str_parms_create_str(kvpairs);
+
     ret = voice_->VoiceSetParameters(parms);
+
+    ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
+
+    if (ret >= 0) {
+        qal_param_screen_state_t param_screen_st;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
+            param_screen_st.screen_state = true;
+            ALOGD("%s:%d - screen = on",__func__,__LINE__);
+            ret = qal_set_param( QAL_PARAM_ID_SCREEN_STATE, (void*)&param_screen_st, sizeof(qal_param_screen_state_t));
+        }
+        else {
+            ALOGD("%s:%d - screen = off",__func__,__LINE__);
+            param_screen_st.screen_state = false;
+            ret = qal_set_param( QAL_PARAM_ID_SCREEN_STATE, (void*)&param_screen_st, sizeof(qal_param_screen_state_t));
+        }
+    }
+
     str_parms_destroy(parms);
 
     ALOGD("%s: exit: %s", __func__, kvpairs);
 
     return ret;
 }
-
 
 int AudioDevice::SetVoiceVolume(float volume) {
     int ret = 0;
