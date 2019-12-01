@@ -489,6 +489,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     mute_ = false;
 
     FillAndroidDeviceMap();
+    audio_extn_gef_init(adev_);
 
     return ret;
 }
@@ -500,9 +501,16 @@ std::shared_ptr<AudioVoice> AudioDevice::VoiceInit() {
 
 }
 
-std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(
-                                              audio_io_handle_t handle) {
+int AudioDevice::SetGEFParam(void *data, int length) {
+    return qal_set_param(QAL_PARAM_ID_UIEFFECT, data, length);
+}
 
+
+int AudioDevice::GetGEFParam(void *data, int *length) {
+    return qal_get_param(QAL_PARAM_ID_UIEFFECT, nullptr, (size_t *)length, data);
+}
+
+std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(audio_io_handle_t handle) {
     std::shared_ptr<StreamOutPrimary> astream_out = NULL;
     out_list_mutex.lock();
     for (int i = 0; i < stream_out_list_.size(); i++) {
@@ -834,7 +842,7 @@ char* AudioDevice::GetParameters(const char *keys) {
         int32_t val = 0;
 
         ret = qal_get_param(QAL_PARAM_ID_BT_A2DP_RECONFIG_SUPPORTED,
-                            (void **)&param_bt_a2dp, &size);
+                            (void **)&param_bt_a2dp, &size, nullptr);
         if (!ret) {
             if (size < sizeof(qal_param_bta2dp_t)) {
                 ALOGE("Size returned is smaller for BT_A2DP_RECONFIG_SUPPORTED");

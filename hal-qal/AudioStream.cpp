@@ -1566,7 +1566,7 @@ int StreamOutPrimary::StopOffloadEffects(
     if (fnp_offload_effect_stop_output_) {
         ret = fnp_offload_effect_stop_output_(ioHandle, qal_stream_handle);
         if (ret) {
-            ALOGE("%s: failed to start offload effect.", __func__);
+            ALOGE("%s: failed to stop offload effect.\n", __func__);
         }
     } else {
         ALOGE("%s: function pointer is null.", __func__);
@@ -1615,7 +1615,7 @@ StreamOutPrimary::StreamOutPrimary(
             device_cap_query->is_playback = true;
             ret = qal_get_param(QAL_PARAM_ID_DEVICE_CAPABILITY,
                                 (void **)&device_cap_query,
-                            &payload_size);
+                                &payload_size, nullptr);
             delete device_cap_query;
 
             config->sample_rate = dynamic_media_config.sample_rate;
@@ -2198,7 +2198,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
             device_cap_query->is_playback = false;
             ret = qal_get_param(QAL_PARAM_ID_DEVICE_CAPABILITY,
                                 (void **)&device_cap_query,
-                                &payload_size);
+                                &payload_size, nullptr);
             ALOGD("%s: usb fs=%d format=%d mask=%x", __func__,
                 dynamic_media_config.sample_rate,
                 dynamic_media_config.format, dynamic_media_config.mask);

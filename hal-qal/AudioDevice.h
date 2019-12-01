@@ -61,6 +61,8 @@ public:
             audio_stream_out **stream_out,
             const char *address);
     void CloseStreamOut(std::shared_ptr<StreamOutPrimary> stream);
+    int SetGEFParam(void *data, int length);
+    int GetGEFParam(void *data, int *length);
     std::shared_ptr<StreamOutPrimary> OutGetStream(audio_io_handle_t handle);
     std::shared_ptr<StreamOutPrimary> OutGetStream(audio_stream_t* audio_stream);
     std::shared_ptr<StreamInPrimary> CreateStreamIn(

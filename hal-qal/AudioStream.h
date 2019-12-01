@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -408,7 +408,7 @@ public:
                      struct audio_config *config,
                      const char *address,
                      offload_effects_start_output fnp_start_offload_effect,
-                     offload_effects_stop_output fnp_stop_offlod_effect);
+                     offload_effects_stop_output fnp_stop_offload_effect);
 
     ~StreamOutPrimary();
     int Standby();

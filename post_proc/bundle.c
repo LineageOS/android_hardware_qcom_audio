@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, 2019-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -258,7 +258,7 @@ exit:
 __attribute__ ((visibility ("default")))
 int offload_effects_bundle_hal_stop_output(audio_io_handle_t output,  qal_stream_handle_t* qal_stream_handle)
 {
-    int ret = -1;
+    int ret = 0;
     struct listnode *fx_node;
     output_context_t *out_ctxt;
 
