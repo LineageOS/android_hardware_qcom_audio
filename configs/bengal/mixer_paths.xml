@@ -60,11 +60,17 @@
     <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia16" value="0" />
     <ctl name="MultiMedia5 Mixer AFE_PCM_TX" value="0" />
     <ctl name="MultiMedia5 Mixer TX_CDC_DMA_TX_3" value="0" />
+    <ctl name="MultiMedia5 Mixer TX_CDC_DMA_TX_4" value="0" />
     <ctl name="MultiMedia1 Mixer TX_CDC_DMA_TX_3" value="0" />
     <ctl name="MultiMedia1 Mixer TX_CDC_DMA_TX_4" value="0" />
+    <ctl name="MultiMedia8 Mixer TX_CDC_DMA_TX_3" value="0" />
+    <ctl name="MultiMedia8 Mixer TX_CDC_DMA_TX_4" value="0" />
+    <ctl name="MultiMedia2 Mixer TX_CDC_DMA_TX_3" value="0" />
+    <ctl name="MultiMedia2 Mixer TX_CDC_DMA_TX_4" value="0" />
     <ctl name="MultiMedia1 Mixer SLIM_7_TX" value="0" />
     <ctl name="MultiMedia8 Mixer SLIM_7_TX" value="0" />
     <ctl name="MultiMedia10 Mixer TX_CDC_DMA_TX_3" value="0" />
+    <ctl name="MultiMedia10 Mixer TX_CDC_DMA_TX_4" value="0" />
     <ctl name="MultiMedia10 Mixer SLIM_7_TX" value="0" />
     <ctl name="MultiMedia10 Mixer AFE_PCM_TX" value="0" />
     <ctl name="DISPLAY_PORT Mixer MultiMedia1" value="0" />
@@ -233,6 +239,7 @@
     <ctl name="RX_CDC_DMA_RX_1_Voice Mixer Voip" value="0" />
     <ctl name="RX_CDC_DMA_RX_0_Voice Mixer Voip" value="0" />
     <ctl name="Voip_Tx Mixer TX_CDC_DMA_TX_3_Voip" value="0" />
+    <ctl name="Voip_Tx Mixer TX_CDC_DMA_TX_4_Voip" value="0" />
     <ctl name="SLIM_7_RX_Voice Mixer Voip" value="0" />
     <ctl name="Voip_Tx Mixer SLIM_7_TX_Voip" value="0" />
     <ctl name="AFE_PCM_RX_Voice Mixer Voip" value="0" />
@@ -301,6 +308,7 @@
 
     <!-- TX Controls -->
     <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
+    <ctl name="DEC0_BCS Switch" value="0" />
     <ctl name="MultiMedia1 Mixer TX_CDC_DMA_TX_3" value="0" />
     <ctl name="ADC2_MIXER Switch" value="0" />
     <ctl name="ADC2 MUX" value="ZERO" />
@@ -408,6 +416,7 @@
 
     <!-- defaults for mmap record -->
     <ctl name="MultiMedia16 Mixer TX_CDC_DMA_TX_3" value="0" />
+    <ctl name="MultiMedia16 Mixer TX_CDC_DMA_TX_4" value="0" />
     <ctl name="MultiMedia16 Mixer SLIM_7_TX" value="0" />
     <ctl name="MultiMedia16 Mixer SLIM_8_TX" value="0" />
     <ctl name="MultiMedia16 Mixer USB_AUDIO_TX" value="0" />
@@ -1849,6 +1858,10 @@
         <ctl name="MultiMedia8 Mixer TX_CDC_DMA_TX_3" value="1" />
     </path>
 
+    <path name="audio-record-compress headset-mic">
+        <ctl name="MultiMedia8 Mixer TX_CDC_DMA_TX_4" value="1" />
+    </path>
+
     <path name="audio-record-compress bt-sco">
         <ctl name="MultiMedia8 Mixer SLIM_7_TX" value="1" />
     </path>
@@ -1868,6 +1881,10 @@
 
     <path name="low-latency-record">
       <ctl name="MultiMedia8 Mixer TX_CDC_DMA_TX_3" value="1" />
+    </path>
+
+    <path name="low-latency-record headset-mic">
+      <ctl name="MultiMedia8 Mixer TX_CDC_DMA_TX_4" value="1" />
     </path>
 
     <path name="low-latency-record bt-sco">
@@ -2308,6 +2325,10 @@
         <ctl name="MultiMedia10 Mixer TX_CDC_DMA_TX_3" value="1" />
     </path>
 
+    <path name="audio-record-voip headset-mic">
+        <ctl name="MultiMedia10 Mixer TX_CDC_DMA_TX_4" value="1" />
+    </path>
+
     <path name="audio-record-voip usb-headset-mic">
         <ctl name="MultiMedia10 Mixer USB_AUDIO_TX" value="1" />
     </path>
@@ -2338,6 +2359,7 @@
         <ctl name="TX SMIC MUX0" value="SWR_MIC4" />
         <ctl name="TX_CDC_DMA_TX_4 Channels" value="One" />
         <ctl name="TX_AIF2_CAP Mixer DEC0" value="1" />
+        <ctl name="DEC0_BCS Switch" value="1" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP2" />
     </path>
@@ -3185,6 +3207,10 @@
       <ctl name="MultiMedia16 Mixer TX_CDC_DMA_TX_3" value="1" />
     </path>
 
+    <path name="mmap-record headset-mic">
+      <ctl name="MultiMedia16 Mixer TX_CDC_DMA_TX_4" value="1" />
+    </path>
+
     <path name="mmap-record bt-sco">
       <ctl name="MultiMedia16 Mixer SLIM_7_TX" value="1" />
     </path>
@@ -3224,6 +3250,10 @@
 
     <path name="hifi-record">
         <ctl name="MultiMedia2 Mixer TX_CDC_DMA_TX_3" value="1" />
+    </path>
+
+    <path name="hifi-record headset-mic">
+        <ctl name="MultiMedia2 Mixer TX_CDC_DMA_TX_4" value="1" />
     </path>
 
     <path name="hifi-record usb-headset-mic">
