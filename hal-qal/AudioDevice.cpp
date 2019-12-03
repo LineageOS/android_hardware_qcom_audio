@@ -475,6 +475,8 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     audio_extn_sound_trigger_init(adev_);
     voice_ = VoiceInit();
 
+    FillAndroidDeviceMap();
+
     return ret;
 }
 
@@ -575,8 +577,12 @@ int AudioDevice::SetMode(const audio_mode_t mode) {
 
 int AudioDevice::SetParameters(const char *kvpairs) {
     int ret = 0;
+    int val = 0;
     struct str_parms *parms;
     char value[32];
+    int device_count = 0;
+    int qal_device_count = 0;
+    qal_device_id_t* qal_device_ids = nullptr;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -599,6 +605,55 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         }
     }
 
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        qal_param_device_connection_t param_device_connection;
+        val = atoi(value);
+        audio_devices_t device = (audio_devices_t)val;
+
+        device_count = popcount(device);
+        if (device_count) {
+            if (qal_device_ids)
+                delete qal_device_ids;
+            qal_device_ids = new qal_device_id_t[device_count];
+            qal_device_count = GetQalDeviceIds(device, qal_device_ids);
+            for (int i = 0; i < qal_device_count; i++) {
+                param_device_connection.connection_state = true;
+                param_device_connection.id = qal_device_ids[i];
+                ret = qal_set_param(QAL_PARAM_ID_DEVICE_CONNECTION,
+                        (void*)&param_device_connection,
+                        sizeof(qal_param_device_connection_t));
+            }
+        }
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        qal_param_device_connection_t param_device_connection;
+        val = atoi(value);
+        audio_devices_t device = (audio_devices_t)val;
+
+        device_count = popcount(device);
+        if (device_count) {
+            if (qal_device_ids)
+                delete qal_device_ids;
+            qal_device_ids = new qal_device_id_t[device_count];
+            qal_device_count = GetQalDeviceIds(device, qal_device_ids);
+            for (int i = 0; i < qal_device_count; i++) {
+                param_device_connection.connection_state = false;
+                param_device_connection.id = qal_device_ids[i];
+                ret = qal_set_param(QAL_PARAM_ID_DEVICE_CONNECTION,
+                        (qal_param_payload*)&param_device_connection,
+                        sizeof(qal_param_device_connection_t));
+            }
+        }
+    }
+
+    if (qal_device_ids)
+        delete qal_device_ids;
+
     str_parms_destroy(parms);
 
     ALOGD("%s: exit: %s", __func__, kvpairs);
@@ -617,6 +672,113 @@ int AudioDevice::SetVoiceVolume(float volume) {
 char* AudioDevice::GetParameters(const char *keys __unused) {
 
     return NULL;
+}
+
+void AudioDevice::FillAndroidDeviceMap() {
+    android_device_map_.clear();
+    /* go through all devices and pushback */
+
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_EARPIECE, QAL_DEVICE_OUT_HANDSET));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_SPEAKER, QAL_DEVICE_OUT_SPEAKER));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADSET, QAL_DEVICE_OUT_WIRED_HEADSET));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADPHONE, QAL_DEVICE_OUT_WIRED_HEADPHONE));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO, QAL_DEVICE_OUT_BLUETOOTH_SCO));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET, QAL_DEVICE_OUT_BLUETOOTH_SCO_HEADSET));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT, QAL_DEVICE_OUT_BLUETOOTH_SCO_CARKIT));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP, QAL_DEVICE_OUT_BLUETOOTH_A2DP));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES, QAL_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER, QAL_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_DIGITAL, QAL_AUDIO_DEVICE_OUT_AUX_DIGITAL));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_HDMI, QAL_DEVICE_OUT_HDMI));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, QAL_DEVICE_OUT_ANLG_DOCK_HEADSET));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET, QAL_DEVICE_OUT_DGTL_DOCK_HEADSET));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_ACCESSORY, QAL_DEVICE_OUT_USB_ACCESSORY));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_DEVICE, QAL_DEVICE_OUT_USB_DEVICE));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_REMOTE_SUBMIX, QAL_DEVICE_OUT_REMOTE_SUBMIX));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_TELEPHONY_TX, QAL_DEVICE_NONE));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_LINE, QAL_DEVICE_OUT_LINE));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_HDMI_ARC, QAL_DEVICE_OUT_HDMI_ARC));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_SPDIF, QAL_DEVICE_OUT_SPDIF));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_FM, QAL_DEVICE_OUT_FM));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_LINE, QAL_DEVICE_OUT_AUX_LINE));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_SPEAKER_SAFE, QAL_DEVICE_OUT_SPEAKER_SAFE));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_IP, QAL_DEVICE_OUT_IP));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BUS, QAL_DEVICE_OUT_BUS));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_PROXY, QAL_DEVICE_OUT_PROXY));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_HEADSET, QAL_DEVICE_OUT_USB_HEADSET));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_DEFAULT, QAL_DEVICE_OUT_SPEAKER));
+
+    /* go through all in devices and pushback */
+
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_BUILTIN_MIC, QAL_DEVICE_IN_HANDSET_MIC));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_BACK_MIC, QAL_DEVICE_IN_SPEAKER_MIC));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_COMMUNICATION, QAL_DEVICE_IN_COMMUNICATION));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_AMBIENT, QAL_DEVICE_IN_AMBIENT);
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET, QAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_WIRED_HEADSET, QAL_DEVICE_IN_WIRED_HEADSET));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_AUX_DIGITAL, QAL_DEVICE_IN_AUX_DIGITAL));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_HDMI, QAL_DEVICE_IN_HDMI));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_VOICE_CALL, QAL_DEVICE_IN_HANDSET_MIC));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_TELEPHONY_RX, QAL_DEVICE_IN_TELEPHONY_RX);
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_REMOTE_SUBMIX, QAL_DEVICE_IN_REMOTE_SUBMIX);
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET, QAL_DEVICE_IN_ANLG_DOCK_HEADSET);
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET, QAL_DEVICE_IN_DGTL_DOCK_HEADSET);
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_USB_ACCESSORY, QAL_DEVICE_IN_USB_ACCESSORY));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_USB_DEVICE, QAL_DEVICE_IN_USB_DEVICE));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_FM_TUNER, QAL_DEVICE_IN_FM_TUNER));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_TV_TUNER, QAL_DEVICE_IN_TV_TUNER);
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_LINE, QAL_DEVICE_IN_LINE));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_SPDIF, QAL_DEVICE_IN_SPDIF));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_A2DP, QAL_DEVICE_IN_BLUETOOTH_A2DP);
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_LOOPBACK, QAL_DEVICE_IN_LOOPBACK);
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_IP, QAL_DEVICE_IN_IP);
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_BUS, QAL_DEVICE_IN_BUS);
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_PROXY, QAL_DEVICE_IN_PROXY));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_USB_HEADSET, QAL_DEVICE_IN_USB_HEADSET));
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_HDMI_ARC, QAL_DEVICE_IN_HDMI_ARC);
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_BLE, QAL_DEVICE_IN_BLUETOOTH_BLE);
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_DEFAULT, QAL_DEVICE_IN_DEFAULT));
+}
+
+int AudioDevice::GetQalDeviceIds(const audio_devices_t hal_device_id,
+                                 qal_device_id_t* qal_device_id) {
+    int device_count_allocated = popcount(hal_device_id & ~AUDIO_DEVICE_BIT_IN);
+    int device_count_used = 0;
+    std::map<audio_devices_t, qal_device_id_t>::iterator it = android_device_map_.begin();
+
+    if (!qal_device_id) {
+        ALOGE("%s: invalid qal device id", __func__);
+        goto error;
+    }
+    // qal device ids is supposed to have to space for the new ids
+    ALOGD("%s: haldeviceIds: %x, devices allocated %d, qal device ids %d",
+          __func__, hal_device_id, device_count_allocated, device_count_used);
+
+    while(it != android_device_map_.end() &&
+          (device_count_used != device_count_allocated)) {
+        ALOGV("%s: hal_device_id %x it->first %x, it->second %d",
+              __func__, hal_device_id, it->first, it->second);
+
+        // skip AUDIO_DEVICE_NONE as device count not 0
+        if (it->first == AUDIO_DEVICE_NONE) {
+            it = std::next(it, 1);
+            continue;
+        }
+
+        if (((hal_device_id & it->first) == it->first) &&
+            ((hal_device_id & AUDIO_DEVICE_BIT_IN) == (it->first & AUDIO_DEVICE_BIT_IN))) {
+            ALOGD("%s: haldeviceId: %x and QAL Device ID %d",
+                  __func__, it->first, it->second);
+            qal_device_id[device_count_used] = it->second;
+            device_count_used = (device_count_used + 1);
+        }
+        it = std::next(it, 1);
+    }
+    ALOGD("%s: haldeviceIds: %x, devices allocated %d, qal device ids before returning %d",
+          __func__, hal_device_id, device_count_allocated, device_count_used);
+
+error:
+    return device_count_used;
 }
 
 static int adev_open(const hw_module_t *module, const char *name __unused,

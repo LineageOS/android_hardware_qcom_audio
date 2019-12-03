@@ -81,6 +81,11 @@ public:
     int SetMode(const audio_mode_t mode);
     int SetVoiceVolume(float volume);
 
+    void FillAndroidDeviceMap();
+    int GetQalDeviceIds(
+            const audio_devices_t hal_device_id,
+            qal_device_id_t* qal_device_id);
+
 protected:
     AudioDevice(){
     }
@@ -93,6 +98,8 @@ protected:
     void *offload_effects_lib_;
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;
+
+    std::map<audio_devices_t, qal_device_id_t> android_device_map_;
 };
 
 #endif //ANDROID_HARDWARE_AHAL_ADEVICE_H_

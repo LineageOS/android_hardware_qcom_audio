@@ -920,100 +920,10 @@ static size_t astream_in_get_buffer_size(const struct audio_stream *stream) {
         return 0;
 }
 
-void StreamPrimary::fillAndroidDeviceMap () {
-
-    mAndroidDeviceMap.clear();
-    /* go through all devices and pushback */
-
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_EARPIECE, QAL_DEVICE_OUT_HANDSET));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_SPEAKER, QAL_DEVICE_OUT_SPEAKER));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADSET, QAL_DEVICE_OUT_WIRED_HEADSET));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADPHONE, QAL_DEVICE_OUT_WIRED_HEADPHONE));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO, QAL_DEVICE_OUT_BLUETOOTH_SCO));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET, QAL_DEVICE_OUT_BLUETOOTH_SCO_HEADSET));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT, QAL_DEVICE_OUT_BLUETOOTH_SCO_CARKIT));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP, QAL_DEVICE_OUT_BLUETOOTH_A2DP));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES, QAL_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER, QAL_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_DIGITAL, QAL_AUDIO_DEVICE_OUT_AUX_DIGITAL));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_HDMI, QAL_DEVICE_OUT_HDMI));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, QAL_DEVICE_OUT_ANLG_DOCK_HEADSET));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET, QAL_DEVICE_OUT_DGTL_DOCK_HEADSET));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_ACCESSORY, QAL_DEVICE_OUT_USB_ACCESSORY));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_DEVICE, QAL_DEVICE_OUT_USB_DEVICE));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_REMOTE_SUBMIX, QAL_DEVICE_OUT_REMOTE_SUBMIX));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_TELEPHONY_TX, QAL_DEVICE_NONE));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_LINE, QAL_DEVICE_OUT_LINE));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_HDMI_ARC, QAL_DEVICE_OUT_HDMI_ARC));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_SPDIF, QAL_DEVICE_OUT_SPDIF));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_FM, QAL_DEVICE_OUT_FM));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_LINE, QAL_DEVICE_OUT_AUX_LINE));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_SPEAKER_SAFE, QAL_DEVICE_OUT_SPEAKER_SAFE));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_IP, QAL_DEVICE_OUT_IP));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_BUS, QAL_DEVICE_OUT_BUS));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_PROXY, QAL_DEVICE_OUT_PROXY));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_HEADSET, QAL_DEVICE_OUT_USB_HEADSET));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_OUT_DEFAULT, QAL_DEVICE_OUT_SPEAKER));
-
-    /* go through all in devices and pushback */
-
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BUILTIN_MIC, QAL_DEVICE_IN_HANDSET_MIC));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BACK_MIC, QAL_DEVICE_IN_SPEAKER_MIC));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_COMMUNICATION, QAL_DEVICE_IN_COMMUNICATION));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_AMBIENT, QAL_DEVICE_IN_AMBIENT);
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET, QAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_WIRED_HEADSET, QAL_DEVICE_IN_WIRED_HEADSET));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_AUX_DIGITAL, QAL_DEVICE_IN_AUX_DIGITAL));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_HDMI, QAL_DEVICE_IN_HDMI));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_VOICE_CALL, QAL_DEVICE_IN_HANDSET_MIC));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_TELEPHONY_RX, QAL_DEVICE_IN_TELEPHONY_RX);
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_REMOTE_SUBMIX, QAL_DEVICE_IN_REMOTE_SUBMIX);
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET, QAL_DEVICE_IN_ANLG_DOCK_HEADSET);
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET, QAL_DEVICE_IN_DGTL_DOCK_HEADSET);
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_USB_ACCESSORY, QAL_DEVICE_IN_USB_ACCESSORY));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_USB_DEVICE, QAL_DEVICE_IN_USB_DEVICE));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_FM_TUNER, QAL_DEVICE_IN_FM_TUNER));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_TV_TUNER, QAL_DEVICE_IN_TV_TUNER);
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_LINE, QAL_DEVICE_IN_LINE));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_SPDIF, QAL_DEVICE_IN_SPDIF));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_A2DP, QAL_DEVICE_IN_BLUETOOTH_A2DP);
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_LOOPBACK, QAL_DEVICE_IN_LOOPBACK);
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_IP, QAL_DEVICE_IN_IP);
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BUS, QAL_DEVICE_IN_BUS);
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_PROXY, QAL_DEVICE_IN_PROXY));
-    mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_USB_HEADSET, QAL_DEVICE_IN_USB_HEADSET));
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_HDMI_ARC, QAL_DEVICE_IN_HDMI_ARC);
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_BLE, QAL_DEVICE_IN_BLUETOOTH_BLE);
-    //mAndroidDeviceMap.insert(std::make_pair(AUDIO_DEVICE_IN_DEFAULT, QAL_DEVICE_IN_DEFAULT));
-}
-
 int StreamPrimary::getQalDeviceIds(const audio_devices_t halDeviceIds, qal_device_id_t* qualIds) {
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    int noDeviceIdsAllocated = popcount(halDeviceIds & ~AUDIO_DEVICE_BIT_IN);
-    int noDeviceIdsUsed = 0;
-    std::map<audio_devices_t, qal_device_id_t>::iterator it = mAndroidDeviceMap.begin();
-
-    if (!qualIds) {
-        ALOGE("%s: failed ", __func__);
-        goto error;
-    }
-    //qualids is supposed to have to space for the new ids
-    ALOGD("%s: haldeviceIds: %x, devices allocated %d, qal device ids %d", __func__, halDeviceIds, noDeviceIdsAllocated, noDeviceIdsUsed);
-
-    while(it != mAndroidDeviceMap.end() && (noDeviceIdsUsed != noDeviceIdsAllocated)) {
-        ALOGV("%s: halDeviceIds %x it->first %x, it->second %d", __func__, halDeviceIds, it->first, it->second);
-
-        if ((halDeviceIds & it->first) == halDeviceIds) {
-            ALOGD("%s: haldeviceId: %x and QAL Device ID %d", __func__, it->first, it->second);
-            qualIds[noDeviceIdsUsed] = it->second;
-            noDeviceIdsUsed = (noDeviceIdsUsed + 1);
-        }
-        it = std::next(it, 1);
-    }
-    ALOGD("%s: haldeviceIds: %x, devices allocated %d, qal device ids before returning %d", __func__, halDeviceIds, noDeviceIdsAllocated, noDeviceIdsUsed);
-
-error:
-    return noDeviceIdsUsed;
+    return adevice->GetQalDeviceIds(halDeviceIds, qualIds);
 }
 
 qal_stream_type_t StreamInPrimary::GetQalStreamType(
@@ -1729,7 +1639,6 @@ StreamOutPrimary::StreamOutPrimary(
           devices, flags, address);
 
     usecase_ = GetOutputUseCase(flags);
-    fillAndroidDeviceMap();
     if (address) {
         strlcpy((char *)&address_, address, AUDIO_DEVICE_MAX_ADDRESS_LEN);
     } else {
@@ -2238,7 +2147,6 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
           devices, flags);
 
     source_ = source;
-    fillAndroidDeviceMap();
 
     usecase_ = GetInputUseCase(flags, source);
     mAndroidInDevices = devices;

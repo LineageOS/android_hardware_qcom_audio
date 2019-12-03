@@ -209,7 +209,6 @@ public:
     int getQalDeviceIds(const audio_devices_t halDeviceId, qal_device_id_t* qalOutDeviceIds);
     audio_io_handle_t GetHandle();
     int             GetUseCase();
-    void fillAndroidDeviceMap();
     std::mutex write_wait_mutex_;
     std::condition_variable write_condition_;
     bool write_ready_;
