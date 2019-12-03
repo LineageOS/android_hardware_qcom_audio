@@ -722,6 +722,25 @@ typedef struct hfp_init_config {
 
 // END: HFP FEATURE ==================================================
 
+// START: ICC FEATURE ====================================================
+bool audio_extn_icc_is_active(struct audio_device *adev);
+audio_usecase_t audio_extn_icc_get_usecase();
+void audio_extn_icc_set_parameters(struct audio_device *adev,
+                                          struct str_parms *parms);
+
+typedef struct icc_init_config {
+    fp_platform_get_pcm_device_id_t              fp_platform_get_pcm_device_id;
+    fp_platform_set_echo_reference_t             fp_platform_set_echo_reference;
+    fp_select_devices_t                          fp_select_devices;
+    fp_audio_extn_ext_hw_plugin_usecase_start_t  fp_audio_extn_ext_hw_plugin_usecase_start;
+    fp_audio_extn_ext_hw_plugin_usecase_stop_t   fp_audio_extn_ext_hw_plugin_usecase_stop;
+    fp_get_usecase_from_list_t                   fp_get_usecase_from_list;
+    fp_disable_audio_route_t                     fp_disable_audio_route;
+    fp_disable_snd_device_t                      fp_disable_snd_device;
+} icc_init_config_t;
+
+//END: ICC FEAUTRE =======================================================
+
 // START: EXT_HW_PLUGIN FEATURE ==================================================
 void* audio_extn_ext_hw_plugin_init(struct audio_device *adev);
 int audio_extn_ext_hw_plugin_deinit(void *plugin);

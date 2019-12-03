@@ -4989,6 +4989,107 @@ int audio_extn_hfp_set_mic_mute2(struct audio_device *adev, bool state)
 }
 // END: HFP ========================================================================
 
+// START: ICC ======================================================================
+#ifdef __LP64__
+#define ICC_LIB_PATH "/vendor/lib64/libicc.so"
+#else
+#define ICC_LIB_PATH "/vendor/lib/libicc.so"
+#endif
+
+static void *icc_lib_handle = NULL;
+
+typedef void (*icc_init_t)(icc_init_config_t);
+static icc_init_t icc_init;
+
+typedef bool (*icc_is_active_t)(struct audio_device *adev);
+static icc_is_active_t icc_is_active;
+
+typedef audio_usecase_t (*icc_get_usecase_t)();
+static icc_get_usecase_t icc_get_usecase;
+
+typedef void (*icc_set_parameters_t)(struct audio_device *adev,
+                                           struct str_parms *parms);
+static icc_set_parameters_t icc_set_parameters;
+
+int icc_feature_init(bool is_feature_enabled)
+{
+    ALOGD("%s: Called with feature %s", __func__,
+                  is_feature_enabled ? "Enabled" : "NOT Enabled");
+    if (is_feature_enabled) {
+        // dlopen lib
+        icc_lib_handle = dlopen(ICC_LIB_PATH, RTLD_NOW);
+
+        if (!icc_lib_handle) {
+            ALOGE("%s: dlopen failed", __func__);
+            goto feature_disabled;
+        }
+        if (!(icc_init = (icc_init_t)dlsym(
+                            icc_lib_handle, "icc_init")) ||
+            !(icc_is_active =
+                 (icc_is_active_t)dlsym(
+                            icc_lib_handle, "icc_is_active")) ||
+            !(icc_get_usecase =
+                 (icc_get_usecase_t)dlsym(
+                            icc_lib_handle, "icc_get_usecase")) ||
+            !(icc_set_parameters =
+                 (icc_set_parameters_t)dlsym(
+                            icc_lib_handle, "icc_set_parameters"))) {
+            ALOGE("%s: dlsym failed", __func__);
+            goto feature_disabled;
+        }
+        icc_init_config_t init_config;
+        init_config.fp_platform_get_pcm_device_id = platform_get_pcm_device_id;
+        init_config.fp_platform_set_echo_reference = platform_set_echo_reference;
+        init_config.fp_select_devices = select_devices;
+        init_config.fp_audio_extn_ext_hw_plugin_usecase_start =
+                                        audio_extn_ext_hw_plugin_usecase_start;
+        init_config.fp_audio_extn_ext_hw_plugin_usecase_stop =
+                                        audio_extn_ext_hw_plugin_usecase_stop;
+        init_config.fp_get_usecase_from_list = get_usecase_from_list;
+        init_config.fp_disable_audio_route = disable_audio_route;
+        init_config.fp_disable_snd_device = disable_snd_device;
+
+        icc_init(init_config);
+        ALOGD("%s:: ---- Feature ICC is Enabled ----", __func__);
+        return 0;
+    }
+
+feature_disabled:
+    if (icc_lib_handle) {
+        dlclose(icc_lib_handle);
+        icc_lib_handle = NULL;
+    }
+
+    icc_init = NULL;
+    icc_is_active = NULL;
+    icc_get_usecase = NULL;
+    icc_set_parameters = NULL;
+
+    ALOGW(":: %s: ---- Feature ICC is disabled ----", __func__);
+    return -ENOSYS;
+}
+
+bool audio_extn_icc_is_active(struct audio_device *adev)
+{
+    return ((icc_is_active) ?
+                    icc_is_active(adev): false);
+}
+
+audio_usecase_t audio_extn_icc_get_usecase()
+{
+    return ((icc_get_usecase) ?
+                    icc_get_usecase(): -1);
+}
+
+void audio_extn_icc_set_parameters(struct audio_device *adev,
+                                           struct str_parms *parms)
+{
+    ((icc_set_parameters) ?
+                    icc_set_parameters(adev, parms): NULL);
+}
+
+// END: ICC ========================================================================
+
 // START: EXT_HW_PLUGIN ===================================================================
 #ifdef __LP64__
 #define EXT_HW_PLUGIN_LIB_PATH "/vendor/lib64/libexthwplugin.so"
@@ -6313,6 +6414,9 @@ void audio_extn_feature_init()
     hfp_feature_init(
         property_get_bool("vendor.audio.feature.hfp.enable",
                            false));
+    icc_feature_init(
+        property_get_bool("vendor.audio.feature.icc.enable",
+                           false));
     ext_hw_plugin_feature_init(
         property_get_bool("vendor.audio.feature.ext_hw_plugin.enable",
                            false));
@@ -6372,6 +6476,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_set_aptx_dec_bt_addr(adev, parms);
    audio_extn_ffv_set_parameters(adev, parms);
    audio_extn_ext_hw_plugin_set_parameters(adev->ext_hw_plugin, parms);
+   audio_extn_icc_set_parameters(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,
