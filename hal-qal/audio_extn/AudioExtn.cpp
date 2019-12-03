@@ -37,7 +37,6 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
    *sr = 0;
    *ch = 0;
    uint16_t flac_sample_size = ((config_->offload_info.bit_width == 32) ? 24:config_->offload_info.bit_width);
-   ALOGE("%s: g\n", __func__);
    if (config_->offload_info.format == AUDIO_FORMAT_FLAC) {
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
         if (ret >= 0) {
@@ -57,7 +56,7 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
             param_payload->qal_snd_dec.flac_dec.max_frame_size = atoi(value);
         }
         param_payload->qal_snd_dec.flac_dec.sample_size = flac_sample_size;
-        ALOGE("FLAC metadata: sample_size %d min_blk_size %d, max_blk_size %d min_frame_size %d max_frame_size %d",
+        ALOGD("FLAC metadata: sample_size %d min_blk_size %d, max_blk_size %d min_frame_size %d max_frame_size %d",
               param_payload->qal_snd_dec.flac_dec.sample_size,
               param_payload->qal_snd_dec.flac_dec.min_blk_size,
               param_payload->qal_snd_dec.flac_dec.max_blk_size,
@@ -117,7 +116,7 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
         }
         *sr = param_payload->qal_snd_dec.alac_dec.sample_rate;
         *ch = param_payload->qal_snd_dec.alac_dec.num_channels;
-        ALOGE("ALAC CSD values: frameLength %d bitDepth %d numChannels %d"
+        ALOGD("ALAC CSD values: frameLength %d bitDepth %d numChannels %d"
                 " maxFrameBytes %d, avgBitRate %d, sampleRate %d",
                 param_payload->qal_snd_dec.alac_dec.frame_length,
                 param_payload->qal_snd_dec.alac_dec.bit_depth,
@@ -170,7 +169,7 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
         }
         *sr = param_payload->qal_snd_dec.ape_dec.sample_rate;
         *ch = param_payload->qal_snd_dec.ape_dec.num_channels;
-        ALOGE("APE CSD values: compatibleVersion %d compressionLevel %d"
+        ALOGD("APE CSD values: compatibleVersion %d compressionLevel %d"
                 " formatFlags %d blocksPerFrame %d finalFrameBlocks %d"
                 " totalFrames %d bitsPerSample %d numChannels %d"
                 " sampleRate %d seekTablePresent %d",
@@ -219,7 +218,7 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
         if (ret >= 0) {
             param_payload->qal_snd_dec.wma_dec.encodeopt2 = atoi(value);
         }
-        ALOGE("WMA params: fmt %x, bit rate %x, balgn %x, sr %d, chmsk %x"
+        ALOGD("WMA params: fmt %x, bit rate %x, balgn %x, sr %d, chmsk %x"
                 " encop %x, op1 %x, op2 %x",
                 param_payload->qal_snd_dec.wma_dec.fmt_tag,
                 param_payload->qal_snd_dec.wma_dec.avg_bit_rate,
@@ -238,8 +237,8 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
 
        param_payload->qal_snd_dec.aac_dec.audio_obj_type = 29;
        param_payload->qal_snd_dec.aac_dec.pce_bits_size = 0;
-       ALOGE("AAC params: aot %d pce %d", param_payload->qal_snd_dec.aac_dec.audio_obj_type, param_payload->qal_snd_dec.aac_dec.pce_bits_size);
-       ALOGE("format %x", config_->offload_info.format);
+       ALOGD("AAC params: aot %d pce %d", param_payload->qal_snd_dec.aac_dec.audio_obj_type, param_payload->qal_snd_dec.aac_dec.pce_bits_size);
+       ALOGD("format %x", config_->offload_info.format);
     }
     return 0;
 }
