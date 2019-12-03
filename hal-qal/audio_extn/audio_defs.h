@@ -31,6 +31,8 @@
 #define AUDIO_DEFS_H
 #include <system/audio-base.h>
 #include <system/audio.h>
+#include <errno.h>
+
 
 /**
  * extended audio codec parameters

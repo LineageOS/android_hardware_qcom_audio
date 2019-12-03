@@ -615,6 +615,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         qal_param_device_connection_t param_device_connection;
         val = atoi(value);
         audio_devices_t device = (audio_devices_t)val;
+
         if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
@@ -627,6 +628,12 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 param_device_connection.device_config.usb_addr.device_num = atoi(value);
                 ALOGI("%s: plugin device num=%d\n", __func__,
                     param_device_connection.device_config.usb_addr.device_num);
+        } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            int controller = -1, stream = -1;
+            AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
+            param_device_connection.device_config.dp_config.controller = controller;
+            param_device_connection.device_config.dp_config.stream = stream;
+            ALOGI("%s: plugin device cont %d stream %d",__func__, controller, stream);
         }
 
         device_count = popcount(device);
@@ -641,6 +648,10 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 ret = qal_set_param(QAL_PARAM_ID_DEVICE_CONNECTION,
                         (void*)&param_device_connection,
                         sizeof(qal_param_device_connection_t));
+                if (ret!=0) {
+                    ALOGE("%s: qal set param failed for device connection",__func__);
+                }
+                ALOGI("%s: qal set param success  for device connection",__func__);
             }
         }
     }
@@ -658,7 +669,12 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             ret = str_parms_get_str(parms, "device", value, sizeof(value));
             if (ret >= 0)
                 param_device_connection.device_config.usb_addr.device_num = atoi(value);
-
+        } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            int controller = -1, stream = -1;
+            AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
+            param_device_connection.device_config.dp_config.controller = controller;
+            param_device_connection.device_config.dp_config.stream = stream;
+            ALOGI("%s: plugin device cont %d stream %d",__func__, controller, stream);
         }
 
         device_count = popcount(device);
@@ -671,8 +687,12 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 param_device_connection.connection_state = false;
                 param_device_connection.id = qal_device_ids[i];
                 ret = qal_set_param(QAL_PARAM_ID_DEVICE_CONNECTION,
-                        (qal_param_payload*)&param_device_connection,
+                        (void*)&param_device_connection,
                         sizeof(qal_param_device_connection_t));
+                if (ret!=0) {
+                    ALOGE("%s: qal set param failed for device disconnect",__func__);
+                }
+                ALOGI("%s: qal set param sucess for device disconnect",__func__);
             }
         }
     }
@@ -806,7 +826,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP, QAL_DEVICE_OUT_BLUETOOTH_A2DP));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES, QAL_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER, QAL_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER));
-    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_DIGITAL, QAL_AUDIO_DEVICE_OUT_AUX_DIGITAL));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_DIGITAL, QAL_DEVICE_OUT_AUX_DIGITAL));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_HDMI, QAL_DEVICE_OUT_HDMI));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, QAL_DEVICE_OUT_ANLG_DOCK_HEADSET));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET, QAL_DEVICE_OUT_DGTL_DOCK_HEADSET));

@@ -247,3 +247,17 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
     }
     return 0;
 }
+
+int AudioExtn::get_controller_stream_from_params(struct str_parms *parms,
+                                           int *controller, int *stream) {
+
+    str_parms_get_int(parms, "controller", controller);
+    str_parms_get_int(parms, "stream", stream);
+    if (*controller < 0 || *controller >= MAX_CONTROLLERS ||
+           *stream < 0 || *stream >= MAX_STREAMS_PER_CONTROLLER) {
+        *controller = 0;
+        *stream = 0;
+        return -EINVAL;
+    }
+    return 0;
+}

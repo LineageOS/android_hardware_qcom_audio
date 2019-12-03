@@ -1639,6 +1639,22 @@ StreamOutPrimary::StreamOutPrimary(
         }
     }
 
+    if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        ALOGD("AUDIO_DEVICE_OUT_AUX_DIGITAL and DIRECT | OFFLOAD, check hdmi caps");
+        if (config->sample_rate == 0) {
+            config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+            config_.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        }
+        if (config->channel_mask == AUDIO_CHANNEL_NONE) {
+            config->channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+            config_.channel_mask = AUDIO_CHANNEL_OUT_5POINT1;
+        }
+        if (config->format == AUDIO_FORMAT_DEFAULT) {
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+            config_.format = AUDIO_FORMAT_PCM_16_BIT;
+        }
+    }
+
     usecase_ = GetOutputUseCase(flags);
     if (address) {
         strlcpy((char *)&address_, address, AUDIO_DEVICE_MAX_ADDRESS_LEN);
@@ -1672,7 +1688,6 @@ StreamOutPrimary::StreamOutPrimary(
     if (!mQalOutDevice) {
         goto error;
     }
-
 
     /* TODO: how to update based on stream parameters and see if device is supported */
     for (int i = 0; i < mNoOfOutDevices; i++) {
@@ -2284,6 +2299,7 @@ StreamPrimary::StreamPrimary(audio_io_handle_t handle,
 {
     memset(&streamAttributes_, 0, sizeof(streamAttributes_));
     memset(&address_, 0, sizeof(address_));
+    ALOGE("%s: SATISH ::: handle: %d channel_mask: %d ", __func__, handle_, config_.channel_mask);
 }
 
 StreamPrimary::~StreamPrimary(void)

@@ -38,6 +38,7 @@ class AudioExtn
 {	
 public:
    static int audio_extn_parse_compress_metadata(struct audio_config *config_, qal_param_payload *param_payload, str_parms *parms, uint32_t *sr, uint16_t *ch);
+   static int get_controller_stream_from_params(struct str_parms *parms, int *controller, int *stream);
 };
 
 #endif /* AUDIOEXTN_H */
