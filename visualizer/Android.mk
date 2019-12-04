@@ -25,6 +25,10 @@ LOCAL_CFLAGS += \
     -Wall \
     -Werror \
     -Wno-unused-variable \
+    -Wno-unused-parameter \
+    -Wno-gnu-designator \
+    -Wno-unused-value \
+    -Wno-typedef-redefinition
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
