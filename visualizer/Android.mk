@@ -24,7 +24,11 @@ LOCAL_CFLAGS+= -O2 -fvisibility=hidden
 LOCAL_CFLAGS += \
     -Wall \
     -Werror \
-    -Wno-unused-variable \
+    -Wno-gnu-designator \
+    -Wno-typedef-redefinition \
+    -Wno-unused-parameter \
+    -Wno-unused-value \
+    -Wno-unused-variable
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
