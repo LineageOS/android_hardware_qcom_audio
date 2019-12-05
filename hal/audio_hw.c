@@ -10254,6 +10254,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->use_old_pspd_mix_ctrl = false;
     adev->adm_routing_changed = false;
 
+    audio_extn_perf_lock_init();
+
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
     if (!adev->platform) {
@@ -10433,7 +10435,6 @@ static int adev_open(const hw_module_t *module, const char *name,
         adev->adm_data = adev->adm_init();
 
     qahwi_init(*device);
-    audio_extn_perf_lock_init();
     audio_extn_adsp_hdlr_init(adev->mixer);
 
     audio_extn_snd_mon_init();
