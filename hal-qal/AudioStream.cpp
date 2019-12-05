@@ -1722,7 +1722,12 @@ int StreamInPrimary::Standby() {
     int ret = 0;
 
     if (qal_stream_handle_) {
-        ret = qal_stream_stop(qal_stream_handle_);
+        if (!is_st_session) {
+            ret = qal_stream_stop(qal_stream_handle_);
+        } else {
+            ret = qal_stream_set_param(qal_stream_handle_,
+                QAL_PARAM_ID_STOP_BUFFERING, nullptr);
+        }
     }
 
     stream_started_ = false;
