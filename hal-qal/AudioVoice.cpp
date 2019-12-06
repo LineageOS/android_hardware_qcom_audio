@@ -137,8 +137,8 @@ int AudioVoice::VoiceOutSetParameters(struct str_parms *parms) {
         val = atoi(value);
         ALOGD("%s Routing is %d", __func__, val);
         if (stream_out_primary_) {
-            stream_out_primary_->getQalDeviceIds(AUDIO_DEVICE_OUT_SPEAKER, &rx_device); //Override to speaker
-            stream_out_primary_->getQalDeviceIds(GetMatchingTxDevice(AUDIO_DEVICE_OUT_EARPIECE), &tx_device); //Override to speaker
+            stream_out_primary_->getQalDeviceIds(val, &rx_device);
+            stream_out_primary_->getQalDeviceIds(GetMatchingTxDevice(val), &tx_device);
         }
         bool same_dev = qal_voice_rx_device_id_ == rx_device;
         qal_voice_rx_device_id_ = rx_device;
@@ -152,7 +152,7 @@ int AudioVoice::VoiceOutSetParameters(struct str_parms *parms) {
         } else {
             //do device switch here
             if (!same_dev) {
-                for (int i = 0; i < max_voice_sessions; i++) {
+                for (int i = 0; i < max_voice_sessions_; i++) {
                     ret = VoiceSetDevice(&voice_.session[i]);
                     if (ret)
                         ALOGE("%s Device switch failed for session[%d]\n", __func__, i);
@@ -167,9 +167,9 @@ int AudioVoice::UpdateCallState(uint32_t vsid, int call_state) {
     voice_session_t *session = NULL;
     int i = 0, ret;
     bool is_call_active;
-    int max_voice_sessions = MAX_VOICE_SESSIONS;
 
-    for (i = 0; i < max_voice_sessions; i++) {
+
+    for (i = 0; i < max_voice_sessions_; i++) {
         if (vsid == voice_.session[i].vsid) {
             session = &voice_.session[i];
             break;
@@ -193,12 +193,11 @@ int AudioVoice::UpdateCallState(uint32_t vsid, int call_state) {
 }
 
 int AudioVoice::UpdateCalls(voice_session_t *pSession) {
-    int max_voice_sessions = MAX_VOICE_SESSIONS;
     int i, ret = 0;
     voice_session_t *session = NULL;
 
 
-    for (i = 0; i < max_voice_sessions; i++) {
+    for (i = 0; i < max_voice_sessions_; i++) {
         session = &pSession[i];
         ALOGD("%s: cur_state=%d new_state=%d vsid=%x",
               __func__, session->state.current_, session->state.new_, session->vsid);
@@ -253,10 +252,9 @@ int AudioVoice::UpdateCalls(voice_session_t *pSession) {
 
 int AudioVoice::StopCall() {
 int i;
-int max_voice_sessions = MAX_VOICE_SESSIONS;
 
     voice_.in_call = false;
-    for (i = 0; i < max_voice_sessions; i++)
+    for (i = 0; i < max_voice_sessions_; i++)
         voice_.session[i].state.new_ = CALL_INACTIVE;
     return UpdateCalls(voice_.session);
 }
@@ -265,7 +263,7 @@ bool AudioVoice::IsCallActive(AudioVoice::voice_session_t *pSession) {
     int i;
     AudioVoice::voice_session_t *session = NULL;
 
-    for (i = 0; i < MAX_VOICE_SESSIONS; i++) {
+    for (i = 0; i < max_voice_sessions_; i++) {
         session = &pSession[i];
         if (session->state.current_ != CALL_INACTIVE)
             return true;
@@ -447,7 +445,7 @@ int AudioVoice::SetMicMute(bool mute) {
     voice_session_t *session = voice_.session;
 
     if (session) {
-        for (int i = 0; i < MAX_VOICE_SESSIONS; i++) {
+        for (int i = 0; i < max_voice_sessions_; i++) {
             if (session[i].qal_voice_handle) {
                 ret = qal_stream_set_mute(session[i].qal_voice_handle, mute);
                 if (ret)
@@ -471,7 +469,7 @@ int AudioVoice::SetVoiceVolume(float volume) {
         qal_vol->volume_pair[0].channel_mask = 0x01;
         qal_vol->volume_pair[0].vol = volume;
 
-        for (int i = 0; i < MAX_VOICE_SESSIONS; i++) {
+        for (int i = 0; i < max_voice_sessions_; i++) {
             if (session[i].qal_voice_handle) {
                 ret = qal_stream_set_volume(session[i].qal_voice_handle, qal_vol);
                 ALOGD("%s volume applied on voice session %d", __func__, i);
@@ -487,8 +485,9 @@ int AudioVoice::SetVoiceVolume(float volume) {
 AudioVoice::AudioVoice() {
 
     voice_.in_call = false;
+    max_voice_sessions_ = MAX_VOICE_SESSIONS;
 
-    for (int i = 0; i < MAX_VOICE_SESSIONS; i++) {
+    for (int i = 0; i < max_voice_sessions_; i++) {
         voice_.session[i].state.current_ = CALL_INACTIVE;
         voice_.session[i].state.new_ = CALL_INACTIVE;
         voice_.session[i].vsid = VOICEMMODE1_VSID;
@@ -505,7 +504,7 @@ AudioVoice::~AudioVoice() {
 
     voice_.in_call = false;
 
-    for (int i = 0; i < MAX_VOICE_SESSIONS; i++) {
+    for (int i = 0; i < max_voice_sessions_; i++) {
         voice_.session[i].state.current_ = CALL_INACTIVE;
         voice_.session[i].state.new_ = CALL_INACTIVE;
         voice_.session[i].vsid = VOICEMMODE1_VSID;
@@ -515,5 +514,6 @@ AudioVoice::~AudioVoice() {
     voice_.session[MMODE2_SESS_IDX].vsid = VOICEMMODE2_VSID;
 
     stream_out_primary_ = NULL;
+    max_voice_sessions_ = 0;
 }
 
