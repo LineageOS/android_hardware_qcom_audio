@@ -16,6 +16,24 @@
       "revId": "66e5d2cebc300b7fc2ca8c52be79b400c982dbaa",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "d97cd4a5_f0dc529f",
+        "filename": "hal/audio_extn/audio_extn.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 51,
+      "author": {
+        "id": 18220
+      },
+      "writtenOn": "2019-12-06T17:22:47Z",
+      "side": 1,
+      "message": "*it be",
+      "parentUuid": "e24fd90f_64694ea7",
+      "revId": "66e5d2cebc300b7fc2ca8c52be79b400c982dbaa",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
