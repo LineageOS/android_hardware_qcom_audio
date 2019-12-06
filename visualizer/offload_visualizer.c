@@ -978,10 +978,10 @@ int visualizer_command(effect_context_t * context, uint32_t cmdCode, uint32_t cm
             }
             const uint32_t delta_smp = context->config.inputCfg.samplingRate * latency_ms / 1000;
 
-            int32_t capture_point = visu_ctxt->capture_idx - visu_ctxt->capture_size - delta_smp;
-            int32_t capture_size = visu_ctxt->capture_size;
+            int64_t capture_point = visu_ctxt->capture_idx - visu_ctxt->capture_size - delta_smp;
+            int64_t capture_size = visu_ctxt->capture_size;
             if (capture_point < 0) {
-                int32_t size = -capture_point;
+                int64_t size = -capture_point;
                 if (size > capture_size)
                     size = capture_size;
 
