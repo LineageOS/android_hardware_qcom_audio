@@ -623,7 +623,6 @@ LOCAL_SHARED_LIBRARIES := \
     libdl \
     libexpat \
     libhidlbase \
-    libhidltransport \
     liblog \
     libtinyalsa \
     libtinycompress \
