@@ -6282,12 +6282,10 @@ static int adev_verify_devices(struct audio_device *adev)
 static int adev_close(hw_device_t *device)
 {
     size_t i;
-    struct audio_device *adev_temp = (struct audio_device *)device;
-
-    if (!adev_temp)
-        return 0;
 
     pthread_mutex_lock(&adev_init_lock);
+    if (!device || ((struct audio_device *)device != adev))
+        goto done;
 
     if ((--audio_device_ref_count) == 0) {
         audio_extn_snd_mon_unregister_listener(adev);
@@ -6306,10 +6304,11 @@ static int adev_close(hw_device_t *device)
             adev->adm_deinit(adev->adm_data);
         pthread_mutex_destroy(&adev->lock);
         free(device);
+        adev = NULL;
     }
 
+done:
     pthread_mutex_unlock(&adev_init_lock);
-
     return 0;
 }
 
