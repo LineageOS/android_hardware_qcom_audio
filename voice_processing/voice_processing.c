@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <stdlib.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/list.h>
 #include <unistd.h>
 #include <hardware/audio_effect.h>

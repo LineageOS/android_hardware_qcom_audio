@@ -105,7 +105,7 @@
 #include <sys/prctl.h>
 #include <cutils/properties.h>
 #include <cutils/str_parms.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/atomic.h>
 #include "audio_utils/primitives.h"
 #include "audio_hw.h"

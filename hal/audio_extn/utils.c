@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <cutils/str_parms.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/misc.h>
 #include <unistd.h>
 

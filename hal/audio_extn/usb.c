@@ -24,7 +24,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/str_parms.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
