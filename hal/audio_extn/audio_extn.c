@@ -44,7 +44,7 @@
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <cutils/properties.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <unistd.h>
 #include <sched.h>
 #include "audio_hw.h"
