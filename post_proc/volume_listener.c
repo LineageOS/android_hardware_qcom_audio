@@ -35,7 +35,7 @@
 #include <pthread.h>
 
 #include <cutils/list.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <hardware/audio_effect.h>
 #include <cutils/properties.h>
 #include <platform_api.h>
