@@ -61,6 +61,7 @@
     <ctl name="MultiMedia5 Mixer AFE_PCM_TX" value="0" />
     <ctl name="MultiMedia5 Mixer TX_CDC_DMA_TX_3" value="0" />
     <ctl name="MultiMedia1 Mixer TX_CDC_DMA_TX_3" value="0" />
+    <ctl name="MultiMedia1 Mixer TX_CDC_DMA_TX_4" value="0" />
     <ctl name="MultiMedia1 Mixer SLIM_7_TX" value="0" />
     <ctl name="MultiMedia8 Mixer SLIM_7_TX" value="0" />
     <ctl name="MultiMedia10 Mixer TX_CDC_DMA_TX_3" value="0" />
@@ -129,6 +130,7 @@
     <ctl name="MultiMedia5 Mixer USB_AUDIO_TX" value="0" />
     <ctl name="MultiMedia8 Mixer USB_AUDIO_TX" value="0" />
     <ctl name="MultiMedia10 Mixer USB_AUDIO_TX" value="0" />
+    <ctl name="TX_AIF2_CAP Mixer DEC0" value="0" />
     <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
     <ctl name="RX_CDC_DMA_RX_1 Channels" value="One" />
     <ctl name="RX_CDC_DMA_RX_0 Channels" value="One" />
@@ -1727,6 +1729,10 @@
         <path name="audio-record bt-sco" />
     </path>
 
+    <path name="audio-record headset-mic">
+        <ctl name="MultiMedia1 Mixer TX_CDC_DMA_TX_4" value="1" />
+    </path>
+
     <path name="audio-record bt-sco-swb">
         <path name="audio-record bt-sco" />
     </path>
@@ -2184,9 +2190,9 @@
     <!-- These are actual sound device specific mixer settings -->
     <path name="amic2">
         <ctl name="TX DEC0 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX0" value="ADC1" />
-        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
-        <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
+        <ctl name="TX SMIC MUX0" value="SWR_MIC4" />
+        <ctl name="TX_CDC_DMA_TX_4 Channels" value="One" />
+        <ctl name="TX_AIF2_CAP Mixer DEC0" value="1" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP2" />
     </path>
@@ -2297,7 +2303,7 @@
     </path>
 
     <path name="handset-mic">
-        <path name="dmic2" />
+        <path name="dmic3" />
     </path>
 
     <path name="headphones">
