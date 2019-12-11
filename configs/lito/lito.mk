@@ -12,7 +12,11 @@ BOARD_USES_ALSA_AUDIO := true
 TARGET_USES_AOSP_FOR_AUDIO := false
 
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
+ifneq ($(GENERIC_ODM_IMAGE),true)
 USE_CUSTOM_AUDIO_POLICY := 1
+else
+USE_CUSTOM_AUDIO_POLICY := 0
+endif
 AUDIO_FEATURE_QSSI_COMPLIANCE := false
 AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := false
 AUDIO_FEATURE_ENABLED_COMPRESS_INPUT := true
@@ -47,7 +51,11 @@ ifeq ($(filter R% r%,$(TARGET_PLATFORM_VERSION)),)
 AUDIO_FEATURE_ENABLED_3D_AUDIO := true
 endif
 AUDIO_FEATURE_ENABLED_AHAL_EXT := true
+ifneq ($(GENERIC_ODM_IMAGE),true)
 AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
+else
+AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := false
+endif
 DOLBY_ENABLE := false
 endif
 
@@ -400,7 +408,54 @@ PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.aac_frm_ctl.enabled=true
 
 #add dynamic feature flags here
-PRODUCT_PROPERTY_OVERRIDES += \
+ifeq ($(GENERIC_ODM_IMAGE),true)
+# Generic ODM varient related
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.a2dp_offload.enable=true \
+vendor.audio.feature.afe_proxy.enable=false \
+vendor.audio.feature.anc_headset.enable=false \
+vendor.audio.feature.battery_listener.enable=false \
+vendor.audio.feature.compr_cap.enable=false \
+vendor.audio.feature.compress_in.enable=false \
+vendor.audio.feature.compress_meta_data.enable=false \
+vendor.audio.feature.compr_voip.enable=false \
+vendor.audio.feature.concurrent_capture.enable=true  \
+vendor.audio.feature.custom_stereo.enable=false \
+vendor.audio.feature.display_port.enable=false \
+vendor.audio.feature.dsm_feedback.enable=false \
+vendor.audio.feature.dynamic_ecns.enable=false \
+vendor.audio.feature.ext_hw_plugin.enable=false \
+vendor.audio.feature.external_dsp.enable=true  \
+vendor.audio.feature.external_speaker.enable=true  \
+vendor.audio.feature.external_speaker_tfa.enable=false \
+vendor.audio.feature.fluence.enable=false \
+vendor.audio.feature.fm.enable=false \
+vendor.audio.feature.hdmi_edid.enable=false \
+vendor.audio.feature.hdmi_passthrough.enable=false \
+vendor.audio.feature.hfp.enable=true  \
+vendor.audio.feature.hifi_audio.enable=false \
+vendor.audio.feature.hwdep_cal.enable=true  \
+vendor.audio.feature.incall_music.enable=true  \
+vendor.audio.feature.multi_voice_session.enable=true \
+vendor.audio.feature.keep_alive.enable=false \
+vendor.audio.feature.kpi_optimize.enable=false \
+vendor.audio.feature.maxx_audio.enable=true  \
+vendor.audio.feature.ras.enable=false \
+vendor.audio.feature.record_play_concurency.enable=false \
+vendor.audio.feature.src_trkn.enable=false \
+vendor.audio.feature.spkr_prot.enable=true  \
+vendor.audio.feature.ssrec.enable=false \
+vendor.audio.feature.usb_offload.enable=true \
+vendor.audio.feature.usb_offload_burst_mode.enable=false  \
+vendor.audio.feature.usb_offload_sidetone_volume.enable=false \
+vendor.audio.feature.deepbuffer_as_primary.enable=false \
+vendor.audio.feature.vbat.enable=false \
+vendor.audio.feature.wsa.enable=false \
+vendor.audio.feature.audiozoom.enable=true \
+vendor.audio.feature.snd_mon.enable=true
+else
+# Non-Generic ODM varient related
+PRODUCT_ODM_PROPERTIES += \
 vendor.audio.feature.a2dp_offload.enable=true \
 vendor.audio.feature.afe_proxy.enable=true \
 vendor.audio.feature.anc_headset.enable=true \
@@ -443,6 +498,7 @@ vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=true
+endif
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \
