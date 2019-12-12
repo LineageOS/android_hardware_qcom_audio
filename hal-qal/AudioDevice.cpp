@@ -107,10 +107,12 @@ std::shared_ptr<StreamInPrimary> AudioDevice::CreateStreamIn(
                                         audio_devices_t devices,
                                         audio_input_flags_t flags,
                                         struct audio_config *config,
+                                        const char *address,
                                         audio_stream_in **stream_in,
                                         audio_source_t source) {
     std::shared_ptr<StreamInPrimary> astream (new StreamInPrimary(handle,
-                                              devices, flags, config, source));
+                                              devices, flags, config,
+                                              address, source));
     astream->GetStreamHandle(stream_in);
     stream_in_list_.push_back(astream);
     ALOGD("%s: input stream %d %p", __func__,(int)stream_in_list_.size(), stream_in); 
@@ -168,7 +170,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         goto exit;
     }
     astream = adevice->OutGetStream(handle);
- 
+
     if (astream == nullptr) {
         adevice->CreateStreamOut(handle, devices, flags, config,
                                  stream_out, address);
@@ -225,7 +227,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                   struct audio_config *config,
                                   struct audio_stream_in **stream_in,
                                   audio_input_flags_t flags,
-                                  const char *address __unused,
+                                  const char *address,
                                   audio_source_t source) {
     int32_t ret = 0;
     bool ret_error = false;
@@ -271,7 +273,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     astream = adevice->InGetStream(handle);
     if (astream == nullptr) {
-        adevice->CreateStreamIn(handle, devices, flags, config,
+        adevice->CreateStreamIn(handle, devices, flags, config, address,
                                 stream_in, source);
     }
     //Need keep track of the list of streams that are allocated
@@ -613,6 +615,19 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         qal_param_device_connection_t param_device_connection;
         val = atoi(value);
         audio_devices_t device = (audio_devices_t)val;
+        if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0) {
+                param_device_connection.device_config.usb_addr.card_id = atoi(value);
+                ALOGI("%s: plugin card=%d\n", __func__,
+                    param_device_connection.device_config.usb_addr.card_id);
+            }
+            ret = str_parms_get_str(parms, "device", value, sizeof(value));
+            if (ret >= 0)
+                param_device_connection.device_config.usb_addr.device_num = atoi(value);
+                ALOGI("%s: plugin device num=%d\n", __func__,
+                    param_device_connection.device_config.usb_addr.device_num);
+        }
 
         device_count = popcount(device);
         if (device_count) {
@@ -636,6 +651,15 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         qal_param_device_connection_t param_device_connection;
         val = atoi(value);
         audio_devices_t device = (audio_devices_t)val;
+        if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0)
+                param_device_connection.device_config.usb_addr.card_id = atoi(value);
+            ret = str_parms_get_str(parms, "device", value, sizeof(value));
+            if (ret >= 0)
+                param_device_connection.device_config.usb_addr.device_num = atoi(value);
+
+        }
 
         device_count = popcount(device);
         if (device_count) {

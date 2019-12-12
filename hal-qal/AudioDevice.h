@@ -68,6 +68,7 @@ public:
             audio_devices_t devices,
             audio_input_flags_t flags,
             struct audio_config *config,
+            const char *address,
             audio_stream_in **stream_in,
             audio_source_t source);
     void CloseStreamIn(std::shared_ptr<StreamInPrimary> stream);
