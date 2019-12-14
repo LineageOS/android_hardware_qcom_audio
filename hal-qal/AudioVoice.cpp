@@ -346,8 +346,14 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
         ret = -EINVAL;
     } else {
         ret = qal_stream_start(session->qal_voice_handle);
-        if (ret)
+        if (ret) {
             ALOGE("%s Qal Stream Start Error (%x)", __func__, ret);
+            ret = qal_stream_close(session->qal_voice_handle);
+            if (ret)
+                ALOGE("%s Qal Stream close failed %x\n", __func__, ret);
+            session->qal_voice_handle = NULL;
+            ret = -EINVAL;
+        }
         else
             ALOGD("%s Qal Stream Start Success", __func__);
     }
@@ -367,15 +373,12 @@ int AudioVoice::VoiceStop(voice_session_t *session) {
 
     if (session && session->qal_voice_handle) {
         ret = qal_stream_stop(session->qal_voice_handle);
-        if (ret) {
+        if (ret)
             ALOGE("%s Qal Stream stop failed %x\n", __func__, ret);
-        } else {
-            ret = qal_stream_close(session->qal_voice_handle);
-            if (ret)
-                ALOGE("%s Qal Stream close failed %x\n", __func__, ret);
-            else
-                session->qal_voice_handle = NULL;
-        }
+        ret = qal_stream_close(session->qal_voice_handle);
+        if (ret)
+            ALOGE("%s Qal Stream close failed %x\n", __func__, ret);
+        session->qal_voice_handle = NULL;
     }
 
     if (ret)
