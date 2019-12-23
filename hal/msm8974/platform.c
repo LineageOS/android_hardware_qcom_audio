@@ -1444,7 +1444,8 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_NONE                               ,      -1},
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
 };
-#elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
+#elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937) || \
+      defined (PLATFORM_MSM8953)
 static int (*msm_device_to_be_id)[];
 #else
 static int msm_device_to_be_id [][NO_COLS] = {
@@ -1452,7 +1453,8 @@ static int msm_device_to_be_id [][NO_COLS] = {
 };
 #endif
 
-#if defined (PLATFORM_MSMFALCON)  || defined (PLATFORM_MSM8937)
+#if defined (PLATFORM_MSMFALCON)  || defined (PLATFORM_MSM8937) || \
+    defined (PLATFORM_MSM8953)
 static int msm_device_to_be_id_internal_codec [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_EARPIECE                       ,       34},
        {AUDIO_DEVICE_OUT_SPEAKER                        ,       34},
@@ -1506,7 +1508,8 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
 };
 #endif
 
-#if defined (PLATFORM_MSMFALCON)  || defined (PLATFORM_MSM8937)
+#if defined (PLATFORM_MSMFALCON)  || defined (PLATFORM_MSM8937) || \
+    defined (PLATFORM_MSM8953)
 static int msm_be_id_array_len;
 #else
 static int msm_be_id_array_len  =
@@ -1717,7 +1720,13 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
          !strncmp(snd_card_name, "bengal-idp-snd-card",
                    sizeof("bengal-idp-snd-card")) ||
          !strncmp(snd_card_name, "bengal-qrd-snd-card",
-                   sizeof("bengal-qrd-snd-card"))) {
+                   sizeof("bengal-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "msm8937-snd-card-mtp",
+                   sizeof("msm8937-snd-card-mtp")) ||
+         !strncmp(snd_card_name, "msm8953-snd-card-mtp",
+                   sizeof("msm8953-snd-card-mtp")) ||
+         !strncmp(snd_card_name, "msm8953-sku4-snd-card",
+                   sizeof("msm8953-sku4-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -2761,6 +2770,11 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
             ALOGD("Opening %s\n", name);
             read_line_from_file(name, buf, sizeof(buf));
             if (strstr(buf, file)) {
+                if (property_get_bool("vendor.audio.read.wsatz.type", false)) {
+                    struct str_parms *parms = NULL;
+                    buf[strlen(buf) - 1] = '\0';
+                    audio_extn_spkr_prot_set_parameters(parms, buf, 0);
+                }
                 wsa_count++;
                 /*We support max only two WSA speakers*/
                 if (wsa_count == 2)
@@ -2783,7 +2797,11 @@ static bool check_and_get_wsa_info(char *snd_card_name, int *wsaCount,
                 if (((!strncmp(snd_card_name, "sdm439-sku1-snd-card",
                     sizeof("sdm439-sku1-snd-card"))) ||
                 (!strncmp(snd_card_name, "sdm439-snd-card-mtp",
-                    sizeof("sdm439-snd-card-mtp"))))) {
+                    sizeof("sdm439-snd-card-mtp"))) ||
+                (!strncmp(snd_card_name, "msm8953-snd-card-mtp",
+                    sizeof("msm8953-snd-card-mtp"))) ||
+                (!strncmp(snd_card_name, "msm8953-sku4-snd-card",
+                    sizeof("msm8953-sku4-snd-card"))))) {
                 *is_wsa_combo_supported = true;
             }
         }
@@ -3062,7 +3080,8 @@ void *platform_init(struct audio_device *adev)
         }
     }
 
-#if defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
+#if defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937) || \
+    defined (PLATFORM_MSM8953)
          if (my_data->is_internal_codec == true) {
             msm_device_to_be_id = msm_device_to_be_id_internal_codec;
             msm_be_id_array_len  =
@@ -7434,7 +7453,9 @@ static int platform_set_hfp_zone(struct platform_data *my_data, uint32_t zone)
     cal.app_type = DEFAULT_APP_TYPE_TX_PATH;
     cal.topo_id = fluence_mmsecns_config.topology_id;
     cal.module_id = fluence_mmsecns_config.module_id;
+#ifdef INSTANCE_ID_ENABLED
     cal.instance_id = fluence_mmsecns_config.instance_id;
+#endif
     cal.param_id = fluence_mmsecns_config.param_id;
 
     if (my_data->acdb_set_audio_cal) {
@@ -7492,7 +7513,9 @@ static int platform_get_hfp_zone(struct platform_data *my_data)
     cal.app_type = DEFAULT_APP_TYPE_TX_PATH;
     cal.topo_id = fluence_mmsecns_config.topology_id;
     cal.module_id = fluence_mmsecns_config.module_id;
+#ifdef INSTANCE_ID_ENABLED
     cal.instance_id = fluence_mmsecns_config.instance_id;
+#endif
     cal.param_id = fluence_mmsecns_config.param_id;
 
     dptr = (uint8_t*)calloc(param_len, sizeof(uint8_t));
@@ -11006,7 +11029,20 @@ int platform_get_vi_feedback_snd_device(snd_device_t snd_device)
 
 int platform_spkr_prot_is_wsa_analog_mode(void *adev __unused)
 {
-    return 0;
+   struct audio_device *adev_h = adev;
+   const char *snd_card_name;
+
+   /*
+    * wsa analog mode is decided based on the sound card name
+    */
+   snd_card_name = mixer_get_name(adev_h->mixer);
+   if ((!strcmp(snd_card_name, "msm8953-snd-card-mtp")) ||
+       (!strcmp(snd_card_name, "msm8953-sku4-snd-card")) ||
+       (!strcmp(snd_card_name, "sdm439-sku1-snd-card")) ||
+       (!strcmp(snd_card_name, "sdm439-snd-card-mtp")))
+       return 1;
+   else
+       return 0;
 }
 
 /*
