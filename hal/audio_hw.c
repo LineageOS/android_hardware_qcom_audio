@@ -7297,6 +7297,12 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         devices = AUDIO_DEVICE_OUT_SPEAKER;
         ALOGW("%s: ignore set device to non existing USB card, use output device(%#x)",
               __func__, devices);
+        if (config->format == AUDIO_FORMAT_DEFAULT)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+        if (config->sample_rate == 0)
+            config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        if (config->channel_mask == AUDIO_CHANNEL_NONE)
+            config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
     }
 
     *stream_out = NULL;
@@ -8437,6 +8443,15 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 usecase->stream.out->a2dp_compress_mute = false;
                 out_set_compr_volume(&usecase->stream.out->stream, usecase->stream.out->volume_l, usecase->stream.out->volume_r);
                 audio_extn_a2dp_set_handoff_mode(false);
+                pthread_mutex_unlock(&usecase->stream.out->lock);
+                break;
+            } else if ((usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+                        usecase->stream.out->a2dp_compress_mute) {
+                pthread_mutex_unlock(&adev->lock);
+                lock_output_stream(usecase->stream.out);
+                pthread_mutex_lock(&adev->lock);
+                usecase->stream.out->devices = AUDIO_DEVICE_OUT_BLUETOOTH_A2DP;
+                check_a2dp_restore_l(adev, usecase->stream.out, true);
                 pthread_mutex_unlock(&usecase->stream.out->lock);
                 break;
             }
