@@ -1439,6 +1439,11 @@ uint32_t StreamOutPrimary::GetBufferSize() {
         return get_compressed_buffer_size();
     } else if (streamAttributes_.type == QAL_STREAM_PCM_OFFLOAD) {
         return get_pcm_offload_buffer_size();
+    } else if (streamAttributes_.type == QAL_STREAM_LOW_LATENCY) {
+        return LOW_LATENCY_PLAYBACK_PERIOD_SIZE *
+            audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
     } else {
        return BUF_SIZE_PLAYBACK * NO_OF_BUF;
     }
@@ -2100,6 +2105,11 @@ uint32_t StreamInPrimary::GetBufferSize() {
     streamAttributes_.type = StreamInPrimary::GetQalStreamType(flags_);
     if (streamAttributes_.type == QAL_STREAM_VOIP_TX) {
         return voip_get_buffer_size(config_.sample_rate);
+    } else if (streamAttributes_.type == QAL_STREAM_LOW_LATENCY) {
+        return LOW_LATENCY_CAPTURE_PERIOD_SIZE *
+            audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
     } else {
        return BUF_SIZE_CAPTURE * NO_OF_BUF;
     }
