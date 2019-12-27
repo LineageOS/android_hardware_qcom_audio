@@ -184,7 +184,12 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
                 param_payload->qal_snd_dec.ape_dec.sample_rate,
                 param_payload->qal_snd_dec.ape_dec.seek_table_present);
     }
-//TODO: vorbis need to add
+    else if (config_->offload_info.format == AUDIO_FORMAT_VORBIS) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_VORBIS_BITSTREAM_FMT, value, sizeof(value));
+        if (ret >= 0) {
+            param_payload->qal_snd_dec.vorbis_dec.bit_stream_fmt = atoi(value);
+        }
+    }
     else if (config_->offload_info.format == AUDIO_FORMAT_WMA || config_->offload_info.format == AUDIO_FORMAT_WMA_PRO) {
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_FORMAT_TAG, value, sizeof(value));
         if (ret >= 0) {

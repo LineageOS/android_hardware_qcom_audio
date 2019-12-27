@@ -49,17 +49,18 @@
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
 
 const std::map<uint32_t, qal_audio_fmt_t> getFormatId {
-	{AUDIO_FORMAT_PCM,                 QAL_AUDIO_FMT_DEFAULT_PCM},
-	{AUDIO_FORMAT_MP3,                 QAL_AUDIO_FMT_MP3},
-	{AUDIO_FORMAT_AAC,                 QAL_AUDIO_FMT_AAC},
-	{AUDIO_FORMAT_AAC_ADTS,            QAL_AUDIO_FMT_AAC_ADTS},
-	{AUDIO_FORMAT_AAC_ADIF,            QAL_AUDIO_FMT_AAC_ADIF},
-	{AUDIO_FORMAT_AAC_LATM,            QAL_AUDIO_FMT_AAC_LATM},
-	{AUDIO_FORMAT_WMA,                 QAL_AUDIO_FMT_WMA_STD},
-	{AUDIO_FORMAT_ALAC,                QAL_AUDIO_FMT_ALAC},
-	{AUDIO_FORMAT_APE,                 QAL_AUDIO_FMT_APE},
-	{AUDIO_FORMAT_WMA_PRO,             QAL_AUDIO_FMT_WMA_PRO},
-        {AUDIO_FORMAT_FLAC,                QAL_AUDIO_FMT_FLAC}
+    {AUDIO_FORMAT_PCM,                 QAL_AUDIO_FMT_DEFAULT_PCM},
+    {AUDIO_FORMAT_MP3,                 QAL_AUDIO_FMT_MP3},
+    {AUDIO_FORMAT_AAC,                 QAL_AUDIO_FMT_AAC},
+    {AUDIO_FORMAT_AAC_ADTS,            QAL_AUDIO_FMT_AAC_ADTS},
+    {AUDIO_FORMAT_AAC_ADIF,            QAL_AUDIO_FMT_AAC_ADIF},
+    {AUDIO_FORMAT_AAC_LATM,            QAL_AUDIO_FMT_AAC_LATM},
+    {AUDIO_FORMAT_WMA,                 QAL_AUDIO_FMT_WMA_STD},
+    {AUDIO_FORMAT_ALAC,                QAL_AUDIO_FMT_ALAC},
+    {AUDIO_FORMAT_APE,                 QAL_AUDIO_FMT_APE},
+    {AUDIO_FORMAT_WMA_PRO,             QAL_AUDIO_FMT_WMA_PRO},
+    {AUDIO_FORMAT_FLAC,                QAL_AUDIO_FMT_FLAC},
+    {AUDIO_FORMAT_VORBIS,              QAL_AUDIO_FMT_VORBIS}
 };
 
 const uint32_t format_to_bitwidth_table[] = {
