@@ -29,7 +29,7 @@
 
 #define LOG_TAG "ahal_AudioStream"
 #define ATRACE_TAG (ATRACE_TAG_AUDIO|ATRACE_TAG_HAL)
-#define LOG_NDEBUG 0
+/*#define LOG_NDEBUG 0*/
 /*#define VERY_VERY_VERBOSE_LOGGING*/
 #ifdef VERY_VERY_VERBOSE_LOGGING
 #define ALOGVV ALOGV
@@ -218,7 +218,7 @@ static int32_t qal_callback(qal_stream_handle_t *stream_handle,
         {
             std::lock_guard<std::mutex> write_guard (astream_out->write_wait_mutex_);
             astream_out->write_ready_ = true;
-            ALOGE("%s: received WRITE_READY event\n",__func__);
+            ALOGD("%s: received WRITE_READY event\n",__func__);
             (astream_out->write_condition_).notify_all();
             event = STREAM_CBK_EVENT_WRITE_READY;
         }
@@ -228,7 +228,7 @@ static int32_t qal_callback(qal_stream_handle_t *stream_handle,
         {
             std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
             astream_out->drain_ready_ = true;
-            ALOGE("%s: received DRAIN_READY event\n",__func__);
+            ALOGD("%s: received DRAIN_READY event\n",__func__);
             (astream_out->drain_condition_).notify_all();
             event = STREAM_CBK_EVENT_DRAIN_READY;
             }
@@ -1342,7 +1342,7 @@ int64_t StreamOutPrimary::platform_render_latency(audio_output_flags_t flags_)
 {
     struct qal_stream_attributes streamAttributes_;
     streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
-    ALOGE("%s:%d type %d", __func__, __LINE__, streamAttributes_.type);
+    ALOGV("%s:%d type %d", __func__, __LINE__, streamAttributes_.type);
     switch (streamAttributes_.type) {
          case QAL_STREAM_DEEP_BUFFER:
              return DEEP_BUFFER_PLATFORM_DELAY;
@@ -1371,12 +1371,12 @@ int64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
     }
     written = total_bytes_written_/audio_bytes_per_frame(
         audio_channel_count_from_out_mask(config_.channel_mask), config_.format);
-    ALOGE("%s: total_bytes_written_ %lld, written %lld",__func__, ((long long) total_bytes_written_), ((long long) written));
+    ALOGV("%s: total_bytes_written_ %lld, written %lld",__func__, ((long long) total_bytes_written_), ((long long) written));
     signed_frames = written; //- kernel_buffer_size + avail;
     signed_frames -= (platform_render_latency(flags_) * (streamAttributes_.out_media_config.sample_rate) / 1000000LL);
     
     if (signed_frames < 0) {
-       ALOGE("%s: signed_frames -ve %lld",__func__, ((long long) signed_frames));
+       ALOGV("%s: signed_frames -ve %lld",__func__, ((long long) signed_frames));
        clock_gettime(CLOCK_MONOTONIC, timestamp);
        signed_frames = 0;
     } else {
@@ -1387,7 +1387,7 @@ int64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
 
 int StreamOutPrimary::get_compressed_buffer_size()
 {
-	ALOGE("%s:%d config_ %x", __func__, __LINE__, config_.format);
+	ALOGD("%s:%d config_ %x", __func__, __LINE__, config_.format);
     return COMPRESS_OFFLOAD_FRAGMENT_SIZE;
 }
 
@@ -1397,7 +1397,7 @@ int StreamOutPrimary::get_pcm_offload_buffer_size()
     uint8_t bytes_per_sample = audio_bytes_per_sample(config_.format);
     uint32_t fragment_size = 0;
 
-    ALOGE("%s:%d config_ format:%x, SR %d ch_mask 0x%x",
+    ALOGD("%s:%d config_ format:%x, SR %d ch_mask 0x%x",
             __func__, __LINE__, config_.format, config_.sample_rate,
             config_.channel_mask);
     fragment_size = PCM_OFFLOAD_BUFFER_DURATION *
@@ -1411,7 +1411,7 @@ int StreamOutPrimary::get_pcm_offload_buffer_size()
 
     fragment_size = ALIGN(fragment_size, (bytes_per_sample * channels * 32));
 
-    ALOGE("%s: fragment size: %d", __func__, fragment_size);
+    ALOGD("%s: fragment size: %d", __func__, fragment_size);
     return fragment_size;
 }
 
@@ -1432,7 +1432,7 @@ uint32_t StreamOutPrimary::GetBufferSize() {
     struct qal_stream_attributes streamAttributes_;
 
     streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
-    ALOGE("%s:%d type %d", __func__, __LINE__, streamAttributes_.type);
+    ALOGD("%s:%d type %d", __func__, __LINE__, streamAttributes_.type);
     if (streamAttributes_.type == QAL_STREAM_VOIP_RX) {
         return voip_get_buffer_size(config_.sample_rate);
     } else if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
@@ -1506,10 +1506,10 @@ int StreamOutPrimary::Open() {
             streamAttributes_.out_media_config.bit_width = 16;
     }
     
-    ALOGE("channels %d samplerate %d format id %d, stream type %d \n", streamAttributes_.out_media_config.ch_info->channels, streamAttributes_.out_media_config.sample_rate,
+    ALOGD("channels %d samplerate %d format id %d, stream type %d \n", streamAttributes_.out_media_config.ch_info->channels, streamAttributes_.out_media_config.sample_rate,
           streamAttributes_.out_media_config.aud_fmt_id, streamAttributes_.type);
-    ALOGE("msample_rate %d mchannels %d \n", msample_rate, mchannels);
-    ALOGE("mNoOfOutDevices %d\n", mNoOfOutDevices);
+    ALOGD("msample_rate %d mchannels %d \n", msample_rate, mchannels);
+    ALOGD("mNoOfOutDevices %d\n", mNoOfOutDevices);
     ret = qal_stream_open (&streamAttributes_,
                           mNoOfOutDevices,
                           mQalOutDevice,
@@ -1563,11 +1563,11 @@ int StreamOutPrimary::GetFrames(uint64_t *frames) {
     }
     timestamp = (uint64_t)tstamp.session_time.value_msw;
     timestamp = timestamp  << 32 | tstamp.session_time.value_lsw;
-    ALOGE("%s: session msw %u",__func__, tstamp.session_time.value_msw);
-    ALOGE("%s: session lsw %u",__func__, tstamp.session_time.value_lsw);
-    ALOGE("%s: session timespec %lld",__func__, ((long long) timestamp));
+    ALOGD("%s: session msw %u",__func__, tstamp.session_time.value_msw);
+    ALOGD("%s: session lsw %u",__func__, tstamp.session_time.value_lsw);
+    ALOGD("%s: session timespec %lld",__func__, ((long long) timestamp));
     timestamp *= (streamAttributes_.out_media_config.sample_rate);
-    ALOGE("%s: timestamp %lld",__func__, ((long long) timestamp));
+    ALOGD("%s: timestamp %lld",__func__, ((long long) timestamp));
     *frames = timestamp/1000000;
 exit:
     return ret;
@@ -1605,7 +1605,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
     qalBuffer.size = bytes;
     qalBuffer.offset = 0;
 
-    ALOGD("%s: handle_ %x Bytes:(%zu)",__func__,handle_, bytes);
+    ALOGV("%s: handle_ %x Bytes:(%zu)",__func__,handle_, bytes);
     if (!qal_stream_handle_){
         ret = Open();
         if (ret) {

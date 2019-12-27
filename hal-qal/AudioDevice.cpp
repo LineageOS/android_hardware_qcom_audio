@@ -37,7 +37,7 @@
 
 #define LOG_TAG "ahal_AudioDevice"
 #define ATRACE_TAG (ATRACE_TAG_AUDIO|ATRACE_TAG_HAL)
-#define LOG_NDEBUG 0
+/*#define LOG_NDEBUG 0*/
 /*#define VERY_VERY_VERBOSE_LOGGING*/
 #ifdef VERY_VERY_VERBOSE_LOGGING
 #define ALOGVV ALOGV
@@ -82,7 +82,7 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::CreateStreamOut(
                                               fnp_offload_effect_stop_output_));
     astream->GetStreamHandle(stream_out);
     stream_out_list_.push_back(astream);
-    ALOGE("%s: output stream %d %p", __func__,(int)stream_out_list_.size(), stream_out);
+    ALOGD("%s: output stream %d %p", __func__,(int)stream_out_list_.size(), stream_out);
     return astream;
 }
 
@@ -108,7 +108,7 @@ std::shared_ptr<StreamInPrimary> AudioDevice::CreateStreamIn(
                                               devices, flags, config, source));
     astream->GetStreamHandle(stream_in);
     stream_in_list_.push_back(astream);
-    ALOGE("%s: input stream %d %p", __func__,(int)stream_in_list_.size(), stream_in); 
+    ALOGD("%s: input stream %d %p", __func__,(int)stream_in_list_.size(), stream_in); 
     return astream;
 }
 
@@ -485,7 +485,7 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(
 std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(audio_stream_t* stream_out) {
 
     std::shared_ptr<StreamOutPrimary> astream_out;
-    ALOGD("%s: stream_out(%p)",__func__, stream_out);
+    ALOGV("%s: stream_out(%p)",__func__, stream_out);
     for (int i = 0; i < stream_out_list_.size(); i++) {
         if (stream_out_list_[i]->stream_.get() ==
                                         (audio_stream_out*) stream_out) {
@@ -494,7 +494,7 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(audio_stream_t* stre
             break;
         }
     }
-    ALOGD("%s: astream_out(%p)",__func__, astream_out->stream_.get());
+    ALOGV("%s: astream_out(%p)",__func__, astream_out->stream_.get());
 
     return astream_out;
 }
@@ -516,7 +516,7 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_io_handle_t han
 std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* stream_in) {
     std::shared_ptr<StreamInPrimary> astream_in;
 
-    ALOGE("%s: stream_in(%p)",__func__, stream_in);
+    ALOGV("%s: stream_in(%p)",__func__, stream_in);
     for (int i = 0; i < stream_in_list_.size(); i++) {
         if (stream_in_list_[i]->stream_.get() == (audio_stream_in*) stream_in) {
             ALOGI("%s: Found existing stream associated with astream_in", __func__);
@@ -524,7 +524,7 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* strea
             break;
         }
     }
-    ALOGE("%s: astream_in(%p)",__func__, astream_in->stream_.get());
+    ALOGV("%s: astream_in(%p)",__func__, astream_in->stream_.get());
     return astream_in;
 }
 
