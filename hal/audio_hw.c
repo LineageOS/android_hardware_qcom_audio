@@ -8439,6 +8439,15 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 audio_extn_a2dp_set_handoff_mode(false);
                 pthread_mutex_unlock(&usecase->stream.out->lock);
                 break;
+            } else if ((usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+                        usecase->stream.out->a2dp_compress_mute) {
+                pthread_mutex_unlock(&adev->lock);
+                lock_output_stream(usecase->stream.out);
+                pthread_mutex_lock(&adev->lock);
+                usecase->stream.out->devices = AUDIO_DEVICE_OUT_BLUETOOTH_A2DP;
+                check_a2dp_restore_l(adev, usecase->stream.out, true);
+                pthread_mutex_unlock(&usecase->stream.out->lock);
+                break;
             }
         }
     }
