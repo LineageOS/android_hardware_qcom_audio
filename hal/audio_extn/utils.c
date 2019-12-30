@@ -1077,7 +1077,9 @@ int audio_extn_utils_get_app_sample_rate_for_device(
             (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
             /* Reset to default if no native stream is active*/
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+        } else if (usecase->out_snd_device == SND_DEVICE_OUT_BT_A2DP ||
+                   usecase->out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP ||
+                   usecase->out_snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP) {
                  /*
                   * For a2dp playback get encoder sampling rate and set copp sampling rate,
                   * for bit width use the stream param only.
