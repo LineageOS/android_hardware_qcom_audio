@@ -28,7 +28,7 @@
  */
 
 #define LOG_TAG "hardware_info"
-/*#define LOG_NDEBUG 0*/
+#define LOG_NDEBUG 0
 #define LOG_NDDEBUG 0
 
 #include <stdlib.h>

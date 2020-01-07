@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "voice_extn"
-/*#define LOG_NDEBUG 0*/
+#define LOG_NDEBUG 0
 #define LOG_NDDEBUG 0
 
 #include <errno.h>

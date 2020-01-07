@@ -15,7 +15,7 @@
  */
 
 #define LOG_TAG "voice_processing"
-/*#define LOG_NDEBUG 0*/
+#define LOG_NDEBUG 0 
 #include <dlfcn.h>
 #include <unistd.h>
 #include <cutils/log.h>

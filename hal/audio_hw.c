@@ -18,7 +18,7 @@
  */
 
 #define LOG_TAG "audio_hw_primary"
-//#define LOG_NDEBUG 0
+#define LOG_NDEBUG 0
 /*#define VERY_VERY_VERBOSE_LOGGING*/
 #ifdef VERY_VERY_VERBOSE_LOGGING
 #define ALOGVV ALOGV
@@ -2730,15 +2730,26 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
     effect_descriptor_t desc;
 
     status = (*effect)->get_descriptor(effect, &desc);
+    ALOGV("%s: REMOVE-effect %p     status: %p", __func__, effect, status);
     if (status != 0)
         return status;
 
     lock_input_stream(in);
     pthread_mutex_lock(&in->dev->lock);
+
+    if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {    
+      ALOGV("%s: source == AUDIO_SOURCE_VOICE_COMMUNICATION", __func__);
+    }
+    if (in->enable_aec == enable) {    
+      ALOGV("%s: enable_aec == enable", __func__);
+      ALOGV("%s: desc.type = %s, FX_IID_AEC =%s", __func__, &desc.type, FX_IID_AEC);
+    }
+
     if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
             in->enable_aec != enable &&
             (memcmp(&desc.type, FX_IID_AEC, sizeof(effect_uuid_t)) == 0)) {
         in->enable_aec = enable;
+        ALOGV("%s: enable_aec = enable", __func__);
         if (!in->standby)
             select_devices(in->dev, in->usecase);
     }
