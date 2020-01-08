@@ -82,8 +82,9 @@ LOCAL_C_INCLUDES := \
         external/tinyalsa/include \
         vendor/qcom/opensource/audio-hal/primary-hal/hal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
-        $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         vendor/qcom/opensource/qal \
+        $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio \
+	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         $(call include-path-for, audio-effects) \
         vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn/
 
@@ -189,6 +190,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_C_INCLUDES := \
         vendor/qcom/opensource/audio-hal/primary-hal/hal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
+        $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         external/tinyalsa/include \
         $(call include-path-for, audio-effects) \
