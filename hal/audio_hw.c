@@ -4724,6 +4724,18 @@ int route_output_stream(struct stream_out *out,
         str_parms_destroy(parms);
     }
 
+    // Workaround: If routing to an non existing hdmi device, fail gracefully
+    if (compare_device_type(&new_devices, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+        (platform_get_edid_info_v2(adev->platform,
+                                   out->extconn.cs.controller,
+                                   out->extconn.cs.stream) != 0)) {
+        ALOGW("out_set_parameters() ignoring rerouting to non existing HDMI/DP");
+        pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&out->lock);
+        ret = -ENOSYS;
+        goto error;
+    }
+
     /*
      * select_devices() call below switches all the usecases on the same
      * backend to the new device. Refer to check_usecases_codec_backend() in
