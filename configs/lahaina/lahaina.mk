@@ -480,3 +480,28 @@ PRODUCT_PACKAGES_ENG += \
 
 PRODUCT_PACKAGES_DEBUG += \
     AudioSettings
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DEV_ARBI)),true)
+PRODUCT_PACKAGES_DEBUG += \
+    libaudiodevarb
+endif
+
+ifeq ($(call is-vendor-board-platform,QCOM),true)
+ifeq ($(call is-platform-sdk-version-at-least,28),true)
+PRODUCT_PACKAGES_DEBUG += \
+    libqti_resampler_headers \
+    lib_soundmodel_headers \
+    libqti_vraudio_headers
+endif
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_3D_AUDIO)),true)
+PRODUCT_PACKAGES_DEBUG += \
+    libvr_object_engine \
+    libvr_amb_engine \
+    libhoaeffects_csim
+endif
+endif
+
+ifeq ($(strip $(BOARD_SUPPORTS_SOUND_TRIGGER)),true)
+PRODUCT_PACKAGES_DEBUG += \
+    libadpcmdec
+endif
