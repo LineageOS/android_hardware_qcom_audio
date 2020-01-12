@@ -1317,6 +1317,11 @@
         <path name="headphones" />
     </path>
 
+    <path name="wsa-speaker-and-headphones">
+        <path name="wsa-speaker" />
+        <path name="headphones" />
+    </path>
+
     <path name="usb-headphones">
     </path>
 
