@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -3139,4 +3139,14 @@ size_t audio_extn_utils_get_input_buffer_size(uint32_t sample_rate,
     size = audio_extn_utils_nearest_multiple(size, audio_extn_utils_lcm(32, bytes_per_period_sample));
 
     return size;
+}
+
+int audio_extn_utils_hash_fn(void *key)
+{
+    return (int)key;
+}
+
+bool audio_extn_utils_hash_eq(void *key1, void *key2)
+{
+    return (key1 == key2);
 }

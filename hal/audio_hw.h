@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <cutils/str_parms.h>
 #include <cutils/list.h>
+#include <cutils/hashmap.h>
 #include <hardware/audio.h>
 #include <tinyalsa/asoundlib.h>
 #include <tinycompress/tinycompress.h>
@@ -336,6 +337,7 @@ struct stream_config {
     audio_devices_t devices;
     unsigned int bit_width;
 };
+
 struct stream_inout {
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by playback thread */
@@ -519,6 +521,25 @@ typedef enum {
     USECASE_TYPE_MAX
 } usecase_type_t;
 
+typedef enum {
+    PATCH_NONE = -1,
+    PATCH_PLAYBACK,
+    PATCH_CAPTURE,
+    PATCH_DEVICE_LOOPBACK
+} patch_type_t;
+
+struct audio_patch_info {
+    struct audio_patch *patch;
+    patch_type_t patch_type;
+    pthread_mutex_t lock;
+};
+
+struct audio_stream_info {
+    struct audio_stream *stream;
+    audio_patch_handle_t patch_handle;
+    pthread_mutex_t lock;
+};
+
 union stream_ptr {
     struct stream_in *in;
     struct stream_out *out;
@@ -697,6 +718,8 @@ struct audio_device {
     bool adm_routing_changed;
     struct listnode audio_patch_record_list;
     unsigned int audio_patch_index;
+    Hashmap *patch_map;
+    Hashmap *io_streams_map;
 };
 
 struct audio_patch_record {
@@ -773,6 +796,14 @@ static inline bool is_loopback_input_device(audio_devices_t device) {
     else
         return false;
 }
+
+int route_output_stream(struct stream_out *stream,
+                               audio_devices_t devices,
+                               char *address);
+int route_input_stream(struct stream_in *stream,
+                              audio_devices_t devices,
+                              char *address,
+                              audio_source_t source);
 
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the
