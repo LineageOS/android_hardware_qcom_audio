@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -3036,6 +3036,114 @@ void audio_extn_init(struct audio_device *adev)
     audio_extn_aptx_dec_set_license(adev);
 }
 
+#ifdef AUDIO_GKI_ENABLED
+int get_wma_dec_info(struct stream_out *out, struct str_parms *parms) {
+    int ret = 0;
+    char value[32];
+
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma_dec.avg_bit_rate = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma_dec.super_block_align = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma_dec.bits_per_sample = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma_dec.channelmask = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma_dec.encodeopt = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma_dec.encodeopt1 = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma_dec.encodeopt2 = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ALOGV("WMA params: fmt %x, bit rate %x, balgn %x, sr %d, chmsk %x"
+            " encop %x, op1 %x, op2 %x",
+            out->compr_config.codec->format,
+            out->compr_config.codec->options.wma_dec.avg_bit_rate,
+            out->compr_config.codec->options.wma_dec.super_block_align,
+            out->compr_config.codec->options.wma_dec.bits_per_sample,
+            out->compr_config.codec->options.wma_dec.channelmask,
+            out->compr_config.codec->options.wma_dec.encodeopt,
+            out->compr_config.codec->options.wma_dec.encodeopt1,
+            out->compr_config.codec->options.wma_dec.encodeopt2);
+
+    return ret;
+}
+#else
+int get_wma_info(struct stream_out *out, struct str_parms *parms) {
+    int ret = 0;
+    char value[32];
+
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma.avg_bit_rate = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma.super_block_align = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma.bits_per_sample = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma.channelmask = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma.encodeopt = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma.encodeopt1 = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2, value, sizeof(value));
+    if (ret >= 0) {
+        out->compr_config.codec->options.wma.encodeopt2 = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ALOGV("WMA params: fmt %x, bit rate %x, balgn %x, sr %d, chmsk %x"
+            " encop %x, op1 %x, op2 %x",
+            out->compr_config.codec->format,
+            out->compr_config.codec->options.wma.avg_bit_rate,
+            out->compr_config.codec->options.wma.super_block_align,
+            out->compr_config.codec->options.wma.bits_per_sample,
+            out->compr_config.codec->options.wma.channelmask,
+            out->compr_config.codec->options.wma.encodeopt,
+            out->compr_config.codec->options.wma.encodeopt1,
+            out->compr_config.codec->options.wma.encodeopt2);
+
+    return ret;
+}
+#endif
+
 int audio_extn_parse_compress_metadata(struct stream_out *out,
                                        struct str_parms *parms)
 {
@@ -3228,51 +3336,11 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
             out->compr_config.codec->format = atoi(value);
             out->is_compr_metadata_avail = true;
         }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.avg_bit_rate = atoi(value);
-            out->is_compr_metadata_avail = true;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.super_block_align = atoi(value);
-            out->is_compr_metadata_avail = true;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.bits_per_sample = atoi(value);
-            out->is_compr_metadata_avail = true;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.channelmask = atoi(value);
-            out->is_compr_metadata_avail = true;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.encodeopt = atoi(value);
-            out->is_compr_metadata_avail = true;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.encodeopt1 = atoi(value);
-            out->is_compr_metadata_avail = true;
-        }
-        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2, value, sizeof(value));
-        if (ret >= 0) {
-            out->compr_config.codec->options.wma.encodeopt2 = atoi(value);
-            out->is_compr_metadata_avail = true;
-        }
-        ALOGV("WMA params: fmt %x, bit rate %x, balgn %x, sr %d, chmsk %x"
-                " encop %x, op1 %x, op2 %x",
-                out->compr_config.codec->format,
-                out->compr_config.codec->options.wma.avg_bit_rate,
-                out->compr_config.codec->options.wma.super_block_align,
-                out->compr_config.codec->options.wma.bits_per_sample,
-                out->compr_config.codec->options.wma.channelmask,
-                out->compr_config.codec->options.wma.encodeopt,
-                out->compr_config.codec->options.wma.encodeopt1,
-                out->compr_config.codec->options.wma.encodeopt2);
+#ifdef AUDIO_GKI_ENABLED
+	ret = get_wma_dec_info(out, parms);
+#else
+	ret = get_wma_info(out, parms);
+#endif
     }
 
     return ret;

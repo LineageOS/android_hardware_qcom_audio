@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -244,14 +244,21 @@ int passthru_get_channel_count(struct stream_out *out)
  */
 bool passthru_should_drop_data(struct stream_out * out)
 {
+    uint32_t compr_passthr = 0;
     /*Drop data only
      *stream is routed to HDMI and
      *stream has PCM format or
      *if a compress offload (DSP decode) session
      */
+#ifdef AUDIO_QGKI_ENABLED
+    /* out->compr_config.codec->reserved[0] is for compr_passthr */
+    compr_passthr = out->compr_config.codec->reserved[0];
+#else
+    compr_passthr = out->compr_config.codec->compr_passthr;
+#endif
     if ((out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
         (((out->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM) ||
-        ((out->compr_config.codec != NULL) && (out->compr_config.codec->compr_passthr == LEGACY_PCM)))) {
+        ((out->compr_config.codec != NULL) && (compr_passthr == LEGACY_PCM)))) {
         if (android_atomic_acquire_load(&compress_passthru_active) > 0) {
             ALOGI("drop data as pass thru is active");
             return true;
@@ -461,21 +468,30 @@ void passthru_update_stream_configuration(
         struct audio_device *adev, struct stream_out *out,
         const void *buffer __unused, size_t bytes __unused)
 {
+    uint32_t compr_passthr = 0;
+
     if(out->compr_config.codec != NULL) {
         if (passthru_is_passt_supported(adev, out)) {
             ALOGV("%s:PASSTHROUGH", __func__);
-            out->compr_config.codec->compr_passthr = PASSTHROUGH;
+            compr_passthr = PASSTHROUGH;
         } else if (passthru_is_convert_supported(adev, out)) {
             ALOGV("%s:PASSTHROUGH CONVERT", __func__);
-            out->compr_config.codec->compr_passthr = PASSTHROUGH_CONVERT;
+            compr_passthr = PASSTHROUGH_CONVERT;
         } else if (out->format == AUDIO_FORMAT_IEC61937) {
             ALOGV("%s:PASSTHROUGH IEC61937", __func__);
-            out->compr_config.codec->compr_passthr = PASSTHROUGH_IEC61937;
+            compr_passthr = PASSTHROUGH_IEC61937;
         } else {
             ALOGV("%s:NO PASSTHROUGH", __func__);
-            out->compr_config.codec->compr_passthr = LEGACY_PCM;
+            compr_passthr = LEGACY_PCM;
        }
     }
+
+#ifdef AUDIO_QGKI_ENABLED
+    /* out->compr_config.codec->reserved[0] is for compr_passthr */
+    out->compr_config.codec->reserved[0] = compr_passthr;
+#else
+    out->compr_config.codec->compr_passthr = compr_passthr;
+#endif
 }
 
 bool passthru_is_passthrough_stream(struct stream_out *out)
