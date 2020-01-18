@@ -3018,78 +3018,7 @@ void *platform_init(struct audio_device *adev)
         return NULL;
     }
 
-    if (platform_is_i2s_ext_modem(snd_card_name, my_data) &&
-        !is_auto_snd_card(snd_card_name)) {
-        ALOGD("%s: Call MIXER_XML_PATH_I2S", __func__);
-
-        adev->audio_route = audio_route_init(adev->snd_card,
-                                             MIXER_XML_PATH_I2S);
-    } else {
-        /* Get the codec internal name from the sound card name
-         * and form the mixer paths file name dynamically. This
-         * is generic way of picking any codec name based mixer
-         * files in future with no code change. This code
-         * assumes mixer files are formed with format as
-         * mixer_paths_internalcodecname.xml
-
-         * If this dynamically read mixer files fails to open then it
-         * falls back to default mixer file i.e mixer_paths.xml. This is
-         * done to preserve backward compatibility but not mandatory as
-         * long as the mixer files are named as per above assumption.
-        */
-        snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s_%s.xml",
-                         MIXER_XML_BASE_STRING, snd_split_handle->snd_card,
-                         snd_split_handle->form_factor);
-        if (!audio_extn_utils_resolve_config_file(mixer_xml_file)) {
-            memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
-            snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
-                         MIXER_XML_BASE_STRING, snd_split_handle->variant);
-
-            if (!audio_extn_utils_resolve_config_file(mixer_xml_file)) {
-                memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
-                snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
-                             MIXER_XML_BASE_STRING, snd_split_handle->snd_card);
-
-                if (!audio_extn_utils_resolve_config_file(mixer_xml_file)) {
-                    memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
-                    strlcpy(mixer_xml_file, MIXER_XML_DEFAULT_PATH, MIXER_PATH_MAX_LENGTH);
-                    audio_extn_utils_resolve_config_file(mixer_xml_file);
-                }
-            }
-        }
-
-        ALOGD("%s: Loading mixer file: %s", __func__, mixer_xml_file);
-        if (audio_extn_read_xml(adev, adev->snd_card, mixer_xml_file,
-                                MIXER_XML_PATH_AUXPCM) == -ENOSYS) {
-            adev->audio_route = audio_route_init(adev->snd_card, mixer_xml_file);
-            update_codec_type_and_interface(my_data, snd_card_name);
-        }
-    }
-
-#if defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
-         if (my_data->is_internal_codec == true) {
-            msm_device_to_be_id = msm_device_to_be_id_internal_codec;
-            msm_be_id_array_len  =
-                sizeof(msm_device_to_be_id_internal_codec) /
-                sizeof(msm_device_to_be_id_internal_codec[0]);
-         } else {
-            msm_device_to_be_id = msm_device_to_be_id_external_codec;
-            msm_be_id_array_len  =
-                sizeof(msm_device_to_be_id_external_codec) /
-                sizeof(msm_device_to_be_id_external_codec[0]);
-         }
-#endif
-
-    if (!adev->audio_route) {
-        ALOGE("%s: Failed to init audio route controls, aborting.",
-               __func__);
-        if (my_data)
-            free(my_data);
-        if (snd_card_name)
-            free(snd_card_name);
-        audio_extn_utils_close_snd_mixer(adev->mixer);
-        return NULL;
-    }
+    update_codec_type_and_interface(my_data, snd_card_name);
 
     adev->dp_allowed_for_voice =
         property_get_bool("vendor.audio.enable.dp.for.voice", false);
@@ -3295,6 +3224,82 @@ void *platform_init(struct audio_device *adev)
         audio_extn_utils_get_platform_info(snd_card_name, platform_info_file);
         platform_info_init(platform_info_file, my_data, PLATFORM);
     }
+
+    // acquire perf lock to reduce the time for audio route init
+    audio_extn_perf_lock_acquire(&adev->perf_lock_handle, 0,
+                                 adev->perf_lock_opts,
+                                 adev->perf_lock_opts_size);
+    if (platform_is_i2s_ext_modem(snd_card_name, my_data) &&
+        !is_auto_snd_card(snd_card_name)) {
+        ALOGD("%s: Call MIXER_XML_PATH_I2S", __func__);
+
+        adev->audio_route = audio_route_init(adev->snd_card,
+                                             MIXER_XML_PATH_I2S);
+    } else {
+        /* Get the codec internal name from the sound card name
+         * and form the mixer paths file name dynamically. This
+         * is generic way of picking any codec name based mixer
+         * files in future with no code change. This code
+         * assumes mixer files are formed with format as
+         * mixer_paths_internalcodecname.xml
+
+         * If this dynamically read mixer files fails to open then it
+         * falls back to default mixer file i.e mixer_paths.xml. This is
+         * done to preserve backward compatibility but not mandatory as
+         * long as the mixer files are named as per above assumption.
+        */
+        snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s_%s.xml",
+                         MIXER_XML_BASE_STRING, snd_split_handle->snd_card,
+                         snd_split_handle->form_factor);
+        if (!audio_extn_utils_resolve_config_file(mixer_xml_file)) {
+            memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
+            snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
+                         MIXER_XML_BASE_STRING, snd_split_handle->variant);
+
+            if (!audio_extn_utils_resolve_config_file(mixer_xml_file)) {
+                memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
+                snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s.xml",
+                             MIXER_XML_BASE_STRING, snd_split_handle->snd_card);
+
+                if (!audio_extn_utils_resolve_config_file(mixer_xml_file)) {
+                    memset(mixer_xml_file, 0, sizeof(mixer_xml_file));
+                    strlcpy(mixer_xml_file, MIXER_XML_DEFAULT_PATH, MIXER_PATH_MAX_LENGTH);
+                    audio_extn_utils_resolve_config_file(mixer_xml_file);
+                }
+            }
+        }
+
+        ALOGD("%s: Loading mixer file: %s", __func__, mixer_xml_file);
+        if (audio_extn_read_xml(adev, adev->snd_card, mixer_xml_file,
+                                MIXER_XML_PATH_AUXPCM) == -ENOSYS)
+            adev->audio_route = audio_route_init(adev->snd_card, mixer_xml_file);
+    }
+    audio_extn_perf_lock_release(&adev->perf_lock_handle);
+
+    if (!adev->audio_route) {
+        ALOGE("%s: Failed to init audio route controls, aborting.",
+               __func__);
+        if (my_data)
+            free(my_data);
+        if (snd_card_name)
+            free(snd_card_name);
+        audio_extn_utils_close_snd_mixer(adev->mixer);
+        return NULL;
+    }
+
+#if defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
+         if (my_data->is_internal_codec == true) {
+            msm_device_to_be_id = msm_device_to_be_id_internal_codec;
+            msm_be_id_array_len  =
+                sizeof(msm_device_to_be_id_internal_codec) /
+                sizeof(msm_device_to_be_id_internal_codec[0]);
+         } else {
+            msm_device_to_be_id = msm_device_to_be_id_external_codec;
+            msm_be_id_array_len  =
+                sizeof(msm_device_to_be_id_external_codec) /
+                sizeof(msm_device_to_be_id_external_codec[0]);
+         }
+#endif
 
     /* CSRA devices support multiple sample rates via I2S at spkr out */
     if (!strncmp(snd_card_name, "qcs405-csra", strlen("qcs405-csra"))) {
@@ -5912,7 +5917,7 @@ int platform_get_ext_disp_type_v2(void *platform, int controller, int stream)
         }
 
         disp_type = mixer_ctl_get_value(ctl, 0);
-        if (disp_type == EXT_DISPLAY_TYPE_NONE) {
+        if (disp_type <= EXT_DISPLAY_TYPE_NONE) {
              ALOGE("%s: Invalid external display type: %d", __func__, disp_type);
              return -EINVAL;
         }

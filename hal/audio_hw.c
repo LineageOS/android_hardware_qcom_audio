@@ -1852,9 +1852,10 @@ static int read_hdmi_sink_caps(struct stream_out *out)
     reset_hdmi_sink_caps(out);
 
     /* Cache ext disp type */
-    if (platform_get_ext_disp_type_v2(adev->platform,
+    ret = platform_get_ext_disp_type_v2(adev->platform,
                                       out->extconn.cs.controller,
-                                      out->extconn.cs.stream <= 0)) {
+                                      out->extconn.cs.stream);
+    if(ret < 0) {
         ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
         return -EINVAL;
     }
@@ -4529,7 +4530,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
     err = platform_get_controller_stream_from_params(parms, &ext_controller,
                                                        &ext_stream);
-    if (err >= 0) {
+    if (err == 0) {
         out->extconn.cs.controller = ext_controller;
         out->extconn.cs.stream = ext_stream;
         ALOGD("%s: usecase(%s) new controller/stream (%d/%d)", __func__,
@@ -9772,6 +9773,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->use_old_pspd_mix_ctrl = false;
     adev->adm_routing_changed = false;
 
+    audio_extn_perf_lock_init();
+
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
     if (!adev->platform) {
@@ -9966,7 +9969,6 @@ static int adev_open(const hw_module_t *module, const char *name,
         adev->adm_data = adev->adm_init();
 
     qahwi_init(*device);
-    audio_extn_perf_lock_init();
     audio_extn_adsp_hdlr_init(adev->mixer);
 
     audio_extn_snd_mon_init();
