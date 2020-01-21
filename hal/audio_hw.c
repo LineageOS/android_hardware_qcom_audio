@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -8943,6 +8943,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config.rate = config->sample_rate;
         in->af_period_multiplier = 1;
     } else if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
+               (!voice_extn_is_compress_voip_supported()) &&
                in->flags & AUDIO_INPUT_FLAG_VOIP_TX &&
                (config->sample_rate == 8000 ||
                 config->sample_rate == 16000 ||
