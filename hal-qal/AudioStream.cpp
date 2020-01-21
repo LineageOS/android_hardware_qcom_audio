@@ -2042,9 +2042,11 @@ set_buff_size:
     if (streamAttributes_.type != QAL_STREAM_VOIP_TX) {
         inBufSize = inBufSize/NO_OF_BUF;
     }
-    ret = qal_stream_set_buffer_size(qal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
-    if (ret) {
-        ALOGE("Qal Stream set buffer size Error  (%x)", ret);
+    if (!handle) {
+        ret = qal_stream_set_buffer_size(qal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
+        if (ret) {
+            ALOGE("Qal Stream set buffer size Error  (%x)", ret);
+        }
     }
 
     total_bytes_read_ = 0; // reset at each open
