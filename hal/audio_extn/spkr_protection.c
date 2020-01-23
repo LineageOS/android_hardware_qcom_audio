@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -854,6 +854,7 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
     uc_info_rx->type = PCM_PLAYBACK;
     uc_info_rx->in_snd_device = SND_DEVICE_NONE;
     uc_info_rx->stream.out = adev->primary_output;
+    list_init(&uc_info_rx->device_list);
     if (fp_audio_extn_is_vbat_enabled())
         uc_info_rx->out_snd_device = SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT;
     else
@@ -895,6 +896,7 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
     uc_info_tx->type = PCM_CAPTURE;
     uc_info_tx->in_snd_device = SND_DEVICE_IN_CAPTURE_VI_FEEDBACK;
     uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+    list_init(&uc_info_tx->device_list);
 
     disable_tx = true;
     list_add_tail(&adev->usecase_list, &uc_info_tx->list);
@@ -2270,6 +2272,7 @@ int spkr_prot_start_processing(snd_device_t snd_device)
     }
     uc_info_tx->id = USECASE_AUDIO_SPKR_CALIB_TX;
     uc_info_tx->type = PCM_CAPTURE;
+    list_init(&uc_info_tx->device_list);
 
     if (fp_platform_get_snd_device_name_extn(adev->platform, snd_device, device_name) < 0) {
         ALOGE("%s: Invalid sound device returned", __func__);

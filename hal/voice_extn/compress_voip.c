@@ -741,6 +741,7 @@ static int voip_start_call(struct audio_device *adev,
             uc_info->stream.out = adev->primary_output;
         uc_info->in_snd_device = SND_DEVICE_NONE;
         uc_info->out_snd_device = SND_DEVICE_NONE;
+        list_init(&uc_info->device_list);
 
         list_add_tail(&adev->usecase_list, &uc_info->list);
 

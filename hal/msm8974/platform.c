@@ -5946,7 +5946,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
 
     ALOGV("%s: enter: output devices(%#x)", __func__, get_device_types(&devices));
     if (list_empty(&devices) ||
-        compare_device_type(&devices, AUDIO_DEVICE_BIT_IN)) {
+        is_audio_in_device_type(&devices)) {
         ALOGV("%s: Invalid output devices (%#x)", __func__, get_device_types(&devices));
         goto exit;
     }
@@ -6991,7 +6991,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
             reassign_device_list(&in_devices, AUDIO_DEVICE_IN_USB_DEVICE, address);
 
         if (list_empty(out_devices))
-            reassign_device_list(&in_devices, (AUDIO_DEVICE_IN_BUILTIN_MIC & ~AUDIO_DEVICE_BIT_IN),
+            reassign_device_list(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC,
                                  address);
 
         if (in)

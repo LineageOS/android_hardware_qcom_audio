@@ -496,6 +496,7 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     uc_info_rx->id = USECASE_AUDIO_TRANSCODE_LOOPBACK_RX;
     uc_info_rx->type = audio_loopback_mod->uc_type_rx;
     uc_info_rx->stream.inout = &active_loopback_patch->patch_stream;
+    list_init(&uc_info_rx->device_list);
     assign_devices(&uc_info_rx->device_list,
                    &active_loopback_patch->patch_stream.out_config.device_list);
     uc_info_rx->in_snd_device = SND_DEVICE_NONE;
@@ -505,6 +506,7 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     uc_info_tx->id = USECASE_AUDIO_TRANSCODE_LOOPBACK_TX;
     uc_info_tx->type = audio_loopback_mod->uc_type_tx;
     uc_info_tx->stream.inout = &active_loopback_patch->patch_stream;
+    list_init(&uc_info_tx->device_list);
     assign_devices(&uc_info_tx->device_list,
                    &active_loopback_patch->patch_stream.in_config.device_list);
     uc_info_tx->in_snd_device = SND_DEVICE_NONE;

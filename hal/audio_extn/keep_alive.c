@@ -268,6 +268,7 @@ static int keep_alive_start_l()
     }
 
     ka.out->flags = 0;
+    list_init(&ka.out->device_list);
     assign_devices(&ka.out->device_list, &ka.active_devices);
     ka.out->dev = adev;
     ka.out->format = AUDIO_FORMAT_PCM_16_BIT;
@@ -317,6 +318,7 @@ void keep_alive_stop(ka_mode_t ka_mode)
     pthread_mutex_lock(&ka.lock);
 
     ALOGV("%s: mode %x", __func__, ka_mode);
+    list_init(&out_devices);
     if (ka_mode && (ka.state != STATE_ACTIVE)) {
         get_device_id_from_mode(ka_mode, &out_devices);
         ALOGV(" %s : Can't stop, keep_alive",__func__);

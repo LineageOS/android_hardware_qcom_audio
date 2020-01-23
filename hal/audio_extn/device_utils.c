@@ -230,7 +230,7 @@ const char *get_usb_device_address(struct listnode *devices)
     struct audio_device_info *item = NULL;
 
     if (devices == NULL)
-        return false;
+        return "";
 
     list_for_each (node, devices) {
         item = node_to_item(node, struct audio_device_info, list);
@@ -397,7 +397,7 @@ bool compare_devices_for_any_match(struct listnode *d1, struct listnode *d2)
 /*
  * Returns all device types from list in bitfield
  * ToDo: Use of this function is not recommended.
- * It has been introduced for compatability with legacy functions.
+ * It has been introduced for compatibility with legacy functions.
  * This can be removed once audio HAL switches to device
  * list usage for all audio extensions.
  */
@@ -408,7 +408,7 @@ audio_devices_t get_device_types(struct listnode *devices)
     audio_devices_t device_type = AUDIO_DEVICE_NONE;
 
     if (devices == NULL)
-        return false;
+        return AUDIO_DEVICE_NONE;
 
     list_for_each (node, devices) {
         item = node_to_item(node, struct audio_device_info, list);
