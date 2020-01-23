@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -4618,6 +4618,19 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             (card = get_alive_usb_card(parms)) >= 0) {
 
             ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d", card);
+            pthread_mutex_unlock(&adev->lock);
+            pthread_mutex_unlock(&out->lock);
+            ret = -ENOSYS;
+            goto routing_fail;
+        }
+
+        // Workaround: If routing to an non existing hdmi device, fail gracefully
+        if (audio_is_output_device(new_dev) &&
+            (new_dev & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+            (platform_get_edid_info_v2(adev->platform,
+                                       out->extconn.cs.controller,
+                                       out->extconn.cs.stream) != 0)) {
+            ALOGW("out_set_parameters() ignoring rerouting to non existing HDMI/DP");
             pthread_mutex_unlock(&adev->lock);
             pthread_mutex_unlock(&out->lock);
             ret = -ENOSYS;
