@@ -435,6 +435,9 @@ protected:
     int get_compressed_buffer_size();
     int get_pcm_offload_buffer_size();
     int64_t platform_render_latency(audio_output_flags_t flags_);
+    audio_format_t halInputFormat = AUDIO_FORMAT_DEFAULT;
+    audio_format_t halOutputFormat = AUDIO_FORMAT_DEFAULT;
+    uint32_t convertBufSize;
     qal_param_payload qparam_payload;
     uint32_t msample_rate;
     uint16_t mchannels;
@@ -442,7 +445,10 @@ protected:
     uint64_t total_bytes_written_; /* total frames written, not cleared when entering standby */
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;
+    void *convertBuffer;
     int FillHalFnPtrs();
+    audio_format_t AlsatoHalFormat(uint32_t pcm_format);
+    uint32_t HaltoAlsaFormat(audio_format_t hal_format);
     friend class AudioDevice;
 };
 

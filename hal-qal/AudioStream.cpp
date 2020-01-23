@@ -49,6 +49,7 @@
 #include <audio_effects/effect_aec.h>
 #include <audio_effects/effect_ns.h>
 #include "audio_extn.h"
+#include <audio_utils/format.h>
 
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
 #define MAX_READ_RETRY_COUNT 25
@@ -856,6 +857,11 @@ static size_t astream_in_get_buffer_size(const struct audio_stream *stream) {
         return 0;
 }
 
+bool platform_supports_true_32bit() {
+    //TODO: Remove the hardcoding.
+    return true;
+}
+
 int StreamPrimary::getQalDeviceIds(const audio_devices_t halDeviceIds, qal_device_id_t* qualIds) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
@@ -1342,6 +1348,58 @@ uint32_t StreamOutPrimary::GetBufferSize() {
     }
 }
 
+/*Translates PCM formats to AOSP formats*/
+audio_format_t StreamOutPrimary::AlsatoHalFormat(uint32_t pcm_format) {
+    audio_format_t format = AUDIO_FORMAT_INVALID;
+
+    switch(pcm_format) {
+    case PCM_FORMAT_S16_LE:
+        format = AUDIO_FORMAT_PCM_16_BIT;
+        break;
+    case PCM_FORMAT_S24_3LE:
+        format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+        break;
+    case PCM_FORMAT_S24_LE:
+        format = AUDIO_FORMAT_PCM_8_24_BIT;
+        break;
+    case PCM_FORMAT_S32_LE:
+        format = AUDIO_FORMAT_PCM_32_BIT;
+        break;
+    default:
+        ALOGW("Incorrect PCM format");
+        format = AUDIO_FORMAT_INVALID;
+    }
+    return format;
+}
+
+/*Translates hal format (AOSP) to alsa formats*/
+uint32_t StreamOutPrimary::HaltoAlsaFormat(audio_format_t hal_format) {
+    uint32_t pcm_format;
+
+    switch (hal_format) {
+    case AUDIO_FORMAT_PCM_32_BIT:
+    case AUDIO_FORMAT_PCM_8_24_BIT:
+    case AUDIO_FORMAT_PCM_FLOAT: {
+        if (platform_supports_true_32bit())
+            pcm_format = PCM_FORMAT_S32_LE;
+        else
+            pcm_format = PCM_FORMAT_S24_3LE;
+        }
+        break;
+    case AUDIO_FORMAT_PCM_8_BIT:
+        pcm_format = PCM_FORMAT_S8;
+        break;
+    case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+        pcm_format = PCM_FORMAT_S24_3LE;
+        break;
+    default:
+    case AUDIO_FORMAT_PCM_16_BIT:
+        pcm_format = PCM_FORMAT_S16_LE;
+        break;
+    }
+    return pcm_format;
+}
+
 int StreamOutPrimary::Open() {
     int ret = -EINVAL;
     uint8_t channels = 0;
@@ -1350,6 +1408,8 @@ int StreamOutPrimary::Open() {
     uint32_t outBufSize = 0;
     uint32_t inBufCount = NO_OF_BUF;
     uint32_t outBufCount = NO_OF_BUF;
+    uint32_t pcmFormat;
+    convertBuffer = NULL;
 /*
     ret = qal_init();
     if ( ret ) {
@@ -1399,25 +1459,32 @@ int StreamOutPrimary::Open() {
             streamAttributes_.out_media_config.ch_info->channels = mchannels;
         streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
     } else if (streamAttributes_.type == QAL_STREAM_PCM_OFFLOAD) {
-        streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[config_.format];
+        halInputFormat = config_.format;
+        pcmFormat = HaltoAlsaFormat(halInputFormat);
+        halOutputFormat = AlsatoHalFormat(pcmFormat);
+        ALOGD("halInputFormat %d halOutputFormat %d", halInputFormat, halOutputFormat);
+        streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[halOutputFormat];
         if (streamAttributes_.out_media_config.bit_width == 0)
             streamAttributes_.out_media_config.bit_width = 16;
     }
 
-    ALOGD("channels %d samplerate %d format id %d, stream type %d", streamAttributes_.out_media_config.ch_info->channels, streamAttributes_.out_media_config.sample_rate,
-          streamAttributes_.out_media_config.aud_fmt_id, streamAttributes_.type);
+    ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
+    ALOGD("channels %d samplerate %d format id %d, stream type %d  stream bitwidth %d",
+           streamAttributes_.out_media_config.ch_info->channels, streamAttributes_.out_media_config.sample_rate,
+           streamAttributes_.out_media_config.aud_fmt_id, streamAttributes_.type,
+           streamAttributes_.out_media_config.bit_width);
     ALOGD("msample_rate %d mchannels %d", msample_rate, mchannels);
     ALOGD("mNoOfOutDevices %d", mNoOfOutDevices);
-    ret = qal_stream_open(&streamAttributes_,
-                         mNoOfOutDevices,
-                         mQalOutDevice,
-                         0,
-                         NULL,
-                         &qal_callback,
-                         (void *)this,
-                         &qal_stream_handle_);
+    ret = qal_stream_open (&streamAttributes_,
+                          mNoOfOutDevices,
+                          mQalOutDevice,
+                          0,
+                          NULL,
+                          &qal_callback,
+                          (void *)this,
+                          &qal_stream_handle_);
 
-    ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
+    ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
     if (ret) {
         ALOGE("Qal Stream Open Error (%x)", ret);
         ret = -EINVAL;
@@ -1433,6 +1500,16 @@ int StreamOutPrimary::Open() {
 //    if (streamAttributes_.type != QAL_STREAM_VOIP_RX) {
  //       outBufSize = outBufSize/NO_OF_BUF;
  //   }
+    if (halInputFormat != halOutputFormat) {
+        convertBufSize = outBufSize;
+        convertBuffer = calloc(1, convertBufSize);
+        if (!convertBuffer) {
+            ret = -ENOMEM;
+            ALOGE("convert Buffer allocation failed. ret %d", ret);
+            goto error_open;
+        }
+        ALOGD("convert buffer allocated for size %d", convertBufSize);
+    }
     ret = qal_stream_set_buffer_size(qal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
     if (ret) {
         ALOGE("Qal Stream set buffer size Error  (%x)", ret);
@@ -1498,6 +1575,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
     int ret = 0;
     struct qal_buffer qalBuffer;
     int local_bytes_written = 0;
+    uint32_t frames;
 
     qalBuffer.buffer = (void*)buffer;
     qalBuffer.size = bytes;
@@ -1536,6 +1614,14 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
         }
     }
 
+    if (halInputFormat != halOutputFormat && convertBuffer != NULL) {
+        frames = bytes / (format_to_bitwidth_table[halInputFormat]/8);
+        memcpy_by_audio_format(convertBuffer, halOutputFormat, buffer, halInputFormat,
+                               frames);
+        qalBuffer.buffer = convertBuffer;
+        qalBuffer.size = convertBufSize;
+        qalBuffer.offset = 0;
+    }
     local_bytes_written = qal_stream_write(qal_stream_handle_, &qalBuffer);
     total_bytes_written_ += local_bytes_written;
     clock_gettime(CLOCK_MONOTONIC, &writeAt);
@@ -1718,6 +1804,8 @@ StreamOutPrimary::~StreamOutPrimary() {
         qal_stream_close(qal_stream_handle_);
         qal_stream_handle_ = nullptr;
     }
+    if (convertBuffer)
+        free(convertBuffer);
 }
 
 int StreamInPrimary::Standby() {
