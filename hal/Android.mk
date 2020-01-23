@@ -326,6 +326,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
     LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
 endif
 
+# Hardware specific feature
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GKI)), true)
+    LOCAL_CFLAGS += -DAUDIO_GKI_ENABLED
+endif
+
 # Legacy feature
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_KEEP_ALIVE_ARM_FFV)), true)
     LOCAL_CFLAGS += -DRUN_KEEP_ALIVE_IN_ARM_FFV

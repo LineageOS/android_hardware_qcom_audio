@@ -505,3 +505,5 @@ ifeq ($(strip $(BOARD_SUPPORTS_SOUND_TRIGGER)),true)
 PRODUCT_PACKAGES_DEBUG += \
     libadpcmdec
 endif
+
+AUDIO_FEATURE_ENABLED_GKI := true
