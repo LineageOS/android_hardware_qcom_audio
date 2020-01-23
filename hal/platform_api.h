@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -207,7 +207,7 @@ int platform_set_device_mute(void *platform, bool state, char *dir);
 snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *out);
 snd_device_t platform_get_input_snd_device(void *platform,
                                            struct stream_in *in,
-                                           audio_devices_t out_device);
+                                           struct listnode *out_devices);
 int platform_set_hdmi_channels(void *platform, int channel_count);
 int platform_edid_get_max_channels(void *platform);
 void platform_add_operator_specific_device(snd_device_t snd_device,
@@ -268,7 +268,8 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
-void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device);
+void platform_set_echo_reference(struct audio_device *adev, bool enable,
+                                 struct listnode *out_devices);
 int platform_check_and_set_swap_lr_channels(struct audio_device *adev, bool swap_channels);
 int platform_set_swap_channels(struct audio_device *adev, bool swap_channels);
 void platform_get_device_to_be_id_map(int **be_id_map, int *length);

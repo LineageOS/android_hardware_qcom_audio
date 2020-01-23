@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, 2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -339,7 +339,7 @@ bool ssr_get_enabled()
 bool  ssr_check_usecase(struct stream_in *in) {
     int ret = false;
     int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
-    audio_devices_t devices = in->device;
+    audio_devices_t devices = get_device_types(&in->device_list);
     audio_source_t source = in->source;
 
     if ((ssr_get_enabled()) &&

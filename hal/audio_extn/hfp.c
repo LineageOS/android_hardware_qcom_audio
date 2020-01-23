@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -309,7 +309,7 @@ static int32_t start_hfp(struct audio_device *adev,
     uc_info->id = hfpmod.ucid;
     uc_info->type = PCM_HFP_CALL;
     uc_info->stream.out = adev->primary_output;
-    uc_info->devices = adev->primary_output->devices;
+    assign_devices(&uc_info->device_list, &adev->primary_output->device_list);
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
@@ -440,6 +440,8 @@ static int32_t stop_hfp(struct audio_device *adev)
 {
     int32_t ret = 0;
     struct audio_usecase *uc_info;
+    struct listnode *node;
+    struct audio_device_info *item = NULL;
 
     ALOGD("%s: enter", __func__);
     hfpmod.is_hfp_running = false;
@@ -484,7 +486,7 @@ static int32_t stop_hfp(struct audio_device *adev)
     }
 
     /* 2. Disable echo reference while stopping hfp */
-    fp_platform_set_echo_reference(adev, false, uc_info->devices);
+    fp_platform_set_echo_reference(adev, false, &uc_info->device_list);
 
     /* 3. Get and set stream specific mixer controls */
     fp_disable_audio_route(adev, uc_info);

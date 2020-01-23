@@ -136,7 +136,8 @@ ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 ms
   MULTIPLE_HW_VARIANTS_ENABLED := true
 endif
 
-LOCAL_SRC_FILES:= ssr.c
+LOCAL_SRC_FILES:= ssr.c \
+                  device_utils.c
 
 LOCAL_CFLAGS += \
     -Wall \
@@ -383,7 +384,8 @@ ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 ms
 endif
 
 LOCAL_SRC_FILES:= \
-        a2dp.c
+        a2dp.c \
+        device_utils.c
 
 LOCAL_CFLAGS += \
     -Wall \
@@ -514,7 +516,8 @@ ifeq ($(TARGET_BOARD_AUTO),true)
 endif
 
 LOCAL_SRC_FILES:= \
-        hfp.c
+        hfp.c \
+        device_utils.c
 
 LOCAL_CFLAGS += \
     -Wall \
@@ -577,7 +580,8 @@ ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 ms
 endif
 
 LOCAL_SRC_FILES:= \
-        passthru.c
+        passthru.c \
+        device_utils.c
 
 LOCAL_CFLAGS += \
     -Wall \
@@ -779,7 +783,8 @@ ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona sdm660 msm8937 $(MSMSTEPPE)
 endif
 
 LOCAL_SRC_FILES:= \
-        maxxaudio.c
+        maxxaudio.c \
+        device_utils.c
 
 LOCAL_CFLAGS += \
     -Wall \
@@ -840,7 +845,8 @@ ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona sdm660 msm8937 $(MSMSTEPPE)
 endif
 
 LOCAL_SRC_FILES:= \
-        audiozoom.c
+        audiozoom.c \
+        device_utils.c
 
 LOCAL_CFLAGS += \
     -Wall \
@@ -904,7 +910,8 @@ ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito atoll sdm660 msm8937 m
 endif
 
 LOCAL_SRC_FILES:= \
-        auto_hal.c
+        auto_hal.c \
+        device_utils.c
 
 LOCAL_CFLAGS += \
     -Wall \

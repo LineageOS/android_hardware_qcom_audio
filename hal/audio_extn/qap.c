@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -431,7 +431,9 @@ static void close_all_pcm_hdmi_output_l()
         }
 
         if ((p_qap->qap_mod[i].stream_out[QAP_OUT_OFFLOAD])
-            && (p_qap->qap_mod[i].stream_out[QAP_OUT_OFFLOAD]->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+            && compare_device_type(
+                    &p_qap->qap_mod[i].stream_out[QAP_OUT_OFFLOAD]->device_list,
+                    AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
             adev_close_output_stream((struct audio_hw_device *)p_qap->adev,
                                      (struct audio_stream_out *)(p_qap->qap_mod[i].stream_out[QAP_OUT_OFFLOAD]));
             p_qap->qap_mod[i].stream_out[QAP_OUT_OFFLOAD] = NULL;
@@ -492,7 +494,7 @@ static int create_qap_passthrough_stream_l()
         config.offload_info.channel_mask = config.channel_mask = out->channel_mask;
 
         //Device is copied from the QAP passthrough input stream.
-        devices = out->devices;
+        devices = get_device_types(&out->device_list);
         flags = out->flags;
 
         ret = adev_open_output_stream((struct audio_hw_device *)p_qap->adev,
@@ -870,7 +872,7 @@ static int qap_start_output_stream(struct stream_out *out)
 
     ALOGD("%s: enter: stream(%p)usecase(%d: %s) devices(%#x)",
           __func__, &out->stream, out->usecase, use_case_table[out->usecase],
-          out->devices);
+          get_device_types(&out->device_list));
 
     if (CARD_STATUS_OFFLINE == out->card_status ||
         CARD_STATUS_OFFLINE == adev->card_status) {
@@ -959,7 +961,8 @@ static ssize_t qap_out_write(struct audio_stream_out *stream, const void *buffer
         }
     }
 
-    if ((adev->is_channel_status_set == false) && (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+    if ((adev->is_channel_status_set == false) &&
+         compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
         audio_utils_set_hdmi_channel_status(out, (char *)buffer, bytes);
         adev->is_channel_status_set = true;
     }
@@ -1759,9 +1762,9 @@ static void qap_session_callback(qap_session_handle_t session_handle __unused,
                 audio_devices_t devices;
 
                 if (qap_mod->stream_in[QAP_IN_MAIN])
-                    devices = qap_mod->stream_in[QAP_IN_MAIN]->devices;
+                    devices = get_device_types(&qap_mod->stream_in[QAP_IN_MAIN]->device_list);
                 else
-                    devices = qap_mod->stream_in[QAP_IN_PCM]->devices;
+                    devices = get_device_types(&qap_mod->stream_in[QAP_IN_PCM]->device_list);
 
                 //If multi channel pcm or passthrough is already enabled then remove the hdmi flag from device.
                 if (p_qap->mch_pcm_hdmi_enabled || p_qap->passthrough_enabled) {
@@ -2595,6 +2598,7 @@ static int qap_out_set_parameters(struct audio_stream *stream, const char *kvpai
     int ret = 0;
     int err = 0;
     struct qap_module *qap_mod = NULL;
+    char *address = "";
 
     DEBUG_MSG("usecase(%d: %s) kvpairs: %s", out->usecase, use_case_table[out->usecase], kvpairs);
 
@@ -2612,7 +2616,7 @@ static int qap_out_set_parameters(struct audio_stream *stream, const char *kvpai
     /* Setting new device information to the mm module input streams.
      * This is needed if QAP module output streams are not created yet.
      */
-    out->devices = val;
+    reassign_device_list(&out->device_list, val, address);
 
 #ifndef SPLIT_A2DP_ENABLED
     if (val == AUDIO_DEVICE_OUT_BLUETOOTH_A2DP) {

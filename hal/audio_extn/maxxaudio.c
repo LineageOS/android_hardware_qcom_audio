@@ -100,7 +100,7 @@ typedef struct ma_audio_cal_version {
 
 typedef struct ma_audio_cal_common_settings {
     unsigned int app_type;
-    unsigned int device;
+    struct listnode devices;
 } ma_audio_cal_common_settings_t;
 
 struct ma_audio_cal_settings {
@@ -237,16 +237,16 @@ static inline bool valid_usecase(struct audio_usecase *usecase)
          (usecase->id == USECASE_AUDIO_PLAYBACK_LOW_LATENCY) ||
          (usecase->id == USECASE_AUDIO_PLAYBACK_OFFLOAD)) &&
         /* support devices */
-        ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
-         (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
-         (audio_is_usb_out_device(usecase->devices) &&
+        (compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_SPEAKER) ||
+         compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
+         (is_usb_out_device_type(&usecase->device_list) &&
           ma_supported_usb())))
         /* TODO: enable A2DP when it is ready */
 
         return true;
 
     ALOGV("%s: not support type %d usecase %d device %d",
-           __func__, usecase->type, usecase->id, usecase->devices);
+           __func__, usecase->type, usecase->id, get_device_types(&usecase->device_list));
 
     return false;
 }
@@ -268,7 +268,9 @@ static void ma_cal_init(struct ma_audio_cal_settings *ma_cal)
     ma_cal->version.major = AUDIO_CAL_SETTINGS_VERSION_MAJOR_DEFAULT;
     ma_cal->version.minor = AUDIO_CAL_SETTINGS_VERSION_MINOR_DEFAULT;
     ma_cal->common.app_type = APP_TYPE_DEFAULT;
-    ma_cal->common.device = DEVICE_DEFAULT;
+    list_init(&ma_cal->common.devices);
+    update_device_list(&ma_cal->common.devices, DEVICE_DEFAULT,
+                       "", true);
     ma_cal->effect_scope_flag = EFFECTIVE_SCOPE_ALL;
 }
 
@@ -286,10 +288,10 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
         usecase = node_to_item(node, struct audio_usecase, list);
         if (usecase->stream.out && valid_usecase(usecase)) {
             ma_cal.common.app_type = usecase->stream.out->app_type_cfg.app_type;
-            ma_cal.common.device = usecase->stream.out->devices;
+            assign_devices(&ma_cal.common.devices, &usecase->stream.out->device_list);
             ALOGV("%s: send usecase(%d) app_type(%d) device(%d)",
                       __func__, usecase->id, ma_cal.common.app_type,
-                      ma_cal.common.device);
+                      get_device_types(&ma_cal.common.devices));
 
             switch (cmd) {
                 case MA_CMD_VOL:
@@ -304,7 +306,8 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
 
                 case MA_CMD_SWAP_ENABLE:
                     /* lr swap only enable for speaker path */
-                    if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
+                    if (compare_device_type(&ma_cal.common.devices,
+                                            AUDIO_DEVICE_OUT_SPEAKER)) {
                         ret = ma_set_lr_swap_l(&ma_cal, true);
                         if (ret)
                             ALOGV("ma_set_lr_swap_l enable returned with success.");
@@ -322,7 +325,8 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
                     break;
 
                 case MA_CMD_ROTATE_ENABLE:
-                    if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
+                    if (compare_device_type(&ma_cal.common.devices,
+                                            AUDIO_DEVICE_OUT_SPEAKER)) {
                         ret = ma_set_orientation_l(&ma_cal, my_data->dispaly_orientation);
                         if (ret)
                             ALOGV("ma_set_orientation_l %d returned with success.",
@@ -692,16 +696,17 @@ void ma_set_device(struct audio_usecase *usecase)
 
     /* update audio_cal and send it */
     ma_cal.common.app_type = usecase->stream.out->app_type_cfg.app_type;
-    ma_cal.common.device = usecase->stream.out->devices;
+    assign_devices(&ma_cal.common.devices, &usecase->stream.out->device_list);
     ALOGV("%s: send usecase(%d) app_type(%d) device(%d)",
               __func__, usecase->id, ma_cal.common.app_type,
-              ma_cal.common.device);
+              get_device_types(&ma_cal.common.devices));
 
     pthread_mutex_lock(&my_data->lock);
 
     if (is_active()) {
 
-        if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
+        if (compare_device_type(&ma_cal.common.devices,
+                                AUDIO_DEVICE_OUT_SPEAKER)) {
             if (my_data->orientation_used)
                 ma_set_rotation_l(usecase->stream.out->dev,
                                   my_data->dispaly_orientation);
