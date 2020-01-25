@@ -75,6 +75,7 @@ public:
     std::shared_ptr<StreamInPrimary> InGetStream(audio_stream_t* stream_in);
     std::shared_ptr<AudioVoice> voice_;
     int SetMicMute(bool state);
+    bool mute_;
     int GetMicMute(bool *state);
     int SetParameters(const char *kvpairs);
     char* GetParameters(const char *keys);

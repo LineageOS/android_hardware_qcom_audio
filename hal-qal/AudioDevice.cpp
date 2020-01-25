@@ -474,6 +474,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     }
     audio_extn_sound_trigger_init(adev_);
     voice_ = VoiceInit();
+    mute_ = false;
 
     FillAndroidDeviceMap();
 
@@ -554,6 +555,7 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* strea
 int AudioDevice::SetMicMute(bool state) {
     int ret;
 
+    mute_ = state;
     if (voice_)
         ret = voice_->SetMicMute(state);
 
@@ -561,9 +563,9 @@ int AudioDevice::SetMicMute(bool state) {
 }
 
 int AudioDevice::GetMicMute(bool *state) {
-    *state = false;
+    *state = mute_;
 
-    return 0; //currently not implemented
+    return 0;
 }
 
 int AudioDevice::SetMode(const audio_mode_t mode) {

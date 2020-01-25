@@ -1291,10 +1291,7 @@ int64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
 {
     int64_t signed_frames = 0;
     int64_t written = 0;
-    if (!qal_stream_handle_) {
-       //ALOGE("%s: qal_stream_handle_ NULL",__func__);
-       return 0;
-    }
+
     if (!timestamp) {
        ALOGE("%s: timestamp NULL",__func__);
        return 0;
