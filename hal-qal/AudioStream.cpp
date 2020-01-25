@@ -41,12 +41,16 @@
 
 #include <log/log.h>
 
+#include <chrono>
+#include <thread>
+
 #include "QalApi.h"
 #include <audio_effects/effect_aec.h>
 #include <audio_effects/effect_ns.h>
 #include "audio_extn.h"
 
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
+#define MAX_READ_RETRY_COUNT 25
 
 const std::map<uint32_t, qal_audio_fmt_t> getFormatId {
     {AUDIO_FORMAT_PCM,                 QAL_AUDIO_FMT_DEFAULT_PCM},
@@ -1714,18 +1718,18 @@ StreamOutPrimary::~StreamOutPrimary() {
 int StreamInPrimary::Standby() {
     int ret = 0;
 
-    if (is_st_session && is_st_session_active) {
-        audio_extn_sound_trigger_stop_lab(this);
-        return ret;
-    }
-
     if (qal_stream_handle_) {
-        ret = qal_stream_stop(qal_stream_handle_);
+        if (!is_st_session) {
+            ret = qal_stream_stop(qal_stream_handle_);
+        } else {
+            ret = qal_stream_set_param(qal_stream_handle_,
+                QAL_PARAM_ID_STOP_BUFFERING, nullptr);
+        }
     }
 
     stream_started_ = false;
 
-    if (qal_stream_handle_) {
+    if (qal_stream_handle_ && !is_st_session) {
         ret = qal_stream_close(qal_stream_handle_);
         qal_stream_handle_ = NULL;
     }
@@ -1951,14 +1955,18 @@ int StreamInPrimary::Open() {
     uint32_t outBufSize = 0;
     uint32_t inBufCount = NO_OF_BUF;
     uint32_t outBufCount = NO_OF_BUF;
+    void *handle = nullptr;
+
     if(!mInitialized) {
         ALOGE("%s: Not initialized, returning error", __func__);
         goto error_open;
     }
 
-    audio_extn_sound_trigger_check_and_get_session(this);
-    if (is_st_session) {
-        return 0;
+    handle = audio_extn_sound_trigger_check_and_get_session(this);
+    if (handle) {
+        ALOGV("Found existing qal stream handle associated with capture handle");
+        qal_stream_handle_ = (qal_stream_handle_t *)handle;
+        goto set_buff_size;
     }
 
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
@@ -2007,6 +2015,7 @@ int StreamInPrimary::Open() {
         goto error_open;
     }
 
+set_buff_size:
     inBufSize = StreamInPrimary::GetBufferSize();
     if (streamAttributes_.type != QAL_STREAM_VOIP_TX) {
         inBufSize = inBufSize/NO_OF_BUF;
@@ -2061,6 +2070,8 @@ int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_s
 
 ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
     int ret = 0;
+    int retry_count = MAX_READ_RETRY_COUNT;
+    size_t size = 0;
     struct qal_buffer qalBuffer;
     uint32_t local_bytes_read = 0;
     qalBuffer.buffer = (void*)buffer;
@@ -2073,8 +2084,21 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
     }
 
     if (is_st_session) {
-        audio_extn_sound_trigger_read(this, (void *)buffer, bytes);
-        return bytes;
+        stream_started_ = true;
+        while (retry_count--) {
+            size = qal_stream_read(qal_stream_handle_, &qalBuffer);
+            if (size < 0) {
+                ALOGE("%s: error, failed to read data from QAL", __func__);
+                goto exit;
+            } else if (size == 0) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            } else {
+                break;
+            }
+        }
+        local_bytes_read = size;
+        total_bytes_read_ += local_bytes_read;
+        goto exit;
     }
 
     if (!stream_started_) {
@@ -2091,6 +2115,9 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
 
     local_bytes_read = qal_stream_read(qal_stream_handle_, &qalBuffer);
     total_bytes_read_ += local_bytes_read;
+
+exit:
+    ALOGV("%s: Exit, bytes read %u", __func__, local_bytes_read);
 
     return local_bytes_read;
 }

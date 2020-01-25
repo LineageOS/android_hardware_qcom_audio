@@ -27,9 +27,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <tinyalsa/asoundlib.h>
+
 #include "AudioDevice.h"
 #include "AudioStream.h"
-#include <tinyalsa/asoundlib.h>
 
 enum st_event_type {
     ST_EVENT_SND_DEVICE_FREE,
@@ -41,20 +42,5 @@ typedef enum st_event_type st_event_type_t;
 
 int audio_extn_sound_trigger_init(std::shared_ptr<AudioDevice> adev);
 void audio_extn_sound_trigger_deinit(std::shared_ptr<AudioDevice> adev);
-void audio_extn_sound_trigger_update_device_status(std::shared_ptr<audio_hw_device_t> device,
-                                     st_event_type_t event);
-void audio_extn_sound_trigger_update_stream_status(StreamPrimary *stream,
-                                     st_event_type_t event);
-void audio_extn_sound_trigger_update_battery_status(bool charging);
-void audio_extn_sound_trigger_update_screen_status(bool screen_off);
-void audio_extn_sound_trigger_set_parameters(std::shared_ptr<AudioDevice> adev,
-                                             struct str_parms *parms);
-void audio_extn_sound_trigger_check_and_get_session(StreamInPrimary *in_stream);
-void audio_extn_sound_trigger_stop_lab(StreamInPrimary *in_stream);
-int audio_extn_sound_trigger_read(StreamInPrimary *in_stream, void *buffer,
-                                  size_t bytes);
-void audio_extn_sound_trigger_get_parameters(const std::shared_ptr<AudioDevice> adev,
-                     struct str_parms *query, struct str_parms *reply);
-bool audio_extn_sound_trigger_check_ec_ref_enable();
-void audio_extn_sound_trigger_update_ec_ref_status(bool on);
-
+void* audio_extn_sound_trigger_check_and_get_session(
+    StreamInPrimary *in_stream);
