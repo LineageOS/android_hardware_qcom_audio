@@ -656,6 +656,56 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     if (qal_device_ids)
         delete qal_device_ids;
 
+    ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
+    if (ret >= 0) {
+        qal_param_btsco_t param_bt_sco;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+            param_bt_sco.bt_sco_on = true;
+        else
+            param_bt_sco.bt_sco_on = false;
+
+        ALOGE("%s: BTSCO on = %d\n", __func__, param_bt_sco.bt_sco_on);
+        ret = qal_set_param(QAL_PARAM_ID_BT_SCO, (void *)&param_bt_sco,
+                            sizeof(qal_param_btsco_t));
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
+    if (ret >= 0) {
+        qal_param_btsco_t param_bt_sco;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+            param_bt_sco.bt_wb_speech_enabled = true;
+        else
+            param_bt_sco.bt_wb_speech_enabled = false;
+
+        ALOGE("%s: BTSCO WB mode = %d\n", __func__, param_bt_sco.bt_wb_speech_enabled);
+        ret = qal_set_param(QAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
+                            sizeof(qal_param_btsco_t));
+     }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value, sizeof(value));
+    if (ret >= 0) {
+        qal_param_bta2dp_t param_bt_a2dp;
+        param_bt_a2dp.reconfigured = true;
+
+        ALOGE("%s: BT A2DP Reconfig command received\n", __func__);
+        ret = qal_set_param(QAL_PARAM_ID_BT_A2DP_RECONFIG, (void *)&param_bt_a2dp,
+                            sizeof(qal_param_bta2dp_t));
+    }
+
+    ret = str_parms_get_str(parms, "A2dpSuspended" , value, sizeof(value));
+    if (ret >= 0) {
+        qal_param_bta2dp_t param_bt_a2dp;
+
+        if (strncmp(value, "true", 4) == 0)
+            param_bt_a2dp.a2dp_suspended = true;
+        else
+            param_bt_a2dp.a2dp_suspended = false;
+
+        ALOGE("%s: BT A2DP Suspended = %s, command received\n", __func__, value);
+        ret = qal_set_param(QAL_PARAM_ID_BT_A2DP_SUSPENDED, (void *)&param_bt_a2dp,
+                            sizeof(qal_param_bta2dp_t));
+    }
+
     str_parms_destroy(parms);
 
     ALOGD("%s: exit: %s", __func__, kvpairs);
@@ -671,9 +721,51 @@ int AudioDevice::SetVoiceVolume(float volume) {
     return ret;
 }
 
-char* AudioDevice::GetParameters(const char *keys __unused) {
+char* AudioDevice::GetParameters(const char *keys) {
+    int32_t ret;
+    char *str;
+    char value[256]={0};
+    size_t size = 0;
+    struct str_parms *reply = str_parms_create();
+    struct str_parms *query = str_parms_create_str(keys);
 
-    return NULL;
+    if (!query || !reply) {
+        if (reply) {
+            str_parms_destroy(reply);
+        }
+        if (query) {
+            str_parms_destroy(query);
+        }
+        ALOGE("%s: failed to create query or reply", __func__);
+        return NULL;
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_A2DP_RECONFIG_SUPPORTED,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        qal_param_bta2dp_t *param_bt_a2dp;
+        int32_t val = 0;
+
+        ret = qal_get_param(QAL_PARAM_ID_BT_A2DP_RECONFIG_SUPPORTED,
+                            (void **)&param_bt_a2dp, &size);
+        if (!ret) {
+            if (size < sizeof(qal_param_bta2dp_t)) {
+                ALOGE("Size returned is smaller for BT_A2DP_RECONFIG_SUPPORTED\n");
+                goto exit;
+            }
+            val = param_bt_a2dp->reconfig_supported;
+            str_parms_add_int(reply, AUDIO_PARAMETER_A2DP_RECONFIG_SUPPORTED, val);
+            ALOGV("%s: isReconfigA2dpSupported = %d", __func__, val);
+        }
+    }
+
+exit:
+    str = str_parms_to_str(reply);
+    str_parms_destroy(query);
+    str_parms_destroy(reply);
+
+    ALOGD("%s: exit: returns - %s", __func__, str);
+    return str;
 }
 
 void AudioDevice::FillAndroidDeviceMap() {
