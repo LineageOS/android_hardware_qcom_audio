@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -49,28 +49,6 @@ enum {
     SPKR_1,
     SPKR_2
 };
-
-/*
- * Below are the devices for which is back end is same, SLIMBUS_0_RX.
- * All these devices are handled by the internal HW codec. We can
- * enable any one of these devices at any time. An exception here is
- * 44.1k headphone which uses different backend. This is filtered
- * as different hal internal device in the code but remains same
- * as standard android device AUDIO_DEVICE_OUT_WIRED_HEADPHONE
- * for other layers.
- */
-#define AUDIO_DEVICE_OUT_ALL_CODEC_BACKEND \
-    (AUDIO_DEVICE_OUT_EARPIECE | AUDIO_DEVICE_OUT_SPEAKER | \
-     AUDIO_DEVICE_OUT_SPEAKER_SAFE | \
-     AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE | \
-     AUDIO_DEVICE_OUT_LINE)
-
-/*
- * Below are the input devices for which back end is same, SLIMBUS_0_TX.
- * All these devices are handled by the internal HW codec. We can
- * enable any one of these devices at any time
- */
-int AUDIO_DEVICE_IN_ALL_CODEC_BACKEND;
 
 /* Sound devices specific to the platform
  * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound

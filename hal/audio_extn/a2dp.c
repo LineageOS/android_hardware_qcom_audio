@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -2786,7 +2786,7 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                 list_for_each(node, &a2dp.adev->usecase_list) {
                     uc_info = node_to_item(node, struct audio_usecase, list);
                     if (uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
-                         (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
+                        is_a2dp_out_device_type(&uc_info->stream.out->device_list)) {
                         pthread_mutex_unlock(&a2dp.adev->lock);
                         fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
                         pthread_mutex_lock(&a2dp.adev->lock);
@@ -2827,7 +2827,7 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                 list_for_each(node, &a2dp.adev->usecase_list) {
                     uc_info = node_to_item(node, struct audio_usecase, list);
                     if (uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
-                         (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
+                        is_a2dp_out_device_type(&uc_info->stream.out->device_list)) {
                         pthread_mutex_unlock(&a2dp.adev->lock);
                         fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
                         pthread_mutex_lock(&a2dp.adev->lock);

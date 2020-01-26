@@ -51,6 +51,7 @@
 #include "audio_defs.h"
 #include "voice.h"
 #include "audio_hw_extn_api.h"
+#include "device_utils.h"
 
 #if LINUX_ENABLED
 #if defined(__LP64__)
@@ -334,7 +335,7 @@ struct stream_config {
     unsigned int sample_rate;
     audio_channel_mask_t channel_mask;
     audio_format_t format;
-    audio_devices_t devices;
+    struct listnode device_list;
     unsigned int bit_width;
 };
 
@@ -368,7 +369,7 @@ struct stream_out {
     unsigned int sample_rate;
     audio_channel_mask_t channel_mask;
     audio_format_t format;
-    audio_devices_t devices;
+    struct listnode device_list;
     audio_output_flags_t flags;
     char profile[MAX_STREAM_PROFILE_STR_LEN];
     audio_usecase_t usecase;
@@ -465,7 +466,7 @@ struct stream_in {
     int standby;
     int source;
     int pcm_device_id;
-    audio_devices_t device;
+    struct listnode device_list;
     audio_channel_mask_t channel_mask;
     audio_usecase_t usecase;
     bool enable_aec;
@@ -550,7 +551,7 @@ struct audio_usecase {
     struct listnode list;
     audio_usecase_t id;
     usecase_type_t  type;
-    audio_devices_t devices;
+    struct listnode device_list;
     snd_device_t out_snd_device;
     snd_device_t in_snd_device;
     struct stream_app_type_cfg out_app_type_cfg;
@@ -798,12 +799,10 @@ static inline bool is_loopback_input_device(audio_devices_t device) {
 }
 
 int route_output_stream(struct stream_out *stream,
-                               audio_devices_t devices,
-                               char *address);
+                        struct listnode *devices);
 int route_input_stream(struct stream_in *stream,
-                              audio_devices_t devices,
-                              char *address,
-                              audio_source_t source);
+                       struct listnode *devices,
+                       audio_source_t source);
 
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the

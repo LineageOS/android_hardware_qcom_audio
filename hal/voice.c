@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -239,11 +239,12 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     uc_info->id = usecase_id;
     uc_info->type = VOICE_CALL;
     uc_info->stream.out = adev->current_call_output;
-    uc_info->devices = adev->current_call_output->devices;
+    list_init(&uc_info->device_list);
+    assign_devices(&uc_info->device_list, &adev->current_call_output->device_list);
 
-    if (popcount(uc_info->devices) == 2) {
+    if (list_length(&uc_info->device_list) == 2) {
         ALOGE("%s: Invalid combo device(%#x) for voice call", __func__,
-              uc_info->devices);
+              get_device_types(&uc_info->device_list));
         ret = -EIO;
         goto error_start_voice;
     }
@@ -252,7 +253,7 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     uc_info->out_snd_device = SND_DEVICE_NONE;
     adev->voice.use_device_mute = false;
 
-    if (audio_is_bluetooth_sco_device(uc_info->devices) && !adev->bt_sco_on) {
+    if (is_sco_out_device_type(&uc_info->device_list) && !adev->bt_sco_on) {
         ALOGE("start_call: couldn't find BT SCO, SCO is not ready");
         adev->voice.in_call = false;
         ret = -EIO;

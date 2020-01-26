@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -365,13 +365,13 @@ bool audio_extn_ffv_get_enabled()
 bool  audio_extn_ffv_check_usecase(struct stream_in *in) {
     int ret = false;
     int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
-    audio_devices_t devices = in->device;
     audio_source_t source = in->source;
 
     if ((audio_extn_ffv_get_enabled()) &&
             (channel_count == 1) &&
             (AUDIO_SOURCE_MIC == source) &&
-            ((AUDIO_DEVICE_IN_BUILTIN_MIC == devices) || (AUDIO_DEVICE_IN_BACK_MIC == devices)) &&
+            (is_single_device_type_equal(&in->device_list, AUDIO_DEVICE_IN_BUILTIN_MIC) ||
+             is_single_device_type_equal(&in->device_list, AUDIO_DEVICE_IN_BACK_MIC)) &&
             (in->format == AUDIO_FORMAT_PCM_16_BIT) &&
             (in->sample_rate == FFV_SAMPLING_RATE_16000)) {
         in->config.channels = channel_count;

@@ -672,7 +672,7 @@ static bool set_app_type_cfg(struct streams_io_cfg *s_info,
 
 void audio_extn_utils_update_stream_input_app_type_cfg(void *platform,
                                   struct listnode *streams_input_cfg_list,
-                                  audio_devices_t devices __unused,
+                                  struct listnode *devices __unused,
                                   audio_input_flags_t flags,
                                   audio_format_t format,
                                   uint32_t sample_rate,
@@ -710,7 +710,7 @@ void audio_extn_utils_update_stream_input_app_type_cfg(void *platform,
 
 void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
                                   struct listnode *streams_output_cfg_list,
-                                  audio_devices_t devices,
+                                  struct listnode *devices,
                                   audio_output_flags_t flags,
                                   audio_format_t format,
                                   uint32_t sample_rate,
@@ -724,7 +724,7 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
     struct stream_format *sf_info;
     char value[PROPERTY_VALUE_MAX] = {0};
 
-    if (devices & AUDIO_DEVICE_OUT_SPEAKER) {
+    if (compare_device_type(devices, AUDIO_DEVICE_OUT_SPEAKER)) {
         int bw = platform_get_snd_device_bit_width(SND_DEVICE_OUT_SPEAKER);
         if ((-ENOSYS != bw) && (bit_width > (uint32_t)bw))
             bit_width = (uint32_t)bw;
@@ -866,7 +866,7 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
     case PCM_PLAYBACK:
         audio_extn_utils_update_stream_output_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
-                                                usecase->stream.out->devices,
+                                                &usecase->stream.out->device_list,
                                                 usecase->stream.out->flags,
                                                 usecase->stream.out->hal_op_format,
                                                 usecase->stream.out->sample_rate,
@@ -882,7 +882,7 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
         else
             audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
                                                 &adev->streams_input_cfg_list,
-                                                usecase->stream.in->device,
+                                                &usecase->stream.in->device_list,
                                                 usecase->stream.in->flags,
                                                 usecase->stream.in->format,
                                                 usecase->stream.in->sample_rate,
@@ -894,7 +894,7 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
     case TRANSCODE_LOOPBACK_RX :
         audio_extn_utils_update_stream_output_app_type_cfg(adev->platform,
                                                 &adev->streams_output_cfg_list,
-                                                usecase->stream.inout->out_config.devices,
+                                                &usecase->stream.inout->out_config.device_list,
                                                 0,
                                                 usecase->stream.inout->out_config.format,
                                                 usecase->stream.inout->out_config.sample_rate,
@@ -1012,7 +1012,7 @@ static int audio_extn_utils_send_app_type_cfg_hfp(struct audio_device *adev,
         goto exit_send_app_type_cfg;
     }
 
-    if (usecase->devices & AUDIO_DEVICE_OUT_BUS)
+    if (compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_BUS))
         is_bus_dev_usecase = true;
 
     snd_device = usecase->out_snd_device;
@@ -1118,7 +1118,8 @@ int audio_extn_utils_get_app_sample_rate_for_device(
 
         if (usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
             usecase->stream.out->app_type_cfg.sample_rate = usecase->stream.out->sample_rate;
-        } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_SPEAKER) {
+        } else if (compare_device_type(&usecase->stream.out->device_list,
+                                       AUDIO_DEVICE_OUT_SPEAKER)) {
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         } else if ((snd_device == SND_DEVICE_OUT_HDMI ||
                     snd_device == SND_DEVICE_OUT_USB_HEADSET ||
@@ -1138,7 +1139,7 @@ int audio_extn_utils_get_app_sample_rate_for_device(
             (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
             /* Reset to default if no native stream is active*/
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        } else if (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
+        } else if (is_a2dp_out_device_type(&usecase->stream.out->device_list)) {
                  /*
                   * For a2dp playback get encoder sampling rate and set copp sampling rate,
                   * for bit width use the stream param only.
@@ -2101,7 +2102,7 @@ int audio_extn_utils_get_avt_device_drift(
         backend = platform_get_snd_device_backend_interface(usecase->out_snd_device);
         if (!backend) {
             ALOGE("%s: Unsupported device %d", __func__,
-                   usecase->stream.out->devices);
+                   get_device_types(&usecase->stream.out->device_list));
             ret = -EINVAL;
             goto done;
         }

@@ -131,6 +131,7 @@ LOCAL_SRC_FILES += audio_extn/audio_extn.c \
                    audio_extn/source_track.c \
                    audio_extn/usb.c \
                    audio_extn/utils.c \
+                   audio_extn/device_utils.c \
                    voice_extn/compress_voip.c \
                    voice_extn/voice_extn.c
 

@@ -680,7 +680,7 @@ int audio_extn_hfp_set_mic_mute2(struct audio_device *adev, bool state);
 typedef int (*fp_platform_set_mic_mute_t)(void *, bool);
 //typedef int (*fp_platform_get_pcm_device_id_t)(audio_usecase_t, int);
 typedef void (*fp_platform_set_echo_reference_t)(struct audio_device *, bool,
-                                                            audio_devices_t);
+                                                     struct listnode *);
 typedef int (*fp_select_devices_t)(struct audio_device *, audio_usecase_t);
 typedef int (*fp_audio_extn_ext_hw_plugin_usecase_start_t)(void *,
                                                       struct audio_usecase *);
@@ -795,7 +795,7 @@ void audio_extn_utils_release_streams_cfg_lists(
                                   struct listnode *streams_input_cfg_list);
 void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
                                   struct listnode *streams_output_cfg_list,
-                                  audio_devices_t devices,
+                                  struct listnode *devices,
                                   audio_output_flags_t flags,
                                   audio_format_t format,
                                   uint32_t sample_rate,
@@ -805,7 +805,7 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
                                   struct stream_app_type_cfg *app_type_cfg);
 void audio_extn_utils_update_stream_input_app_type_cfg(void *platform,
                                   struct listnode *streams_input_cfg_list,
-                                  audio_devices_t devices,
+                                  struct listnode *devices,
                                   audio_input_flags_t flags,
                                   audio_format_t format,
                                   uint32_t sample_rate,
@@ -1063,7 +1063,7 @@ int audio_extn_keep_alive_set_parameters(struct audio_device *adev,
 void audio_extn_gef_init(struct audio_device *adev);
 void audio_extn_gef_deinit(struct audio_device *adev);
 
-void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
+void audio_extn_gef_notify_device_config(struct listnode *audio_devices,
     audio_channel_mask_t channel_mask, int sample_rate, int acdb_id, int app_type);
 #ifndef INSTANCE_ID_ENABLED
 int audio_extn_gef_send_audio_cal(void* adev, int acdb_dev_id, int acdb_device_type,
@@ -1126,7 +1126,8 @@ void audio_extn_source_track_get_parameters(const struct audio_device *adev,
 void audio_extn_fm_set_parameters(struct audio_device *adev,
                                    struct str_parms *parms);
 void audio_extn_fm_get_parameters(struct str_parms *query, struct str_parms *reply);
-void audio_extn_fm_route_on_selected_device(struct audio_device *adev, audio_devices_t device);
+void audio_extn_fm_route_on_selected_device(struct audio_device *adev,
+                                            struct listnode *devices);
 
 #ifndef APTX_DECODER_ENABLED
 #define audio_extn_aptx_dec_set_license(adev); (0)
