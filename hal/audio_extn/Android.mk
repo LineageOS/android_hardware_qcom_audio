@@ -618,6 +618,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
 
+# Kernel specific feature
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GKI)), true)
+    LOCAL_CFLAGS += -DAUDIO_GKI_ENABLED
+endif
+
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
 ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)

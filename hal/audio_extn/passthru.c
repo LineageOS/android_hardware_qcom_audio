@@ -250,7 +250,7 @@ bool passthru_should_drop_data(struct stream_out * out)
      *stream has PCM format or
      *if a compress offload (DSP decode) session
      */
-#ifdef AUDIO_QGKI_ENABLED
+#ifdef AUDIO_GKI_ENABLED
     /* out->compr_config.codec->reserved[0] is for compr_passthr */
     compr_passthr = out->compr_config.codec->reserved[0];
 #else
@@ -486,7 +486,7 @@ void passthru_update_stream_configuration(
        }
     }
 
-#ifdef AUDIO_QGKI_ENABLED
+#ifdef AUDIO_GKI_ENABLED
     /* out->compr_config.codec->reserved[0] is for compr_passthr */
     out->compr_config.codec->reserved[0] = compr_passthr;
 #else

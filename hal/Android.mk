@@ -326,7 +326,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
     LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
 endif
 
-# Hardware specific feature
+# Kernel specific feature
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GKI)), true)
     LOCAL_CFLAGS += -DAUDIO_GKI_ENABLED
 endif
