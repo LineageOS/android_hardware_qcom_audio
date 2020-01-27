@@ -63,9 +63,15 @@ uint64_t timestamp;
 };
 #define compress_config_set_timstamp_flag(config) (-ENOSYS)
 #else
+#ifdef AUDIO_GKI_ENABLED
+/* (config).codec->reserved[1] is for flags */
+#define compress_config_set_timstamp_flag(config) \
+            (config)->codec->reserved[1] |= COMPRESSED_TIMESTAMP_FLAG
+#else
 #define compress_config_set_timstamp_flag(config) \
             (config)->codec->flags |= COMPRESSED_TIMESTAMP_FLAG
-#endif
+#endif /* AUDIO_GKI_ENABLED */
+#endif /* COMPRESSED_TIMESTAMP_FLAG */
 
 #define COMPRESS_RECORD_NUM_FRAGMENTS 8
 
@@ -338,7 +344,7 @@ int cin_configure_input_stream(struct stream_in *in, struct audio_config *in_con
         flags |= audio_extn_utils_get_perf_mode_flag();
     }
 
-#ifdef AUDIO_QGKI_ENABLED
+#ifdef AUDIO_GKI_ENABLED
     /* out->compr_config.codec->reserved[0] is for compr_passthr */
     cin_data->compr_config.codec->reserved[0] = compr_passthr;
     /* out->compr_config.codec->reserved[1] is for flags */
