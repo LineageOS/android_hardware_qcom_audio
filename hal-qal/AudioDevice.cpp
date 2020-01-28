@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -82,16 +82,19 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::CreateStreamOut(
                                               fnp_offload_effect_start_output_,
                                               fnp_offload_effect_stop_output_));
     astream->GetStreamHandle(stream_out);
+    out_list_mutex.lock();
     stream_out_list_.push_back(astream);
     ALOGE("%s: output stream %d %p", __func__,(int)stream_out_list_.size(), stream_out);
     if (flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
         if (voice_)
             voice_->stream_out_primary_ = astream;
     }
+    out_list_mutex.unlock();
     return astream;
 }
 
 void AudioDevice::CloseStreamOut(std::shared_ptr<StreamOutPrimary> stream) {
+    out_list_mutex.lock();
     auto iter =
         std::find(stream_out_list_.begin(), stream_out_list_.end(), stream);
 
@@ -100,6 +103,7 @@ void AudioDevice::CloseStreamOut(std::shared_ptr<StreamOutPrimary> stream) {
     } else {
         stream_out_list_.erase(iter);
     }
+    out_list_mutex.unlock();
 }
 
 std::shared_ptr<StreamInPrimary> AudioDevice::CreateStreamIn(
@@ -114,12 +118,15 @@ std::shared_ptr<StreamInPrimary> AudioDevice::CreateStreamIn(
                                               devices, flags, config,
                                               address, source));
     astream->GetStreamHandle(stream_in);
+    in_list_mutex.lock();
     stream_in_list_.push_back(astream);
+    in_list_mutex.unlock();
     ALOGD("%s: input stream %d %p", __func__,(int)stream_in_list_.size(), stream_in); 
     return astream;
 }
 
 void AudioDevice::CloseStreamIn(std::shared_ptr<StreamInPrimary> stream) {
+    in_list_mutex.lock();
     auto iter =
         std::find(stream_in_list_.begin(), stream_in_list_.end(), stream);
     if (iter == stream_in_list_.end()) {
@@ -127,6 +134,7 @@ void AudioDevice::CloseStreamIn(std::shared_ptr<StreamInPrimary> stream) {
     } else {
         stream_in_list_.erase(iter);
     }
+    in_list_mutex.unlock();
 }
 
 static int adev_close(hw_device_t *device __unused) {
@@ -141,7 +149,7 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume) {
 
     std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
-        ALOGE("%s: invalid adevice object",__func__);
+        ALOGE("%s: invalid adevice object", __func__);
         return -EINVAL;
     }
 
@@ -166,7 +174,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
-        ALOGE("%s: invalid adevice object",__func__);
+        ALOGE("%s: invalid adevice object", __func__);
         goto exit;
     }
     astream = adevice->OutGetStream(handle);
@@ -186,13 +194,13 @@ void adev_close_output_stream(struct audio_hw_device *dev,
     std::shared_ptr<StreamOutPrimary> astream_out;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
-        ALOGE("%s: invalid adevice object",__func__);
+        ALOGE("%s: invalid adevice object", __func__);
         return;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: invalid astream_in object",__func__);
+        ALOGE("%s: invalid astream_in object", __func__);
         return;
     }
 
@@ -206,14 +214,14 @@ void adev_close_input_stream(struct audio_hw_device *dev,
     std::shared_ptr<StreamInPrimary> astream_in;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
-        ALOGE("%s: invalid adevice object",__func__);
+        ALOGE("%s: invalid adevice object", __func__);
         return;
     }
 
     astream_in = adevice->InGetStream((audio_stream_t*)stream);
 
     if (!astream_in) {
-        ALOGE("%s: invalid astream_in object",__func__);
+        ALOGE("%s: invalid astream_in object", __func__);
         return;
     }
 
@@ -233,39 +241,39 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     bool ret_error = false;
     std::shared_ptr<StreamInPrimary> astream = nullptr;
     ALOGD("%s: enter: sample_rate(%d) channel_mask(%#x) devices(%#x)\
-        io_handle(%d) source(%d) format %x",__func__, config->sample_rate,
+        io_handle(%d) source(%d) format %x", __func__, config->sample_rate,
         config->channel_mask, devices, handle, source, config->format);
 
     std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
-        ALOGE("%s: invalid adevice object",__func__);
+        ALOGE("%s: invalid adevice object", __func__);
         goto exit;
     }
     if ((config->format == AUDIO_FORMAT_PCM_FLOAT) ||
         (config->format == AUDIO_FORMAT_PCM_32_BIT) ||
         (config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) ||
         (config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
-    //astream->bit_width = 24;
-    if ((source != AUDIO_SOURCE_UNPROCESSED) &&
-            (source != AUDIO_SOURCE_CAMCORDER)) {
-        config->format = AUDIO_FORMAT_PCM_16_BIT;
-        if (config->sample_rate > 48000)
-            config->sample_rate = 48000;
-        ret_error = true;
-    } else if (!(config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED ||
-                config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
-        config->format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
-        ret_error = true;
+        //astream->bit_width = 24;
+        if ((source != AUDIO_SOURCE_UNPROCESSED) &&
+                (source != AUDIO_SOURCE_CAMCORDER)) {
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+            if (config->sample_rate > 48000)
+                config->sample_rate = 48000;
+            ret_error = true;
+        } else if (!(config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED ||
+                    config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
+            config->format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+            ret_error = true;
+        }
+
+        if (ret_error) {
+            ret = -EINVAL;
+            goto exit;
+        }
     }
 
-    if (ret_error) {
-        ret = -EINVAL;
-        goto exit;
-    }
-    }
-
-    if (config->format == AUDIO_FORMAT_PCM_FLOAT){
-        ALOGE("%s: format not supported\n",__func__);
+    if (config->format == AUDIO_FORMAT_PCM_FLOAT) {
+        ALOGE("%s: format not supported", __func__);
         config->format = AUDIO_FORMAT_PCM_16_BIT;
         ret = -EINVAL;
         goto exit;
@@ -285,7 +293,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 {
     std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
-        ALOGE("%s: invalid adevice object",__func__);
+        ALOGE("%s: invalid adevice object", __func__);
         return -EINVAL;
     }
 
@@ -295,7 +303,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 static int adev_set_mic_mute(struct audio_hw_device *dev, bool state) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
-        ALOGE("%s: invalid adevice object",__func__);
+        ALOGE("%s: invalid adevice object", __func__);
         return -EINVAL;
     }
 
@@ -306,7 +314,7 @@ static int adev_get_mic_mute(const struct audio_hw_device *dev, bool *state) {
     std::shared_ptr<AudioDevice> adevice =
         AudioDevice::GetInstance((audio_hw_device_t *)dev);
     if (!adevice) {
-        ALOGE("%s: invalid adevice object",__func__);
+        ALOGE("%s: invalid adevice object", __func__);
         return -EINVAL;
     }
 
@@ -337,7 +345,7 @@ static int adev_set_parameters(struct audio_hw_device *dev,
                                const char *kvpairs) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
-        ALOGE("%s: invalid adevice object",__func__);
+        ALOGE("%s: invalid adevice object", __func__);
         return -EINVAL;
     }
 
@@ -349,7 +357,7 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     std::shared_ptr<AudioDevice> adevice =
         AudioDevice::GetInstance((audio_hw_device_t*)dev);
     if (!adevice) {
-        ALOGE("%s: invalid adevice object",__func__);
+        ALOGE("%s: invalid adevice object", __func__);
         return NULL;
     }
 
@@ -421,7 +429,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
 
     ret = qal_init();
     if (ret) {
-        ALOGE("%s:(%d) qal_init failed ret=(%d)",__func__,__LINE__, ret);
+        ALOGE("%s:(%d) qal_init failed ret=(%d)", __func__, __LINE__, ret);
         return -EINVAL;
     }
 
@@ -494,9 +502,8 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(
                                               audio_io_handle_t handle) {
 
     std::shared_ptr<StreamOutPrimary> astream_out = NULL;
-
-    for (int i = 0; i < stream_out_list_.size(); i++){
-
+    out_list_mutex.lock();
+    for (int i = 0; i < stream_out_list_.size(); i++) {
         if (stream_out_list_[i]->handle_ == handle) {
             ALOGI("%s: Found existing stream associated with iohandle %d",
                   __func__, handle);
@@ -505,13 +512,15 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(
         }
     }
 
+    out_list_mutex.unlock();
     return astream_out;
 }
 
 std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(audio_stream_t* stream_out) {
 
     std::shared_ptr<StreamOutPrimary> astream_out;
-    ALOGV("%s: stream_out(%p)",__func__, stream_out);
+    ALOGV("%s: stream_out(%p)", __func__, stream_out);
+    out_list_mutex.lock();
     for (int i = 0; i < stream_out_list_.size(); i++) {
         if (stream_out_list_[i]->stream_.get() ==
                                         (audio_stream_out*) stream_out) {
@@ -520,14 +529,16 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::OutGetStream(audio_stream_t* stre
             break;
         }
     }
-    ALOGV("%s: astream_out(%p)",__func__, astream_out->stream_.get());
+    out_list_mutex.unlock();
+    ALOGV("%s: astream_out(%p)", __func__, astream_out->stream_.get());
 
     return astream_out;
 }
 
 std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_io_handle_t handle) {
     std::shared_ptr<StreamInPrimary> astream_in = NULL;
-    for (int i = 0; i < stream_in_list_.size(); i++){
+    in_list_mutex.lock();
+    for (int i = 0; i < stream_in_list_.size(); i++) {
         if (stream_in_list_[i]->handle_ == handle) {
             ALOGI("%s: Found existing stream associated with iohandle %d",
                   __func__, handle);
@@ -535,14 +546,15 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_io_handle_t han
             break;
         }
     }
-
+    in_list_mutex.unlock();
     return astream_in;
 }
 
 std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* stream_in) {
     std::shared_ptr<StreamInPrimary> astream_in;
 
-    ALOGV("%s: stream_in(%p)",__func__, stream_in);
+    ALOGV("%s: stream_in(%p)", __func__, stream_in);
+    in_list_mutex.lock();
     for (int i = 0; i < stream_in_list_.size(); i++) {
         if (stream_in_list_[i]->stream_.get() == (audio_stream_in*) stream_in) {
             ALOGI("%s: Found existing stream associated with astream_in", __func__);
@@ -550,7 +562,8 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* strea
             break;
         }
     }
-    ALOGV("%s: astream_in(%p)",__func__, astream_in->stream_.get());
+    in_list_mutex.unlock();
+    ALOGV("%s: astream_in(%p)", __func__, astream_in->stream_.get());
     return astream_in;
 }
 
@@ -599,11 +612,11 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         qal_param_screen_state_t param_screen_st;
         if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
             param_screen_st.screen_state = true;
-            ALOGD("%s:%d - screen = on",__func__,__LINE__);
+            ALOGD("%s:%d - screen = on", __func__, __LINE__);
             ret = qal_set_param( QAL_PARAM_ID_SCREEN_STATE, (void*)&param_screen_st, sizeof(qal_param_screen_state_t));
         }
         else {
-            ALOGD("%s:%d - screen = off",__func__,__LINE__);
+            ALOGD("%s:%d - screen = off", __func__, __LINE__);
             param_screen_st.screen_state = false;
             ret = qal_set_param( QAL_PARAM_ID_SCREEN_STATE, (void*)&param_screen_st, sizeof(qal_param_screen_state_t));
         }
@@ -621,14 +634,14 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             if (ret >= 0) {
                 param_device_connection.device_config.usb_addr.card_id = atoi(value);
                 usb_card_id_ = param_device_connection.device_config.usb_addr.card_id;
-                ALOGI("%s: plugin card=%d\n", __func__,
+                ALOGI("%s: plugin card=%d", __func__,
                     param_device_connection.device_config.usb_addr.card_id);
             }
             ret = str_parms_get_str(parms, "device", value, sizeof(value));
             if (ret >= 0) {
                 param_device_connection.device_config.usb_addr.device_num = atoi(value);
                 usb_dev_num_ = param_device_connection.device_config.usb_addr.device_num;
-                ALOGI("%s: plugin device num=%d\n", __func__,
+                ALOGI("%s: plugin device num=%d", __func__,
                     param_device_connection.device_config.usb_addr.device_num);
             }
         } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
@@ -636,7 +649,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
             param_device_connection.device_config.dp_config.controller = controller;
             param_device_connection.device_config.dp_config.stream = stream;
-            ALOGI("%s: plugin device cont %d stream %d",__func__, controller, stream);
+            ALOGI("%s: plugin device cont %d stream %d", __func__, controller, stream);
         }
 
         device_count = popcount(device);
@@ -652,9 +665,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                         (void*)&param_device_connection,
                         sizeof(qal_param_device_connection_t));
                 if (ret!=0) {
-                    ALOGE("%s: qal set param failed for device connection",__func__);
+                    ALOGE("%s: qal set param failed for device connection", __func__);
                 }
-                ALOGI("%s: qal set param success  for device connection",__func__);
+                ALOGI("%s: qal set param success  for device connection", __func__);
             }
         }
     }
@@ -677,7 +690,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
             param_device_connection.device_config.dp_config.controller = controller;
             param_device_connection.device_config.dp_config.stream = stream;
-            ALOGI("%s: plugin device cont %d stream %d",__func__, controller, stream);
+            ALOGI("%s: plugin device cont %d stream %d", __func__, controller, stream);
         }
 
         device_count = popcount(device);
@@ -693,9 +706,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                         (void*)&param_device_connection,
                         sizeof(qal_param_device_connection_t));
                 if (ret!=0) {
-                    ALOGE("%s: qal set param failed for device disconnect",__func__);
+                    ALOGE("%s: qal set param failed for device disconnect", __func__);
                 }
-                ALOGI("%s: qal set param sucess for device disconnect",__func__);
+                ALOGI("%s: qal set param sucess for device disconnect", __func__);
             }
         }
     }
@@ -711,7 +724,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         else
             param_bt_sco.bt_sco_on = false;
 
-        ALOGE("%s: BTSCO on = %d\n", __func__, param_bt_sco.bt_sco_on);
+        ALOGE("%s: BTSCO on = %d", __func__, param_bt_sco.bt_sco_on);
         ret = qal_set_param(QAL_PARAM_ID_BT_SCO, (void *)&param_bt_sco,
                             sizeof(qal_param_btsco_t));
     }
@@ -724,7 +737,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         else
             param_bt_sco.bt_wb_speech_enabled = false;
 
-        ALOGE("%s: BTSCO WB mode = %d\n", __func__, param_bt_sco.bt_wb_speech_enabled);
+        ALOGE("%s: BTSCO WB mode = %d", __func__, param_bt_sco.bt_wb_speech_enabled);
         ret = qal_set_param(QAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
                             sizeof(qal_param_btsco_t));
      }
@@ -734,7 +747,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         qal_param_bta2dp_t param_bt_a2dp;
         param_bt_a2dp.reconfigured = true;
 
-        ALOGE("%s: BT A2DP Reconfig command received\n", __func__);
+        ALOGE("%s: BT A2DP Reconfig command received", __func__);
         ret = qal_set_param(QAL_PARAM_ID_BT_A2DP_RECONFIG, (void *)&param_bt_a2dp,
                             sizeof(qal_param_bta2dp_t));
     }
@@ -748,7 +761,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         else
             param_bt_a2dp.a2dp_suspended = false;
 
-        ALOGE("%s: BT A2DP Suspended = %s, command received\n", __func__, value);
+        ALOGE("%s: BT A2DP Suspended = %s, command received", __func__, value);
         ret = qal_set_param(QAL_PARAM_ID_BT_A2DP_SUSPENDED, (void *)&param_bt_a2dp,
                             sizeof(qal_param_bta2dp_t));
     }
@@ -797,7 +810,7 @@ char* AudioDevice::GetParameters(const char *keys) {
                             (void **)&param_bt_a2dp, &size);
         if (!ret) {
             if (size < sizeof(qal_param_bta2dp_t)) {
-                ALOGE("Size returned is smaller for BT_A2DP_RECONFIG_SUPPORTED\n");
+                ALOGE("Size returned is smaller for BT_A2DP_RECONFIG_SUPPORTED");
                 goto exit;
             }
             val = param_bt_a2dp->reconfig_supported;
@@ -929,14 +942,14 @@ static int adev_open(const hw_module_t *module, const char *name __unused,
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    if(!adevice){
-        ALOGE("%s: error, GetInstance failed",__func__);
+    if (!adevice) {
+        ALOGE("%s: error, GetInstance failed", __func__);
     }
 
     ret = adevice->Init(device, module);
 
     if (ret || (*device == NULL)) {
-      ALOGE("%s: error, audio device init failed, ret(%d),*device(%p)",
+        ALOGE("%s: error, audio device init failed, ret(%d),*device(%p)",
             __func__, ret, *device);
     }
 

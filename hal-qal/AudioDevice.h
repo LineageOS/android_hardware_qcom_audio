@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +32,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <mutex>
 #include <vector>
 
 #include <cutils/properties.h>
@@ -98,6 +98,8 @@ protected:
     static std::shared_ptr<audio_hw_device_t> device_;
     std::vector<std::shared_ptr<StreamOutPrimary>> stream_out_list_;
     std::vector<std::shared_ptr<StreamInPrimary>> stream_in_list_;
+    std::mutex out_list_mutex;
+    std::mutex in_list_mutex;
     void *offload_effects_lib_;
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;
