@@ -343,6 +343,7 @@ LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
 include $(BUILD_SHARED_LIBRARY)
 
+ifneq ($(USE_DEVICE_SPECIFIC_A2DP_OFFLOAD),true)
 #-------------------------------------------
 #            Build A2DP_OFFLOAD LIB
 #-------------------------------------------
@@ -400,6 +401,7 @@ endif
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
 include $(BUILD_SHARED_LIBRARY)
+endif
 
 #-------------------------------------------
 
