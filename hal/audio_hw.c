@@ -1867,7 +1867,7 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
                 (usecase->in_snd_device != snd_device || force_routing) &&
                 ((backend_check_cond &&
                  (is_codec_backend_in_device_type(&usecase->device_list) ||
-                  (usecase->type == VOIP_CALL))) &&
+                  (usecase->type == VOIP_CALL))) ||
                 ((uc_info->type == VOICE_CALL &&
                  is_single_device_type_equal(&usecase->device_list,
                                             AUDIO_DEVICE_IN_VOICE_CALL)) ||
@@ -4649,7 +4649,8 @@ int route_output_stream(struct stream_out *out,
      * turned off, the write gets blocked.
      * Avoid this by routing audio to speaker until standby.
      */
-    if (compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+    if (is_single_device_type_equal(&out->device_list,
+                AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
             list_empty(&new_devices) &&
             !audio_extn_passthru_is_passthrough_stream(out) &&
             (platform_get_edid_info(adev->platform) != 0) /* HDMI disconnected */) {
@@ -9559,13 +9560,16 @@ static int adev_verify_devices(struct audio_device *adev)
             memset(&uc_info, 0, sizeof(uc_info));
             uc_info.id = audio_usecase;
             uc_info.type = usecase_type;
+            list_init(&uc_info.device_list);
             if (dir) {
                 memset(&in, 0, sizeof(in));
+                list_init(&in.device_list);
                 update_device_list(&in.device_list, audio_device, "", true);
                 in.source = AUDIO_SOURCE_VOICE_COMMUNICATION;
                 uc_info.stream.in = &in;
             }
             memset(&out, 0, sizeof(out));
+            list_init(&out.device_list);
             update_device_list(&out.device_list, audio_device, "", true);
             uc_info.stream.out = &out;
             update_device_list(&uc_info.device_list, audio_device, "", true);
@@ -10047,6 +10051,7 @@ static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *ou
               __func__, out->usecase);
         return -EINVAL;
     }
+    list_init(&devices);
 
     ALOGD("%s: enter: usecase(%d: %s)", __func__,
           out->usecase, use_case_table[out->usecase]);

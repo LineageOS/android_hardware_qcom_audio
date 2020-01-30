@@ -370,16 +370,18 @@ void audio_extn_dolby_set_endpoint(struct audio_device *adev)
 {
     struct listnode *node;
     struct audio_usecase *usecase;
+    struct listnode devices;
     struct mixer_ctl *ctl;
     const char *mixer_ctl_name = "DS1 DAP Endpoint";
     int endpoint = 0, ret;
     bool send = false;
 
+    list_init(&devices);
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
         if ((usecase->type == PCM_PLAYBACK) &&
             (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY)) {
-            endpoint |= is_audio_out_device_type(&usecase->device_list);
+            append_devices(&devices, &usecase->device_list);
             send = true;
         }
     }
@@ -392,6 +394,9 @@ void audio_extn_dolby_set_endpoint(struct audio_device *adev)
               __func__, mixer_ctl_name);
         return;
     }
+    // FIXME: It is not recommended to store more than one device on bitfields
+    // This handling should be updated here and in driver code.
+    endpoint = get_device_types(&devices);
     ret = mixer_ctl_set_value(ctl, 0, endpoint);
     if (ret)
         ALOGE("%s: Dolby set endpint cannot be set error:%d",__func__, ret);
@@ -524,20 +529,25 @@ int audio_extn_dap_hal_deinit() {
 void audio_extn_dolby_ds2_set_endpoint(struct audio_device *adev) {
     struct listnode *node;
     struct audio_usecase *usecase;
+    struct listnode devices;
     int endpoint = 0;
     bool send = false;
 
+    list_init(&devices);
     list_for_each(node, &adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
         if ((usecase->type == PCM_PLAYBACK) &&
             (usecase->id != USECASE_AUDIO_PLAYBACK_LOW_LATENCY)) {
-            endpoint |= is_audio_out_device_type(&usecase->device_list);
+            append_devices(&devices, &usecase->device_list);
             send = true;
         }
     }
     if (!send)
         return;
 
+    // FIXME: It is not recommended to store more than one device on bitfields
+    // This handling should be updated here and in driver code.
+    endpoint = get_device_types(&devices);
     if (ds2extnmod.dap_hal_set_hw_info) {
         ds2extnmod.dap_hal_set_hw_info(HW_ENDPOINT, (void*)(&endpoint));
         ALOGE("%s: Dolby set endpint :0x%x",__func__, endpoint);
