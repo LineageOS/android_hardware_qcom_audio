@@ -1706,6 +1706,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("sm6150-wcd9375qrd-snd-card")) ||
          !strncmp(snd_card_name, "sm6150-wcd9375-snd-card",
                    sizeof("sm6150-wcd9375-snd-card")) ||
+         !strncmp(snd_card_name, "sm8150-tavil-qrd-snd-card",
+                   sizeof("sm8150-tavil-qrd-snd-card")) ||
          !strncmp(snd_card_name, "atoll-wcd937x-snd-card",
                    sizeof("atoll-wcd937x-snd-card")) ||
          !strncmp(snd_card_name, "atoll-idp-snd-card",
@@ -3266,6 +3268,9 @@ void *platform_init(struct audio_device *adev)
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
                sizeof("kona-qrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "sm8150-tavil-qrd-snd-card",
+               sizeof("sm8150-tavil-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "lito-qrd-snd-card",
                sizeof("lito-qrd-snd-card")))
