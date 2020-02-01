@@ -1,3 +1,5 @@
+ifneq ($(strip $(TARGET_PROVIDES_AUDIO_EXTNS)),true)
+
 #--------------------------------------------
 #          Build SND_MONITOR LIB
 #--------------------------------------------
@@ -1185,4 +1187,6 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT)),true)
 endif
 
 include $(BUILD_SHARED_LIBRARY)
+endif
+
 endif
