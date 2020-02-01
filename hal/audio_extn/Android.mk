@@ -1,3 +1,5 @@
+ifneq ($(strip $(TARGET_PROVIDES_AUDIO_EXTNS)),true)
+
 #AudioHal-primaryHal-Hal path
 ifneq ($(BOARD_OPENSOURCE_DIR), )
   PRIMARY_HAL_PATH := $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal/hal
@@ -1190,4 +1192,6 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT)),true)
 endif
 
 include $(BUILD_SHARED_LIBRARY)
+endif
+
 endif
