@@ -377,6 +377,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GCOV)),true)
 endif
 
 LOCAL_SHARED_LIBRARIES += libbase libhidlbase libutils android.hardware.power@1.2 liblog
+
+LOCAL_SHARED_LIBRARIES += android.hardware.power-ndk_platform
+LOCAL_SHARED_LIBRARIES += libbinder_ndk
+
 LOCAL_SRC_FILES += audio_perf.cpp
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_FM_TUNER_EXT)),true)
