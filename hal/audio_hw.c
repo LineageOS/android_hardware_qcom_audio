@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -3798,8 +3798,15 @@ int start_output_stream(struct stream_out *out)
             out_set_pcm_volume(&out->stream, out->volume_l, out->volume_r);
         }
     } else {
-        platform_set_stream_channel_map(adev->platform, out->channel_mask,
-                   out->pcm_device_id, &out->channel_map_param.channel_map[0]);
+        /*
+         * set custom channel map if:
+         *   1. neither mono nor stereo clips i.e. channels > 2 OR
+         *   2. custom channel map has been set by client
+         * else default channel map of FC/FR/FL can always be set to DSP
+         */
+        if (popcount(out->channel_mask) > 2 || out->channel_map_param.channel_map[0])
+            platform_set_stream_channel_map(adev->platform, out->channel_mask,
+                       out->pcm_device_id, &out->channel_map_param.channel_map[0]);
         audio_enable_asm_bit_width_enforce_mode(adev->mixer,
                                                 adev->dsp_bit_width_enforce_mode,
                                                 true);
@@ -4618,6 +4625,19 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             (card = get_alive_usb_card(parms)) >= 0) {
 
             ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d", card);
+            pthread_mutex_unlock(&adev->lock);
+            pthread_mutex_unlock(&out->lock);
+            ret = -ENOSYS;
+            goto routing_fail;
+        }
+
+        // Workaround: If routing to an non existing hdmi device, fail gracefully
+        if (audio_is_output_device(new_dev) &&
+            (new_dev & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+            (platform_get_edid_info_v2(adev->platform,
+                                       out->extconn.cs.controller,
+                                       out->extconn.cs.stream) != 0)) {
+            ALOGW("out_set_parameters() ignoring rerouting to non existing HDMI/DP");
             pthread_mutex_unlock(&adev->lock);
             pthread_mutex_unlock(&out->lock);
             ret = -ENOSYS;
