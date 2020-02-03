@@ -17,15 +17,17 @@
 #ifndef __QAUDIOPERF_H__
 #define __QAUDIOPERF_H__
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int audio_streaming_hint_start();
-int audio_streaming_hint_end();
-
-int audio_low_latency_hint_start();
-int audio_low_latency_hint_end();
+// return true on success, false on failure
+bool audio_streaming_hint_start();
+bool audio_streaming_hint_end();
+bool audio_low_latency_hint_start();
+bool audio_low_latency_hint_end();
 
 #ifdef __cplusplus
 }
