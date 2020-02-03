@@ -42,6 +42,7 @@
 #include "audio_extn.h"
 #include <platform.h>
 #include <math.h>
+#include <pthread.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
