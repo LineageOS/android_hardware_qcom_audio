@@ -22,95 +22,216 @@
 #include <utils/Mutex.h>
 
 #include <android/hardware/power/1.2/IPower.h>
+#include <aidl/android/hardware/power/Boost.h>
+#include <aidl/android/hardware/power/IPower.h>
+#include <aidl/android/hardware/power/Mode.h>
+#include <android/binder_manager.h>
 
 #include "audio_perf.h"
 
-using android::hardware::power::V1_2::IPower;
-using android::hardware::power::V1_2::PowerHint;
-using android::hardware::power::V1_2::toString;
-using android::hardware::Return;
-using android::hardware::Void;
-using android::hardware::hidl_death_recipient;
-using android::hidl::base::V1_0::IBase;
-
-// Do not use gPowerHAL, use getPowerHal to retrieve a copy instead
-static android::sp<IPower> gPowerHal_ = nullptr;
-// Protect gPowerHal_
+// Protect gPowerHal_1_2_ and gPowerHal_Aidl_
+static android::sp<android::hardware::power::V1_2::IPower> gPowerHal_1_2_;
+static std::shared_ptr<aidl::android::hardware::power::IPower> gPowerHal_Aidl_;
 static std::mutex gPowerHalMutex;
+static constexpr int kDefaultBoostDurationMs = 2000;
+static constexpr int kBoostOff = -1;
 
-// PowerHalDeathRecipient to invalid the client when service dies
-struct PowerHalDeathRecipient : virtual public hidl_death_recipient {
-    // hidl_death_recipient interface
-    virtual void serviceDied(uint64_t, const android::wp<IBase>&) override {
-        std::lock_guard<std::mutex> lock(gPowerHalMutex);
-        ALOGE("PowerHAL just died");
-        gPowerHal_ = nullptr;
-    }
+static const std::string kInstance =
+        std::string(aidl::android::hardware::power::IPower::descriptor) + "/default";
+
+enum hal_version {
+    NONE,
+    HIDL_1_2,
+    AIDL,
 };
 
-// Retrieve a copy of client
-static android::sp<IPower> getPowerHal() {
-    std::lock_guard<std::mutex> lock(gPowerHalMutex);
-    static android::sp<PowerHalDeathRecipient> gPowerHalDeathRecipient = nullptr;
-    static bool gPowerHalExists = true;
+// Connnect PowerHAL
+static hal_version connectPowerHalLocked() {
+    static bool gPowerHalHidlExists = true;
+    static bool gPowerHalAidlExists = true;
 
-    if (gPowerHalExists && gPowerHal_ == nullptr) {
-        gPowerHal_ = IPower::getService();
+    if (!gPowerHalHidlExists && !gPowerHalAidlExists) {
+        return NONE;
+    }
 
-        if (gPowerHal_ == nullptr) {
-            ALOGE("Unable to get Power service");
-            gPowerHalExists = false;
+    if (gPowerHalAidlExists) {
+        // (re)connect if handle is null
+        if (!gPowerHal_Aidl_) {
+            ndk::SpAIBinder pwBinder = ndk::SpAIBinder(
+                AServiceManager_getService(kInstance.c_str()));
+            gPowerHal_Aidl_ = aidl::android::hardware::power::IPower::fromBinder(pwBinder);
+        }
+        if (gPowerHal_Aidl_) {
+            ALOGI("Successfully connected to Power Hal Aidl service.");
+            return AIDL;
         } else {
-            if (gPowerHalDeathRecipient == nullptr) {
-                gPowerHalDeathRecipient = new PowerHalDeathRecipient();
-            }
-            Return<bool> linked = gPowerHal_->linkToDeath(
-                gPowerHalDeathRecipient, 0 /* cookie */);
-            if (!linked.isOk()) {
-                ALOGE("Transaction error in linking to PowerHAL death: %s",
-                      linked.description().c_str());
-                gPowerHal_ = nullptr;
-            } else if (!linked) {
-                ALOGW("Unable to link to PowerHal death notifications");
-                gPowerHal_ = nullptr;
-            } else {
-                ALOGD("Connect to PowerHAL and link to death "
-                      "notification successfully");
-            }
+            // no more try on this handle
+            gPowerHalAidlExists = false;
         }
     }
-    return gPowerHal_;
-}
 
-static bool powerHint(PowerHint hint, int32_t data) {
-    android::sp<IPower> powerHal = getPowerHal();
-    if (powerHal == nullptr) {
-        return false;
+    if (gPowerHalHidlExists) {
+        // (re)connect if handle is null
+        if (!gPowerHal_1_2_) {
+            gPowerHal_1_2_ =
+                    android::hardware::power::V1_2::IPower::getService();
+        }
+        if (gPowerHal_1_2_) {
+            ALOGI("Successfully connected to Power Hal Hidl service.");
+            return HIDL_1_2;
+        } else {
+            // no more try on this handle
+            gPowerHalHidlExists = false;
+        }
     }
 
-    auto ret = powerHal->powerHintAsync_1_2(hint, data);
+    return NONE;
+}
 
-    if (!ret.isOk()) {
-        ALOGE("powerHint failed, hint: %s, data: %" PRId32 ",  error: %s",
-              toString(hint).c_str(),
-              data,
-              ret.description().c_str());
+bool audio_streaming_hint_start() {
+    std::lock_guard<std::mutex> lock(gPowerHalMutex);
+    switch(connectPowerHalLocked()) {
+        case NONE:
+            return false;
+        case HIDL_1_2:
+            {
+                auto ret = gPowerHal_1_2_->powerHintAsync_1_2(
+                    android::hardware::power::V1_2::PowerHint::AUDIO_STREAMING,
+                    1);
+                if (!ret.isOk()) {
+                    ALOGE("powerHint failed, error: %s",
+                          ret.description().c_str());
+                    gPowerHal_1_2_ = nullptr;
+                    return false;
+                }
+                return true;
+            }
+        case AIDL:
+            {
+                auto ret = gPowerHal_Aidl_->setBoost(
+                    aidl::android::hardware::power::Boost::AUDIO_LAUNCH,
+                    kDefaultBoostDurationMs);
+                if (!ret.isOk()) {
+                    std::string err = ret.getDescription();
+                    ALOGE("Failed to set power hint. Error: %s", err.c_str());
+                    gPowerHal_Aidl_ = nullptr;
+                    return false;
+                }
+                return true;
+            }
+        default:
+            ALOGE("Unknown HAL state");
+            return false;
     }
-    return ret.isOk();
 }
 
-int audio_streaming_hint_start() {
-    return powerHint(PowerHint::AUDIO_STREAMING, 1);
+bool audio_streaming_hint_end() {
+    std::lock_guard<std::mutex> lock(gPowerHalMutex);
+    switch(connectPowerHalLocked()) {
+        case NONE:
+            return false;
+        case HIDL_1_2:
+            {
+                auto ret = gPowerHal_1_2_->powerHintAsync_1_2(
+                    android::hardware::power::V1_2::PowerHint::AUDIO_STREAMING,
+                    0);
+                if (!ret.isOk()) {
+                    ALOGE("powerHint failed, error: %s",
+                          ret.description().c_str());
+                    gPowerHal_1_2_ = nullptr;
+                    return false;
+                }
+                return true;
+            }
+        case AIDL:
+            {
+                auto ret = gPowerHal_Aidl_->setBoost(
+                    aidl::android::hardware::power::Boost::AUDIO_LAUNCH,
+                    kBoostOff);
+                if (!ret.isOk()) {
+                    std::string err = ret.getDescription();
+                    ALOGE("Failed to set power hint. Error: %s", err.c_str());
+                    gPowerHal_Aidl_ = nullptr;
+                    return false;
+                }
+                return true;
+            }
+        default:
+            ALOGE("Unknown HAL state");
+            return false;
+    }
 }
 
-int audio_streaming_hint_end() {
-    return powerHint(PowerHint::AUDIO_STREAMING, 0);
+bool audio_low_latency_hint_start() {
+    std::lock_guard<std::mutex> lock(gPowerHalMutex);
+    switch(connectPowerHalLocked()) {
+        case NONE:
+            return false;
+        case HIDL_1_2:
+            {
+                auto ret = gPowerHal_1_2_->powerHintAsync_1_2(
+                    android::hardware::power::V1_2::PowerHint::AUDIO_LOW_LATENCY,
+                    1);
+                if (!ret.isOk()) {
+                    ALOGE("powerHint failed, error: %s",
+                          ret.description().c_str());
+                    gPowerHal_1_2_ = nullptr;
+                    return false;
+                }
+                return true;
+            }
+        case AIDL:
+            {
+                auto ret = gPowerHal_Aidl_->setMode(
+                    aidl::android::hardware::power::Mode::AUDIO_STREAMING_LOW_LATENCY,
+                    true);
+                if (!ret.isOk()) {
+                    std::string err = ret.getDescription();
+                    ALOGE("Failed to set power hint. Error: %s", err.c_str());
+                    gPowerHal_Aidl_ = nullptr;
+                    return false;
+                }
+                return true;
+            }
+        default:
+            ALOGE("Unknown HAL state");
+            return false;
+    }
 }
 
-int audio_low_latency_hint_start() {
-    return powerHint(PowerHint::AUDIO_LOW_LATENCY, 1);
-}
-
-int audio_low_latency_hint_end() {
-    return powerHint(PowerHint::AUDIO_LOW_LATENCY, 0);
+bool audio_low_latency_hint_end() {
+    std::lock_guard<std::mutex> lock(gPowerHalMutex);
+    switch(connectPowerHalLocked()) {
+        case NONE:
+            return false;
+        case HIDL_1_2:
+            {
+                auto ret = gPowerHal_1_2_->powerHintAsync_1_2(
+                    android::hardware::power::V1_2::PowerHint::AUDIO_LOW_LATENCY,
+                    0);
+                if (!ret.isOk()) {
+                    ALOGE("powerHint failed, error: %s",
+                          ret.description().c_str());
+                    gPowerHal_1_2_ = nullptr;
+                    return false;
+                }
+                return true;
+            }
+        case AIDL:
+            {
+                auto ret = gPowerHal_Aidl_->setMode(
+                    aidl::android::hardware::power::Mode::AUDIO_STREAMING_LOW_LATENCY,
+                    false);
+                if (!ret.isOk()) {
+                    std::string err = ret.getDescription();
+                    ALOGE("Failed to set power hint. Error: %s", err.c_str());
+                    gPowerHal_Aidl_ = nullptr;
+                    return false;
+                }
+                return true;
+            }
+        default:
+            ALOGE("Unknown HAL state");
+            return false;
+    }
 }
