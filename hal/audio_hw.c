@@ -3732,6 +3732,8 @@ static int out_standby(struct audio_stream *stream)
         if (do_stop) {
             stop_output_stream(out);
         }
+        // if fm is active route on selected device in UI
+        audio_extn_fm_route_on_selected_device(adev, out->devices);
         pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&out->lock);
@@ -7301,7 +7303,8 @@ static int adev_update_voice_comm_input_stream(struct stream_in *in,
 
 #ifndef COMPRESS_VOIP_ENABLED
     if (valid_rate && valid_ch &&
-        in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) {
+        (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
+         in->source == AUDIO_SOURCE_VOICE_COMMUNICATION)) {
         in->usecase = USECASE_AUDIO_RECORD_VOIP;
         in->config = default_pcm_config_voip_copp;
         in->config.period_size = VOIP_IO_BUF_SIZE(in->sample_rate,
@@ -7317,8 +7320,9 @@ static int adev_update_voice_comm_input_stream(struct stream_in *in,
 #else
     //XXX needed for voice_extn_compress_voip_open_input_stream
     in->config.rate = config->sample_rate;
-    if ((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
-         voice_extn_compress_voip_is_active(in->dev)) &&
+    if((in->dev->mode == AUDIO_MODE_IN_COMMUNICATION ||
+        in->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+        voice_extn_compress_voip_is_active(in->dev)) &&
         (voice_extn_compress_voip_is_format_supported(in->format)) &&
         valid_rate && valid_ch) {
         voice_extn_compress_voip_open_input_stream(in);
@@ -7418,13 +7422,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->flags = flags;
     in->bit_width = 16;
     in->af_period_multiplier = 1;
-
-    /* Update config params with the requested sample rate and channels */
-    if ((in->device == AUDIO_DEVICE_IN_TELEPHONY_RX) &&
-          (adev->mode != AUDIO_MODE_IN_CALL)) {
-        ret = -EINVAL;
-        goto err_open;
-    }
 
     if (is_usb_dev && may_use_hifi_record) {
         /* HiFi record selects an appropriate format, channel, rate combo

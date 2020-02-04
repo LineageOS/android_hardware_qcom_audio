@@ -238,6 +238,10 @@ vendor.audio.hw.aac.encoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.flac.sw.decoder.24bit=true
 
+#read wsatz name from thermal zone type
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.read.wsatz.type=true
+
 #Set AudioFlinger client heap size
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.af.client_heap_size_kbyte=7168
