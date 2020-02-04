@@ -620,14 +620,17 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
                 param_device_connection.device_config.usb_addr.card_id = atoi(value);
+                usb_card_id_ = param_device_connection.device_config.usb_addr.card_id;
                 ALOGI("%s: plugin card=%d\n", __func__,
                     param_device_connection.device_config.usb_addr.card_id);
             }
             ret = str_parms_get_str(parms, "device", value, sizeof(value));
-            if (ret >= 0)
+            if (ret >= 0) {
                 param_device_connection.device_config.usb_addr.device_num = atoi(value);
+                usb_dev_num_ = param_device_connection.device_config.usb_addr.device_num;
                 ALOGI("%s: plugin device num=%d\n", __func__,
                     param_device_connection.device_config.usb_addr.device_num);
+            }
         } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             int controller = -1, stream = -1;
             AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);

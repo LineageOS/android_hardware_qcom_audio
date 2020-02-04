@@ -87,7 +87,8 @@ public:
     int GetQalDeviceIds(
             const audio_devices_t hal_device_id,
             qal_device_id_t* qal_device_id);
-
+    int                       usb_card_id_;
+    int                       usb_dev_num_;
 protected:
     AudioDevice(){
     }
