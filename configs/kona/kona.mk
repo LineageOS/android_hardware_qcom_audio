@@ -100,6 +100,11 @@ AUDIO_AGM += libagm_mixer_plugin
 AUDIO_AGM += libagm_pcm_plugin
 AUDIO_AGM += libagm_compress_plugin
 
+#QAL Module
+AUDIO_QAL := libqal
+AUDIO_QAL += lib_bt_bundle
+AUDIO_QAL += catf
+
 BOARD_SUPPORTS_OPENSOURCE_STHAL := true
 
 AUDIO_HARDWARE := audio.a2dp.default
@@ -188,6 +193,7 @@ ifneq ($(strip $(TARGET_USES_RRO)), true)
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
 endif
 PRODUCT_PACKAGES += $(AUDIO_AGM)
+PRODUCT_PACKAGES += $(AUDIO_QAL)
 
 PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
