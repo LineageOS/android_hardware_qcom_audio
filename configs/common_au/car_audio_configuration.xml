@@ -68,10 +68,10 @@
                 where port is the physical port of the display (See DisplayAddress.Phyisical)
             -->
         </zone>
-        <zone name="rear seat zone">
+        <zone name="front passenger zone">
             <volumeGroups>
                 <group>
-                    <device address="BUS08_REAR_SEAT">
+                    <device address="BUS08_FRONT_PASSENGER">
                         <context context="music"/>
                         <context context="navigation"/>
                         <context context="voice_command"/>
@@ -85,6 +85,25 @@
             </volumeGroups>
             <displays>
                 <display port="1"/>
+            </displays>
+        </zone>
+        <zone name="rear seat zone">
+            <volumeGroups>
+                <group>
+                    <device address="BUS16_REAR_SEAT">
+                        <context context="music"/>
+                        <context context="navigation"/>
+                        <context context="voice_command"/>
+                        <context context="call_ring"/>
+                        <context context="call"/>
+                        <context context="alarm"/>
+                        <context context="notification"/>
+                        <context context="system_sound"/>
+                    </device>
+                </group>
+            </volumeGroups>
+            <displays>
+                <display port="2"/>
             </displays>
         </zone>
     </zones>
