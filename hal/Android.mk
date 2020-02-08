@@ -256,7 +256,6 @@ endif
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_HDMI)),true)
     LOCAL_CFLAGS += -DAUDIO_EXTERNAL_HDMI_ENABLED
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-parsers
-    LOCAL_SHARED_LIBRARIES += libaudioparsers
 endif
 
 # Hardware specific feature
