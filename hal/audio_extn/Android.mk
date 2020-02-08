@@ -524,8 +524,6 @@ include $(BUILD_SHARED_LIBRARY)
 #-------------------------------------------
 #            Build HDMI PASSTHROUGH
 #-------------------------------------------
-ifneq ($(QCPATH),)
-
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libhdmipassthru
@@ -584,8 +582,6 @@ endif
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
 include $(BUILD_SHARED_LIBRARY)
-
-endif
 
 #-------------------------------------------
 #            Build BATTERY_LISTENER
