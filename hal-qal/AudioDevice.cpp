@@ -107,10 +107,12 @@ std::shared_ptr<StreamInPrimary> AudioDevice::CreateStreamIn(
                                         audio_devices_t devices,
                                         audio_input_flags_t flags,
                                         struct audio_config *config,
+                                        const char *address,
                                         audio_stream_in **stream_in,
                                         audio_source_t source) {
     std::shared_ptr<StreamInPrimary> astream (new StreamInPrimary(handle,
-                                              devices, flags, config, source));
+                                              devices, flags, config,
+                                              address, source));
     astream->GetStreamHandle(stream_in);
     stream_in_list_.push_back(astream);
     ALOGD("%s: input stream %d %p", __func__,(int)stream_in_list_.size(), stream_in); 
@@ -168,7 +170,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         goto exit;
     }
     astream = adevice->OutGetStream(handle);
- 
+
     if (astream == nullptr) {
         adevice->CreateStreamOut(handle, devices, flags, config,
                                  stream_out, address);
@@ -225,7 +227,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                   struct audio_config *config,
                                   struct audio_stream_in **stream_in,
                                   audio_input_flags_t flags,
-                                  const char *address __unused,
+                                  const char *address,
                                   audio_source_t source) {
     int32_t ret = 0;
     bool ret_error = false;
@@ -271,7 +273,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     astream = adevice->InGetStream(handle);
     if (astream == nullptr) {
-        adevice->CreateStreamIn(handle, devices, flags, config,
+        adevice->CreateStreamIn(handle, devices, flags, config, address,
                                 stream_in, source);
     }
     //Need keep track of the list of streams that are allocated
@@ -614,6 +616,29 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         val = atoi(value);
         audio_devices_t device = (audio_devices_t)val;
 
+        if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0) {
+                param_device_connection.device_config.usb_addr.card_id = atoi(value);
+                usb_card_id_ = param_device_connection.device_config.usb_addr.card_id;
+                ALOGI("%s: plugin card=%d\n", __func__,
+                    param_device_connection.device_config.usb_addr.card_id);
+            }
+            ret = str_parms_get_str(parms, "device", value, sizeof(value));
+            if (ret >= 0) {
+                param_device_connection.device_config.usb_addr.device_num = atoi(value);
+                usb_dev_num_ = param_device_connection.device_config.usb_addr.device_num;
+                ALOGI("%s: plugin device num=%d\n", __func__,
+                    param_device_connection.device_config.usb_addr.device_num);
+            }
+        } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            int controller = -1, stream = -1;
+            AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
+            param_device_connection.device_config.dp_config.controller = controller;
+            param_device_connection.device_config.dp_config.stream = stream;
+            ALOGI("%s: plugin device cont %d stream %d",__func__, controller, stream);
+        }
+
         device_count = popcount(device);
         if (device_count) {
             if (qal_device_ids)
@@ -626,6 +651,10 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 ret = qal_set_param(QAL_PARAM_ID_DEVICE_CONNECTION,
                         (void*)&param_device_connection,
                         sizeof(qal_param_device_connection_t));
+                if (ret!=0) {
+                    ALOGE("%s: qal set param failed for device connection",__func__);
+                }
+                ALOGI("%s: qal set param success  for device connection",__func__);
             }
         }
     }
@@ -636,6 +665,20 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         qal_param_device_connection_t param_device_connection;
         val = atoi(value);
         audio_devices_t device = (audio_devices_t)val;
+        if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
+            ret = str_parms_get_str(parms, "card", value, sizeof(value));
+            if (ret >= 0)
+                param_device_connection.device_config.usb_addr.card_id = atoi(value);
+            ret = str_parms_get_str(parms, "device", value, sizeof(value));
+            if (ret >= 0)
+                param_device_connection.device_config.usb_addr.device_num = atoi(value);
+        } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            int controller = -1, stream = -1;
+            AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
+            param_device_connection.device_config.dp_config.controller = controller;
+            param_device_connection.device_config.dp_config.stream = stream;
+            ALOGI("%s: plugin device cont %d stream %d",__func__, controller, stream);
+        }
 
         device_count = popcount(device);
         if (device_count) {
@@ -647,8 +690,12 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 param_device_connection.connection_state = false;
                 param_device_connection.id = qal_device_ids[i];
                 ret = qal_set_param(QAL_PARAM_ID_DEVICE_CONNECTION,
-                        (qal_param_payload*)&param_device_connection,
+                        (void*)&param_device_connection,
                         sizeof(qal_param_device_connection_t));
+                if (ret!=0) {
+                    ALOGE("%s: qal set param failed for device disconnect",__func__);
+                }
+                ALOGI("%s: qal set param sucess for device disconnect",__func__);
             }
         }
     }
@@ -782,7 +829,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP, QAL_DEVICE_OUT_BLUETOOTH_A2DP));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES, QAL_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER, QAL_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER));
-    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_DIGITAL, QAL_AUDIO_DEVICE_OUT_AUX_DIGITAL));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_DIGITAL, QAL_DEVICE_OUT_AUX_DIGITAL));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_HDMI, QAL_DEVICE_OUT_HDMI));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET, QAL_DEVICE_OUT_ANLG_DOCK_HEADSET));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET, QAL_DEVICE_OUT_DGTL_DOCK_HEADSET));

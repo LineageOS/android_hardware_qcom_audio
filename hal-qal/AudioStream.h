@@ -185,6 +185,159 @@ enum {
     AUDIO_USECASE_MAX
 };
 
+struct string_to_enum {
+    const char *name;
+    uint32_t value;
+};
+#define STRING_TO_ENUM(string) { #string, string }
+
+static const struct string_to_enum formats_name_to_enum_table[] = {
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_16_BIT),
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_24_BIT_PACKED),
+    STRING_TO_ENUM(AUDIO_FORMAT_PCM_32_BIT),
+    STRING_TO_ENUM(AUDIO_FORMAT_AC3),
+    STRING_TO_ENUM(AUDIO_FORMAT_E_AC3),
+    STRING_TO_ENUM(AUDIO_FORMAT_E_AC3_JOC),
+    STRING_TO_ENUM(AUDIO_FORMAT_DOLBY_TRUEHD),
+    STRING_TO_ENUM(AUDIO_FORMAT_DTS),
+    STRING_TO_ENUM(AUDIO_FORMAT_DTS_HD),
+    STRING_TO_ENUM(AUDIO_FORMAT_IEC61937)
+};
+
+static const struct string_to_enum channels_name_to_enum_table[] = {
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_STEREO),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_2POINT1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_QUAD),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_SURROUND),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_PENTA),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_5POINT1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_6POINT1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_OUT_7POINT1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_IN_MONO),
+    STRING_TO_ENUM(AUDIO_CHANNEL_IN_STEREO),
+    STRING_TO_ENUM(AUDIO_CHANNEL_IN_FRONT_BACK),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_1),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_2),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_3),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_4),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_5),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_6),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_7),
+    STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_8),
+};
+
+const std::map<uint32_t, qal_audio_fmt_t> getFormatId {
+    {AUDIO_FORMAT_PCM,                 QAL_AUDIO_FMT_DEFAULT_PCM},
+    {AUDIO_FORMAT_MP3,                 QAL_AUDIO_FMT_MP3},
+    {AUDIO_FORMAT_AAC,                 QAL_AUDIO_FMT_AAC},
+    {AUDIO_FORMAT_AAC_ADTS,            QAL_AUDIO_FMT_AAC_ADTS},
+    {AUDIO_FORMAT_AAC_ADIF,            QAL_AUDIO_FMT_AAC_ADIF},
+    {AUDIO_FORMAT_AAC_LATM,            QAL_AUDIO_FMT_AAC_LATM},
+    {AUDIO_FORMAT_WMA,                 QAL_AUDIO_FMT_WMA_STD},
+    {AUDIO_FORMAT_ALAC,                QAL_AUDIO_FMT_ALAC},
+    {AUDIO_FORMAT_APE,                 QAL_AUDIO_FMT_APE},
+    {AUDIO_FORMAT_WMA_PRO,             QAL_AUDIO_FMT_WMA_PRO},
+    {AUDIO_FORMAT_FLAC,                QAL_AUDIO_FMT_FLAC},
+    {AUDIO_FORMAT_VORBIS,              QAL_AUDIO_FMT_VORBIS}
+};
+
+const uint32_t format_to_bitwidth_table[] = {
+    [AUDIO_FORMAT_DEFAULT] = 0,
+    [AUDIO_FORMAT_PCM_16_BIT] = 16,
+    [AUDIO_FORMAT_PCM_8_BIT] = 8,
+    [AUDIO_FORMAT_PCM_32_BIT] = 32,
+    [AUDIO_FORMAT_PCM_8_24_BIT] = 32,
+    [AUDIO_FORMAT_PCM_FLOAT] = sizeof(float) * 8,
+    [AUDIO_FORMAT_PCM_24_BIT_PACKED] = 24,
+};
+
+const char * const use_case_table[AUDIO_USECASE_MAX] = {
+    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = "deep-buffer-playback",
+    [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
+    [USECASE_AUDIO_PLAYBACK_WITH_HAPTICS] = "audio-with-haptics-playback",
+    [USECASE_AUDIO_PLAYBACK_ULL]         = "audio-ull-playback",
+    [USECASE_AUDIO_PLAYBACK_MULTI_CH]    = "multi-channel-playback",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
+    //Enabled for Direct_PCM
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD2] = "compress-offload-playback2",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD3] = "compress-offload-playback3",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD4] = "compress-offload-playback4",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD5] = "compress-offload-playback5",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD6] = "compress-offload-playback6",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD7] = "compress-offload-playback7",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD8] = "compress-offload-playback8",
+    [USECASE_AUDIO_PLAYBACK_OFFLOAD9] = "compress-offload-playback9",
+    [USECASE_AUDIO_PLAYBACK_FM] = "play-fm",
+    [USECASE_AUDIO_PLAYBACK_MMAP] = "mmap-playback",
+    [USECASE_AUDIO_PLAYBACK_HIFI] = "hifi-playback",
+    [USECASE_AUDIO_PLAYBACK_TTS] = "audio-tts-playback",
+
+    [USECASE_AUDIO_RECORD] = "audio-record",
+    [USECASE_AUDIO_RECORD_COMPRESS] = "audio-record-compress",
+    [USECASE_AUDIO_RECORD_COMPRESS2] = "audio-record-compress2",
+    [USECASE_AUDIO_RECORD_COMPRESS3] = "audio-record-compress3",
+    [USECASE_AUDIO_RECORD_COMPRESS4] = "audio-record-compress4",
+    [USECASE_AUDIO_RECORD_COMPRESS5] = "audio-record-compress5",
+    [USECASE_AUDIO_RECORD_COMPRESS6] = "audio-record-compress6",
+    [USECASE_AUDIO_RECORD_LOW_LATENCY] = "low-latency-record",
+    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = "fm-virtual-record",
+    [USECASE_AUDIO_RECORD_MMAP] = "mmap-record",
+    [USECASE_AUDIO_RECORD_HIFI] = "hifi-record",
+
+    [USECASE_AUDIO_HFP_SCO] = "hfp-sco",
+    [USECASE_AUDIO_HFP_SCO_WB] = "hfp-sco-wb",
+    [USECASE_VOICE_CALL] = "voice-call",
+
+    [USECASE_VOICE2_CALL] = "voice2-call",
+    [USECASE_VOLTE_CALL] = "volte-call",
+    [USECASE_QCHAT_CALL] = "qchat-call",
+    [USECASE_VOWLAN_CALL] = "vowlan-call",
+    [USECASE_VOICEMMODE1_CALL] = "voicemmode1-call",
+    [USECASE_VOICEMMODE2_CALL] = "voicemmode2-call",
+    [USECASE_COMPRESS_VOIP_CALL] = "compress-voip-call",
+    [USECASE_INCALL_REC_UPLINK] = "incall-rec-uplink",
+    [USECASE_INCALL_REC_DOWNLINK] = "incall-rec-downlink",
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = "incall-rec-uplink-and-downlink",
+    [USECASE_INCALL_REC_UPLINK_COMPRESS] = "incall-rec-uplink-compress",
+    [USECASE_INCALL_REC_DOWNLINK_COMPRESS] = "incall-rec-downlink-compress",
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS] = "incall-rec-uplink-and-downlink-compress",
+
+    [USECASE_INCALL_MUSIC_UPLINK] = "incall_music_uplink",
+    [USECASE_INCALL_MUSIC_UPLINK2] = "incall_music_uplink2",
+    [USECASE_AUDIO_SPKR_CALIB_RX] = "spkr-rx-calib",
+    [USECASE_AUDIO_SPKR_CALIB_TX] = "spkr-vi-record",
+
+    [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
+    [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
+    [USECASE_AUDIO_PLAYBACK_SILENCE] = "silence-playback",
+
+    /* Transcode loopback cases */
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK_RX] = "audio-transcode-loopback-rx",
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK_TX] = "audio-transcode-loopback-tx",
+
+    [USECASE_AUDIO_PLAYBACK_VOIP] = "audio-playback-voip",
+    [USECASE_AUDIO_RECORD_VOIP] = "audio-record-voip",
+    /* For Interactive Audio Streams */
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1] = "audio-interactive-stream1",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2] = "audio-interactive-stream2",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3] = "audio-interactive-stream3",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4] = "audio-interactive-stream4",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5] = "audio-interactive-stream5",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6] = "audio-interactive-stream6",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7] = "audio-interactive-stream7",
+    [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8] = "audio-interactive-stream8",
+
+    [USECASE_AUDIO_EC_REF_LOOPBACK] = "ec-ref-audio-capture",
+
+    [USECASE_AUDIO_A2DP_ABR_FEEDBACK] = "a2dp-abr-feedback",
+
+    [USECASE_AUDIO_PLAYBACK_MEDIA] = "media-playback",
+    [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = "sys-notification-playback",
+    [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = "nav-guidance-playback",
+    [USECASE_AUDIO_PLAYBACK_PHONE] = "phone-playback",
+    [USECASE_AUDIO_FM_TUNER_EXT] = "fm-tuner-ext",
+};
+
 extern "C" typedef void (*hello_t)( const char* text );
 extern "C" typedef int (*offload_effects_start_output)(audio_io_handle_t,
                                                        qal_stream_handle_t*);
@@ -201,24 +354,25 @@ public:
         audio_devices_t devices,
         struct audio_config *config);
     ~StreamPrimary();
-
     uint32_t        GetSampleRate();
     uint32_t        GetBufferSize();
     audio_format_t  GetFormat();
-    uint32_t        GetChannels();
+    uint32_t        GetChannelMask();
     int getQalDeviceIds(const audio_devices_t halDeviceId, qal_device_id_t* qalOutDeviceIds);
     audio_io_handle_t GetHandle();
     int             GetUseCase();
     std::mutex write_wait_mutex_;
     std::condition_variable write_condition_;
     bool write_ready_;
-
     std::mutex drain_wait_mutex_;
     std::condition_variable drain_condition_;
     bool drain_ready_;
     stream_callback_t client_callback;
     void *client_cookie;
-
+    static int GetDeviceAddress(struct str_parms *parms, int *card_id,
+                                 int *device_num);
+    int GetLookupTableIndex(const struct string_to_enum *table,
+                                        const int table_size, int value);
 protected:
     struct qal_stream_attributes streamAttributes_;
     qal_stream_handle_t*      qal_stream_handle_;
@@ -305,6 +459,7 @@ public:
                     audio_devices_t devices,
                     audio_input_flags_t flags,
                     struct audio_config *config,
+                    const char *address,
                     audio_source_t source);
 
     ~StreamInPrimary();

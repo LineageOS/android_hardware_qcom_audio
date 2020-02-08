@@ -68,6 +68,7 @@ public:
             audio_devices_t devices,
             audio_input_flags_t flags,
             struct audio_config *config,
+            const char *address,
             audio_stream_in **stream_in,
             audio_source_t source);
     void CloseStreamIn(std::shared_ptr<StreamInPrimary> stream);
@@ -86,7 +87,8 @@ public:
     int GetQalDeviceIds(
             const audio_devices_t hal_device_id,
             qal_device_id_t* qal_device_id);
-
+    int                       usb_card_id_;
+    int                       usb_dev_num_;
 protected:
     AudioDevice(){
     }
