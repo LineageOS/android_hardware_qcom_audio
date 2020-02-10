@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -520,7 +520,10 @@ static void update_hardware_info_kona(
           struct hardware_info *hw_info,
           const char *snd_card_name)
 {
-    if (!strncmp(snd_card_name, "bengal-idp-snd-card",
+    if (!strncmp(snd_card_name, "lito-lagoonmtp-snd-card",
+                 sizeof("lito-lagoonmtp-snd-card"))) {
+        strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "bengal-idp-snd-card",
                  sizeof("bengal-idp-snd-card"))) {
         strlcpy(hw_info->name, "bengal", sizeof(hw_info->name));
         hw_info->is_stereo_spkr = false;
