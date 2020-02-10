@@ -3668,7 +3668,8 @@ int audio_extn_set_device_cfg_params(struct audio_device *adev,
     backend_idx = platform_get_backend_index(snd_device);
 
     ALOGV("%s:: device %d sample_rate %d snd_device %d backend_idx %d",
-                __func__, get_device_types(&out.device_list), out.sample_rate, snd_device, backend_idx);
+                __func__, get_device_types(&out.device_list),
+                out.sample_rate, snd_device, backend_idx);
 
     ALOGV("%s:: Device Config Params from Client samplerate %d  channels %d"
           " bit_width %d  format %d  device %d  channel_map[0] %d channel_map[1] %d"

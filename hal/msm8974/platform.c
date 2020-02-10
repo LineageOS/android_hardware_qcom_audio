@@ -1706,6 +1706,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("sm6150-wcd9375qrd-snd-card")) ||
          !strncmp(snd_card_name, "sm6150-wcd9375-snd-card",
                    sizeof("sm6150-wcd9375-snd-card")) ||
+         !strncmp(snd_card_name, "sm8150-tavil-qrd-snd-card",
+                   sizeof("sm8150-tavil-qrd-snd-card")) ||
          !strncmp(snd_card_name, "atoll-wcd937x-snd-card",
                    sizeof("atoll-wcd937x-snd-card")) ||
          !strncmp(snd_card_name, "atoll-idp-snd-card",
@@ -3266,6 +3268,9 @@ void *platform_init(struct audio_device *adev)
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
                sizeof("kona-qrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "sm8150-tavil-qrd-snd-card",
+               sizeof("sm8150-tavil-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "lito-qrd-snd-card",
                sizeof("lito-qrd-snd-card")))
@@ -5946,7 +5951,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
 
     ALOGV("%s: enter: output devices(%#x)", __func__, get_device_types(&devices));
     if (list_empty(&devices) ||
-        compare_device_type(&devices, AUDIO_DEVICE_BIT_IN)) {
+        is_audio_in_device_type(&devices)) {
         ALOGV("%s: Invalid output devices (%#x)", __func__, get_device_types(&devices));
         goto exit;
     }
@@ -6991,7 +6996,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
             reassign_device_list(&in_devices, AUDIO_DEVICE_IN_USB_DEVICE, address);
 
         if (list_empty(out_devices))
-            reassign_device_list(&in_devices, (AUDIO_DEVICE_IN_BUILTIN_MIC & ~AUDIO_DEVICE_BIT_IN),
+            reassign_device_list(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC,
                                  address);
 
         if (in)

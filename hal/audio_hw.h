@@ -532,13 +532,11 @@ typedef enum {
 struct audio_patch_info {
     struct audio_patch *patch;
     patch_type_t patch_type;
-    pthread_mutex_t lock;
 };
 
 struct audio_stream_info {
     struct audio_stream *stream;
     audio_patch_handle_t patch_handle;
-    pthread_mutex_t lock;
 };
 
 union stream_ptr {

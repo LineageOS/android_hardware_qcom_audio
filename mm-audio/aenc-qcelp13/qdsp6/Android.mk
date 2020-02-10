@@ -25,7 +25,6 @@ libOmxQcelp13Enc-def += -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-self-ass
 include $(CLEAR_VARS)
 
 libOmxQcelp13Enc-inc       := $(LOCAL_PATH)/inc
-libOmxQcelp13Enc-inc       += $(TARGET_OUT_HEADERS)/mm-core/omxcore
 
 LOCAL_MODULE             := libOmxQcelp13Enc
 LOCAL_MODULE_TAGS        := optional
@@ -49,16 +48,14 @@ LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+LOCAL_HEADER_LIBRARIES := libomxcore_headers
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
-  LOCAL_HEADER_LIBRARIES := audio_kernel_headers
-endif
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
-  LOCAL_HEADER_LIBRARIES := audio_kernel_headers
+  LOCAL_HEADER_LIBRARIES += audio_kernel_headers
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
 endif
 
 
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_SANITIZE := integer_overflow
 endif
 include $(BUILD_SHARED_LIBRARY)
@@ -73,7 +70,6 @@ include $(CLEAR_VARS)
 mm-qcelp13-enc-test-inc    := $(LOCAL_PATH)/inc
 mm-qcelp13-enc-test-inc    += $(LOCAL_PATH)/test
 
-mm-qcelp13-enc-test-inc    += $(TARGET_OUT_HEADERS)/mm-core/omxcore
 LOCAL_MODULE            := mm-aenc-omxqcelp13-test
 LOCAL_MODULE_TAGS       := optional
 LOCAL_CFLAGS            := $(libOmxQcelp13Enc-def)
@@ -85,7 +81,7 @@ LOCAL_SHARED_LIBRARIES  += libOmxQcelp13Enc
 LOCAL_VENDOR_MODULE     := true
 LOCAL_SRC_FILES         := test/omx_qcelp13_enc_test.c
 
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_SANITIZE := integer_overflow
 endif
 include $(BUILD_EXECUTABLE)

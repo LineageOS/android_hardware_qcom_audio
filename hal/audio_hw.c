@@ -682,23 +682,20 @@ static inline void free_map(Hashmap *map)
     }
 }
 
-static inline void patch_map_remove(struct audio_device *adev,
+static inline void patch_map_remove_l(struct audio_device *adev,
                                 audio_patch_handle_t patch_handle)
 {
     if (patch_handle == AUDIO_PATCH_HANDLE_NONE)
         return;
 
-    pthread_mutex_lock(&adev->lock);
     struct audio_patch_info *p_info =
         hashmapGet(adev->patch_map, (void *) (intptr_t) patch_handle);
     if (p_info) {
         ALOGV("%s: Remove patch %d", __func__, patch_handle);
         hashmapRemove(adev->patch_map, (void *) (intptr_t) patch_handle);
         free(p_info->patch);
-        pthread_mutex_destroy(&p_info->lock);
         free(p_info);
     }
-    pthread_mutex_unlock(&adev->lock);
 }
 
 static inline int io_streams_map_insert(struct audio_device *adev,
@@ -715,14 +712,13 @@ static inline int io_streams_map_insert(struct audio_device *adev,
     }
     s_info->stream = stream;
     s_info->patch_handle = patch_handle;
-    pthread_mutex_init(&s_info->lock, (const pthread_mutexattr_t *) NULL);
 
     pthread_mutex_lock(&adev->lock);
     struct audio_stream_info *stream_info =
             hashmapPut(adev->io_streams_map, (void *) (intptr_t) handle, (void *) s_info);
-    pthread_mutex_unlock(&adev->lock);
     if (stream_info != NULL)
         free(stream_info);
+    pthread_mutex_unlock(&adev->lock);
     ALOGD("%s: Added stream in io_streams_map with handle %d", __func__, handle);
     return 0;
 }
@@ -733,24 +729,22 @@ static inline void io_streams_map_remove(struct audio_device *adev,
     pthread_mutex_lock(&adev->lock);
     struct audio_stream_info *s_info =
             hashmapRemove(adev->io_streams_map, (void *) (intptr_t) handle);
-    pthread_mutex_unlock(&adev->lock);
     if (s_info == NULL)
-        return;
+        goto done;
     ALOGD("%s: Removed stream with handle %d", __func__, handle);
-    patch_map_remove(adev, s_info->patch_handle);
-    pthread_mutex_destroy(&s_info->lock);
+    patch_map_remove_l(adev, s_info->patch_handle);
     free(s_info);
+done:
+    pthread_mutex_unlock(&adev->lock);
     return;
 }
 
-static struct audio_patch_info* fetch_patch_info(struct audio_device *adev,
+static struct audio_patch_info* fetch_patch_info_l(struct audio_device *adev,
                                     audio_patch_handle_t handle)
 {
     struct audio_patch_info *p_info = NULL;
-    pthread_mutex_lock(&adev->lock);
     p_info = (struct audio_patch_info *)
                  hashmapGet(adev->patch_map, (void *) (intptr_t) handle);
-    pthread_mutex_unlock(&adev->lock);
     return p_info;
 }
 
@@ -1873,7 +1867,7 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
                 (usecase->in_snd_device != snd_device || force_routing) &&
                 ((backend_check_cond &&
                  (is_codec_backend_in_device_type(&usecase->device_list) ||
-                  (usecase->type == VOIP_CALL))) &&
+                  (usecase->type == VOIP_CALL))) ||
                 ((uc_info->type == VOICE_CALL &&
                  is_single_device_type_equal(&usecase->device_list,
                                             AUDIO_DEVICE_IN_VOICE_CALL)) ||
@@ -4655,7 +4649,8 @@ int route_output_stream(struct stream_out *out,
      * turned off, the write gets blocked.
      * Avoid this by routing audio to speaker until standby.
      */
-    if (compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+    if (is_single_device_type_equal(&out->device_list,
+                AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
             list_empty(&new_devices) &&
             !audio_extn_passthru_is_passthrough_stream(out) &&
             (platform_get_edid_info(adev->platform) != 0) /* HDMI disconnected */) {
@@ -9565,13 +9560,16 @@ static int adev_verify_devices(struct audio_device *adev)
             memset(&uc_info, 0, sizeof(uc_info));
             uc_info.id = audio_usecase;
             uc_info.type = usecase_type;
+            list_init(&uc_info.device_list);
             if (dir) {
                 memset(&in, 0, sizeof(in));
+                list_init(&in.device_list);
                 update_device_list(&in.device_list, audio_device, "", true);
                 in.source = AUDIO_SOURCE_VOICE_COMMUNICATION;
                 uc_info.stream.in = &in;
             }
             memset(&out, 0, sizeof(out));
+            list_init(&out.device_list);
             update_device_list(&out.device_list, audio_device, "", true);
             uc_info.stream.out = &out;
             update_device_list(&uc_info.device_list, audio_device, "", true);
@@ -9729,61 +9727,55 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
             break;
         case AUDIO_PORT_TYPE_SESSION:
         case AUDIO_PORT_TYPE_NONE:
-            break;
+            ALOGE("%s: Unsupported source type %d", __func__, sources[0].type);
+            ret = -EINVAL;
+            goto done;
     }
 
     pthread_mutex_lock(&adev->lock);
-    s_info = hashmapGet(adev->io_streams_map, (void *) (intptr_t) io_handle);
-    pthread_mutex_unlock(&adev->lock);
-    if (s_info == NULL) {
-        ALOGE("%s: Failed to obtain stream info", __func__);
-        ret = -EINVAL;
-        goto done;
-    }
-    ALOGV("%s: Fetched stream info with io_handle %d", __func__, io_handle);
 
-    pthread_mutex_lock(&s_info->lock);
     // Generate patch info and update patch
     if (*handle == AUDIO_PATCH_HANDLE_NONE) {
-        if (s_info->patch_handle != AUDIO_PATCH_HANDLE_NONE) {
-            // Use patch handle cached in s_info to update patch
-            *handle = s_info->patch_handle;
-            p_info = fetch_patch_info(adev, *handle);
-            if (p_info == NULL) {
-                ALOGE("%s: Unable to fetch patch for stream patch handle %d",
-                      __func__, *handle);
-                pthread_mutex_unlock(&s_info->lock);
-                ret = -EINVAL;
-                goto done;
-            }
-        } else {
-            *handle = generate_patch_handle();
-            p_info = (struct audio_patch_info *) calloc(1, sizeof(struct audio_patch_info));
-            if (p_info == NULL) {
-                ALOGE("%s: Failed to allocate memory", __func__);
-                pthread_mutex_unlock(&s_info->lock);
-                ret = -ENOMEM;
-                goto done;
-            }
-            new_patch = true;
-            pthread_mutex_init(&p_info->lock, (const pthread_mutexattr_t *) NULL);
-            s_info->patch_handle = *handle;
+        *handle = generate_patch_handle();
+        p_info = (struct audio_patch_info *)
+                      calloc(1, sizeof(struct audio_patch_info));
+        if (p_info == NULL) {
+            ALOGE("%s: Failed to allocate memory", __func__);
+            pthread_mutex_unlock(&adev->lock);
+            ret = -ENOMEM;
+            goto done;
         }
+        new_patch = true;
     } else {
-        p_info = fetch_patch_info(adev, *handle);
+        p_info = fetch_patch_info_l(adev, *handle);
         if (p_info == NULL) {
             ALOGE("%s: Unable to fetch patch for received patch handle %d",
                   __func__, *handle);
-            pthread_mutex_unlock(&s_info->lock);
+            pthread_mutex_unlock(&adev->lock);
             ret = -EINVAL;
             goto done;
         }
-        s_info->patch_handle = *handle;
     }
-    pthread_mutex_lock(&p_info->lock);
     update_patch(num_sources, sources, num_sinks, sinks,
-                 *handle, p_info, patch_type, new_patch);
-    stream = s_info->stream;
+             *handle, p_info, patch_type, new_patch);
+
+    // Fetch stream info of associated mix for playback or capture patches
+    if (p_info->patch_type == PATCH_PLAYBACK ||
+            p_info->patch_type == PATCH_CAPTURE) {
+        s_info = hashmapGet(adev->io_streams_map, (void *) (intptr_t) io_handle);
+        if (s_info == NULL) {
+            ALOGE("%s: Failed to obtain stream info", __func__);
+            if (new_patch)
+                free(p_info);
+            pthread_mutex_unlock(&adev->lock);
+            ret = -EINVAL;
+            goto done;
+        }
+        ALOGV("%s: Fetched stream info with io_handle %d", __func__, io_handle);
+        s_info->patch_handle = *handle;
+        stream = s_info->stream;
+    }
+    pthread_mutex_unlock(&adev->lock);
 
     // Update routing for stream
     if (stream != NULL) {
@@ -9791,26 +9783,25 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
             ret = route_output_stream((struct stream_out *) stream, &devices);
         else if (p_info->patch_type == PATCH_CAPTURE)
             ret = route_input_stream((struct stream_in *) stream, &devices, input_source);
-    }
-
-    if (ret < 0) {
-        s_info->patch_handle = AUDIO_PATCH_HANDLE_NONE;
-        ALOGE("%s: Stream routing failed for io_handle %d", __func__, io_handle);
-        pthread_mutex_unlock(&p_info->lock);
-        pthread_mutex_unlock(&s_info->lock);
-        goto done;
+        if (ret < 0) {
+            pthread_mutex_lock(&adev->lock);
+            s_info->patch_handle = AUDIO_PATCH_HANDLE_NONE;
+            if (new_patch)
+                free(p_info);
+            pthread_mutex_unlock(&adev->lock);
+            ALOGE("%s: Stream routing failed for io_handle %d", __func__, io_handle);
+            goto done;
+        }
     }
 
     // Add new patch to patch map
     if (!ret && new_patch) {
         pthread_mutex_lock(&adev->lock);
         hashmapPut(adev->patch_map, (void *) (intptr_t) *handle, (void *) p_info);
-        pthread_mutex_unlock(&adev->lock);
         ALOGD("%s: Added a new patch with handle %d", __func__, *handle);
+        pthread_mutex_unlock(&adev->lock);
     }
 
-    pthread_mutex_unlock(&p_info->lock);
-    pthread_mutex_unlock(&s_info->lock);
 done:
     audio_extn_hw_loopback_create_audio_patch(dev,
                                         num_sources,
@@ -9833,6 +9824,7 @@ int adev_release_audio_patch(struct audio_hw_device *dev,
     struct audio_device *adev = (struct audio_device *) dev;
     int ret = 0;
     audio_source_t input_source = AUDIO_SOURCE_DEFAULT;
+    struct audio_stream *stream = NULL;
 
     if (handle == AUDIO_PATCH_HANDLE_NONE) {
         ALOGE("%s: Invalid patch handle %d", __func__, handle);
@@ -9841,48 +9833,53 @@ int adev_release_audio_patch(struct audio_hw_device *dev,
     }
 
     ALOGD("%s: Remove patch with handle %d", __func__, handle);
-    struct audio_patch_info *p_info = fetch_patch_info(adev, handle);
+    pthread_mutex_lock(&adev->lock);
+    struct audio_patch_info *p_info = fetch_patch_info_l(adev, handle);
     if (p_info == NULL) {
         ALOGE("%s: Patch info not found with handle %d", __func__, handle);
+        pthread_mutex_unlock(&adev->lock);
         ret = -EINVAL;
         goto done;
     }
-    pthread_mutex_lock(&p_info->lock);
     struct audio_patch *patch = p_info->patch;
     if (patch == NULL) {
         ALOGE("%s: Patch not found for handle %d", __func__, handle);
+        pthread_mutex_unlock(&adev->lock);
         ret = -EINVAL;
-        pthread_mutex_unlock(&p_info->lock);
         goto done;
     }
-    pthread_mutex_unlock(&p_info->lock);
     audio_io_handle_t io_handle = AUDIO_IO_HANDLE_NONE;
     switch (patch->sources[0].type) {
         case AUDIO_PORT_TYPE_MIX:
             io_handle = patch->sources[0].ext.mix.handle;
             break;
         case AUDIO_PORT_TYPE_DEVICE:
-            io_handle = patch->sinks[0].ext.mix.handle;
+            if (p_info->patch_type == PATCH_CAPTURE)
+                io_handle = patch->sinks[0].ext.mix.handle;
             break;
         case AUDIO_PORT_TYPE_SESSION:
         case AUDIO_PORT_TYPE_NONE:
-            break;
+            pthread_mutex_unlock(&adev->lock);
+            ret = -EINVAL;
+            goto done;
     }
 
     // Remove patch and reset patch handle in stream info
-    pthread_mutex_lock(&adev->lock);
-    struct audio_stream_info *s_info =
-        hashmapGet(adev->io_streams_map, (void *) (intptr_t) io_handle);
-    pthread_mutex_unlock(&adev->lock);
-    if (s_info == NULL) {
-        ALOGE("%s: stream for io_handle %d is not available", __func__, io_handle);
-        goto done;
+    patch_map_remove_l(adev, handle);
+    if (p_info->patch_type == PATCH_PLAYBACK ||
+        p_info->patch_type == PATCH_CAPTURE) {
+        struct audio_stream_info *s_info =
+            hashmapGet(adev->io_streams_map, (void *) (intptr_t) io_handle);
+        if (s_info == NULL) {
+            ALOGE("%s: stream for io_handle %d is not available", __func__, io_handle);
+            pthread_mutex_unlock(&adev->lock);
+            goto done;
+        }
+        s_info->patch_handle = AUDIO_PATCH_HANDLE_NONE;
+        stream = s_info->stream;
     }
-    pthread_mutex_lock(&s_info->lock);
-    s_info->patch_handle = AUDIO_PATCH_HANDLE_NONE;
-    struct audio_stream *stream = s_info->stream;
+    pthread_mutex_unlock(&adev->lock);
 
-    pthread_mutex_lock(&p_info->lock);
     if (stream != NULL) {
         struct listnode devices;
         list_init(&devices);
@@ -9895,11 +9892,6 @@ int adev_release_audio_patch(struct audio_hw_device *dev,
     if (ret < 0)
         ALOGW("%s: Stream routing failed for io_handle %d", __func__, io_handle);
 
-    pthread_mutex_unlock(&p_info->lock);
-    pthread_mutex_unlock(&s_info->lock);
-
-    // Remove patch entry from map
-    patch_map_remove(adev, handle);
 done:
     audio_extn_hw_loopback_release_audio_patch(dev, handle);
     audio_extn_auto_hal_release_audio_patch(dev, handle);
@@ -10059,6 +10051,7 @@ static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *ou
               __func__, out->usecase);
         return -EINVAL;
     }
+    list_init(&devices);
 
     ALOGD("%s: enter: usecase(%d: %s)", __func__,
           out->usecase, use_case_table[out->usecase]);
@@ -10472,8 +10465,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 adev_open_err:
     free_map(adev->patch_map);
     free_map(adev->io_streams_map);
-    if (adev->snd_dev_ref_cnt)
-        free(adev->snd_dev_ref_cnt);
+    free(adev->snd_dev_ref_cnt);
     pthread_mutex_destroy(&adev->lock);
     free(adev);
     adev = NULL;
