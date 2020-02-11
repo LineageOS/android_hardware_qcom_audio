@@ -38,6 +38,8 @@
 #endif
 
 #include <log/log.h>
+#include <stdio.h>
+#include <cutils/str_parms.h>
 #include "audio_extn.h"
 #include "AudioVoice.h"
 #include "QalApi.h"
@@ -55,8 +57,10 @@ int AudioVoice::SetMode(const audio_mode_t mode) {
 }
 
 int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
-    int value;
+    int value, i;
+    char c_value[32];
     int ret = 0, err;
+    qal_param_payload params;
 
     ALOGD("%s: Enter", __func__);
 
@@ -82,6 +86,30 @@ int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
                 __func__, vsid, call_state);
             ret = -EINVAL;
             goto done;
+        }
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, c_value, sizeof(c_value));
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_TTY_MODE);
+        if (strcmp(c_value, AUDIO_PARAMETER_VALUE_TTY_OFF) == 0)
+            params.tty_mode = QAL_TTY_OFF;
+        else if (strcmp(c_value, AUDIO_PARAMETER_VALUE_TTY_VCO) == 0)
+            params.tty_mode = QAL_TTY_VCO;
+        else if (strcmp(c_value, AUDIO_PARAMETER_VALUE_TTY_HCO) == 0)
+            params.tty_mode = QAL_TTY_HCO;
+        else if (strcmp(c_value, AUDIO_PARAMETER_VALUE_TTY_FULL) == 0)
+            params.tty_mode = QAL_TTY_FULL;
+        else {
+            ret = -EINVAL;
+            goto done;
+        }
+
+        for ( i = 0; i < max_voice_sessions_; i++) {
+            voice_.session[i].tty_mode = params.tty_mode;
+            if (IsCallActive(&voice_.session[i])) {
+                qal_stream_set_param(voice_.session[i].qal_voice_handle, QAL_PARAM_ID_TTY_MODE, &params);
+            }
         }
     }
 
@@ -348,6 +376,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     memset(&streamAttributes, 0, sizeof(streamAttributes));
     streamAttributes.type = QAL_STREAM_VOICE_CALL;
     streamAttributes.info.voice_call_info.VSID = session->vsid;
+    streamAttributes.info.voice_call_info.tty_mode = session->tty_mode;
     streamAttributes.direction = QAL_AUDIO_INPUT_OUTPUT;
     streamAttributes.in_media_config.sample_rate = 48000;
     streamAttributes.in_media_config.ch_info = in_ch_info;
@@ -524,6 +553,7 @@ AudioVoice::AudioVoice() {
         voice_.session[i].state.new_ = CALL_INACTIVE;
         voice_.session[i].vsid = VOICEMMODE1_VSID;
         voice_.session[i].qal_voice_handle = NULL;
+        voice_.session[i].tty_mode = QAL_TTY_OFF;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
@@ -540,6 +570,7 @@ AudioVoice::~AudioVoice() {
         voice_.session[i].state.current_ = CALL_INACTIVE;
         voice_.session[i].state.new_ = CALL_INACTIVE;
         voice_.session[i].vsid = VOICEMMODE1_VSID;
+        voice_.session[i].tty_mode = QAL_TTY_OFF;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;

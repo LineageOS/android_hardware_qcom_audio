@@ -50,6 +50,13 @@
 #define AUDIO_PARAMETER_KEY_DEVICE_MUTE         "device_mute"
 #define AUDIO_PARAMETER_KEY_DIRECTION           "direction"
 
+/* TTY mode selection */
+#define AUDIO_PARAMETER_KEY_TTY_MODE "tty_mode"
+#define AUDIO_PARAMETER_VALUE_TTY_OFF "tty_off"
+#define AUDIO_PARAMETER_VALUE_TTY_VCO "tty_vco"
+#define AUDIO_PARAMETER_VALUE_TTY_HCO "tty_hco"
+#define AUDIO_PARAMETER_VALUE_TTY_FULL "tty_full"
+
 #define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
 
 class AudioVoice {
@@ -63,6 +70,7 @@ public:
     struct voice_session_t {
             call_state_t state;
             uint32_t vsid;
+            uint32_t tty_mode;
             qal_stream_handle_t*  qal_voice_handle;
     };
 
