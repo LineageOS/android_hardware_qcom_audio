@@ -573,6 +573,10 @@
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-safe">
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="deep-buffer-playback hdmi">
         <ctl name="HDMI Mixer MultiMedia1" value="1" />
     </path>
@@ -586,7 +590,17 @@
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-safe-and-hdmi">
+        <path name="deep-buffer-playback hdmi" />
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="deep-buffer-playback speaker-and-display-port">
+        <path name="deep-buffer-playback display-port" />
+        <path name="deep-buffer-playback" />
+    </path>
+
+    <path name="deep-buffer-playback speaker-safe-and-display-port">
         <path name="deep-buffer-playback display-port" />
         <path name="deep-buffer-playback" />
     </path>
@@ -618,6 +632,11 @@
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-safe-and-usb-headphones">
+        <path name="deep-buffer-playback usb-headphones" />
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="deep-buffer-playback headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia1" value="1" />
     </path>
@@ -627,11 +646,20 @@
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-safe-and-headphones">
+        <path name="deep-buffer-playback headphones" />
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="low-latency-playback">
         <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia5" value="1" />
     </path>
 
     <path name="low-latency-playback speaker-protected">
+        <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback speaker-safe">
         <path name="low-latency-playback" />
     </path>
 
@@ -658,7 +686,17 @@
         <path name="low-latency-playback" />
     </path>
 
+    <path name="low-latency-playback speaker-safe-and-hdmi">
+        <path name="low-latency-playback hdmi" />
+        <path name="low-latency-playback" />
+    </path>
+
     <path name="low-latency-playback speaker-and-display-port">
+        <path name="low-latency-playback display-port" />
+        <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback speaker-safe-and-display-port">
         <path name="low-latency-playback display-port" />
         <path name="low-latency-playback" />
     </path>
@@ -680,11 +718,21 @@
         <path name="low-latency-playback" />
     </path>
 
+    <path name="low-latency-playback speaker-safe-and-usb-headphones">
+        <path name="low-latency-playback usb-headphones" />
+        <path name="low-latency-playback" />
+    </path>
+
     <path name="low-latency-playback headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia5" value="1" />
     </path>
 
     <path name="low-latency-playback speaker-and-headphones">
+        <path name="low-latency-playback headphones" />
+        <path name="low-latency-playback" />
+    </path>
+
+    <path name="low-latency-playback speaker-safe-and-headphones">
         <path name="low-latency-playback headphones" />
         <path name="low-latency-playback" />
     </path>
@@ -697,11 +745,20 @@
         <path name="audio-ull-playback" />
     </path>
 
+    <path name="audio-ull-playback speaker-safe">
+        <path name="audio-ull-playback" />
+    </path>
+
     <path name="audio-ull-playback headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia8" value="1" />
     </path>
 
     <path name="audio-ull-playback speaker-and-headphones">
+        <path name="audio-ull-playback" />
+        <path name="audio-ull-playback headphones" />
+    </path>
+
+    <path name="audio-ull-playback speaker-safe-and-headphones">
         <path name="audio-ull-playback" />
         <path name="audio-ull-playback headphones" />
     </path>
@@ -729,7 +786,17 @@
         <path name="audio-ull-playback" />
     </path>
 
+    <path name="audio-ull-playback speaker-safe-and-hdmi">
+        <path name="audio-ull-playback hdmi" />
+        <path name="audio-ull-playback" />
+    </path>
+
     <path name="audio-ull-playback speaker-and-display-port">
+        <path name="audio-ull-playback display-port" />
+        <path name="audio-ull-playback" />
+    </path>
+
+    <path name="audio-ull-playback speaker-safe-and-display-port">
         <path name="audio-ull-playback display-port" />
         <path name="audio-ull-playback" />
     </path>
@@ -766,6 +833,10 @@
         <path name="compress-offload-playback" />
     </path>
 
+    <path name="compress-offload-playback speaker-safe">
+        <path name="compress-offload-playback" />
+    </path>
+
     <path name="compress-offload-playback hdmi">
         <ctl name="HDMI Mixer MultiMedia4" value="1" />
     </path>
@@ -797,7 +868,17 @@
         <path name="compress-offload-playback" />
     </path>
 
+    <path name="compress-offload-playback speaker-safe-and-hdmi">
+        <path name="compress-offload-playback hdmi" />
+        <path name="compress-offload-playback" />
+    </path>
+
     <path name="compress-offload-playback speaker-and-display-port">
+        <path name="compress-offload-playback display-port" />
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback speaker-safe-and-display-port">
         <path name="compress-offload-playback display-port" />
         <path name="compress-offload-playback" />
     </path>
@@ -819,6 +900,11 @@
         <path name="compress-offload-playback" />
     </path>
 
+    <path name="compress-offload-playback speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback usb-headphones" />
+        <path name="compress-offload-playback" />
+    </path>
+
     <path name="compress-offload-playback headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia4" value="1" />
     </path>
@@ -836,8 +922,17 @@
         <path name="compress-offload-playback" />
     </path>
 
+    <path name="compress-offload-playback speaker-safe-and-headphones">
+        <path name="compress-offload-playback headphones" />
+        <path name="compress-offload-playback" />
+    </path>
+
     <path name="compress-offload-playback2">
         <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia7" value="1" />
+    </path>
+
+    <path name="compress-offload-playback2 speaker-safe">
+        <path name="compress-offload-playback2" />
     </path>
 
     <path name="compress-offload-playback2 hdmi">
@@ -863,7 +958,17 @@
         <path name="compress-offload-playback2" />
     </path>
 
+    <path name="compress-offload-playback2 speaker-safe-and-hdmi">
+        <path name="compress-offload-playback2 hdmi" />
+        <path name="compress-offload-playback2" />
+    </path>
+
     <path name="compress-offload-playback2 speaker-and-display-port">
+        <path name="compress-offload-playback2 display-port" />
+        <path name="compress-offload-playback2" />
+    </path>
+
+    <path name="compress-offload-playback2 speaker-safe-and-display-port">
         <path name="compress-offload-playback2 display-port" />
         <path name="compress-offload-playback2" />
     </path>
@@ -885,6 +990,11 @@
         <path name="compress-offload-playback2" />
     </path>
 
+    <path name="compress-offload-playback2 speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback2 usb-headphones" />
+        <path name="compress-offload-playback2" />
+    </path>
+
     <path name="compress-offload-playback2 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia7" value="1" />
     </path>
@@ -902,8 +1012,17 @@
         <path name="compress-offload-playback2" />
     </path>
 
+    <path name="compress-offload-playback2 speaker-safe-and-headphones">
+        <path name="compress-offload-playback2 headphones" />
+        <path name="compress-offload-playback2" />
+    </path>
+
     <path name="compress-offload-playback3">
         <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="compress-offload-playback3 speaker-safe">
+        <path name="compress-offload-playback3" />
     </path>
 
     <path name="compress-offload-playback3 hdmi">
@@ -929,7 +1048,17 @@
         <path name="compress-offload-playback3" />
     </path>
 
+    <path name="compress-offload-playback3 speaker-safe-and-hdmi">
+        <path name="compress-offload-playback3 hdmi" />
+        <path name="compress-offload-playback3" />
+    </path>
+
     <path name="compress-offload-playback3 speaker-and-display-port">
+        <path name="compress-offload-playback3 display-port" />
+        <path name="compress-offload-playback3" />
+    </path>
+
+    <path name="compress-offload-playback3 speaker-safe-and-display-port">
         <path name="compress-offload-playback3 display-port" />
         <path name="compress-offload-playback3" />
     </path>
@@ -951,6 +1080,11 @@
         <path name="compress-offload-playback3" />
     </path>
 
+    <path name="compress-offload-playback3 speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback3 usb-headphones" />
+        <path name="compress-offload-playback3" />
+    </path>
+
     <path name="compress-offload-playback3 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia10" value="1" />
     </path>
@@ -968,8 +1102,17 @@
         <path name="compress-offload-playback3" />
     </path>
 
+    <path name="compress-offload-playback3 speaker-safe-and-headphones">
+        <path name="compress-offload-playback3 headphones" />
+        <path name="compress-offload-playback3" />
+    </path>
+
     <path name="compress-offload-playback4">
         <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia11" value="1" />
+    </path>
+
+    <path name="compress-offload-playback4 speaker-safe">
+        <path name="compress-offload-playback4" />
     </path>
 
     <path name="compress-offload-playback4 hdmi">
@@ -995,7 +1138,17 @@
         <path name="compress-offload-playback4" />
     </path>
 
+    <path name="compress-offload-playback4 speaker-safe-and-hdmi">
+        <path name="compress-offload-playback4 hdmi" />
+        <path name="compress-offload-playback4" />
+    </path>
+
     <path name="compress-offload-playback4 speaker-and-display-port">
+        <path name="compress-offload-playback4 display-port" />
+        <path name="compress-offload-playback4" />
+    </path>
+
+    <path name="compress-offload-playback4 speaker-safe-and-display-port">
         <path name="compress-offload-playback4 display-port" />
         <path name="compress-offload-playback4" />
     </path>
@@ -1018,6 +1171,11 @@
         <path name="compress-offload-playback4" />
     </path>
 
+    <path name="compress-offload-playback4 speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback4 usb-headphones" />
+        <path name="compress-offload-playback4" />
+    </path>
+
     <path name="compress-offload-playback4 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia11" value="1" />
     </path>
@@ -1035,8 +1193,17 @@
         <path name="compress-offload-playback4" />
     </path>
 
+    <path name="compress-offload-playback4 speaker-safe-and-headphones">
+        <path name="compress-offload-playback4 headphones" />
+        <path name="compress-offload-playback4" />
+    </path>
+
     <path name="compress-offload-playback5">
         <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia12" value="1" />
+    </path>
+
+    <path name="compress-offload-playback5 speaker-safe">
+        <path name="compress-offload-playback5" />
     </path>
 
     <path name="compress-offload-playback5 hdmi">
@@ -1062,7 +1229,17 @@
         <path name="compress-offload-playback5" />
     </path>
 
+    <path name="compress-offload-playback5 speaker-safe-and-hdmi">
+        <path name="compress-offload-playback5 hdmi" />
+        <path name="compress-offload-playback5" />
+    </path>
+
     <path name="compress-offload-playback5 speaker-and-display-port">
+        <path name="compress-offload-playback5 display-port" />
+        <path name="compress-offload-playback5" />
+    </path>
+
+    <path name="compress-offload-playback5 speaker-safe-and-display-port">
         <path name="compress-offload-playback5 display-port" />
         <path name="compress-offload-playback5" />
     </path>
@@ -1084,6 +1261,11 @@
         <path name="compress-offload-playback5" />
     </path>
 
+    <path name="compress-offload-playback5 speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback5 usb-headphones" />
+        <path name="compress-offload-playback5" />
+    </path>
+
     <path name="compress-offload-playback5 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia12" value="1" />
     </path>
@@ -1101,8 +1283,17 @@
         <path name="compress-offload-playback5" />
     </path>
 
+    <path name="compress-offload-playback5 speaker-safe-and-headphones">
+        <path name="compress-offload-playback5 headphones" />
+        <path name="compress-offload-playback5" />
+    </path>
+
     <path name="compress-offload-playback6">
         <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia13" value="1" />
+    </path>
+
+    <path name="compress-offload-playback6 speaker-safe">
+        <path name="compress-offload-playback6" />
     </path>
 
     <path name="compress-offload-playback6 hdmi">
@@ -1128,7 +1319,17 @@
         <path name="compress-offload-playback6" />
     </path>
 
+    <path name="compress-offload-playback6 speaker-safe-and-hdmi">
+        <path name="compress-offload-playback6 hdmi" />
+        <path name="compress-offload-playback6" />
+    </path>
+
     <path name="compress-offload-playback6 speaker-and-display-port">
+        <path name="compress-offload-playback6 display-port" />
+        <path name="compress-offload-playback6" />
+    </path>
+
+    <path name="compress-offload-playback6 speaker-safe-and-display-port">
         <path name="compress-offload-playback6 display-port" />
         <path name="compress-offload-playback6" />
     </path>
@@ -1150,6 +1351,11 @@
         <path name="compress-offload-playback6" />
     </path>
 
+    <path name="compress-offload-playback6 speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback6 usb-headphones" />
+        <path name="compress-offload-playback6" />
+    </path>
+
     <path name="compress-offload-playback6 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia13" value="1" />
     </path>
@@ -1167,8 +1373,17 @@
         <path name="compress-offload-playback6" />
     </path>
 
+    <path name="compress-offload-playback6 speaker-safe-and-headphones">
+        <path name="compress-offload-playback6 headphones" />
+        <path name="compress-offload-playback6" />
+    </path>
+
     <path name="compress-offload-playback7">
         <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia14" value="1" />
+    </path>
+
+    <path name="compress-offload-playback7 speaker-safe">
+        <path name="compress-offload-playback7" />
     </path>
 
     <path name="compress-offload-playback7 hdmi">
@@ -1194,7 +1409,17 @@
         <path name="compress-offload-playback7" />
     </path>
 
+    <path name="compress-offload-playback7 speaker-safe-and-hdmi">
+        <path name="compress-offload-playback7 hdmi" />
+        <path name="compress-offload-playback7" />
+    </path>
+
     <path name="compress-offload-playback7 speaker-and-display-port">
+        <path name="compress-offload-playback7 display-port" />
+        <path name="compress-offload-playback7" />
+    </path>
+
+    <path name="compress-offload-playback7 speaker-safe-and-display-port">
         <path name="compress-offload-playback7 display-port" />
         <path name="compress-offload-playback7" />
     </path>
@@ -1216,6 +1441,11 @@
         <path name="compress-offload-playback7" />
     </path>
 
+    <path name="compress-offload-playback7 speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback7 usb-headphones" />
+        <path name="compress-offload-playback7" />
+    </path>
+
     <path name="compress-offload-playback7 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia14" value="1" />
     </path>
@@ -1233,8 +1463,17 @@
         <path name="compress-offload-playback7" />
     </path>
 
+    <path name="compress-offload-playback7 speaker-safe-and-headphones">
+        <path name="compress-offload-playback7 headphones" />
+        <path name="compress-offload-playback7" />
+    </path>
+
     <path name="compress-offload-playback8">
         <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia15" value="1" />
+    </path>
+
+    <path name="compress-offload-playback8 speaker-safe">
+        <path name="compress-offload-playback8" />
     </path>
 
     <path name="compress-offload-playback8 hdmi">
@@ -1260,7 +1499,17 @@
         <path name="compress-offload-playback8" />
     </path>
 
+    <path name="compress-offload-playback8 speaker-safe-and-hdmi">
+        <path name="compress-offload-playback8 hdmi" />
+        <path name="compress-offload-playback8" />
+    </path>
+
     <path name="compress-offload-playback8 speaker-and-display-port">
+        <path name="compress-offload-playback8 display-port" />
+        <path name="compress-offload-playback8" />
+    </path>
+
+    <path name="compress-offload-playback8 speaker-safe-and-display-port">
         <path name="compress-offload-playback8 display-port" />
         <path name="compress-offload-playback8" />
     </path>
@@ -1282,6 +1531,11 @@
         <path name="compress-offload-playback8" />
     </path>
 
+    <path name="compress-offload-playback8 speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback8 usb-headphones" />
+        <path name="compress-offload-playback8" />
+    </path>
+
     <path name="compress-offload-playback8 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia15" value="1" />
     </path>
@@ -1299,7 +1553,16 @@
         <path name="compress-offload-playback8" />
     </path>
 
+    <path name="compress-offload-playback8 speaker-safe-and-headphones">
+        <path name="compress-offload-playback8 headphones" />
+        <path name="compress-offload-playback8" />
+    </path>
+
     <path name="compress-offload-playback9">
+        <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="compress-offload-playback9 speaker-safe">
         <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia16" value="1" />
     </path>
 
@@ -1326,7 +1589,17 @@
         <path name="compress-offload-playback9" />
     </path>
 
+    <path name="compress-offload-playback9 speaker-safe-and-hdmi">
+        <path name="compress-offload-playback9 hdmi" />
+        <path name="compress-offload-playback9" />
+    </path>
+
     <path name="compress-offload-playback9 speaker-and-display-port">
+        <path name="compress-offload-playback9 display-port" />
+        <path name="compress-offload-playback9" />
+    </path>
+
+    <path name="compress-offload-playback9 speaker-safe-and-display-port">
         <path name="compress-offload-playback9 display-port" />
         <path name="compress-offload-playback9" />
     </path>
@@ -1348,6 +1621,11 @@
         <path name="compress-offload-playback9" />
     </path>
 
+    <path name="compress-offload-playback9 speaker-safe-and-usb-headphones">
+        <path name="compress-offload-playback9 usb-headphones" />
+        <path name="compress-offload-playback9" />
+    </path>
+
     <path name="compress-offload-playback9 headphones">
         <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia16" value="1" />
     </path>
@@ -1361,6 +1639,11 @@
     </path>
 
     <path name="compress-offload-playback9 speaker-and-headphones">
+        <path name="compress-offload-playback9 headphones" />
+        <path name="compress-offload-playback9" />
+    </path>
+
+    <path name="compress-offload-playback9 speaker-safe-and-headphones">
         <path name="compress-offload-playback9 headphones" />
         <path name="compress-offload-playback9" />
     </path>
@@ -1878,6 +2161,10 @@
         <path name="speaker" />
     </path>
 
+    <path name="speaker-safe">
+        <path name="speaker-mono" />
+    </path>
+
    <path name="speaker-vbat-mono">
        <path name="speaker-mono" />
    </path>
@@ -1887,6 +2174,10 @@
    </path>
 
    <path name="speaker-vbat">
+       <path name="speaker" />
+   </path>
+
+   <path name="speaker-safe">
        <path name="speaker" />
    </path>
 
@@ -2136,8 +2427,17 @@
         <path name="speaker" />
     </path>
 
+    <path name="speaker-safe-and-headphones">
+        <path name="headphones" />
+        <path name="speaker-safe" />
+    </path>
+
     <path name="speaker-and-line">
         <path name="speaker-and-headphones" />
+    </path>
+
+    <path name="speaker-safe-and-line">
+        <path name="speaker-safe-and-headphones" />
     </path>
 
     <path name="speaker-and-headphones-liquid">
@@ -2196,6 +2496,11 @@
 
     <path name="speaker-and-usb-headphones">
         <path name="speaker" />
+        <path name="usb-headphones" />
+    </path>
+
+    <path name="speaker-safe-and-usb-headphones">
+        <path name="speaker-safe" />
         <path name="usb-headphones" />
     </path>
 
@@ -2484,6 +2789,11 @@
         <path name="bt-a2dp" />
     </path>
 
+    <path name="speaker-safe-and-bt-a2dp">
+        <path name="speaker-safe" />
+        <path name="bt-a2dp" />
+    </path>
+
     <path name="deep-buffer-playback bt-a2dp">
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia1" value="1" />
     </path>
@@ -2537,7 +2847,17 @@
         <path name="deep-buffer-playback" />
     </path>
 
+    <path name="deep-buffer-playback speaker-safe-and-bt-a2dp">
+        <path name="deep-buffer-playback bt-a2dp" />
+        <path name="deep-buffer-playback" />
+    </path>
+
     <path name="compress-offload-playback speaker-and-bt-a2dp">
+        <path name="compress-offload-playback bt-a2dp" />
+        <path name="compress-offload-playback" />
+    </path>
+
+    <path name="compress-offload-playback speaker-safe-and-bt-a2dp">
         <path name="compress-offload-playback bt-a2dp" />
         <path name="compress-offload-playback" />
     </path>
@@ -2547,7 +2867,17 @@
         <path name="low-latency-playback" />
     </path>
 
+    <path name="low-latency-playback speaker-safe-and-bt-a2dp">
+        <path name="low-latency-playback bt-a2dp" />
+        <path name="low-latency-playback" />
+    </path>
+
     <path name="compress-offload-playback2 speaker-and-bt-a2dp">
+        <path name="compress-offload-playback2 bt-a2dp" />
+        <path name="compress-offload-playback2" />
+    </path>
+
+    <path name="compress-offload-playback2 speaker-safe-and-bt-a2dp">
         <path name="compress-offload-playback2 bt-a2dp" />
         <path name="compress-offload-playback2" />
     </path>
@@ -2557,7 +2887,17 @@
         <path name="compress-offload-playback3" />
     </path>
 
+    <path name="compress-offload-playback3 speaker-safe-and-bt-a2dp">
+        <path name="compress-offload-playback3 bt-a2dp" />
+        <path name="compress-offload-playback3" />
+    </path>
+
     <path name="compress-offload-playback4 speaker-and-bt-a2dp">
+        <path name="compress-offload-playback4 bt-a2dp" />
+        <path name="compress-offload-playback4" />
+    </path>
+
+    <path name="compress-offload-playback4 speaker-safe-and-bt-a2dp">
         <path name="compress-offload-playback4 bt-a2dp" />
         <path name="compress-offload-playback4" />
     </path>
@@ -2567,7 +2907,17 @@
         <path name="compress-offload-playback5" />
     </path>
 
+    <path name="compress-offload-playback5 speaker-safe-and-bt-a2dp">
+        <path name="compress-offload-playback5 bt-a2dp" />
+        <path name="compress-offload-playback5" />
+    </path>
+
     <path name="compress-offload-playback6 speaker-and-bt-a2dp">
+        <path name="compress-offload-playback6 bt-a2dp" />
+        <path name="compress-offload-playback6" />
+    </path>
+
+    <path name="compress-offload-playback6 speaker-safe-and-bt-a2dp">
         <path name="compress-offload-playback6 bt-a2dp" />
         <path name="compress-offload-playback6" />
     </path>
@@ -2577,7 +2927,17 @@
         <path name="compress-offload-playback7" />
     </path>
 
+    <path name="compress-offload-playback7 speaker-safe-and-bt-a2dp">
+        <path name="compress-offload-playback7 bt-a2dp" />
+        <path name="compress-offload-playback7" />
+    </path>
+
     <path name="compress-offload-playback8 speaker-and-bt-a2dp">
+        <path name="compress-offload-playback8 bt-a2dp" />
+        <path name="compress-offload-playback8" />
+    </path>
+
+    <path name="compress-offload-playback8 speaker-safe-and-bt-a2dp">
         <path name="compress-offload-playback8 bt-a2dp" />
         <path name="compress-offload-playback8" />
     </path>
@@ -2587,7 +2947,17 @@
         <path name="compress-offload-playback9" />
     </path>
 
+    <path name="compress-offload-playback9 speaker-safe-and-bt-a2dp">
+        <path name="compress-offload-playback9 bt-a2dp" />
+        <path name="compress-offload-playback9" />
+    </path>
+
     <path name="audio-ull-playback speaker-and-bt-a2dp">
+        <path name="audio-ull-playback bt-a2dp" />
+        <path name="audio-ull-playback" />
+    </path>
+
+    <path name="audio-ull-playback speaker-safe-and-bt-a2dp">
         <path name="audio-ull-playback bt-a2dp" />
         <path name="audio-ull-playback" />
     </path>
@@ -2601,6 +2971,11 @@
     </path>
 
     <path name="mmap-playback speaker-and-headphones">
+        <path name="mmap-playback" />
+        <path name="mmap-playback headphones" />
+    </path>
+
+    <path name="mmap-playback speaker-safe-and-headphones">
         <path name="mmap-playback" />
         <path name="mmap-playback headphones" />
     </path>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -50,6 +50,7 @@ typedef int  (*acdb_init_v3_t)(const char *, char *, struct listnode *);
 typedef int  (*acdb_init_v4_t)(void *, int);
 typedef void (*acdb_send_audio_cal_t)(int, int, int , int);
 typedef void (*acdb_send_audio_cal_v3_t)(int, int, int, int, int);
+typedef void (*acdb_send_audio_cal_v4_t)(int, int, int, int, int, int);
 typedef void (*acdb_send_voice_cal_t)(int, int);
 typedef int (*acdb_reload_vocvoltable_t)(int);
 typedef int  (*acdb_get_default_app_type_t)(void);

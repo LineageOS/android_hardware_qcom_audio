@@ -44,6 +44,7 @@ AUDIO_FEATURE_ENABLED_USB_TUNNEL := true
 AUDIO_FEATURE_ENABLED_A2DP_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_3D_AUDIO := true
 AUDIO_FEATURE_ENABLED_AHAL_EXT := true
+AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
 DOLBY_ENABLE := false
 endif
 
@@ -453,6 +454,10 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@5.0-impl \
     android.hardware.audio.effect@5.0 \
     android.hardware.audio.effect@5.0-impl
+
+# enable sound trigger hidl hal 2.2
+PRODUCT_PACKAGES += \
+    android.hardware.soundtrigger@2.2-impl \
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \
