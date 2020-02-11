@@ -487,6 +487,8 @@ static const struct string_to_enum out_sample_rates_name_to_enum_table[] = {
     STRING_TO_ENUM(96000),
     STRING_TO_ENUM(176400),
     STRING_TO_ENUM(192000),
+    STRING_TO_ENUM(352800),
+    STRING_TO_ENUM(384000),
 };
 
 struct in_effect_list {
@@ -509,6 +511,8 @@ static int out_set_pcm_volume(struct audio_stream_out *stream, float left, float
 static void adev_snd_mon_cb(void *cookie, struct str_parms *parms);
 static void in_snd_mon_cb(void * stream, struct str_parms * parms);
 static void out_snd_mon_cb(void * stream, struct str_parms * parms);
+
+static int configure_btsco_sample_rate(snd_device_t snd_device);
 
 #ifdef AUDIO_FEATURE_ENABLED_GCOV
 extern void  __gcov_flush();
@@ -1302,6 +1306,7 @@ int enable_snd_device(struct audio_device *adev,
             goto err;
         }
 
+        configure_btsco_sample_rate(snd_device);
         /* due to the possibility of calibration overwrite between listen
             and audio, notify listen hal before audio calibration is sent */
         audio_extn_sound_trigger_update_device_status(snd_device,
@@ -1761,13 +1766,13 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
         if (usecase->type != PCM_PLAYBACK &&
                 usecase != uc_info &&
                 (usecase->in_snd_device != snd_device || force_routing) &&
-                ((uc_info->devices & backend_check_cond) &&
+                (((uc_info->devices & backend_check_cond) &&
                  (((usecase->devices & ~AUDIO_DEVICE_BIT_IN) & AUDIO_DEVICE_IN_ALL_CODEC_BACKEND) ||
-                  (usecase->type == VOIP_CALL))) &&
+                  (usecase->type == VOIP_CALL))) ||
                 ((uc_info->type == VOICE_CALL &&
                   usecase->devices == AUDIO_DEVICE_IN_VOICE_CALL) ||
                  platform_check_backends_match(snd_device,\
-                                              usecase->in_snd_device)) &&
+                                              usecase->in_snd_device))) &&
                 (usecase->id != USECASE_AUDIO_SPKR_CALIB_TX)) {
             ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
@@ -2291,6 +2296,50 @@ bool is_bt_soc_on(struct audio_device *adev)
     return bt_soc_status;
 }
 
+static int configure_btsco_sample_rate(snd_device_t snd_device)
+{
+    struct mixer_ctl *ctl = NULL;
+    struct mixer_ctl *ctl_sr_rx = NULL, *ctl_sr_tx = NULL, *ctl_sr = NULL;
+    char *rate_str = NULL;
+    bool is_rx_dev = true;
+
+    if (is_btsco_device(snd_device, snd_device)) {
+        ctl_sr_tx = mixer_get_ctl_by_name(adev->mixer, "BT SampleRate TX");
+        ctl_sr_rx = mixer_get_ctl_by_name(adev->mixer, "BT SampleRate RX");
+        if (!ctl_sr_tx || !ctl_sr_rx) {
+            ctl_sr = mixer_get_ctl_by_name(adev->mixer, "BT SampleRate");
+            if (!ctl_sr)
+                return -ENOSYS;
+        }
+
+        switch (snd_device) {
+        case SND_DEVICE_OUT_BT_SCO:
+            rate_str = "KHZ_8";
+            break;
+        case SND_DEVICE_IN_BT_SCO_MIC_NREC:
+        case SND_DEVICE_IN_BT_SCO_MIC:
+            rate_str = "KHZ_8";
+            is_rx_dev = false;
+            break;
+        case SND_DEVICE_OUT_BT_SCO_WB:
+            rate_str = "KHZ_16";
+            break;
+        case SND_DEVICE_IN_BT_SCO_MIC_WB_NREC:
+        case SND_DEVICE_IN_BT_SCO_MIC_WB:
+            rate_str = "KHZ_16";
+            is_rx_dev = false;
+            break;
+        default:
+            return 0;
+        }
+
+        ctl = (ctl_sr == NULL) ? (is_rx_dev ? ctl_sr_rx : ctl_sr_tx) : ctl_sr;
+        if (mixer_ctl_set_enum_by_string(ctl, rate_str) != 0)
+            return -ENOSYS;
+    }
+    return 0;
+}
+
 int out_standby_l(struct audio_stream *stream);
 
 struct stream_in *adev_get_active_input(const struct audio_device *adev)
@@ -2696,6 +2745,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                     usecase->stream.out->sample_rate,
                     &usecase->stream.out->app_type_cfg.sample_rate);
         } else if (((out_snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+                     out_snd_device != SND_DEVICE_OUT_HEADPHONES &&
+                     out_snd_device != SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER &&
                      !audio_is_true_native_stream_active(adev)) &&
                     usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
                     (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
@@ -2752,6 +2803,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
               !(usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
               (usecase->type != TRANSCODE_LOOPBACK_TX) &&
               (usecase->type != TRANSCODE_LOOPBACK_RX) &&
+              (usecase->type != PCM_CAPTURE) &&
               usecase->stream.out->started) {
               if (is_bt_soc_on(adev) == false) {
                   ALOGD("BT SCO/A2dp disconnected while in connection");
@@ -3183,7 +3235,7 @@ static void *offload_thread_loop(void *context)
     int ret = 0;
 
     setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_AUDIO);
-    //set_sched_policy(0, SP_FOREGROUND);
+    set_sched_policy(0, SP_FOREGROUND);
     prctl(PR_SET_NAME, (unsigned long)"Offload Callback", 0, 0, 0);
 
     ALOGV("%s", __func__);
@@ -5471,7 +5523,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             out->send_new_metadata = 0;
             if (out->send_next_track_params && out->is_compr_metadata_avail) {
                 ALOGD("copl(%p):send next track params in gapless", out);
-                // compress_set_next_track_param(out->compr, &(out->compr_config.codec->options));
+                compress_set_next_track_param(out->compr, &(out->compr_config.codec->options));
                 out->send_next_track_params = false;
                 out->is_compr_metadata_avail = false;
             }
@@ -7348,6 +7400,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                               __func__, ret);
                         goto error_open;
                     }
+                } else {
+                    out->usecase = GET_USECASE_AUDIO_PLAYBACK_PRIMARY(use_db_as_primary);
+                    out->config = GET_PCM_CONFIG_AUDIO_PLAYBACK_PRIMARY(use_db_as_primary);
                 }
         }
     } else if (audio_is_linear_pcm(out->format) &&
@@ -8080,7 +8135,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     int status = 0;
     bool a2dp_reconfig = false;
     struct listnode *node;
-    struct audio_usecase *usecase = NULL;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -8112,20 +8166,26 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0){
             adev->bt_sco_on = true;
         } else {
-            ALOGD("sco is off, reset sco and route device to handset/mic");
             adev->bt_sco_on = false;
             audio_extn_sco_reset_configuration();
+        }
+    }
+
+    ret = str_parms_get_str(parms, "A2dpSuspended", value, sizeof(value));
+    if (ret>=0) {
+        if (!strncmp(value, "false", 5) &&
+            audio_extn_a2dp_source_is_suspended()) {
+            struct audio_usecase *usecase;
+            struct listnode *node;
             list_for_each(node, &adev->usecase_list) {
                 usecase = node_to_item(node, struct audio_usecase, list);
-                if ((usecase->type == PCM_PLAYBACK) && usecase->stream.out &&
-                    (usecase->stream.out->devices & AUDIO_DEVICE_OUT_ALL_SCO))
-                    usecase->stream.out->devices = AUDIO_DEVICE_OUT_EARPIECE;
-                else if ((usecase->type == PCM_CAPTURE) && usecase->stream.in &&
-                         (usecase->stream.in->device & AUDIO_DEVICE_IN_ALL_SCO))
+                if (usecase->stream.in && (usecase->type == PCM_CAPTURE) &&
+                    ((usecase->stream.in->device & ~AUDIO_DEVICE_BIT_IN) &
+                        AUDIO_DEVICE_IN_ALL_SCO)) {
+                    ALOGD("a2dp resumed, switch bt sco mic to handset mic");
                     usecase->stream.in->device = AUDIO_DEVICE_IN_BUILTIN_MIC;
-                else
-                    continue;
-                select_devices(adev, usecase->id);
+                    select_devices(adev, usecase->id);
+                }
             }
         }
     }
@@ -8255,21 +8315,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 ALOGV("detected USB disconnect .. enable proxy");
                 adev->allow_afe_proxy_usage = true;
             }
-        }
-        if (audio_is_a2dp_out_device(device)) {
-           struct audio_usecase *usecase;
-           struct listnode *node;
-           list_for_each(node, &adev->usecase_list) {
-               usecase = node_to_item(node, struct audio_usecase, list);
-               if (PCM_PLAYBACK == usecase->type && usecase->stream.out &&
-                  (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-                   usecase->stream.out->a2dp_compress_mute) {
-                   struct stream_out *out = usecase->stream.out;
-                   ALOGD("Unmuting the stream when Bt-A2dp disconnected and stream is mute");
-                   out->a2dp_compress_mute = false;
-                   out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
-               }
-           }
         }
     }
 
@@ -9418,6 +9463,8 @@ static void adev_snd_mon_cb(void *cookie, struct str_parms *parms)
             platform_snd_card_update(adev->platform, status);
             audio_extn_fm_set_parameters(adev, parms);
             audio_extn_auto_hal_set_parameters(adev, parms);
+            if (status == CARD_STATUS_OFFLINE)
+                audio_extn_sco_reset_configuration();
         } else if (is_ext_device_status) {
             platform_set_parameters(adev->platform, parms);
         }
@@ -9459,11 +9506,10 @@ static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *ou
             pthread_mutex_unlock(&out->compr_mute_lock);
         }
     } else {
-        // mute compress stream if suspended
-        pthread_mutex_lock(&out->compr_mute_lock);
-        if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-            (!out->a2dp_compress_mute)) {
-            if (!out->standby) {
+        if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+            // mute compress stream if suspended
+            pthread_mutex_lock(&out->compr_mute_lock);
+            if (!out->a2dp_compress_mute && !out->standby) {
                 ALOGD("%s: selecting speaker and muting stream", __func__);
                 devices = out->devices;
                 out->devices = AUDIO_DEVICE_OUT_SPEAKER;
@@ -9480,8 +9526,12 @@ static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *ou
                 out->volume_l = left_p;
                 out->volume_r = right_p;
             }
+            pthread_mutex_unlock(&out->compr_mute_lock);
+        } else {
+            // tear down a2dp path for non offloaded streams
+            if (audio_extn_a2dp_source_is_suspended())
+                out_standby_l(&out->stream.common);
         }
-        pthread_mutex_unlock(&out->compr_mute_lock);
     }
     ALOGV("%s: exit", __func__);
     return 0;
