@@ -116,6 +116,12 @@ audio_devices_t AudioVoice::GetMatchingTxDevice(audio_devices_t halRxDeviceId) {
         case AUDIO_DEVICE_OUT_SPEAKER:
             halTxDeviceId = AUDIO_DEVICE_IN_BACK_MIC ;
             break;
+        case AUDIO_DEVICE_OUT_WIRED_HEADSET:
+            halTxDeviceId = AUDIO_DEVICE_IN_WIRED_HEADSET;
+            break;
+        case AUDIO_DEVICE_OUT_WIRED_HEADPHONE:
+            halTxDeviceId = AUDIO_DEVICE_IN_BUILTIN_MIC;
+            break;
         default:
             halTxDeviceId = AUDIO_DEVICE_NONE;
             ALOGE("%s: unsupported Device Id of %d\n", __func__, halRxDeviceId);
