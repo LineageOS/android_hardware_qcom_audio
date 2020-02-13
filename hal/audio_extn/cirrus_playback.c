@@ -506,6 +506,7 @@ static void *audio_extn_cirrus_calibration_thread() {
     uc_info_rx->in_snd_device = SND_DEVICE_NONE;
     uc_info_rx->stream.out = adev->primary_output;
     uc_info_rx->out_snd_device = SND_DEVICE_OUT_SPEAKER;
+    list_init(&uc_info_rx->device_list);
     list_add_tail(&adev->usecase_list, &uc_info_rx->list);
 
     fp_enable_snd_device(adev, SND_DEVICE_OUT_SPEAKER);
@@ -846,6 +847,7 @@ int spkr_prot_start_processing(snd_device_t snd_device) {
     uc_info_tx->type = PCM_CAPTURE;
     uc_info_tx->in_snd_device = SND_DEVICE_IN_CAPTURE_VI_FEEDBACK;
     uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+    list_init(&uc_info_tx->device_list);
     handle.pcm_tx = NULL;
 
     list_add_tail(&adev->usecase_list, &uc_info_tx->list);

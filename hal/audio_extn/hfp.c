@@ -306,6 +306,7 @@ static int32_t start_hfp(struct audio_device *adev,
     uc_info->id = hfpmod.ucid;
     uc_info->type = PCM_HFP_CALL;
     uc_info->stream.out = adev->primary_output;
+    list_init(&uc_info->device_list);
     assign_devices(&uc_info->device_list, &adev->primary_output->device_list);
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
