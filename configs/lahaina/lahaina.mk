@@ -104,6 +104,8 @@ AUDIO_HAL_TEST_APPS += hal_rec_test
 PRODUCT_PACKAGES += $(AUDIO_HARDWARE)
 PRODUCT_PACKAGES += $(AUDIO_WRAPPER)
 PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
+PRODUCT_PACKAGES += audioadsprpcd
+PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
 
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
