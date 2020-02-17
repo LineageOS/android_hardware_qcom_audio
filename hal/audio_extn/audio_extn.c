@@ -1294,6 +1294,12 @@ static int32_t afe_proxy_set_channel_mapping(struct audio_device *adev,
         set_values[0] = PCM_CHANNEL_FL;
         set_values[1] = PCM_CHANNEL_FR;
         break;
+     case 4:
+        set_values[0] = PCM_CHANNEL_FL;
+        set_values[1] = PCM_CHANNEL_FR;
+        set_values[2] = PCM_CHANNEL_LS;
+        set_values[3] = PCM_CHANNEL_LFE;
+        break;
     case 6:
         set_values[0] = PCM_CHANNEL_FL;
         set_values[1] = PCM_CHANNEL_FR;
@@ -1390,7 +1396,7 @@ int32_t audio_extn_set_afe_proxy_channel_mixer(struct audio_device *adev,
     }
     mixer_ctl_set_enum_by_string(ctl, channel_cnt_str);
 
-    if (channel_count == 6 || channel_count == 8 || channel_count == 2) {
+    if (channel_count == 6 || channel_count == 8 || channel_count == 2 || channel_count == 4) {
         ret = afe_proxy_set_channel_mapping(adev, channel_count, snd_device);
     } else {
         ALOGE("%s: set unsupported channel count(%d)",  __func__, channel_count);
