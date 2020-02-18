@@ -148,6 +148,7 @@ AUDIO_DLKM += audio_swr.ko
 AUDIO_DLKM += audio_wcd_core.ko
 AUDIO_DLKM += audio_swr_ctrl.ko
 AUDIO_DLKM += audio_wsa881x.ko
+AUDIO_DLKM += audio_wsa883x.ko
 AUDIO_DLKM += audio_platform.ko
 AUDIO_DLKM += audio_hdmi.ko
 AUDIO_DLKM += audio_stub.ko
