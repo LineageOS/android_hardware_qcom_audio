@@ -311,6 +311,7 @@ struct platform_data {
     bool gsm_mode_enabled;
     bool is_slimbus_interface;
     bool is_internal_codec;
+    bool is_default_be_config;
     int mono_speaker;
     bool voice_speaker_stereo;
     /* Audio calibration related functions */
@@ -1725,6 +1726,13 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
      }
+
+    if (!strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
+        !strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
+        !strncmp(snd_card_name, "qcs605", strlen("qcs605")) ||
+        !strncmp(snd_card_name, "sdm439", strlen("sdm439"))) {
+        my_data->is_default_be_config = true;
+    }
 }
 
 static bool can_enable_mbdrc_on_device(snd_device_t snd_device)
@@ -3022,6 +3030,7 @@ void *platform_init(struct audio_device *adev)
 
     my_data->is_slimbus_interface = true;
     my_data->is_internal_codec = false;
+    my_data->is_default_be_config = false;
 
     my_data->hw_info = hw_info_init(snd_card_name);
     if (!my_data->hw_info) {
@@ -9667,7 +9676,9 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
         bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
-    } else if (my_data->is_internal_codec && !audio_is_usb_in_device(snd_device)) {
+    } else if (my_data->is_internal_codec &&
+               my_data->is_default_be_config &&
+               !audio_is_usb_in_device(snd_device)) {
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
         if (in && in->bit_width == 24)
@@ -9697,6 +9708,11 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
                 if (channels < uc_channels)
                     channels = uc_channels;
             }
+        }
+        if ((sample_rate % INPUT_SAMPLING_RATE_11025 == 0) &&
+            (!audio_is_usb_in_device(snd_device))) {
+            ALOGV("%s:txbecf: afe: set sample rate to default Sample Rate(48k)",__func__);
+            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
     }
     if (backend_idx == USB_AUDIO_TX_BACKEND) {
