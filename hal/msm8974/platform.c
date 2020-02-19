@@ -65,6 +65,7 @@
 #define PLATFORM_INFO_XML_PATH_SKUSH  "/etc/audio_platform_info_skush.xml"
 #define PLATFORM_INFO_XML_PATH_SKUW  "/etc/audio_platform_info_skuw.xml"
 #define PLATFORM_INFO_XML_PATH_QRD  "/etc/audio_platform_info_qrd.xml"
+#define PLATFORM_INFO_XML_PATH_LAGOON_QRD  "/etc/audio_platform_info_lagoon_qrd.xml"
 #define PLATFORM_INFO_XML_PATH "/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_AUXPCM "/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_I2S "/etc/mixer_paths_i2s.xml"
@@ -76,6 +77,7 @@
 #define PLATFORM_INFO_XML_PATH_SKUSH "/vendor/etc/audio_platform_info_skush.xml"
 #define PLATFORM_INFO_XML_PATH_SKUW "/vendor/etc/audio_platform_info_skuw.xml"
 #define PLATFORM_INFO_XML_PATH_QRD "/vendor/etc/audio_platform_info_qrd.xml"
+#define PLATFORM_INFO_XML_PATH_LAGOON_QRD  "/vendor/etc/audio_platform_info_lagoon_qrd.xml"
 #define PLATFORM_INFO_XML_PATH "/vendor/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_AUXPCM "/vendor/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_I2S "/vendor/etc/mixer_paths_i2s.xml"
@@ -1720,7 +1722,11 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
          !strncmp(snd_card_name, "msm8953-snd-card-mtp",
                    sizeof("msm8953-snd-card-mtp")) ||
          !strncmp(snd_card_name, "msm8953-sku4-snd-card",
-                   sizeof("msm8953-sku4-snd-card"))) {
+                   sizeof("msm8953-sku4-snd-card")) ||
+         !strncmp(snd_card_name, "lito-lagoonmtp-snd-card",
+                   sizeof("lito-lagoonmtp-snd-card")) ||
+         !strncmp(snd_card_name, "lito-lagoonqrd-snd-card",
+                   sizeof("lito-lagoonqrd-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -3288,6 +3294,9 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "lito-qrd-snd-card",
                sizeof("lito-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "lito-lagoonqrd-snd-card",
+               sizeof("lito-lagoonqrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_LAGOON_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "atoll-qrd-snd-card",
                sizeof("atoll-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
