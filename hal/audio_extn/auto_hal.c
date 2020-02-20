@@ -775,6 +775,9 @@ snd_device_t auto_hal_get_input_snd_device(struct audio_device *adev,
         case USECASE_ICC_CALL:
             snd_device = SND_DEVICE_IN_ICC;
             break;
+        case USECASE_AUDIO_PLAYBACK_SYNTHESIZER:
+            snd_device = SND_DEVICE_IN_SYNTH_MIC;
+            break;
         default:
             ALOGE("%s: Usecase (%d) not supported", __func__, uc_id);
             return -EINVAL;
@@ -869,6 +872,9 @@ snd_device_t auto_hal_get_output_snd_device(struct audio_device *adev,
             break;
         case USECASE_ICC_CALL:
             snd_device = SND_DEVICE_OUT_ICC;
+            break;
+        case USECASE_AUDIO_PLAYBACK_SYNTHESIZER:
+            snd_device = SND_DEVICE_OUT_SYNTH_SPKR;
             break;
         default:
             ALOGE("%s: Usecase (%d) not supported", __func__, uc_id);

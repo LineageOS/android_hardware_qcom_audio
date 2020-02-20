@@ -998,6 +998,22 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
         ALOGV("%s Selected apptype: playback %d capture %d",
             __func__, usecase->out_app_type_cfg.app_type, usecase->in_app_type_cfg.app_type);
         break;
+    case SYNTH_LOOPBACK:
+        /* update out_app_type_cfg */
+        usecase->out_app_type_cfg.sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        usecase->out_app_type_cfg.bit_width =
+                                platform_get_snd_device_bit_width(usecase->out_snd_device);
+        usecase->out_app_type_cfg.app_type =
+                                platform_get_default_app_type_v2(adev->platform, PCM_PLAYBACK);
+        /* update in_app_type_cfg */
+        usecase->in_app_type_cfg.sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        usecase->in_app_type_cfg.bit_width =
+                                platform_get_snd_device_bit_width(usecase->in_snd_device);
+        usecase->in_app_type_cfg.app_type =
+                                platform_get_default_app_type_v2(adev->platform, PCM_CAPTURE);
+        ALOGV("%s Selected apptype: playback %d capture %d",
+            __func__, usecase->out_app_type_cfg.app_type, usecase->in_app_type_cfg.app_type);
+        break;
     default:
         ALOGE("%s: app type cfg not supported for usecase type (%d)",
             __func__, usecase->type);
@@ -1213,6 +1229,64 @@ int audio_extn_utils_send_app_type_cfg_icc(struct audio_device *adev,
                                         acdb_dev_id, sample_rate,
                                         PCM_CAPTURE,
                                         snd_device);
+exit_send_app_type_cfg:
+    return rc;
+}
+
+static int audio_extn_utils_send_app_type_cfg_synth(struct audio_device *adev,
+                                       struct audio_usecase *usecase)
+{
+    int pcm_device_id, acdb_dev_id = 0, snd_device = usecase->out_snd_device;
+    int32_t sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+    int app_type = 0, rc = 0;
+    bool is_bus_dev_usecase = false;
+
+    ALOGV("%s", __func__);
+
+    if (usecase->type != SYNTH_LOOPBACK) {
+        ALOGV("%s: not a SYNTH path, no need to cfg app type", __func__);
+        rc = 0;
+        goto exit_send_app_type_cfg;
+    }
+    if (usecase->id != USECASE_AUDIO_PLAYBACK_SYNTHESIZER) {
+        ALOGV("%s: a usecase where app type cfg is not required", __func__);
+        rc = 0;
+        goto exit_send_app_type_cfg;
+    }
+
+    if (compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_BUS)) {
+        is_bus_dev_usecase = true;
+    }
+
+    snd_device = usecase->out_snd_device;
+    pcm_device_id = platform_get_pcm_device_id(usecase->id, PCM_PLAYBACK);
+
+    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
+    if (acdb_dev_id < 0) {
+        ALOGE("%s: Couldn't get the acdb dev id", __func__);
+        rc = -EINVAL;
+        goto exit_send_app_type_cfg;
+    }
+
+    if (usecase->type == SYNTH_LOOPBACK) {
+        /* config SYNTH session: playback path */
+        if (is_bus_dev_usecase) {
+            app_type = usecase->out_app_type_cfg.app_type;
+            sample_rate= usecase->out_app_type_cfg.sample_rate;
+        } else {
+            snd_device = SND_DEVICE_NONE; // use legacy behavior
+            app_type = platform_get_default_app_type_v2(adev->platform, PCM_PLAYBACK);
+            sample_rate= CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+        }
+        rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
+                                            acdb_dev_id, sample_rate,
+                                            PCM_PLAYBACK,
+                                            snd_device);
+        if (rc < 0)
+            goto exit_send_app_type_cfg;
+    }
+
+    rc = 0;
 exit_send_app_type_cfg:
     return rc;
 }
@@ -1564,6 +1638,8 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
         return audio_extn_utils_send_app_type_cfg_hfp(adev, usecase);
     } else if (usecase->type == ICC_CALL) {
         return audio_extn_utils_send_app_type_cfg_icc(adev, usecase);
+    } else if (usecase->type == SYNTH_LOOPBACK) {
+        return audio_extn_utils_send_app_type_cfg_synth(adev, usecase);
     }
 
     switch (usecase->type) {
@@ -1966,7 +2042,7 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
                          usecase->stream.in->app_type_cfg.app_type);
     } else if ((type == PCM_HFP_CALL) || (type == PCM_CAPTURE) ||
                (type == TRANSCODE_LOOPBACK_RX && usecase->stream.inout != NULL) ||
-               (type == ICC_CALL)) {
+               (type == ICC_CALL) || (type == SYNTH_LOOPBACK)) {
         platform_send_audio_calibration(adev->platform, usecase,
                          platform_get_default_app_type_v2(adev->platform, usecase->type));
     } else {

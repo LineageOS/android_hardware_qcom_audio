@@ -1415,6 +1415,20 @@ typedef struct auto_hal_init_config {
 } auto_hal_init_config_t;
 // END: AUTO_HAL FEATURE ==================================================
 
+// START: SYNTH_HAL FEATURE ==================================================
+bool audio_extn_synth_is_active(struct audio_device *adev);
+void audio_extn_synth_set_parameters(struct audio_device *adev,
+                                struct str_parms *parms);
+
+typedef struct synth_init_config {
+    fp_get_usecase_from_list_t                   fp_get_usecase_from_list;
+    fp_platform_get_pcm_device_id_t              fp_platform_get_pcm_device_id;
+    fp_disable_audio_route_t                     fp_disable_audio_route;
+    fp_disable_snd_device_t                      fp_disable_snd_device;
+    fp_select_devices_t                          fp_select_devices;
+} synth_init_config_t;
+// END: SYNTH_HAL FEATURE ==================================================
+
 bool audio_extn_edid_is_supported_sr(edid_audio_info* info, int sr);
 bool audio_extn_edid_is_supported_bps(edid_audio_info* info, int bps);
 int audio_extn_edid_get_highest_supported_sr(edid_audio_info* info);
