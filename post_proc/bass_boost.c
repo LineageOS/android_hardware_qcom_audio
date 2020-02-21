@@ -85,7 +85,6 @@ typedef struct acdb_audio_cal_cfg {
 } acdb_audio_cal_cfg_t;
 
 typedef int (*acdb_get_audio_cal_t) (void *, void *, uint32_t*);
-static int pbe_load_config(struct pbe_params *params);
 
 /*
  * Bass operations
@@ -588,7 +587,6 @@ int pbe_init(effect_context_t *context)
     pbe_ctxt->hw_acc_fd = -1;
     pbe_ctxt->temp_disabled = false;
     memset(&(pbe_ctxt->offload_pbe), 0, sizeof(struct pbe_params));
-    pbe_load_config(&(pbe_ctxt->offload_pbe));
 
     return 0;
 }
@@ -669,53 +667,4 @@ int pbe_set_mode(effect_context_t *context, int32_t hw_acc_fd)
         ALOGI("%s: hw_acc is not supported.", __func__);
 
     return 0;
-}
-
-static int pbe_load_config(struct pbe_params *params)
-{
-    int                  ret = 0;
-    uint32_t             len = 0;
-    uint32_t             propValue = 0;
-    uint32_t             pbe_app_type = PBE_CONF_APP_ID;
-    char                 propValueStr[PROPERTY_VALUE_MAX];
-    void                 *acdb_handle = NULL;
-    acdb_get_audio_cal_t acdb_get_audio_cal = NULL;
-    acdb_audio_cal_cfg_t cal_cfg;
-    memset(&cal_cfg, 0, sizeof(acdb_audio_cal_cfg_t));
-
-    acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
-    if (acdb_handle == NULL) {
-        ALOGE("%s error opening library %s", __func__, LIB_ACDB_LOADER);
-        return -EFAULT;
-    }
-
-    acdb_get_audio_cal = (acdb_get_audio_cal_t)dlsym(acdb_handle,
-                                  "acdb_loader_get_audio_cal_v2");
-    if (acdb_get_audio_cal == NULL) {
-        dlclose(acdb_handle);
-        ALOGE("%s error resolving acdb func symbols", __func__);
-        return -EFAULT;
-    }
-    if (property_get("vendor.audio.safx.pbe.app.type", propValueStr, "0")) {
-        propValue = atoll(propValueStr);
-        if (propValue != 0) {
-            pbe_app_type = propValue;
-        }
-    }
-    ALOGD("%s pbe_app_type = 0x%.8x", __func__, pbe_app_type);
-
-    cal_cfg.persist              = 1;
-    cal_cfg.cal_type             = AUDIO_STREAM_CAL_TYPE;
-    cal_cfg.app_type             = pbe_app_type;
-    cal_cfg.module_id            = PBE_CONF_MODULE_ID;
-    cal_cfg.param_id             = PBE_CONF_PARAM_ID;
-
-    len = sizeof(params->config);
-    ret = acdb_get_audio_cal((void *)&cal_cfg, (void*)&(params->config), &len);
-    ALOGD("%s ret = %d, len = %u", __func__, ret, len);
-    if (ret == 0)
-        params->cfg_len = len;
-
-    dlclose(acdb_handle);
-    return ret;
 }

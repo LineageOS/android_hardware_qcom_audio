@@ -65,6 +65,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include "effect_api.h"
+#include "kvh2xml.h"
 
 #ifdef DTS_EAGLE
 #include "effect_util.h"
@@ -158,7 +159,7 @@ static int bassboost_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_s
     }
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG) {
         qal_key_value_pair_t tkvpair;
-        tkvpair.key = TAG_BASSBOOST_KEY;
+        tkvpair.key = BASS_BOOST_SWITCH;
         tkvpair.value = bassboost->enable_flag;
 
         qal_key_vector_t qal_key_vector;
@@ -166,7 +167,7 @@ static int bassboost_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_s
         qal_key_vector.kvp = &tkvpair;
 
         effect_payload.isTKV = PARAM_TKV;
-        effect_payload.tag = TAG_BASSBOOST;
+        effect_payload.tag = TAG_STREAM_BASS_BOOST;
         effect_payload.payloadSize = sizeof(uint32_t) + sizeof(qal_key_value_pair_t);
         effect_payload.payload = (uint32_t *)&qal_key_vector;
 
@@ -182,7 +183,7 @@ static int bassboost_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_s
 
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_STRENGTH) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_BASSBOOST;
+        effect_payload.tag = TAG_STREAM_BASS_BOOST;
         // +1 means memory allocation for paramId
         effect_payload.payloadSize = (BASS_BOOST_STRENGTH_PARAM_LEN + 1) * sizeof(uint32_t);
 
@@ -204,7 +205,7 @@ static int bassboost_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_s
 
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_MODE) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_BASSBOOST;
+        effect_payload.tag = TAG_STREAM_BASS_BOOST;
         // +1 means memory allocation for paramId
         effect_payload.payloadSize = (BASS_BOOST_STRENGTH_PARAM_LEN + 1) * sizeof(uint32_t);
 
@@ -259,14 +260,9 @@ static int pbe_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_
                             struct pbe_params *pbe,
                             unsigned param_send_flags)
 {
-    int i = 0, index = 0;
-    int32_t *p_coeffs = NULL;
-    uint32_t lpf_len = 0, hpf_len = 0, bpf_len = 0;
-    uint32_t bsf_len = 0, tsf_len = 0, total_coeffs_len = 0;
     qal_param_payload qal_payload;
     int ret = 0;
     effect_qal_payload_t effect_payload;
-    qal_effect_custom_payload_t custom_payload;
 
     if (!qal_stream_handle) {
         ALOGE("%s: qal stream handle is null.\n", __func__);
@@ -276,7 +272,7 @@ static int pbe_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_
     ALOGV("%s: enabled=%d", __func__, pbe->enable_flag);
     if (param_send_flags & OFFLOAD_SEND_PBE_ENABLE_FLAG) {
         qal_key_value_pair_t tkvpair;
-        tkvpair.key = TAG_PBE_KEY;
+        tkvpair.key = PBE_SWITCH;
         tkvpair.value = pbe->enable_flag;;
 
         qal_key_vector_t qal_key_vector;
@@ -284,7 +280,7 @@ static int pbe_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_
         qal_key_vector.kvp = &tkvpair;
 
         effect_payload.isTKV = PARAM_TKV;
-        effect_payload.tag = TAG_PBE;
+        effect_payload.tag = TAG_STREAM_PBE;
         effect_payload.payloadSize = sizeof(uint32_t) + sizeof(qal_key_value_pair_t);
         effect_payload.payload = (uint32_t *)&qal_key_vector;
 
@@ -292,61 +288,6 @@ static int pbe_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
                 (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
-        if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
-            return ret;
-        }
-    }
-
-    if (param_send_flags & OFFLOAD_SEND_PBE_CONFIG) {
-        effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_PBE;
-        effect_payload.payloadSize = pbe->cfg_len + sizeof(uint32_t);
-        custom_payload.paramId = PARAM_ID_PBE_PARAMS_CONFIG;
-        custom_payload.data = (uint32_t *)malloc(pbe->cfg_len);
-
-        custom_payload.data[index++] = pbe->config.real_bass_mix;
-        custom_payload.data[index++] = pbe->config.bass_color_control;
-        custom_payload.data[index++] = pbe->config.main_chain_delay;
-        custom_payload.data[index++] = pbe->config.xover_filter_order;
-        custom_payload.data[index++] = pbe->config.bandpass_filter_order;
-        custom_payload.data[index++] = pbe->config.drc_delay;
-        custom_payload.data[index++] = pbe->config.rms_tav;
-        custom_payload.data[index++] = pbe->config.exp_threshold;
-        custom_payload.data[index++] = pbe->config.exp_slope;
-        custom_payload.data[index++] = pbe->config.comp_threshold;
-        custom_payload.data[index++] = pbe->config.comp_slope;
-        custom_payload.data[index++] = pbe->config.makeup_gain;
-        custom_payload.data[index++] = pbe->config.comp_attack;
-        custom_payload.data[index++] = pbe->config.comp_release;
-        custom_payload.data[index++] = pbe->config.exp_attack;
-        custom_payload.data[index++] = pbe->config.exp_release;
-        custom_payload.data[index++] = pbe->config.limiter_bass_threshold;
-        custom_payload.data[index++] = pbe->config.limiter_high_threshold;
-        custom_payload.data[index++] = pbe->config.limiter_bass_makeup_gain;
-        custom_payload.data[index++] = pbe->config.limiter_high_makeup_gain;
-        custom_payload.data[index++] = pbe->config.limiter_bass_gc;
-        custom_payload.data[index++] = pbe->config.limiter_high_gc;
-        custom_payload.data[index++] = pbe->config.limiter_delay;
-        custom_payload.data[index++] = pbe->config.reserved;
-        p_coeffs = &pbe->config.p1LowPassCoeffs[0];
-        lpf_len = (pbe->config.xover_filter_order == 3) ? 10 : 5;
-        hpf_len = (pbe->config.xover_filter_order == 3) ? 10 : 5;
-        bpf_len = pbe->config.bandpass_filter_order * 5;
-        bsf_len = 5;
-        tsf_len = 5;
-        total_coeffs_len = lpf_len + hpf_len + bpf_len + bsf_len + tsf_len;
-
-        for (i = 0; i < total_coeffs_len; i++) {
-            custom_payload.data[index++] = *p_coeffs++;
-        }
-
-        effect_payload.payload = (uint32_t *)&custom_payload;
-        qal_payload.has_effect = 0x01;
-        qal_payload.effect_payload = (uint32_t *)&effect_payload;
-        ret = qal_stream_set_param(qal_stream_handle,
-                (qal_param_id_type_t)QAL_PARAM_ID_UIEFFECT, &qal_payload);
-        free(custom_payload.data);
         if (ret) {
             ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
             return ret;
@@ -426,7 +367,7 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG) {
 
         qal_key_value_pair_t tkvpair;
-        tkvpair.key = TAG_VIRTUALIZER_KEY;
+        tkvpair.key = VIRTUALIZER_SWITCH;
         tkvpair.value = virtualizer->enable_flag;
 
         qal_key_vector_t qal_key_vector;
@@ -434,7 +375,7 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
         qal_key_vector.kvp = &tkvpair;
 
         effect_payload.isTKV = PARAM_TKV;
-        effect_payload.tag = TAG_VIRTUALIZER;
+        effect_payload.tag = TAG_STREAM_VIRTUALIZER;
         effect_payload.payloadSize = sizeof(uint32_t) + sizeof(qal_key_value_pair_t);
         effect_payload.payload = (uint32_t *)&qal_key_vector;
 
@@ -449,7 +390,7 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_STRENGTH) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_VIRTUALIZER;
+        effect_payload.tag = TAG_STREAM_VIRTUALIZER;
         effect_payload.payloadSize = (VIRTUALIZER_STRENGTH_PARAM_LEN + 1) * sizeof(uint32_t);
 
         custom_payload.paramId = PARAM_ID_VIRTUALIZER_STRENGTH;
@@ -468,7 +409,7 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_OUT_TYPE) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_VIRTUALIZER;
+        effect_payload.tag = TAG_STREAM_VIRTUALIZER;
         effect_payload.payloadSize = (VIRTUALIZER_OUT_TYPE_PARAM_LEN + 1) * sizeof(uint32_t);
 
         custom_payload.paramId = PARAM_ID_VIRTUALIZER_OUT_TYPE;
@@ -487,7 +428,7 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_GAIN_ADJUST) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_VIRTUALIZER;
+        effect_payload.tag = TAG_STREAM_VIRTUALIZER;
         effect_payload.payloadSize = (VIRTUALIZER_GAIN_ADJUST_PARAM_LEN + 1) * sizeof(uint32_t);
 
         custom_payload.paramId = PARAM_ID_VIRTUALIZER_GAIN_ADJUST;
@@ -587,7 +528,7 @@ static int eq_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_h
 
     if (param_send_flags & OFFLOAD_SEND_EQ_ENABLE_FLAG) {
         qal_key_value_pair_t tkvpair;
-        tkvpair.key = TAG_EQUALIZER_KEY;
+        tkvpair.key = EQUALIZER_SWITCH;
         tkvpair.value = eq->enable_flag;
 
         qal_key_vector_t qal_key_vector;
@@ -595,7 +536,7 @@ static int eq_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_h
         qal_key_vector.kvp = &tkvpair;
 
         effect_payload.isTKV = PARAM_TKV;
-        effect_payload.tag = TAG_EQUALIZER;
+        effect_payload.tag = TAG_STREAM_EQUALIZER;
         effect_payload.payloadSize = sizeof(uint32_t) + sizeof(qal_key_value_pair_t);
         effect_payload.payload = (uint32_t *)&qal_key_vector;
 
@@ -613,7 +554,7 @@ static int eq_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_h
     if (param_send_flags & OFFLOAD_SEND_EQ_PRESET) {
         // param_id + actual payload
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_EQUALIZER;
+        effect_payload.tag = TAG_STREAM_EQUALIZER;
         effect_payload.payloadSize = (EQ_CONFIG_PARAM_LEN + 1) * sizeof(uint32_t);
 
         custom_payload.paramId = PARAM_ID_EQ_CONFIG;
@@ -639,7 +580,7 @@ static int eq_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_h
     if (param_send_flags & OFFLOAD_SEND_EQ_BANDS_LEVEL) {
         // param_id + actual payload
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_EQUALIZER;
+        effect_payload.tag = TAG_STREAM_EQUALIZER;
         effect_payload.payloadSize = (1 + EQ_CONFIG_PARAM_LEN + eq->config.num_bands * EQ_CONFIG_PER_BAND_PARAM_LEN) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_EQ_CONFIG;
         index = 0;
@@ -800,7 +741,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
 
     if (param_send_flags & OFFLOAD_SEND_REVERB_ENABLE_FLAG) {
         qal_key_value_pair_t tkvpair;
-        tkvpair.key = TAG_REVERB_KEY;
+        tkvpair.key = REVERB_SWITCH;
         tkvpair.value = reverb->enable_flag;
 
         qal_key_vector_t qal_key_vector;
@@ -808,7 +749,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         qal_key_vector.kvp = &tkvpair;
 
         effect_payload.isTKV = PARAM_TKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = sizeof(uint32_t) + sizeof(qal_key_value_pair_t);
         effect_payload.payload = (uint32_t *)&qal_key_vector;
 
@@ -825,7 +766,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     if (param_send_flags & OFFLOAD_SEND_REVERB_MODE) {
         // param_id + actual payload
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_MODE_PARAM_LEN + 1) * sizeof(uint32_t);
 
         custom_payload.paramId = PARAM_ID_REVERB_MODE;
@@ -845,7 +786,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     if (param_send_flags & OFFLOAD_SEND_REVERB_PRESET) {
         // param_id + actual payload
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_PRESET_PARAM_LEN + 1) * sizeof(uint32_t);
 
         custom_payload.paramId = PARAM_ID_REVERB_PRESET;
@@ -865,7 +806,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     if (param_send_flags & OFFLOAD_SEND_REVERB_WET_MIX) {
         // param_id + actual payload
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_WET_MIX_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_WET_MIX;
         custom_payload.data = (uint32_t *)malloc(REVERB_WET_MIX_PARAM_LEN * sizeof(uint32_t));
@@ -884,7 +825,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     if (param_send_flags & OFFLOAD_SEND_REVERB_GAIN_ADJUST) {
         // param_id + actual payload
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_GAIN_ADJUST_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_GAIN_ADJUST;
         custom_payload.data = (uint32_t *)malloc(REVERB_GAIN_ADJUST_PARAM_LEN * sizeof(uint32_t));
@@ -902,7 +843,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     if (param_send_flags & OFFLOAD_SEND_REVERB_ROOM_LEVEL) {
         // param_id + actual payload
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_ROOM_LEVEL_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_ROOM_LEVEL;
         custom_payload.data = (uint32_t *)malloc(REVERB_ROOM_LEVEL_PARAM_LEN * sizeof(uint32_t));
@@ -920,7 +861,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     if (param_send_flags & OFFLOAD_SEND_REVERB_ROOM_HF_LEVEL) {
         // param_id + actual payload
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_ROOM_HF_LEVEL_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_ROOM_HF_LEVEL;
         custom_payload.data = (uint32_t *)malloc(REVERB_ROOM_HF_LEVEL_PARAM_LEN * sizeof(uint32_t));
@@ -938,7 +879,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DECAY_TIME) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_DECAY_TIME_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_DECAY_TIME;
         custom_payload.data = (uint32_t *)malloc(REVERB_DECAY_TIME_PARAM_LEN * sizeof(uint32_t));
@@ -955,7 +896,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DECAY_HF_RATIO) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_DECAY_HF_RATIO_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_DECAY_HF_RATIO;
         custom_payload.data = (uint32_t *)malloc(REVERB_DECAY_HF_RATIO_PARAM_LEN * sizeof(uint32_t));
@@ -973,7 +914,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_REFLECTIONS_LEVEL) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_REFLECTIONS_LEVEL_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_REFLECTIONS_LEVEL;
         custom_payload.data = (uint32_t *)malloc(REVERB_REFLECTIONS_LEVEL_PARAM_LEN * sizeof(uint32_t));
@@ -990,7 +931,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_REFLECTIONS_DELAY) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_REFLECTIONS_DELAY_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_REFLECTIONS_DELAY;
         custom_payload.data = (uint32_t *)malloc(REVERB_REFLECTIONS_DELAY_PARAM_LEN * sizeof(uint32_t));
@@ -1007,7 +948,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_LEVEL) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_LEVEL_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_LEVEL;
         custom_payload.data = (uint32_t *)malloc(REVERB_LEVEL_PARAM_LEN * sizeof(uint32_t));
@@ -1025,7 +966,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DELAY) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_DELAY_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_DELAY;
         custom_payload.data = (uint32_t *)malloc(REVERB_DELAY_PARAM_LEN * sizeof(uint32_t));
@@ -1042,7 +983,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DIFFUSION) {
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_DIFFUSION_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_DIFFUSION;
         custom_payload.data = (uint32_t *)malloc(REVERB_DIFFUSION_PARAM_LEN * sizeof(uint32_t));
@@ -1060,7 +1001,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
     if (param_send_flags & OFFLOAD_SEND_REVERB_DENSITY) {
         // param_id + actual payload
         effect_payload.isTKV = PARAM_NONTKV;
-        effect_payload.tag = TAG_REVERB;
+        effect_payload.tag = TAG_STREAM_REVERB;
         effect_payload.payloadSize = (REVERB_DENSITY_PARAM_LEN + 1) * sizeof(uint32_t);
         custom_payload.paramId = PARAM_ID_REVERB_DENSITY;
         custom_payload.data = (uint32_t *)malloc(REVERB_DENSITY_PARAM_LEN * sizeof(uint32_t));
