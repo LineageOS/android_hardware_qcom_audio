@@ -17,6 +17,7 @@ LOCAL_SRC_FILES := \
     AudioDevice.cpp \
     AudioVoice.cpp \
     audio_extn/soundtrigger.cpp \
+    audio_extn/audio_hidl.cpp \
     audio_extn/AudioExtn.cpp
 
 LOCAL_SHARED_LIBRARIES := \
@@ -42,6 +43,10 @@ LOCAL_C_INCLUDES += \
     $(call include-path-for, audio-effects) \
     $(LOCAL_PATH)/audio_extn
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AHAL_EXT)),true)
+    LOCAL_CFLAGS += -DAHAL_EXT_ENABLED
+    LOCAL_SHARED_LIBRARIES += vendor.qti.hardware.audiohalext@1.0
+endif
 
 LOCAL_CFLAGS += -D_GNU_SOURCE
 LOCAL_CFLAGS += -Wall -Werror

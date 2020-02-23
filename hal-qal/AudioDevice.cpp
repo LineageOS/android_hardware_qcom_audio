@@ -53,6 +53,7 @@
 
 #include "QalApi.h"
 #include "audio_extn.h"
+#include "audio_hidl.h"
 
 std::shared_ptr<AudioDevice> AudioDevice::GetInstance() {
     if (!adev_) {
@@ -483,6 +484,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
         }
     }
     audio_extn_sound_trigger_init(adev_);
+    audio_extn_hidl_init();
     voice_ = VoiceInit();
     mute_ = false;
 
