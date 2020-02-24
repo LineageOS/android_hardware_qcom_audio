@@ -182,6 +182,7 @@ static int32_t fm_start(struct audio_device *adev, audio_devices_t outputDevices
     fm_out->format = AUDIO_FORMAT_PCM_16_BIT;
     fm_out->usecase = USECASE_AUDIO_PLAYBACK_FM;
     fm_out->config = pcm_config_fm;
+    list_init(&fm_out->device_list);
     reassign_device_list(&fm_out->device_list, outputDevices, "");
     fmmod.is_fm_running = true;
 
@@ -195,6 +196,7 @@ static int32_t fm_start(struct audio_device *adev, audio_devices_t outputDevices
     uc_info->id = USECASE_AUDIO_PLAYBACK_FM;
     uc_info->type = PCM_PLAYBACK;
     uc_info->stream.out = fm_out;
+    list_init(&uc_info->device_list);
     reassign_device_list(&uc_info->device_list, outputDevices, "");
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
