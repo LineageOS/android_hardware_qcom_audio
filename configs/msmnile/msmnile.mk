@@ -375,7 +375,7 @@ vendor.audio.volume.headset.gain.depcal=true
 
 #enable dualmic fluence for voice communication
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.audio.fluence.voicecomm=true
+persist.vendor.audio.fluence.voicecomm=true
 
 #add dynamic feature flags here
 ifeq ($(GENERIC_ODM_IMAGE),true)
