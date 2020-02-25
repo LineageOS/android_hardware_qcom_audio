@@ -7603,10 +7603,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             ret = -EINVAL;
             goto error_open;
         }
-        /* save car audio stream and address for bus device */
-        strlcpy(out->address, address, AUDIO_DEVICE_MAX_ADDRESS_LEN);
-        ALOGV("%s: address %s, car_audio_stream %x",
-            __func__, out->address, out->car_audio_stream);
+        ALOGV("%s: car_audio_stream %x", __func__, out->car_audio_stream);
     }
 
     /* Check for VOIP usecase */

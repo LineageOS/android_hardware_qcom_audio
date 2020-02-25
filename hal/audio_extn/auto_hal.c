@@ -605,12 +605,10 @@ int auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                                                     streams_output_ctxt_t,
                                                     list);
                 /* limit audio gain support for bus device only */
-                if (is_single_device_type_equal(
-                        &out_ctxt->output->device_list, AUDIO_DEVICE_OUT_BUS) &&
-                    is_single_device_type_equal(&out_ctxt->output->device_list,
-                                                config->ext.device.type) &&
-                    strcmp(out_ctxt->output->address,
-                        config->ext.device.address) == 0) {
+                if (config->ext.device.type == AUDIO_DEVICE_OUT_BUS &&
+                    compare_device_type_and_address(&out_ctxt->output->device_list,
+                                                    config->ext.device.type,
+                                                    config->ext.device.address)) {
                     /* millibel = 1/100 dB = 1/1000 bel
                      * q13 = (10^(mdb/100/20))*(2^13)
                      */
