@@ -1914,6 +1914,15 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
         else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_BUS))
             strlcpy(ec_ref_mixer_path, "multi-mic-echo-reference",
                     MIXER_PATH_MAX_LENGTH);
+        else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_BT_SCO_WB] > 0)
+            strlcat(ec_ref_mixer_path, " bt-sco-wb",
+                    MIXER_PATH_MAX_LENGTH);
+        else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_BT_SCO_SWB] > 0)
+            strlcat(ec_ref_mixer_path, " bt-sco-swb",
+                    MIXER_PATH_MAX_LENGTH);
+        else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_BLUETOOTH_SCO))
+            strlcat(ec_ref_mixer_path, " bt-sco",
+                    MIXER_PATH_MAX_LENGTH);
 
         if (audio_route_apply_and_update_path(adev->audio_route,
                                               ec_ref_mixer_path) == 0)
