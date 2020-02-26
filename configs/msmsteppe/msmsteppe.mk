@@ -32,6 +32,7 @@ AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL := true
 AUDIO_FEATURE_ENABLED_A2DP_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_3D_AUDIO := false
+AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
 DOLBY_ENABLE := false
 endif
 
@@ -184,8 +185,16 @@ ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
 endif
+
+ifeq ($(GENERIC_ODM_IMAGE),true)
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/audio_policy_configuration_odm.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
+else
+PRODUCT_COPY_FILES += \
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
+endif
+
+PRODUCT_COPY_FILES += \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
@@ -391,7 +400,6 @@ vendor.audio.feature.maxx_audio.enable=false \
 vendor.audio.feature.ras.enable=true \
 vendor.audio.feature.record_play_concurency.enable=false \
 vendor.audio.feature.src_trkn.enable=true \
-vendor.audio.feature.spkr_prot.enable=true \
 vendor.audio.feature.ssrec.enable=true \
 vendor.audio.feature.usb_offload.enable=true \
 vendor.audio.feature.usb_offload_burst_mode.enable=true \
@@ -401,6 +409,12 @@ vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=true
+
+ifeq ($(TARGET_FWK_SUPPORTS_FULL_VALUEADDS),true)
+PRODUCT_PROPERTY_OVERRIDES += vendor.audio.feature.spkr_prot.enable=true
+else
+PRODUCT_PROPERTY_OVERRIDES += vendor.audio.feature.spkr_prot.enable=false
+endif
 
 #enable AAC frame ctl for A2DP sinks
 PRODUCT_PROPERTY_OVERRIDES += \
