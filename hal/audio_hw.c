@@ -6424,9 +6424,6 @@ static int in_standby(struct audio_stream *stream)
             in->pcm = NULL;
         }
 
-        if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION)
-            adev->enable_voicerx = false;
-
         if (do_stop)
             status = stop_input_stream(in);
 
@@ -9276,6 +9273,10 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     pthread_mutex_lock(&adev->lock);
     if (in->usecase == USECASE_AUDIO_RECORD) {
         adev->pcm_record_uc_state = 0;
+    }
+
+    if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+        adev->enable_voicerx = false;
     }
 
     if (audio_extn_ssr_get_stream() == in) {
