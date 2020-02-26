@@ -1346,6 +1346,7 @@ typedef streams_output_ctxt_t* (*fp_out_get_stream_t)(struct audio_device*, audi
 typedef size_t (*fp_get_output_period_size_t)(uint32_t, audio_format_t, int, int);
 typedef int (*fp_audio_extn_ext_hw_plugin_set_audio_gain_t)(void*, struct audio_usecase*, uint32_t);
 typedef struct stream_in* (*fp_adev_get_active_input_t)(const struct audio_device*);
+typedef audio_patch_handle_t (*fp_generate_patch_handle_t)(void);
 
 typedef struct auto_hal_init_config {
     fp_in_get_stream_t                           fp_in_get_stream;
@@ -1361,6 +1362,7 @@ typedef struct auto_hal_init_config {
     fp_adev_get_active_input_t                   fp_adev_get_active_input;
     fp_platform_set_echo_reference_t             fp_platform_set_echo_reference;
     fp_platform_get_eccarstate_t                 fp_platform_get_eccarstate;
+    fp_generate_patch_handle_t                   fp_generate_patch_handle;
 } auto_hal_init_config_t;
 // END: AUTO_HAL FEATURE ==================================================
 

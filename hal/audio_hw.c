@@ -10209,7 +10209,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     list_init(&adev->active_inputs_list);
     list_init(&adev->active_outputs_list);
     list_init(&adev->audio_patch_record_list);
-    adev->audio_patch_index = 0;
     adev->io_streams_map = hashmapCreate(AUDIO_IO_PORTS_MAX, audio_extn_utils_hash_fn,
                                          audio_extn_utils_hash_eq);
     if (!adev->io_streams_map) {

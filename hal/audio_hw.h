@@ -715,7 +715,6 @@ struct audio_device {
     int camera_orientation; /* CAMERA_BACK_LANDSCAPE ... CAMERA_FRONT_PORTRAIT */
     bool adm_routing_changed;
     struct listnode audio_patch_record_list;
-    unsigned int audio_patch_index;
     Hashmap *patch_map;
     Hashmap *io_streams_map;
 };
@@ -724,10 +723,7 @@ struct audio_patch_record {
     struct listnode list;
     audio_patch_handle_t handle;
     audio_usecase_t usecase;
-    audio_io_handle_t input_io_handle;
-    audio_io_handle_t output_io_handle;
-    struct audio_port_config source;
-    struct audio_port_config sink;
+    struct audio_patch patch;
 };
 
 int select_devices(struct audio_device *adev,
@@ -800,6 +796,8 @@ int route_output_stream(struct stream_out *stream,
 int route_input_stream(struct stream_in *stream,
                        struct listnode *devices,
                        audio_source_t source);
+
+audio_patch_handle_t generate_patch_handle();
 
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the
