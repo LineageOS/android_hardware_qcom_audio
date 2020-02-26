@@ -81,6 +81,7 @@
     <ctl name="EC Reference Channels" value="Zero"/>
     <ctl name="EC Reference Bit Format" value="0"/>
     <ctl name="EC Reference SampleRate" value="0"/>
+    <ctl name="LPI Enable" value="0" />
 
     <path name="listen-voice-wakeup-1">
         <ctl name="LSM1 Mixer VA_CDC_DMA_TX_0" value="1" />
@@ -148,66 +149,82 @@
 
     <path name="listen-voice-wakeup-1 port">
         <ctl name="LSM1 Port" value="VA_CDC_DMA_TX_0" />
+        <ctl name="LPI Enable" value="1" />
     </path>
 
     <path name="listen-voice-wakeup-2 port">
         <ctl name="LSM2 Port" value="VA_CDC_DMA_TX_0" />
+        <ctl name="LPI Enable" value="1" />
     </path>
 
     <path name="listen-voice-wakeup-3 port">
         <ctl name="LSM3 Port" value="VA_CDC_DMA_TX_0" />
+        <ctl name="LPI Enable" value="1" />
     </path>
 
     <path name="listen-voice-wakeup-4 port">
         <ctl name="LSM4 Port" value="VA_CDC_DMA_TX_0" />
+        <ctl name="LPI Enable" value="1" />
     </path>
 
     <path name="listen-voice-wakeup-5 port">
         <ctl name="LSM5 Port" value="VA_CDC_DMA_TX_0" />
+        <ctl name="LPI Enable" value="1" />
     </path>
 
     <path name="listen-voice-wakeup-6 port">
         <ctl name="LSM6 Port" value="VA_CDC_DMA_TX_0" />
+        <ctl name="LPI Enable" value="1" />
     </path>
 
     <path name="listen-voice-wakeup-7 port">
         <ctl name="LSM7 Port" value="VA_CDC_DMA_TX_0" />
+        <ctl name="LPI Enable" value="1" />
     </path>
 
     <path name="listen-voice-wakeup-8 port">
         <ctl name="LSM8 Port" value="VA_CDC_DMA_TX_0" />
+        <ctl name="LPI Enable" value="1" />
     </path>
 
     <path name="listen-voice-wakeup-1 preproc port">
         <ctl name="LSM1 Port" value="ADM_LSM_TX" />
+        <ctl name="LPI Enable" value="0" />
     </path>
 
     <path name="listen-voice-wakeup-2 preproc port">
         <ctl name="LSM2 Port" value="ADM_LSM_TX" />
+        <ctl name="LPI Enable" value="0" />
     </path>
 
     <path name="listen-voice-wakeup-3 preproc port">
         <ctl name="LSM3 Port" value="ADM_LSM_TX" />
+        <ctl name="LPI Enable" value="0" />
     </path>
 
     <path name="listen-voice-wakeup-4 preproc port">
         <ctl name="LSM4 Port" value="ADM_LSM_TX" />
+        <ctl name="LPI Enable" value="0" />
     </path>
 
     <path name="listen-voice-wakeup-5 preproc port">
         <ctl name="LSM5 Port" value="ADM_LSM_TX" />
+        <ctl name="LPI Enable" value="0" />
     </path>
 
     <path name="listen-voice-wakeup-6 preproc port">
         <ctl name="LSM6 Port" value="ADM_LSM_TX" />
+        <ctl name="LPI Enable" value="0" />
     </path>
 
     <path name="listen-voice-wakeup-7 preproc port">
         <ctl name="LSM7 Port" value="ADM_LSM_TX" />
+        <ctl name="LPI Enable" value="0" />
     </path>
 
     <path name="listen-voice-wakeup-8 preproc port">
         <ctl name="LSM8 Port" value="ADM_LSM_TX" />
+        <ctl name="LPI Enable" value="0" />
     </path>
 
     <path name="listen-ape-handset-mic">
@@ -227,7 +244,7 @@
         <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
         <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
         <ctl name="VA DMIC MUX0" value="DMIC1" />
-        <ctl name="VA DMIC MUX1" value="DMIC4" />
+        <ctl name="VA DMIC MUX1" value="DMIC0" />
     </path>
 
     <path name="listen-ape-handset-tmic">
@@ -239,8 +256,8 @@
         <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
         <ctl name="VA DEC2 MUX" value="MSM_DMIC" />
         <ctl name="VA DMIC MUX0" value="DMIC1" />
-        <ctl name="VA DMIC MUX1" value="DMIC4" />
-        <ctl name="VA DMIC MUX2" value="DMIC0" />
+        <ctl name="VA DMIC MUX1" value="DMIC0" />
+        <ctl name="VA DMIC MUX2" value="DMIC3" />
     </path>
 
     <path name="listen-ape-handset-qmic">
@@ -253,10 +270,10 @@
         <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
         <ctl name="VA DEC2 MUX" value="MSM_DMIC" />
         <ctl name="VA DEC3 MUX" value="MSM_DMIC" />
-        <ctl name="VA DMIC MUX0" value="DMIC0" />
-        <ctl name="VA DMIC MUX1" value="DMIC2" />
+        <ctl name="VA DMIC MUX0" value="DMIC1" />
+        <ctl name="VA DMIC MUX1" value="DMIC0" />
         <ctl name="VA DMIC MUX2" value="DMIC3" />
-        <ctl name="VA DMIC MUX3" value="DMIC1" />
+        <ctl name="VA DMIC MUX3" value="DMIC2" />
     </path>
 
     <path name="listen-ape-headset-mic">
