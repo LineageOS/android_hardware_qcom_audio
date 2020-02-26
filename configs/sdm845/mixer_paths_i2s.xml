@@ -191,6 +191,10 @@
         <ctl name="RX1 MIX2 INP1" value="IIR1" />
     </path>
 
+    <path name="speaker-safe">
+        <path name="speaker" />
+    </path>
+
     <path name="speaker-mic">
         <path name="dmic1" />
     </path>
@@ -260,6 +264,10 @@
         <path name="headphones" />
         <ctl name="RX7 MIX1 INP1" value="RX1" />
         <ctl name="COMP0 Switch" value="1" />
+    </path>
+
+    <path name="speaker-safe-and-headphones">
+        <path name="speaker-and-headphones" />
     </path>
 
     <path name="voice-rec-mic">
