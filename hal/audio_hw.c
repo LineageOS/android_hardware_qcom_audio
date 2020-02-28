@@ -3700,7 +3700,7 @@ int start_output_stream(struct stream_out *out)
         CARD_STATUS_OFFLINE == adev->card_status) {
         ALOGW("out->card_status or adev->card_status offline, try again");
         ret = -EIO;
-        goto error_config;
+        goto error_fatal;
     }
 
     //Update incall music usecase to reflect correct voice session
@@ -4038,12 +4038,13 @@ error_open:
     audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     stop_output_stream(out);
-error_config:
+error_fatal:
     /*
      * sleep 50ms to allow sufficient time for kernel
      * drivers to recover incases like SSR.
      */
     usleep(50000);
+error_config:
     ATRACE_END();
     enable_gcov();
     return ret;
