@@ -103,6 +103,7 @@ AUDIO_AGM += libagm_compress_plugin
 #QAL Module
 AUDIO_QAL := libqal
 AUDIO_QAL += lib_bt_bundle
+AUDIO_QAL += lib_bt_aptx
 AUDIO_QAL += catf
 
 BOARD_SUPPORTS_OPENSOURCE_STHAL := true

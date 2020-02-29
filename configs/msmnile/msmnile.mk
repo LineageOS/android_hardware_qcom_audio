@@ -112,6 +112,7 @@ AUDIO_WRAPPER += libqahwwrapper
 #QAL Module
 AUDIO_QAL := libqal
 AUDIO_QAL += lib_bt_bundle
+AUDIO_QAL += lib_bt_aptx
 AUDIO_QAL += catf
 
 #HAL Test app
