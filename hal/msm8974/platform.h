@@ -394,7 +394,8 @@ enum {
 #define HIFI_BUFFER_OUTPUT_PERIOD_COUNT 2
 
 /* Used in calculating fragment size for pcm offload */
-#ifdef PLATFORM_MSMFALCON
+#if defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937) || \
+    defined (PLATFORM_MSM8953)
 #define PCM_OFFLOAD_BUFFER_DURATION 40 /* 40 millisecs */
 #else
 #define PCM_OFFLOAD_BUFFER_DURATION 80 /* 80 millisecs */
@@ -478,7 +479,8 @@ enum {
     defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || \
     defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL)
 #define PLAYBACK_OFFLOAD_DEVICE2 17
-#elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
+#elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937) || \
+      defined (PLATFORM_MSM8953)
 #define PLAYBACK_OFFLOAD_DEVICE2 24
 #endif
 
@@ -490,7 +492,7 @@ enum {
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
     defined (PLATFORM_MSM8937) || defined (PLATFORM_ATOLL) || \
-    defined (PLATFORM_BENGAL)
+    defined (PLATFORM_BENGAL) || defined (PLATFORM_MSM8953)
 #define PLAYBACK_OFFLOAD_DEVICE3 18
 #define PLAYBACK_OFFLOAD_DEVICE4 34
 #define PLAYBACK_OFFLOAD_DEVICE5 35
@@ -520,7 +522,8 @@ enum {
 #ifdef PLATFORM_MSM8610
 #define LOWLATENCY_PCM_DEVICE 12
 #define EC_REF_RX "SEC_I2S_RX"
-#elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
+#elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937) || \
+      defined (PLATFORM_MSM8953)
 #define LOWLATENCY_PCM_DEVICE 12
 #define EC_REF_RX "I2S_RX"
 #define MMAP_PLAYBACK_PCM_DEVICE 2
@@ -576,7 +579,8 @@ enum {
 #define VOLTE_CALL_PCM_DEVICE 15
 #define QCHAT_CALL_PCM_DEVICE 37
 #define VOWLAN_CALL_PCM_DEVICE 16
-#elif PLATFORM_MSMFALCON
+#elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937) || \
+      defined (PLATFORM_MSM8953)
 #define VOICE_CALL_PCM_DEVICE 2
 #define VOICE2_CALL_PCM_DEVICE 13
 #define VOLTE_CALL_PCM_DEVICE 15
@@ -623,7 +627,8 @@ enum {
 #define HFP_SCO_RX 29
 #define HFP_ASM_RX_TX 36
 #define HFP_EXT_EC_REF_TX 1
-#elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937)
+#elif defined (PLATFORM_MSMFALCON) || defined (PLATFORM_MSM8937) || \
+      defined (PLATFORM_MSM8953)
 #define HFP_SCO_RX 17
 #define HFP_ASM_RX_TX 18
 #else

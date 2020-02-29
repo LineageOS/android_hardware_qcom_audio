@@ -17,7 +17,7 @@ USE_CUSTOM_AUDIO_POLICY := 1
 else
 USE_CUSTOM_AUDIO_POLICY := 0
 endif
-AUDIO_FEATURE_QSSI_COMPLIANCE := false
+AUDIO_FEATURE_QSSI_COMPLIANCE := true
 AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := false
 AUDIO_FEATURE_ENABLED_COMPRESS_INPUT := true
 AUDIO_FEATURE_ENABLED_CONCURRENT_CAPTURE := true
@@ -524,6 +524,15 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@5.0-impl \
     android.hardware.audio.effect@5.0 \
     android.hardware.audio.effect@5.0-impl
+
+# enable audio hidl hal 6.0
+PRODUCT_PACKAGES += \
+    android.hardware.audio@6.0 \
+    android.hardware.audio.common@6.0 \
+    android.hardware.audio.common@6.0-util \
+    android.hardware.audio@6.0-impl \
+    android.hardware.audio.effect@6.0 \
+    android.hardware.audio.effect@6.0-impl
 
 # enable sound trigger hidl hal 2.2
 PRODUCT_PACKAGES += \
