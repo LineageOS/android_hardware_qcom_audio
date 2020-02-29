@@ -9341,10 +9341,24 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             ALOGD("%s:becf: afe: set sample rate to default Sample Rate(48k)",__func__);
         }
 
-        /*set sample rate to 48khz if multiple sample rates are not supported in spkr and hdset*/
-        if (is_hdset_combo_device(usecase->devices) && !my_data->is_multiple_sample_rate_combo_supported)
-            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-            ALOGD("%s:becf: afe: set default Sample Rate(48k) for combo device",__func__);
+        /*
+         * set sample rate to 48khz if any combo use case is present and
+         * device has only one clock source, it cannot
+         * support different sample rate for HS and SPKR
+         * devices.Use default sample rate in such concurrent use cases.
+        */
+        if (!my_data->is_multiple_sample_rate_combo_supported) {
+            struct listnode *node;
+            list_for_each(node, &adev->usecase_list) {
+                struct audio_usecase *uc;
+                uc = node_to_item(node, struct audio_usecase, list);
+                if (is_hdset_combo_device(uc->devices)) {
+                    ALOGD("%s:becf: afe: set default Sample Rate(48k) for combo device",__func__);
+                    sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+                    break;
+                }
+            }
+        }
     }
 
     if (backend_idx != platform_get_voice_call_backend(adev)
