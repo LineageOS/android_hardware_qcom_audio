@@ -118,6 +118,7 @@ BOARD_VENDOR_KERNEL_MODULES := \
     $(KERNEL_MODULES_OUT)/audio_wcd_core.ko \
     $(KERNEL_MODULES_OUT)/audio_swr_ctrl.ko \
     $(KERNEL_MODULES_OUT)/audio_wsa881x.ko \
+    $(KERNEL_MODULES_OUT)/audio_wsa883x.ko \
     $(KERNEL_MODULES_OUT)/audio_platform.ko \
     $(KERNEL_MODULES_OUT)/audio_hdmi.ko \
     $(KERNEL_MODULES_OUT)/audio_stub.ko \
@@ -182,6 +183,7 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_cdp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_lagoonmtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_lagoonmtp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_cdp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml \
@@ -366,7 +368,7 @@ vendor.audio.volume.headset.gain.depcal=true
 
 #enable dualmic fluence for voice communication
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.audio.fluence.voicecomm=true
+persist.vendor.audio.fluence.voicecomm=true
 endif
 
 USE_XML_AUDIO_POLICY_CONF := 1

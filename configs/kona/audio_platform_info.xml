@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- Copyright (c) 2014, 2016-2019, The Linux Foundation. All rights reserved. -->
+<!-- Copyright (c) 2014, 2016-2020, The Linux Foundation. All rights reserved. -->
 <!--                                                                        -->
 <!-- Redistribution and use in source and binary forms, with or without     -->
 <!-- modification, are permitted provided that the following conditions are -->
@@ -46,6 +46,7 @@
         <device name="SND_DEVICE_IN_USB_HEADSET_HEX_MIC_AEC" acdb_id="162"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_HEX_MIC" acdb_id="162"/>
         <device name="SND_DEVICE_IN_VOCE_RECOG_USB_HEADSET_HEX_MIC" acdb_id="162"/>
+        <device name="SND_DEVICE_IN_VOICE_HEARING_AID" acdb_id="11"/>
     </acdb_ids>
 
     <module_ids>
@@ -249,6 +250,7 @@
         <device name="SND_DEVICE_IN_SPEAKER_QMIC_NS" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_SPEAKER_QMIC_AEC_NS" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_THREE_MIC" interface="TX_CDC_DMA_TX_3"/>
+        <device name="SND_DEVICE_IN_VOICE_HEARING_AID" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_HANDSET_TMIC" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_HANDSET_TMIC_AEC" interface="TX_CDC_DMA_TX_3"/>

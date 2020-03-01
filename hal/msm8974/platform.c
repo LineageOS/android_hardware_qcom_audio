@@ -1360,7 +1360,6 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
        {AUDIO_DEVICE_OUT_FM                             ,       7},
-       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
        {AUDIO_DEVICE_OUT_ALL                            ,      -1},
        {AUDIO_DEVICE_NONE                               ,      -1},
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
@@ -1387,7 +1386,6 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
 /* Add the correct be ids */
        {AUDIO_DEVICE_OUT_FM                             ,       7},
-       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
        {AUDIO_DEVICE_OUT_ALL                            ,      -1},
        {AUDIO_DEVICE_NONE                               ,      -1},
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
@@ -1414,7 +1412,6 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
 /* Add the correct be ids */
        {AUDIO_DEVICE_OUT_FM                             ,       7},
-       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
        {AUDIO_DEVICE_OUT_ALL                            ,      -1},
        {AUDIO_DEVICE_NONE                               ,      -1},
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
@@ -1441,7 +1438,6 @@ static int msm_device_to_be_id [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
 /* Add the correct be ids */
        {AUDIO_DEVICE_OUT_FM                             ,       7},
-       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
        {AUDIO_DEVICE_OUT_ALL                            ,      -1},
        {AUDIO_DEVICE_NONE                               ,      -1},
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
@@ -1475,7 +1471,6 @@ static int msm_device_to_be_id_internal_codec [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
        {AUDIO_DEVICE_OUT_FM                             ,       7},
-       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
        {AUDIO_DEVICE_OUT_ALL                            ,      -1},
        {AUDIO_DEVICE_NONE                               ,      -1},
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
@@ -1501,7 +1496,6 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
        {AUDIO_DEVICE_OUT_REMOTE_SUBMIX                  ,       9},
        {AUDIO_DEVICE_OUT_PROXY                          ,       9},
        {AUDIO_DEVICE_OUT_FM                             ,       7},
-       {AUDIO_DEVICE_OUT_FM_TX                          ,       8},
        {AUDIO_DEVICE_OUT_ALL                            ,      -1},
        {AUDIO_DEVICE_NONE                               ,      -1},
        {AUDIO_DEVICE_OUT_DEFAULT                        ,      -1},
@@ -1717,7 +1711,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
          !strncmp(snd_card_name, "bengal-idp-snd-card",
                    sizeof("bengal-idp-snd-card")) ||
          !strncmp(snd_card_name, "bengal-qrd-snd-card",
-                   sizeof("bengal-qrd-snd-card"))) {
+                   sizeof("bengal-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "lito-lagoonmtp-snd-card",
+                   sizeof("lito-lagoonmtp-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -3069,10 +3065,8 @@ void *platform_init(struct audio_device *adev)
         my_data->fluence_sb_enabled = true;
 
     my_data->fluence_type = FLUENCE_NONE;
-    if ((property_get("ro.vendor.audio.sdk.fluencetype",
-                      my_data->fluence_cap, NULL) > 0) ||
-        (property_get("ro.qc.sdk.audio.fluencetype",
-                      my_data->fluence_cap, NULL) > 0)) {
+    if (property_get("ro.vendor.audio.sdk.fluencetype",
+                      my_data->fluence_cap, NULL) > 0) {
         if (!strncmp("fluencepro", my_data->fluence_cap, sizeof("fluencepro"))) {
             my_data->fluence_type = FLUENCE_QUAD_MIC | FLUENCE_DUAL_MIC;
 
@@ -3090,21 +3084,19 @@ void *platform_init(struct audio_device *adev)
     }
 
     if (my_data->fluence_type != FLUENCE_NONE) {
-        if ((property_get("persist.vendor.audio.fluence.voicecall",
-                          value,NULL) > 0) ||
-            (property_get("persist.audio.fluence.voicecall",value,NULL) > 0)) {
+        if (property_get("persist.vendor.audio.fluence.voicecall",
+                          value,NULL) > 0) {
             if (!strncmp("true", value, sizeof("true")))
                 my_data->fluence_in_voice_call = true;
         }
 
-        if ((property_get("persist.vendor.audio.fluence.voicerec",
-                          value,NULL) > 0) ||
-            (property_get("persist.audio.fluence.voicerec",value,NULL) > 0)) {
+        if (property_get("persist.vendor.audio.fluence.voicerec",
+                          value,NULL) > 0) {
             if (!strncmp("true", value, sizeof("true")))
                 my_data->fluence_in_voice_rec = true;
         }
 
-        property_get("persist.audio.fluence.voicecomm",value,"");
+        property_get("persist.vendor.audio.fluence.voicecomm",value,"");
         if (!strncmp("true", value, sizeof("true"))) {
             my_data->fluence_in_voice_comm = true;
         }
@@ -3114,9 +3106,8 @@ void *platform_init(struct audio_device *adev)
             my_data->fluence_in_audio_rec = true;
         }
 
-        if ((property_get("persist.vendor.audio.fluence.speaker",
-                          value,NULL) > 0) ||
-            (property_get("persist.audio.fluence.speaker",value,NULL) > 0)) {
+        if (property_get("persist.vendor.audio.fluence.speaker",
+                          value,NULL) > 0) {
             if (!strncmp("true", value, sizeof("true"))) {
                 my_data->fluence_in_spkr_mode = true;
             }
@@ -6256,8 +6247,6 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                            my_data->ext_disp[controller][stream].type);
                     goto exit;
             }
-        } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
-            snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
         } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
             if(adev->voice.hac)
                 snd_device = SND_DEVICE_OUT_VOICE_HAC_HANDSET;
@@ -6373,8 +6362,6 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
         else
             snd_device = SND_DEVICE_OUT_USB_HEADPHONES;
-    } else if (devices & AUDIO_DEVICE_OUT_FM_TX) {
-        snd_device = SND_DEVICE_OUT_TRANSMISSION_FM;
     } else if (devices & AUDIO_DEVICE_OUT_EARPIECE) {
         /*HAC support for voice-ish audio (eg visual voicemail)*/
         if(adev->voice.hac)
