@@ -230,6 +230,7 @@ int auto_hal_create_audio_patch(struct audio_hw_device *dev,
                 ALOGV("Creating audio patch for external FM tuner");
                 uc_info->id = USECASE_AUDIO_FM_TUNER_EXT;
                 uc_info->type = PCM_PASSTHROUGH;
+                list_init(&uc_info->device_list);
                 reassign_device_list(&uc_info->device_list, AUDIO_DEVICE_IN_FM_TUNER,
                                      sources->ext.device.address);
                 uc_info->in_snd_device = SND_DEVICE_IN_CAPTURE_FM;
@@ -713,6 +714,7 @@ int auto_hal_start_hfp_downlink(struct audio_device *adev,
 
     uc_downlink_info->type = PCM_HFP_CALL;
     uc_downlink_info->stream.out = adev->primary_output;
+    list_init(&uc_downlink_info->device_list);
     assign_devices(&uc_downlink_info->device_list, &adev->primary_output->device_list);
     uc_downlink_info->in_snd_device = SND_DEVICE_NONE;
     uc_downlink_info->out_snd_device = SND_DEVICE_NONE;

@@ -5325,7 +5325,8 @@ bool audio_extn_is_hifi_filter_enabled(struct audio_device* adev, struct stream_
     if (audio_extn_hifi_filter_enabled) {
         /*Restricting the feature for Tavil and WCD9375 codecs only*/
         if ((strstr(codec_variant, "WCD9385") || strstr(codec_variant, "WCD9375"))
-            && (na_mode == NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_DSP) && channels <=2) {
+            && (na_mode == NATIVE_AUDIO_MODE_MULTIPLE_MIX_IN_DSP || na_mode ==
+                       NATIVE_AUDIO_MODE_TRUE_44_1) && channels <=2) {
             /*Upsampling 8 time should be restricited to headphones playback only */
             if (snd_device == SND_DEVICE_OUT_HEADPHONES
                 || snd_device == SND_DEVICE_OUT_HEADPHONES_44_1

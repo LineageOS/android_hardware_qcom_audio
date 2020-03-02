@@ -12,7 +12,7 @@ BOARD_USES_ALSA_AUDIO := true
 TARGET_USES_AOSP_FOR_AUDIO := false
 
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
-AUDIO_FEATURE_QSSI_COMPLIANCE := false
+AUDIO_FEATURE_QSSI_COMPLIANCE := true
 AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := false
 AUDIO_FEATURE_ENABLED_COMPRESS_INPUT := true
 AUDIO_FEATURE_ENABLED_CONCURRENT_CAPTURE := true
@@ -495,6 +495,15 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@5.0-impl \
     android.hardware.audio.effect@5.0 \
     android.hardware.audio.effect@5.0-impl
+
+# enable audio hidl hal 6.0
+PRODUCT_PACKAGES += \
+    android.hardware.audio@6.0 \
+    android.hardware.audio.common@6.0 \
+    android.hardware.audio.common@6.0-util \
+    android.hardware.audio@6.0-impl \
+    android.hardware.audio.effect@6.0 \
+    android.hardware.audio.effect@6.0-impl
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \
