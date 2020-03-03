@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -124,7 +124,7 @@ audio_devices_t AudioVoice::GetMatchingTxDevice(audio_devices_t halRxDeviceId) {
             break;
         default:
             halTxDeviceId = AUDIO_DEVICE_NONE;
-            ALOGE("%s: unsupported Device Id of %d\n", __func__, halRxDeviceId);
+            ALOGE("%s: unsupported Device Id of %d", __func__, halRxDeviceId);
             break;
     }
 
@@ -133,24 +133,45 @@ audio_devices_t AudioVoice::GetMatchingTxDevice(audio_devices_t halRxDeviceId) {
 
 int AudioVoice::VoiceOutSetParameters(struct str_parms *parms) {
     char value[32];
-    int ret = 0, val = 0, err;
-    qal_device_id_t rx_device = (qal_device_id_t) NULL;
-    qal_device_id_t tx_device = (qal_device_id_t) NULL;
+    int ret = 0, rx_device = 0, tx_device = 0, err;
+    qal_device_id_t qal_rx_device = (qal_device_id_t) NULL;
+    qal_device_id_t qal_tx_device = (qal_device_id_t) NULL;
+    qal_device_id_t* qal_device_ids = NULL;
+    uint16_t device_count = 0;
 
     ALOGD("%s Enter", __func__);
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (err >= 0) {
-        val = atoi(value);
-        ALOGD("%s Routing is %d", __func__, val);
-        if (stream_out_primary_) {
-            stream_out_primary_->getQalDeviceIds(val, &rx_device);
-            stream_out_primary_->getQalDeviceIds(GetMatchingTxDevice(val), &tx_device);
+        rx_device = atoi(value);
+        if ((device_count = popcount(rx_device)) == 0) {
+            ALOGE("%s invalid routing device %d", __func__, rx_device);
+            return 0;
         }
-        bool same_dev = qal_voice_rx_device_id_ == rx_device;
-        qal_voice_rx_device_id_ = rx_device;
-        qal_voice_tx_device_id_ = tx_device;
 
-        if(!IsCallActive(voice_.session)) {
+        tx_device = GetMatchingTxDevice(rx_device);
+        if (device_count < popcount(tx_device)) {
+            device_count = popcount(tx_device);
+        }
+
+        qal_device_ids = (qal_device_id_t *)calloc(1, device_count * sizeof(qal_device_id_t));
+        if (!qal_device_ids) {
+            ALOGE("%s fail to allocate memory for qal device array", __func__);
+            return -ENOMEM;
+        }
+
+        ALOGD("%s Routing is %d", __func__, rx_device);
+        if (stream_out_primary_) {
+            stream_out_primary_->getQalDeviceIds(rx_device, qal_device_ids);
+            qal_rx_device = qal_device_ids[0];
+            memset(qal_device_ids, 0, device_count * sizeof(qal_device_id_t));
+            stream_out_primary_->getQalDeviceIds(tx_device, qal_device_ids);
+            qal_tx_device = qal_device_ids[0];
+        }
+        bool same_dev = qal_voice_rx_device_id_ == qal_rx_device;
+        qal_voice_rx_device_id_ = qal_rx_device;
+        qal_voice_tx_device_id_ = qal_tx_device;
+
+        if (!IsCallActive(voice_.session)) {
             if (mode_ == AUDIO_MODE_IN_CALL) {
                 voice_.in_call = true;
                 ret = UpdateCalls(voice_.session);
@@ -161,10 +182,12 @@ int AudioVoice::VoiceOutSetParameters(struct str_parms *parms) {
                 for (int i = 0; i < max_voice_sessions_; i++) {
                     ret = VoiceSetDevice(&voice_.session[i]);
                     if (ret)
-                        ALOGE("%s Device switch failed for session[%d]\n", __func__, i);
+                        ALOGE("%s Device switch failed for session[%d]", __func__, i);
                 }
             }
         }
+
+        free(qal_device_ids);
     }
     return ret;
 }
@@ -185,7 +208,7 @@ int AudioVoice::UpdateCallState(uint32_t vsid, int call_state) {
     if (session) {
         session->state.new_ = call_state;
         is_call_active = IsCallActive(voice_.session);
-        ALOGD("%s is_call_active:%d in_call:%d, mode:%d\n",
+        ALOGD("%s is_call_active:%d in_call:%d, mode:%d",
               __func__, is_call_active, voice_.in_call, mode_);
         if (is_call_active ||
                 (voice_.in_call && mode_ == AUDIO_MODE_IN_CALL)) {
@@ -217,7 +240,7 @@ int AudioVoice::UpdateCalls(voice_session_t *pSession) {
                 ALOGD("%s: INACTIVE -> ACTIVE vsid:%x", __func__, session->vsid);
                 ret = VoiceStart(session);
                 if (ret < 0) {
-                    ALOGE("%s: VoiceStart() failed\n", __func__);
+                    ALOGE("%s: VoiceStart() failed", __func__);
                 } else {
                     session->state.current_ = session->state.new_;
                 }
@@ -257,7 +280,7 @@ int AudioVoice::UpdateCalls(voice_session_t *pSession) {
 }
 
 int AudioVoice::StopCall() {
-int i;
+    int i;
 
     voice_.in_call = false;
     for (i = 0; i < max_voice_sessions_; i++)
@@ -345,7 +368,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
                           (void *)this,
                           &session->qal_voice_handle);// Need to add this to the audio stream structure.
 
-    ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
+    ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
 
     if (ret) {
         ALOGE("%s Qal Stream Open Error (%x)", __func__, ret);
@@ -356,7 +379,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
             ALOGE("%s Qal Stream Start Error (%x)", __func__, ret);
             ret = qal_stream_close(session->qal_voice_handle);
             if (ret)
-                ALOGE("%s Qal Stream close failed %x\n", __func__, ret);
+                ALOGE("%s Qal Stream close failed %x", __func__, ret);
             session->qal_voice_handle = NULL;
             ret = -EINVAL;
         }
@@ -380,10 +403,10 @@ int AudioVoice::VoiceStop(voice_session_t *session) {
     if (session && session->qal_voice_handle) {
         ret = qal_stream_stop(session->qal_voice_handle);
         if (ret)
-            ALOGE("%s Qal Stream stop failed %x\n", __func__, ret);
+            ALOGE("%s Qal Stream stop failed %x", __func__, ret);
         ret = qal_stream_close(session->qal_voice_handle);
         if (ret)
-            ALOGE("%s Qal Stream close failed %x\n", __func__, ret);
+            ALOGE("%s Qal Stream close failed %x", __func__, ret);
         session->qal_voice_handle = NULL;
     }
 
@@ -432,9 +455,9 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     if (session && session->qal_voice_handle) {
         ret = qal_stream_set_device(session->qal_voice_handle, 2, qalDevices);
         if (ret)
-            ALOGE("%s Qal Stream Set Device failed %x\n", __func__, ret);
+            ALOGE("%s Qal Stream Set Device failed %x", __func__, ret);
     } else {
-        ALOGE("%s Voice handle not found \n", __func__);
+        ALOGE("%s Voice handle not found", __func__);
     }
 
 error_open:
@@ -458,7 +481,7 @@ int AudioVoice::SetMicMute(bool mute) {
             if (session[i].qal_voice_handle) {
                 ret = qal_stream_set_mute(session[i].qal_voice_handle, mute);
                 if (ret)
-                    ALOGE("%s Error applying mute %d for voice session %d\n", __func__, mute, i);
+                    ALOGE("%s Error applying mute %d for voice session %d", __func__, mute, i);
             }
         }
     }

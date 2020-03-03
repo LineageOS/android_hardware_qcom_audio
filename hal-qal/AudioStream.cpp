@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -112,7 +112,7 @@ static int32_t qal_callback(qal_stream_handle_t *stream_handle,
         {
             std::lock_guard<std::mutex> write_guard (astream_out->write_wait_mutex_);
             astream_out->write_ready_ = true;
-            ALOGD("%s: received WRITE_READY event\n",__func__);
+            ALOGD("%s: received WRITE_READY event", __func__);
             (astream_out->write_condition_).notify_all();
             event = STREAM_CBK_EVENT_WRITE_READY;
         }
@@ -122,7 +122,7 @@ static int32_t qal_callback(qal_stream_handle_t *stream_handle,
         {
             std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
             astream_out->drain_ready_ = true;
-            ALOGD("%s: received DRAIN_READY event\n",__func__);
+            ALOGD("%s: received DRAIN_READY event", __func__);
             (astream_out->drain_condition_).notify_all();
             event = STREAM_CBK_EVENT_DRAIN_READY;
             }
@@ -131,7 +131,7 @@ static int32_t qal_callback(qal_stream_handle_t *stream_handle,
         event = STREAM_CBK_EVENT_ERROR;
         break;
     default:
-        ALOGE("%s: Invalid event id:%d\n",__func__, event_id);
+        ALOGE("%s: Invalid event id:%d", __func__, event_id);
         return -EINVAL;
     }
 
@@ -149,7 +149,7 @@ static uint32_t astream_out_get_sample_rate(const struct audio_stream *stream) {
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return 0;
     }
 
@@ -172,7 +172,7 @@ static audio_format_t astream_out_get_format(
     if (adevice)
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     else
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
 
     if (astream_out)
         return astream_out->GetFormat();
@@ -206,18 +206,18 @@ static uint32_t astream_out_get_channels(const struct audio_stream *stream) {
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
-    ALOGD("%s: stream_out(%p)",__func__, stream);
+    ALOGD("%s: stream_out(%p)", __func__, stream);
     if (adevice != nullptr) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return 0;
     }
 
     if (astream_out != nullptr) {
         return astream_out->GetChannelMask();
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return 0;
     }
 }
@@ -228,17 +228,17 @@ static int astream_pause(struct audio_stream_out *stream)
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 
-    ALOGD("%s: pause",__func__);
+    ALOGD("%s: pause", __func__);
     return astream_out->Pause();
 }
 
@@ -248,13 +248,13 @@ static int astream_resume(struct audio_stream_out *stream)
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 
@@ -267,13 +267,13 @@ static int astream_flush(struct audio_stream_out *stream)
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 
@@ -286,13 +286,13 @@ static int astream_drain(struct audio_stream_out *stream, audio_drain_type_t typ
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 
@@ -305,18 +305,18 @@ static int astream_set_callback(struct audio_stream_out *stream, stream_callback
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!callback) {
-        ALOGE("%s: NULL Callback passed",__func__);
+        ALOGE("%s: NULL Callback passed", __func__);
         return -EINVAL;
     }
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 
@@ -333,7 +333,7 @@ static int astream_out_standby(struct audio_stream *stream) {
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
@@ -343,7 +343,7 @@ static int astream_out_standby(struct audio_stream *stream) {
     if (astream_out) {
         return astream_out->Standby();
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 }
@@ -351,7 +351,7 @@ static int astream_out_standby(struct audio_stream *stream) {
 static int astream_dump(const struct audio_stream *stream, int fd) {
     std::ignore = stream;
     std::ignore = fd;
-    ALOGD("%s: dump function not implemented",__func__);
+    ALOGD("%s: dump function not implemented", __func__);
     return 0;
 }
 
@@ -362,7 +362,7 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
 
 static int astream_out_get_presentation_position(
                                const struct audio_stream_out *stream,
-                               uint64_t *frames, struct timespec *timestamp){
+                               uint64_t *frames, struct timespec *timestamp) {
     std::ignore = stream;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
@@ -370,11 +370,11 @@ static int astream_out_get_presentation_position(
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
     if (!timestamp) {
-       ALOGE("%s: timestamp NULL",__func__);
+       ALOGE("%s: timestamp NULL", __func__);
        return -EINVAL;
     }
     if (astream_out) {
@@ -382,7 +382,7 @@ static int astream_out_get_presentation_position(
        case QAL_STREAM_COMPRESSED:
           ret = astream_out->GetFrames(frames);
           if (ret != 0) {
-             ALOGE("%s: GetTimestamp failed %d",__func__, ret);
+             ALOGE("%s: GetTimestamp failed %d", __func__, ret);
              return ret;
           }
           clock_gettime(CLOCK_MONOTONIC, timestamp);
@@ -392,10 +392,10 @@ static int astream_out_get_presentation_position(
           break;
        }
     } else {
-        //ALOGE("%s: unable to get audio stream",__func__);
+        //ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
-    ALOGV("%s: frames %lld played at %lld ",__func__, ((long long) *frames), timestamp->tv_sec * 1000000LL + timestamp->tv_nsec / 1000);
+    ALOGV("%s: frames %lld played at %lld ", __func__, ((long long) *frames), timestamp->tv_sec * 1000000LL + timestamp->tv_nsec / 1000);
 
     return ret;
 }
@@ -404,7 +404,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
                                    uint32_t *dsp_frames) {
     std::ignore = stream;
     std::ignore = dsp_frames;
-    ALOGD("%s: enter",__func__);
+    ALOGD("%s: enter", __func__);
     return 0;
 }
 
@@ -418,7 +418,7 @@ static int astream_out_set_parameters(struct audio_stream *stream,
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
         ret = -EINVAL;
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         goto exit;
     }
 
@@ -437,7 +437,7 @@ static int astream_out_set_parameters(struct audio_stream *stream,
         goto exit;
     }
 
-   // if(astream_out->flags_ == (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
+   // if (astream_out->flags_ == (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
        ret = astream_out->SetParameters(parms);
        if (ret) {
           ALOGE("Stream SetParameters Error (%x)", ret);
@@ -465,7 +465,7 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
         ret = -EINVAL;
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         goto exit;
     }
 
@@ -477,7 +477,7 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
         ALOGE("out_get_parameters: failed to allocate mem for query or reply");
         return nullptr;
     }
-    ALOGD("%s: keys: %s",__func__,keys);
+    ALOGD("%s: keys: %s", __func__, keys);
 
     ret = str_parms_get_str(query, "is_direct_pcm_track", value, sizeof(value));
     if (ret >= 0) {
@@ -551,14 +551,14 @@ static int astream_out_set_volume(struct audio_stream_out *stream,
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
     if (astream_out) {
         return astream_out->SetVolume(left, right);
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 }
@@ -584,14 +584,14 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
     if (astream_in) {
         return astream_in->Read(buffer, bytes);
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 
@@ -607,14 +607,14 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
     if (astream_out) {
         return astream_out->Write(buffer, bytes);
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 
@@ -623,10 +623,10 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
 static int astream_in_set_microphone_direction(
                         const struct audio_stream_in *stream,
-                        audio_microphone_direction_t dir){
+                        audio_microphone_direction_t dir) {
     std::ignore = stream;
     std::ignore = dir;
-    ALOGD("%s: function not implemented",__func__);
+    ALOGD("%s: function not implemented", __func__);
     //No plans to implement audiozoom
     return -1;
 }
@@ -636,7 +636,7 @@ static int in_set_microphone_field_dimension(
                         float zoom) {
     std::ignore = stream;
     std::ignore = zoom;
-    ALOGD("%s: function not implemented",__func__);
+    ALOGD("%s: function not implemented", __func__);
     //No plans to implement audiozoom
     return -1;
 }
@@ -651,13 +651,13 @@ static int astream_in_add_audio_effect(
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
     if (astream_in) {
         return astream_in->addRemoveAudioEffect(stream, effect, true);
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 }
@@ -671,13 +671,13 @@ static int astream_in_remove_audio_effect(const struct audio_stream *stream,
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
     if (astream_in) {
         return astream_in->addRemoveAudioEffect(stream, effect, false);
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 }
@@ -687,7 +687,7 @@ static int astream_in_get_capture_position(const struct audio_stream_in *stream,
     std::ignore = stream;
     std::ignore = frames;
     std::ignore = time;
-    ALOGD("%s: position not implemented currently supported in qal",__func__);
+    ALOGD("%s: position not implemented currently supported in qal", __func__);
     return 0;
 }
 
@@ -712,19 +712,19 @@ static int astream_in_get_active_microphones(
     std::ignore = stream;
     std::ignore = mic_array;
     std::ignore = mic_count;
-    ALOGD("%s: get active mics not currently supported in qal",__func__);
+    ALOGD("%s: get active mics not currently supported in qal", __func__);
     return 0;
 }
 
 static uint32_t astream_in_get_sample_rate(const struct audio_stream *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
-    ALOGE("%s: Inside",__func__);
+    ALOGE("%s: Inside", __func__);
 
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return 0;
     }
 
@@ -742,26 +742,26 @@ static uint32_t astream_in_get_channels(const struct audio_stream *stream) {
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return 0;
     }
 
     if (astream_in) {
         return astream_in->GetChannelMask();
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return 0;
     }
 }
 
-static audio_format_t astream_in_get_format(const struct audio_stream *stream){
+static audio_format_t astream_in_get_format(const struct audio_stream *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
 
     if (adevice)
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     else
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
 
     if (astream_in)
         return astream_in->GetFormat();
@@ -776,7 +776,7 @@ static int astream_in_standby(struct audio_stream *stream) {
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
@@ -786,7 +786,7 @@ static int astream_in_standby(struct audio_stream *stream) {
     if (astream_in) {
         return astream_in->Standby();
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 }
@@ -806,7 +806,7 @@ static int astream_in_set_parameters(struct audio_stream *stream, const char *kv
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
@@ -822,7 +822,7 @@ static char* astream_in_get_parameters(const struct audio_stream *stream,
                                        const char *keys) {
     std::ignore = stream;
     std::ignore = keys;
-    ALOGD("%s: function not implemented",__func__);
+    ALOGD("%s: function not implemented", __func__);
     return 0;
 }
 
@@ -833,14 +833,14 @@ static int astream_in_set_gain(struct audio_stream_in *stream, float gain) {
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        ALOGE("%s: unable to get audio device", __func__);
         return -EINVAL;
     }
 
     if (astream_in) {
         return astream_in->SetGain(gain);
     } else {
-        ALOGE("%s: unable to get audio stream",__func__);
+        ALOGE("%s: unable to get audio stream", __func__);
         return -EINVAL;
     }
 }
@@ -897,7 +897,7 @@ int StreamPrimary::GetLookupTableIndex(const struct string_to_enum *table,
 qal_stream_type_t StreamInPrimary::GetQalStreamType(
                                         audio_input_flags_t halStreamFlags) {
     qal_stream_type_t qalStreamType = QAL_STREAM_LOW_LATENCY;
-    if ((halStreamFlags & AUDIO_INPUT_FLAG_VOIP_TX)!=0){
+    if ((halStreamFlags & AUDIO_INPUT_FLAG_VOIP_TX)!=0) {
          qalStreamType = QAL_STREAM_VOIP_TX;
          return qalStreamType;
     }
@@ -921,7 +921,7 @@ qal_stream_type_t StreamInPrimary::GetQalStreamType(
             AUDIO_INPUT_FLAG_SYNC        = 0x8,
             AUDIO_INPUT_FLAG_HW_AV_SYNC = 0x40,
             */
-            ALOGE("%s: flag %#x is not supported from QAL.\n" ,
+            ALOGE("%s: flag %#x is not supported from QAL." ,
                       __func__, halStreamFlags);
             break;
     }
@@ -932,9 +932,9 @@ qal_stream_type_t StreamInPrimary::GetQalStreamType(
 qal_stream_type_t StreamOutPrimary::GetQalStreamType(
                                     audio_output_flags_t halStreamFlags) {
     qal_stream_type_t qalStreamType = QAL_STREAM_LOW_LATENCY;
-     if ((halStreamFlags & AUDIO_OUTPUT_FLAG_VOIP_RX)!=0){
-         qalStreamType = QAL_STREAM_VOIP_RX;
-         return qalStreamType;
+    if ((halStreamFlags & AUDIO_OUTPUT_FLAG_VOIP_RX)!=0) {
+        qalStreamType = QAL_STREAM_VOIP_RX;
+        return qalStreamType;
     }
     if ((halStreamFlags & AUDIO_OUTPUT_FLAG_FAST) != 0) {
         qalStreamType = QAL_STREAM_LOW_LATENCY;
@@ -1035,7 +1035,7 @@ int StreamOutPrimary::Resume() {
 
 int StreamOutPrimary::Flush() {
     int ret = 0;
-    ALOGD("%s: Enter \n", __func__);
+    ALOGD("%s: Enter", __func__);
     if (qal_stream_handle_) {
         ret = qal_stream_flush(qal_stream_handle_);
         if (!ret)
@@ -1060,7 +1060,7 @@ int StreamOutPrimary::Drain(audio_drain_type_t type) {
            qalDrainType = QAL_DRAIN_PARTIAL;
            break;
     default:
-           ALOGE("%s: Invalid drain type:%d\n", __func__, type);
+           ALOGE("%s: Invalid drain type:%d", __func__, type);
            return -EINVAL;
     }
 
@@ -1068,7 +1068,7 @@ int StreamOutPrimary::Drain(audio_drain_type_t type) {
         ret = qal_stream_drain(qal_stream_handle_, qalDrainType);
 
     if (ret) {
-        ALOGE("%s: Invalid drain type:%d\n", __func__, type);
+        ALOGE("%s: Invalid drain type:%d", __func__, type);
     }
 
     return ret;
@@ -1080,7 +1080,7 @@ int StreamOutPrimary::Standby() {
     if (qal_stream_handle_) {
         ret = qal_stream_stop(qal_stream_handle_);
         if (ret) {
-            ALOGE("%s: failed to stop stream.\n", __func__);
+            ALOGE("%s: failed to stop stream.", __func__);
             return -EINVAL;
         }
     }
@@ -1106,8 +1106,6 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     qal_device_id_t * deviceId;
     struct qal_device* deviceIdConfigs;
     int err =  -EINVAL;
-    struct qal_channel_info *ch_info;
-    int channels = 0;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     ALOGD("%s: enter ", __func__);
@@ -1116,11 +1114,11 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
         goto error;
 
 #if 0
-    if (!qal_stream_handle_){
+    if (!qal_stream_handle_) {
         ALOGD("%s: No stream handle, going to call open", __func__);
         ret = Open();
         if (ret) {
-            ALOGE("%s: failed to open stream.\n", __func__);
+            ALOGE("%s: failed to open stream.", __func__);
             return -EINVAL;
         }
     }
@@ -1129,17 +1127,8 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
     if (err >= 0) {
-
         val = atoi(value);
         ALOGV("%s: Found routing for output stream with value %x", __func__, val);
-        channels = audio_channel_count_from_out_mask(config_.channel_mask);
-        ch_info = (struct qal_channel_info *) calloc(1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
-        if (ch_info == NULL) {
-          ALOGE("Allocation failed for channel map");
-          ret = -ENOMEM;
-          goto error;
-        }
-
         ALOGD("%s: mAndroidOutDevicese %d, mNoOfOutDevices %d", __func__, mAndroidOutDevices, mNoOfOutDevices);
         /* If its the same device as what was already routed to, dont bother */
         if ((mAndroidOutDevices != val) && (val != 0)) {
@@ -1179,14 +1168,14 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
             ret = qal_stream_set_device(qal_stream_handle_, mNoOfOutDevices, mQalOutDevice);
         }
     }
-     //TBD: check if its offload and check call the following
-   ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &qparam_payload, parms, &msample_rate, &mchannels);
-   if (ret) {
-      ALOGE("parse_compress_metadata Error (%x)", ret);
-   }
+    //TBD: check if its offload and check call the following
+    ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &qparam_payload, parms, &msample_rate, &mchannels);
+    if (ret) {
+        ALOGE("parse_compress_metadata Error (%x)", ret);
+    }
 error:
-   ALOGE("%s: exit %d\n", __func__, ret);
-   return ret;
+    ALOGE("%s: exit %d", __func__, ret);
+    return ret;
 }
 
 int StreamOutPrimary::VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, struct str_parms *parms) {
@@ -1201,7 +1190,7 @@ int StreamOutPrimary::VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, s
 
 int StreamOutPrimary::SetVolume(float left , float right) {
     int ret = 0;
-    ALOGE("%s: g\n", __func__);
+    ALOGE("%s: g", __func__);
 
     /* free previously cached volume if any */
     if (volume_) {
@@ -1262,17 +1251,17 @@ int64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
     int64_t written = 0;
 
     if (!timestamp) {
-       ALOGE("%s: timestamp NULL",__func__);
+       ALOGE("%s: timestamp NULL", __func__);
        return 0;
     }
     written = total_bytes_written_/audio_bytes_per_frame(
         audio_channel_count_from_out_mask(config_.channel_mask), config_.format);
-    ALOGV("%s: total_bytes_written_ %lld, written %lld",__func__, ((long long) total_bytes_written_), ((long long) written));
+    ALOGV("%s: total_bytes_written_ %lld, written %lld", __func__, ((long long) total_bytes_written_), ((long long) written));
     signed_frames = written; //- kernel_buffer_size + avail;
     signed_frames -= (platform_render_latency(flags_) * (streamAttributes_.out_media_config.sample_rate) / 1000000LL);
 
     if (signed_frames < 0) {
-       ALOGV("%s: signed_frames -ve %lld",__func__, ((long long) signed_frames));
+       ALOGV("%s: signed_frames -ve %lld", __func__, ((long long) signed_frames));
        clock_gettime(CLOCK_MONOTONIC, timestamp);
        signed_frames = 0;
     } else {
@@ -1356,7 +1345,7 @@ int StreamOutPrimary::Open() {
 /*
     ret = qal_init();
     if ( ret ) {
-      ALOGD("%s:(%d) qal_init failed ret=(%d)",__func__,__LINE__, ret);
+      ALOGD("%s:(%d) qal_init failed ret=(%d)", __func__, __LINE__, ret);
       return -EINVAL;
     }
 */
@@ -1364,22 +1353,22 @@ int StreamOutPrimary::Open() {
         ALOGE("%s: Not initialized, returning error", __func__);
         goto error_open;
     }
-    ALOGD("%s: no_of_devices %d, android Device id %x ",__func__, mNoOfOutDevices, mAndroidOutDevices);
+    ALOGD("%s: no_of_devices %d, android Device id %x ", __func__, mNoOfOutDevices, mAndroidOutDevices);
     //need to convert channel mask to qal channel mask
     // Stream channel mask
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
     ch_info = (struct qal_channel_info *)calloc(
                             1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
     if (ch_info == NULL) {
-      ALOGE("Allocation failed for channel map");
-      ret = -ENOMEM;
-      goto error_open;
+        ALOGE("Allocation failed for channel map");
+        ret = -ENOMEM;
+        goto error_open;
     }
 
     ch_info->channels = channels;
     ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-    if (ch_info->channels > 1 )
-      ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+    if (ch_info->channels > 1)
+        ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
     streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
     streamAttributes_.flags = (qal_stream_flags_t)flags_;
@@ -1390,37 +1379,37 @@ int StreamOutPrimary::Open() {
     streamAttributes_.out_media_config.ch_info = ch_info;
 
     if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
-       streamAttributes_.flags = (qal_stream_flags_t)(1 << QAL_STREAM_FLAG_NON_BLOCKING);
-       if (config_.offload_info.format == 0)
-          config_.offload_info.format = config_.format;
-       if (config_.offload_info.sample_rate == 0)
-          config_.offload_info.sample_rate = config_.sample_rate;
-       streamAttributes_.out_media_config.sample_rate = config_.offload_info.sample_rate;
-       if (msample_rate)
-          streamAttributes_.out_media_config.sample_rate = msample_rate;
-       if (mchannels)
-          streamAttributes_.out_media_config.ch_info->channels = mchannels;
-       streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
+        streamAttributes_.flags = (qal_stream_flags_t)(1 << QAL_STREAM_FLAG_NON_BLOCKING);
+        if (config_.offload_info.format == 0)
+            config_.offload_info.format = config_.format;
+        if (config_.offload_info.sample_rate == 0)
+            config_.offload_info.sample_rate = config_.sample_rate;
+        streamAttributes_.out_media_config.sample_rate = config_.offload_info.sample_rate;
+        if (msample_rate)
+            streamAttributes_.out_media_config.sample_rate = msample_rate;
+        if (mchannels)
+            streamAttributes_.out_media_config.ch_info->channels = mchannels;
+        streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
     } else if (streamAttributes_.type == QAL_STREAM_PCM_OFFLOAD) {
         streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[config_.format];
         if (streamAttributes_.out_media_config.bit_width == 0)
             streamAttributes_.out_media_config.bit_width = 16;
     }
-    
-    ALOGD("channels %d samplerate %d format id %d, stream type %d \n", streamAttributes_.out_media_config.ch_info->channels, streamAttributes_.out_media_config.sample_rate,
-          streamAttributes_.out_media_config.aud_fmt_id, streamAttributes_.type);
-    ALOGD("msample_rate %d mchannels %d \n", msample_rate, mchannels);
-    ALOGD("mNoOfOutDevices %d\n", mNoOfOutDevices);
-    ret = qal_stream_open (&streamAttributes_,
-                          mNoOfOutDevices,
-                          mQalOutDevice,
-                          0,
-                          NULL,
-                          &qal_callback,
-                          (void *)this,
-                          &qal_stream_handle_);
 
-    ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
+    ALOGD("channels %d samplerate %d format id %d, stream type %d", streamAttributes_.out_media_config.ch_info->channels, streamAttributes_.out_media_config.sample_rate,
+          streamAttributes_.out_media_config.aud_fmt_id, streamAttributes_.type);
+    ALOGD("msample_rate %d mchannels %d", msample_rate, mchannels);
+    ALOGD("mNoOfOutDevices %d", mNoOfOutDevices);
+    ret = qal_stream_open(&streamAttributes_,
+                         mNoOfOutDevices,
+                         mQalOutDevice,
+                         0,
+                         NULL,
+                         &qal_callback,
+                         (void *)this,
+                         &qal_stream_handle_);
+
+    ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
     if (ret) {
         ALOGE("Qal Stream Open Error (%x)", ret);
         ret = -EINVAL;
@@ -1428,7 +1417,7 @@ int StreamOutPrimary::Open() {
     if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
        ret = qal_stream_set_param(qal_stream_handle_, 0, &qparam_payload);
        if (ret) {
-          ALOGE("Qal Set Param Error (%x)\n", ret);
+          ALOGE("Qal Set Param Error (%x)", ret);
        }
     }
 
@@ -1451,24 +1440,24 @@ error_open:
 int StreamOutPrimary::GetFrames(uint64_t *frames) {
     int ret = 0;
     if (!qal_stream_handle_) {
-       ALOGE("%s: qal_stream_handle_ NULL",__func__);
-       *frames = 0;
-       return 0;
+        ALOGE("%s: qal_stream_handle_ NULL", __func__);
+        *frames = 0;
+        return 0;
     }
     qal_session_time tstamp;
     uint64_t timestamp = 0;
     ret = qal_get_timestamp(qal_stream_handle_, &tstamp);
-    if (ret != 0){
-       ALOGE("%s: qal_get_timestamp failed %d",__func__, ret);
+    if (ret != 0) {
+       ALOGE("%s: qal_get_timestamp failed %d", __func__, ret);
        goto exit;
     }
     timestamp = (uint64_t)tstamp.session_time.value_msw;
     timestamp = timestamp  << 32 | tstamp.session_time.value_lsw;
-    ALOGD("%s: session msw %u",__func__, tstamp.session_time.value_msw);
-    ALOGD("%s: session lsw %u",__func__, tstamp.session_time.value_lsw);
-    ALOGD("%s: session timespec %lld",__func__, ((long long) timestamp));
+    ALOGD("%s: session msw %u", __func__, tstamp.session_time.value_msw);
+    ALOGD("%s: session lsw %u", __func__, tstamp.session_time.value_lsw);
+    ALOGD("%s: session timespec %lld", __func__, ((long long) timestamp));
     timestamp *= (streamAttributes_.out_media_config.sample_rate);
-    ALOGD("%s: timestamp %lld",__func__, ((long long) timestamp));
+    ALOGD("%s: timestamp %lld", __func__, ((long long) timestamp));
     *frames = timestamp/1000000;
 exit:
     return ret;
@@ -1497,7 +1486,7 @@ int StreamOutPrimary::GetOutputUseCase(audio_output_flags_t halStreamFlags)
     return usecase;
 }
 
-ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
+ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
     int ret = 0;
     struct qal_buffer qalBuffer;
     int local_bytes_written = 0;
@@ -1506,11 +1495,11 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
     qalBuffer.size = bytes;
     qalBuffer.offset = 0;
 
-    ALOGV("%s: handle_ %x Bytes:(%zu)",__func__,handle_, bytes);
-    if (!qal_stream_handle_){
+    ALOGV("%s: handle_ %x Bytes:(%zu)", __func__, handle_, bytes);
+    if (!qal_stream_handle_) {
         ret = Open();
         if (ret) {
-            ALOGE("%s: failed to open stream.\n", __func__);
+            ALOGE("%s: failed to open stream.", __func__);
             return -EINVAL;
         }
     }
@@ -1518,7 +1507,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes){
     if (!stream_started_) {
         ret = qal_stream_start(qal_stream_handle_);
         if (ret) {
-            ALOGE("%s:failed to start stream. ret=%d\n", __func__, ret);
+            ALOGE("%s:failed to start stream. ret=%d", __func__, ret);
             qal_stream_close(qal_stream_handle_);
             qal_stream_handle_ = NULL;
             return -EINVAL;
@@ -1552,10 +1541,10 @@ int StreamOutPrimary::StartOffloadEffects(
     if (fnp_offload_effect_start_output_) {
         ret = fnp_offload_effect_start_output_(ioHandle, qal_stream_handle);
         if (ret) {
-            ALOGE("%s: failed to start offload effect.\n", __func__);
+            ALOGE("%s: failed to start offload effect.", __func__);
         }
     } else {
-        ALOGE("%s: function pointer is null.\n", __func__);
+        ALOGE("%s: function pointer is null.", __func__);
         return -EINVAL;
     }
 
@@ -1569,10 +1558,10 @@ int StreamOutPrimary::StopOffloadEffects(
     if (fnp_offload_effect_stop_output_) {
         ret = fnp_offload_effect_stop_output_(ioHandle, qal_stream_handle);
         if (ret) {
-            ALOGE("%s: failed to start offload effect.\n", __func__);
+            ALOGE("%s: failed to start offload effect.", __func__);
         }
     } else {
-        ALOGE("%s: function pointer is null.\n", __func__);
+        ALOGE("%s: function pointer is null.", __func__);
         return -EINVAL;
     }
 
@@ -1597,8 +1586,8 @@ StreamOutPrimary::StreamOutPrimary(
     int ret = 0;
 
     if (!stream_) {
-      ALOGE("%s: No memory allocated for stream_",__func__);
-      goto error;
+        ALOGE("%s: No memory allocated for stream_", __func__);
+        goto error;
     }
     ALOGE("%s: enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)\
           address(%s)", __func__, handle, config->format, config->sample_rate, config->channel_mask,
@@ -1625,7 +1614,7 @@ StreamOutPrimary::StreamOutPrimary(
             config->channel_mask = dynamic_media_config.mask;
             config->format = (audio_format_t)dynamic_media_config.format;
             memcpy(&config_, config, sizeof(struct audio_config));
-            ALOGI("%s: sample rate = %#x channel_mask=%#x fmt=%#x %d\n",
+            ALOGI("%s: sample rate = %#x channel_mask=%#x fmt=%#x %d",
                   __func__, config->sample_rate, config->channel_mask,
                   config->format, __LINE__);
 
@@ -1691,7 +1680,7 @@ StreamOutPrimary::StreamOutPrimary(
             mQalOutDevice[i].config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         mQalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         mQalOutDevice[i].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
-        ALOGI("%s: device rate = %#x width=%#x fmt=%#x %d\n",
+        ALOGI("%s: device rate = %#x width=%#x fmt=%#x %d",
             __func__, mQalOutDevice[i].config.sample_rate,
             mQalOutDevice[i].config.bit_width,
             mQalOutDevice[i].config.aud_fmt_id, __LINE__);
@@ -1761,7 +1750,6 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
 
 
     if (source_ == AUDIO_SOURCE_VOICE_COMMUNICATION) {
-
         if (memcmp(&desc.type, FX_IID_AEC, sizeof(effect_uuid_t)) == 0) {
             if (enable) {
                 if (isECEnabled) {
@@ -1888,7 +1876,9 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
 
         val = atoi(value);
         ALOGV("%s: Found routing for input stream with value %x", __func__, val);
-        channels = audio_channel_count_from_out_mask(config_.channel_mask);
+        // TBD: Hard code number of channels to 2 for now.
+        //channels = audio_channel_count_from_out_mask(config_.channel_mask);
+        channels = 2;
         ch_info = (struct qal_channel_info *) calloc(1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
         if (ch_info == NULL) {
           ALOGE("Allocation failed for channel map");
@@ -1896,15 +1886,13 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
           goto exit;
         }
 
-        //need to convert channel mask to qal channel mask
-        ch_info->channels = 2; //TBD: Hard code number of channels to 2 for now.
+        // need to convert channel mask to qal channel mask
+        ch_info->channels = channels;
         ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
         if (ch_info->channels > 1 )
             ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
-
         /* If its the same device as what was already routed to, dont bother */
-
         if ((mAndroidInDevices != val) && (val != 0) && audio_is_input_device(val)) {
             //re-allocate mQalOutDevice and mQalOutDeviceIds
             if (popcount(val & ~AUDIO_DEVICE_BIT_IN) != mNoOfInDevices) {
@@ -1953,7 +1941,7 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
        }
    ret = qal_stream_set_param(qal_stream_handle_, 0, &qparam_payload);
    if (ret) {
-      ALOGE("Qal Set Param Error (%x)\n", ret);
+      ALOGE("Qal Set Param Error (%x)", ret);
    }
 #endif
 exit:
@@ -1970,7 +1958,7 @@ int StreamInPrimary::Open() {
     uint32_t outBufCount = NO_OF_BUF;
     void *handle = nullptr;
 
-    if(!mInitialized) {
+    if (!mInitialized) {
         ALOGE("%s: Not initialized, returning error", __func__);
         goto error_open;
     }
@@ -1983,7 +1971,11 @@ int StreamInPrimary::Open() {
     }
 
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
-    ch_info =(struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*channels);
+    if (channels == 0) {
+       ALOGE("invalid channel count");
+       return -EINVAL;
+    }
+    ch_info = (struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*channels);
     if (!ch_info) {
        ALOGE("malloc failed for ch_info");
        return -ENOMEM;
@@ -2010,18 +2002,18 @@ int StreamInPrimary::Open() {
     streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     streamAttributes_.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
     streamAttributes_.in_media_config.ch_info = ch_info;
-    ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
+    ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
 
-    ret = qal_stream_open (&streamAttributes_,
-                          mNoOfInDevices,
-                          mQalInDevice,
-                          0,
-                          NULL,
-                          &qal_callback,
-                          (void *)this,
-                          &qal_stream_handle_);
+    ret = qal_stream_open(&streamAttributes_,
+                         mNoOfInDevices,
+                         mQalInDevice,
+                         0,
+                         NULL,
+                         &qal_callback,
+                         (void *)this,
+                         &qal_stream_handle_);
 
-    ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
+    ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
 
     if (ret) {
         ALOGE("Qal Stream Open Error (%x)", ret);
@@ -2059,7 +2051,7 @@ uint32_t StreamInPrimary::GetBufferSize() {
                     audio_channel_count_from_out_mask(config_.channel_mask),
                     config_.format);
     } else {
-       return BUF_SIZE_CAPTURE * NO_OF_BUF;
+        return BUF_SIZE_CAPTURE * NO_OF_BUF;
     }
 }
 
@@ -2081,7 +2073,7 @@ int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_s
     return usecase;
 }
 
-ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
+ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     int ret = 0;
     int retry_count = MAX_READ_RETRY_COUNT;
     size_t size = 0;
@@ -2091,8 +2083,8 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes){
     qalBuffer.size = bytes;
     qalBuffer.offset = 0;
 
-    ALOGD("%s: Bytes:(%zu)",__func__,bytes);
-    if (!qal_stream_handle_){
+    ALOGD("%s: Bytes:(%zu)", __func__, bytes);
+    if (!qal_stream_handle_) {
         ret = Open();
     }
 
@@ -2197,7 +2189,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
             ret = qal_get_param(QAL_PARAM_ID_DEVICE_CAPABILITY,
                                 (void **)&device_cap_query,
                                 &payload_size);
-            ALOGD("%s: usb fs=%d format=%d mask=%x\n", __func__,
+            ALOGD("%s: usb fs=%d format=%d mask=%x", __func__,
                 dynamic_media_config.sample_rate,
                 dynamic_media_config.format, dynamic_media_config.mask);
             delete device_cap_query;
@@ -2234,7 +2226,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     ALOGD("%s: No of devices %d", __func__, mNoOfInDevices);
     mQalInDeviceIds = new qal_device_id_t[mNoOfInDevices];
     if (!mQalInDeviceIds) {
-           goto error;
+        goto error;
     }
 
     noQalDevices = getQalDeviceIds(devices, mQalInDeviceIds);
