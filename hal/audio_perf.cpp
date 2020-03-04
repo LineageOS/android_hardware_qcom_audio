@@ -54,6 +54,21 @@ static hal_version connectPowerHalLocked() {
         return NONE;
     }
 
+    if (gPowerHalHidlExists) {
+        // (re)connect if handle is null
+        if (!gPowerHal_1_2_) {
+            gPowerHal_1_2_ =
+                    android::hardware::power::V1_2::IPower::getService();
+        }
+        if (gPowerHal_1_2_) {
+            ALOGI("Successfully connected to Power Hal Hidl service.");
+            return HIDL_1_2;
+        } else {
+            // no more try on this handle
+            gPowerHalHidlExists = false;
+        }
+    }
+
     if (gPowerHalAidlExists) {
         // (re)connect if handle is null
         if (!gPowerHal_Aidl_) {
@@ -67,21 +82,6 @@ static hal_version connectPowerHalLocked() {
         } else {
             // no more try on this handle
             gPowerHalAidlExists = false;
-        }
-    }
-
-    if (gPowerHalHidlExists) {
-        // (re)connect if handle is null
-        if (!gPowerHal_1_2_) {
-            gPowerHal_1_2_ =
-                    android::hardware::power::V1_2::IPower::getService();
-        }
-        if (gPowerHal_1_2_) {
-            ALOGI("Successfully connected to Power Hal Hidl service.");
-            return HIDL_1_2;
-        } else {
-            // no more try on this handle
-            gPowerHalHidlExists = false;
         }
     }
 
