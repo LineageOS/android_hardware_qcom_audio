@@ -9301,7 +9301,11 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                 goto err_open;
             }
         }
-        if (audio_extn_is_concurrent_capture_enabled()) {
+
+        /* assign concurrent capture usecase if record has to caried out from
+         * actual hardware input source */
+        if (audio_extn_is_concurrent_capture_enabled() &&
+            !audio_is_virtual_input_source(in->source)) {
             /* Acquire lock to avoid two concurrent use cases initialized to
                same pcm record use case */
 
