@@ -487,6 +487,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     audio_extn_hidl_init();
     voice_ = VoiceInit();
     mute_ = false;
+    current_rotation = QAL_SPEAKER_ROTATION_LR;
 
     FillAndroidDeviceMap();
     audio_extn_gef_init(adev_);
@@ -681,6 +682,50 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 }
                 ALOGI("%s: qal set param success  for device connection", __func__);
             }
+        }
+    }
+
+    /* Checking for Device rotation */
+    ret = str_parms_get_int(parms, "rotation", &val);
+    if (ret >= 0) {
+        int isRotationReq = 0;
+        qal_param_device_rotation_t param_device_rotation;
+        switch (val) {
+        case 270:
+        {
+            if (QAL_SPEAKER_ROTATION_LR == current_rotation) {
+                /* Device rotated from normal position to inverted landscape. */
+                current_rotation = QAL_SPEAKER_ROTATION_RL;
+                isRotationReq = 1;
+                param_device_rotation.rotation_type = QAL_SPEAKER_ROTATION_RL;
+            }
+        }
+        break;
+        case 0:
+        case 180:
+        case 90:
+        {
+            if (QAL_SPEAKER_ROTATION_RL == current_rotation) {
+                /* Phone was in inverted landspace and now is changed to portrait
+                 * or inverted portrait. Notify QAL to swap the speaker.
+                 */
+                current_rotation = QAL_SPEAKER_ROTATION_LR;
+                isRotationReq = 1;
+                param_device_rotation.rotation_type = QAL_SPEAKER_ROTATION_LR;
+            }
+        }
+        break;
+        default:
+            ALOGE("%s: unexpected rotation of %d", __func__, val);
+            isRotationReq = -EINVAL;
+        }
+        if (1 == isRotationReq) {
+            /* Swap the speakers */
+            ALOGD("%s: Swapping the speakers ", __func__);
+            ret = qal_set_param(QAL_PARAM_ID_DEVICE_ROTATION,
+                    (void*)&param_device_rotation,
+                    sizeof(qal_param_device_rotation_t));
+            ALOGD("%s: Speakers swapped ", __func__);
         }
     }
 
