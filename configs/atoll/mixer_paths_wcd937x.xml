@@ -2516,6 +2516,7 @@
     <!-- VoIP Tx settings -->
     <path name="audio-record-voip">
         <ctl name="MultiMedia10 Mixer TX_CDC_DMA_TX_3" value="1" />
+        <ctl name="TX_DEC2 Volume" value="84" />
     </path>
 
     <path name="audio-record-voip usb-headset-mic">

@@ -971,17 +971,19 @@ int visualizer_command(effect_context_t * context, uint32_t cmdCode, uint32_t cm
 
         if (context->state == EFFECT_STATE_ACTIVE) {
             int32_t latency_ms = visu_ctxt->latency;
-            const uint32_t delta_ms = visualizer_get_delta_time_ms_from_updated_time(visu_ctxt);
+            const int32_t delta_ms = visualizer_get_delta_time_ms_from_updated_time(visu_ctxt);
             latency_ms -= delta_ms;
             if (latency_ms < 0) {
                 latency_ms = 0;
             }
             const uint32_t delta_smp = context->config.inputCfg.samplingRate * latency_ms / 1000;
 
-            int32_t capture_point = visu_ctxt->capture_idx - visu_ctxt->capture_size - delta_smp;
-            int32_t capture_size = visu_ctxt->capture_size;
+            int64_t capture_point = visu_ctxt->capture_idx;
+            capture_point -= visu_ctxt->capture_size;
+            capture_point -= delta_smp;
+            int64_t capture_size = visu_ctxt->capture_size;
             if (capture_point < 0) {
-                int32_t size = -capture_point;
+                int64_t size = -capture_point;
                 if (size > capture_size)
                     size = capture_size;
 
