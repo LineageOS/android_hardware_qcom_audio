@@ -150,6 +150,9 @@ audio_devices_t AudioVoice::GetMatchingTxDevice(audio_devices_t halRxDeviceId) {
         case AUDIO_DEVICE_OUT_WIRED_HEADPHONE:
             halTxDeviceId = AUDIO_DEVICE_IN_BUILTIN_MIC;
             break;
+        case AUDIO_DEVICE_OUT_USB_HEADSET:
+            halTxDeviceId = AUDIO_DEVICE_IN_USB_HEADSET;
+            break;
         default:
             halTxDeviceId = AUDIO_DEVICE_NONE;
             ALOGE("%s: unsupported Device Id of %d", __func__, halRxDeviceId);
@@ -333,6 +336,7 @@ bool AudioVoice::IsCallActive(AudioVoice::voice_session_t *pSession) {
 int AudioVoice::VoiceStart(voice_session_t *session) {
     int ret;
     struct qal_stream_attributes streamAttributes;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     struct qal_device qalDevices[2];
     uint8_t channels = 0;
     struct qal_channel_info *out_ch_info = NULL, *in_ch_info = NULL;
@@ -366,12 +370,16 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     qalDevices[0].config.sample_rate = 48000;
     qalDevices[0].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     qalDevices[0].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    qalDevices[0].address.card_id = adevice->usb_card_id_;
+    qalDevices[0].address.device_num =adevice->usb_dev_num_;
 
     qalDevices[1].id = qal_voice_rx_device_id_;
     qalDevices[1].config.ch_info = out_ch_info;
     qalDevices[1].config.sample_rate = 48000;
     qalDevices[1].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     qalDevices[1].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    qalDevices[1].address.card_id = adevice->usb_card_id_;
+    qalDevices[1].address.device_num = adevice->usb_dev_num_;
 
     memset(&streamAttributes, 0, sizeof(streamAttributes));
     streamAttributes.type = QAL_STREAM_VOICE_CALL;
@@ -397,7 +405,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
                           (void *)this,
                           &session->qal_voice_handle);// Need to add this to the audio stream structure.
 
-    ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
+    ALOGD("%s:qal_stream_open() ret:%d line:%d", __func__, ret, __LINE__);
 
     if (ret) {
         ALOGE("%s Qal Stream Open Error (%x)", __func__, ret);
@@ -450,6 +458,7 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     struct qal_device qalDevices[2];
     uint8_t channels = 0;
     struct qal_channel_info *out_ch_info = NULL, *in_ch_info = NULL;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     channels = 1;
     in_ch_info = (struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*channels);
@@ -474,12 +483,16 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     qalDevices[0].config.sample_rate = 48000;
     qalDevices[0].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     qalDevices[0].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    qalDevices[0].address.card_id = adevice->usb_card_id_;
+    qalDevices[0].address.device_num =adevice->usb_dev_num_;
 
     qalDevices[1].id = qal_voice_rx_device_id_;
     qalDevices[1].config.ch_info = out_ch_info;
     qalDevices[1].config.sample_rate = 48000;
     qalDevices[1].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     qalDevices[1].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    qalDevices[1].address.card_id = adevice->usb_card_id_;
+    qalDevices[1].address.device_num =adevice->usb_dev_num_;
 
     if (session && session->qal_voice_handle) {
         ret = qal_stream_set_device(session->qal_voice_handle, 2, qalDevices);
@@ -515,6 +528,7 @@ int AudioVoice::SetMicMute(bool mute) {
         }
     }
     return ret;
+
 }
 
 int AudioVoice::SetVoiceVolume(float volume) {
