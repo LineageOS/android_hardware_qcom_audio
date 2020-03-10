@@ -9880,9 +9880,10 @@ int adev_release_audio_patch(struct audio_hw_device *dev,
     }
 
     // Remove patch and reset patch handle in stream info
+    patch_type_t patch_type = p_info->patch_type;
     patch_map_remove_l(adev, handle);
-    if (p_info->patch_type == PATCH_PLAYBACK ||
-        p_info->patch_type == PATCH_CAPTURE) {
+    if (patch_type == PATCH_PLAYBACK ||
+        patch_type == PATCH_CAPTURE) {
         struct audio_stream_info *s_info =
             hashmapGet(adev->io_streams_map, (void *) (intptr_t) io_handle);
         if (s_info == NULL) {
@@ -9898,9 +9899,9 @@ int adev_release_audio_patch(struct audio_hw_device *dev,
     if (stream != NULL) {
         struct listnode devices;
         list_init(&devices);
-        if (p_info->patch_type == PATCH_PLAYBACK)
+        if (patch_type == PATCH_PLAYBACK)
             ret = route_output_stream((struct stream_out *) stream, &devices);
-        else if (p_info->patch_type == PATCH_CAPTURE)
+        else if (patch_type == PATCH_CAPTURE)
             ret = route_input_stream((struct stream_in *) stream, &devices, input_source);
     }
 
