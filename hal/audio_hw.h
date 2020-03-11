@@ -445,7 +445,6 @@ struct stream_out {
     error_log_t *error_log;
     bool pspd_coeff_sent;
 
-    char address[AUDIO_DEVICE_MAX_ADDRESS_LEN];
     int car_audio_stream;
 
     union {
@@ -767,7 +766,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                             audio_output_flags_t flags,
                             struct audio_config *config,
                             struct audio_stream_out **stream_out,
-                            const char *address __unused);
+                            const char *address);
 void adev_close_output_stream(struct audio_hw_device *dev __unused,
                               struct audio_stream_out *stream);
 
