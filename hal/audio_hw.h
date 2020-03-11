@@ -796,6 +796,21 @@ static inline bool is_loopback_input_device(audio_devices_t device) {
         return false;
 }
 
+static inline bool audio_is_virtual_input_source(audio_source_t source) {
+    bool result = false;
+    switch(source) {
+        case AUDIO_SOURCE_VOICE_UPLINK :
+        case AUDIO_SOURCE_VOICE_DOWNLINK :
+        case AUDIO_SOURCE_VOICE_CALL :
+        case AUDIO_SOURCE_FM_TUNER :
+            result = true;
+            break;
+        default:
+            break;
+    }
+    return result;
+}
+
 int route_output_stream(struct stream_out *stream,
                         struct listnode *devices);
 int route_input_stream(struct stream_in *stream,

@@ -9097,12 +9097,14 @@ static void platform_check_hdmi_backend_cfg(struct audio_device* adev,
           ", usecase = %d", __func__, bit_width,
           sample_rate, channels, usecase->id);
 
+    if (is_offload_usecase(usecase->id)) {
 #ifdef AUDIO_GKI_ENABLED
-    /* out->compr_config.codec->reserved[0] is for compr_passthr */
-    compr_passthr = usecase->stream.out->compr_config.codec->reserved[0];
+        /* out->compr_config.codec->reserved[0] is for compr_passthr */
+        compr_passthr = usecase->stream.out->compr_config.codec->reserved[0];
 #else
-    compr_passthr = usecase->stream.out->compr_config.codec->compr_passthr;
+        compr_passthr = usecase->stream.out->compr_config.codec->compr_passthr;
 #endif
+    }
 
     if (audio_extn_passthru_is_enabled() && audio_extn_passthru_is_active()
         && (compr_passthr != 0)) {
