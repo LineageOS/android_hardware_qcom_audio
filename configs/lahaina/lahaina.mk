@@ -102,7 +102,7 @@ AUDIO_HAL_TEST_APPS += hal_rec_test
 PRODUCT_PACKAGES += $(AUDIO_HARDWARE)
 PRODUCT_PACKAGES += $(AUDIO_WRAPPER)
 PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
-
+PRODUCT_PACKAGES += ftm_test_config_lahaina-qrd-snd-card
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
