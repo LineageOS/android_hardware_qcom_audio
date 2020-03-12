@@ -5905,7 +5905,7 @@ int platform_get_ext_disp_type_v2(void *platform, int controller, int stream)
     }
 
     disp = &my_data->ext_disp[controller][stream];
-    if (disp->type != EXT_DISPLAY_TYPE_NONE) {
+    if (disp->type > EXT_DISPLAY_TYPE_NONE) {
          ALOGD("%s: Returning cached ext disp type:%s",
                __func__, (disp->type == EXT_DISPLAY_TYPE_DP) ? "DisplayPort" : "HDMI");
          return disp->type;
