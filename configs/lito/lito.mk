@@ -405,6 +405,10 @@ persist.vendor.bt.aac_frm_ctl.enabled=true
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.aac_frm_ctl.enabled=true
 
+#enable VBR frame ctl
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.aac_vbr_frm_ctl.enabled=true
+
 #add dynamic feature flags here
 ifeq ($(GENERIC_ODM_IMAGE),true)
 # Generic ODM varient related
