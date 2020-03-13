@@ -4199,7 +4199,8 @@ int platform_get_ext_disp_type(void *platform)
     return disp_type;
 }
 
-snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *out)
+snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *out,
+                                            usecase_type_t uc_type __unused)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
@@ -4672,7 +4673,8 @@ static snd_device_t get_snd_device_for_voice_comm(struct platform_data *my_data,
 
 snd_device_t platform_get_input_snd_device(void *platform,
                                            struct stream_in *in,
-                                           audio_devices_t out_device)
+                                           audio_devices_t out_device,
+                                           usecase_type_t uc_type __unused)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
     struct audio_device *adev = my_data->adev;
@@ -8706,4 +8708,8 @@ int platform_get_display_port_ctl_index(int controller __unused,
                                         int stream __unused)
 {
     return -EINVAL;
+}
+
+bool platform_is_call_proxy_snd_device(snd_device_t snd_device __unused) {
+    return false;
 }
