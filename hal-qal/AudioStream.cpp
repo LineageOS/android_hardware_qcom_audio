@@ -1106,6 +1106,7 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     qal_device_id_t * deviceId;
     struct qal_device* deviceIdConfigs;
     int err =  -EINVAL;
+    int controller = -1, stream = -1;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     ALOGD("%s: enter ", __func__);
@@ -1123,6 +1124,13 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
         }
     }
 #endif
+
+    err = AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
+    if ( err >= 0) {
+        adevice->dp_controller = controller;
+        adevice->dp_stream = stream;
+        ALOGE("%s: plugin device cont %d stream %d",__func__, controller, stream);
+    }
 
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));

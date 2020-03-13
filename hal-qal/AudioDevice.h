@@ -89,6 +89,8 @@ public:
             qal_device_id_t* qal_device_id);
     int                       usb_card_id_;
     int                       usb_dev_num_;
+    int   dp_controller;
+    int   dp_stream;
 protected:
     AudioDevice(){
     }

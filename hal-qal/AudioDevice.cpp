@@ -648,7 +648,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             int controller = -1, stream = -1;
             AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
             param_device_connection.device_config.dp_config.controller = controller;
+            dp_controller = controller;
             param_device_connection.device_config.dp_config.stream = stream;
+            dp_stream = stream;
             ALOGI("%s: plugin device cont %d stream %d", __func__, controller, stream);
         }
 
@@ -898,6 +900,7 @@ int AudioDevice::GetQalDeviceIds(const audio_devices_t hal_device_id,
                                  qal_device_id_t* qal_device_id) {
     int device_count_allocated = popcount(hal_device_id & ~AUDIO_DEVICE_BIT_IN);
     int device_count_used = 0;
+
     std::map<audio_devices_t, qal_device_id_t>::iterator it = android_device_map_.begin();
 
     if (!qal_device_id) {
@@ -923,7 +926,17 @@ int AudioDevice::GetQalDeviceIds(const audio_devices_t hal_device_id,
             ((hal_device_id & AUDIO_DEVICE_BIT_IN) == (it->first & AUDIO_DEVICE_BIT_IN))) {
             ALOGD("%s: haldeviceId: %x and QAL Device ID %d",
                   __func__, it->first, it->second);
-            qal_device_id[device_count_used] = it->second;
+            if ( (it->second == QAL_DEVICE_OUT_AUX_DIGITAL) ||
+                 (it->second == QAL_DEVICE_OUT_HDMI) ) {
+               ALOGE("%s: dp_controller: %d dp_stream: %d", __func__, dp_controller, dp_stream);
+               if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
+                  qal_device_id[device_count_used] = QAL_DEVICE_OUT_AUX_DIGITAL_1;
+               } else {
+                  qal_device_id[device_count_used] = it->second;
+               }
+            } else {
+               qal_device_id[device_count_used] = it->second;
+            }
             device_count_used = (device_count_used + 1);
         }
         it = std::next(it, 1);
