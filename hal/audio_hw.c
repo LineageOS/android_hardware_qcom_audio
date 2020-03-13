@@ -1303,12 +1303,13 @@ int enable_snd_device(struct audio_device *adev,
             goto err;
         }
 
-        if (((SND_DEVICE_OUT_BT_SCO_SWB == snd_device) ||
-             (SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC == snd_device) ||
-             (SND_DEVICE_IN_BT_SCO_MIC_SWB == snd_device)) &&
-            (audio_extn_sco_start_configuration() < 0)) {
-            ALOGE(" fail to configure sco control path ");
-            goto err;
+        if ((SND_DEVICE_OUT_BT_SCO_SWB == snd_device) ||
+            (SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC == snd_device) ||
+            (SND_DEVICE_IN_BT_SCO_MIC_SWB == snd_device)) {
+            if (!adev->bt_sco_on || (audio_extn_sco_start_configuration() < 0)) {
+                ALOGE(" fail to configure sco control path ");
+                goto err;
+            }
         }
 
         configure_btsco_sample_rate(snd_device);
