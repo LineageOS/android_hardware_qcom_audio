@@ -527,6 +527,10 @@ static void update_hardware_info_kona(
                  sizeof("bengal-idp-snd-card"))) {
         strlcpy(hw_info->name, "bengal", sizeof(hw_info->name));
         hw_info->is_stereo_spkr = false;
+    } else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
+                 sizeof("bengal-scubaidp-snd-card"))) {
+        strlcpy(hw_info->name, "bengal", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else if (!strncmp(snd_card_name, "kona-mtp-snd-card",
                  sizeof("kona-mtp-snd-card"))) {
         strlcpy(hw_info->name, "kona", sizeof(hw_info->name));
