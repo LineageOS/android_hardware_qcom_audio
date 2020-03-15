@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -337,6 +337,7 @@ enum {
 };
 #define INPUT_SAMPLING_RATE_DSD64       2822400
 #define INPUT_SAMPLING_RATE_DSD128      5644800
+#define INPUT_SAMPLING_RATE_11025       11025
 #define DEFAULT_OUTPUT_SAMPLING_RATE    48000
 #define OUTPUT_SAMPLING_RATE_44100      44100
 #define OUTPUT_SAMPLING_RATE_DSD64       176400
