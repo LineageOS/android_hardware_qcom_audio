@@ -910,13 +910,13 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
         case USECASE_AUDIO_HFP_SCO_WB:
             audio_extn_btsco_get_sample_rate(usecase->out_snd_device,
                                              &usecase->out_app_type_cfg.sample_rate);
-            usecase->in_app_type_cfg.sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+            usecase->in_app_type_cfg.sample_rate = usecase->out_app_type_cfg.sample_rate;
             break;
         case USECASE_AUDIO_HFP_SCO_DOWNLINK:
         case USECASE_AUDIO_HFP_SCO_WB_DOWNLINK:
             audio_extn_btsco_get_sample_rate(usecase->in_snd_device,
                                              &usecase->in_app_type_cfg.sample_rate);
-            usecase->out_app_type_cfg.sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+            usecase->out_app_type_cfg.sample_rate = usecase->in_app_type_cfg.sample_rate;
             break;
         default:
             ALOGE("%s: usecase id (%d) not supported, use default sample rate",
