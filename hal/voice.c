@@ -26,7 +26,7 @@
 #include <math.h>
 #include <log/log.h>
 #include <cutils/str_parms.h>
-
+#include <cutils/properties.h>
 #include "audio_hw.h"
 #include "voice.h"
 #include "voice_extn/voice_extn.h"
@@ -48,10 +48,27 @@ struct pcm_config pcm_config_voice_call = {
     .format = PCM_FORMAT_S16_LE,
 };
 
-#ifdef PLATFORM_AUTO
 struct pcm *voice_loopback_tx = NULL;
 struct pcm *voice_loopback_rx = NULL;
-#endif
+
+static bool voice_external_baseband_supported(struct audio_device *adev)
+{
+    /* If platform is apq8084 and baseband is MDM, load CSD Client specific
+     * symbols. Voice call is handled by MDM and apps processor talks to
+     * MDM through CSD Client
+     */
+    char * snd_card_name;
+    char baseband[100];
+    snd_card_name = strdup(mixer_get_name(adev->mixer));
+    property_get("ro.baseband", baseband, "");
+    if ((!strncmp("hana55", snd_card_name, sizeof("hana55"))) &&
+        ( !strncmp("mdm", baseband, (sizeof("mdm")-1)) ||
+          !strncmp("sdx", baseband, (sizeof("sdx")-1)))) {
+         return 1;
+    } else
+         return 0;
+}
+
 static struct voice_session *voice_get_session_from_use_case(struct audio_device *adev,
                               audio_usecase_t usecase_id)
 {
@@ -186,16 +203,16 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         session->pcm_tx = NULL;
     }
 
-#ifdef PLATFORM_AUTO
-    if(voice_loopback_rx) {
-        pcm_close(voice_loopback_rx);
-        voice_loopback_rx = NULL;
+    if (voice_external_baseband_supported(adev)) {
+        if(voice_loopback_rx) {
+           pcm_close(voice_loopback_rx);
+           voice_loopback_rx = NULL;
+       }
+       if(voice_loopback_tx) {
+          pcm_close(voice_loopback_tx);
+          voice_loopback_tx = NULL;
+       }
     }
-    if(voice_loopback_tx) {
-        pcm_close(voice_loopback_tx);
-        voice_loopback_tx = NULL;
-    }
-#endif
     /* 2. Get and set stream specific mixer controls */
     disable_audio_route(adev, uc_info);
 
@@ -215,9 +232,7 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     int ret = 0;
     struct audio_usecase *uc_info;
     int pcm_dev_rx_id, pcm_dev_tx_id;
-#ifdef PLATFORM_AUTO
     int pcm_dev_loopback_rx_id, pcm_dev_loopback_tx_id;
-#endif
     uint32_t sample_rate = 8000;
     struct voice_session *session = NULL;
     struct pcm_config voice_config = pcm_config_voice_call;
@@ -263,10 +278,11 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 
     select_devices(adev, usecase_id);
 
-#ifdef PLATFORM_AUTO
-    pcm_dev_loopback_rx_id = HOST_LESS_RX_ID;
-    pcm_dev_loopback_tx_id = HOST_LESS_TX_ID;
-#endif
+    if (voice_external_baseband_supported(adev)) {
+        pcm_dev_loopback_rx_id = HOST_LESS_RX_ID;
+        pcm_dev_loopback_tx_id = HOST_LESS_TX_ID;
+    }
+
     pcm_dev_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
     pcm_dev_tx_id = platform_get_pcm_device_id(uc_info->id, PCM_CAPTURE);
 
@@ -308,27 +324,27 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         goto error_start_voice;
     }
 
-#ifdef PLATFORM_AUTO
-    voice_loopback_rx = pcm_open(adev->snd_card,
+    if (voice_external_baseband_supported(adev)) {
+        voice_loopback_rx = pcm_open(adev->snd_card,
                                  pcm_dev_loopback_rx_id,
                                  PCM_OUT, &voice_config);
-    if (voice_loopback_rx < 0 || !pcm_is_ready(voice_loopback_rx)) {
-        ALOGE("%s: Either could not open pcm_dev_loopback_rx_id %d or %s",
-              __func__, pcm_dev_loopback_rx_id, pcm_get_error(voice_loopback_rx));
-        ret = -EIO;
-        goto error_start_voice;
-    }
+        if (voice_loopback_rx < 0 || !pcm_is_ready(voice_loopback_rx)) {
+            ALOGE("%s: Either could not open pcm_dev_loopback_rx_id %d or %s",
+                  __func__, pcm_dev_loopback_rx_id, pcm_get_error(voice_loopback_rx));
+            ret = -EIO;
+            goto error_start_voice;
+        }
 
-    voice_loopback_tx = pcm_open(adev->snd_card,
+        voice_loopback_tx = pcm_open(adev->snd_card,
                                  pcm_dev_loopback_tx_id,
                                  PCM_IN, &voice_config);
-    if (voice_loopback_tx < 0 || !pcm_is_ready(voice_loopback_tx)) {
-         ALOGE("%s: Either could not open pcm_dev_loopback_tx_id %d or %s",
-               __func__, pcm_dev_loopback_tx_id, pcm_get_error(voice_loopback_tx));
-         ret = -EIO;
-         goto error_start_voice;
+        if (voice_loopback_tx < 0 || !pcm_is_ready(voice_loopback_tx)) {
+                 ALOGE("%s: Either could not open pcm_dev_loopback_tx_id %d or %s",
+                   __func__, pcm_dev_loopback_tx_id, pcm_get_error(voice_loopback_tx));
+             ret = -EIO;
+             goto error_start_voice;
+        }
     }
-#endif
 
     if (adev->mic_break_enabled)
         platform_set_mic_break_det(adev->platform, true);
@@ -345,19 +361,19 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         goto error_start_voice;
     }
 
-#ifdef PLATFORM_AUTO
-    ret = pcm_start(voice_loopback_tx);
-    if (ret != 0) {
-        ALOGE("%s: %s", __func__, pcm_get_error(voice_loopback_tx));
-        goto error_start_voice;
-    }
+    if (voice_external_baseband_supported(adev)) {
+        ret = pcm_start(voice_loopback_tx);
+        if (ret != 0) {
+            ALOGE("%s: %s", __func__, pcm_get_error(voice_loopback_tx));
+            goto error_start_voice;
+        }
 
-    ret = pcm_start(voice_loopback_rx);
-    if (ret != 0) {
-        ALOGE("%s: %s", __func__, pcm_get_error(voice_loopback_rx));
-        goto error_start_voice;
+        ret = pcm_start(voice_loopback_rx);
+        if (ret != 0) {
+            ALOGE("%s: %s", __func__, pcm_get_error(voice_loopback_rx));
+            goto error_start_voice;
+        }
     }
-#endif
 
     /* Enable aanc only when no calls are active */
     if (!voice_is_call_state_active(adev))
@@ -766,7 +782,6 @@ int voice_set_parameters(struct audio_device *adev, struct str_parms *parms)
                 voice_update_devices_for_all_voice_usecases(adev);
         }
     }
-
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_INCALLMUSIC,
                             value, sizeof(value));
     if (err >= 0) {
@@ -823,5 +838,6 @@ void voice_update_devices_for_all_voice_usecases(struct audio_device *adev)
         }
     }
 }
+
 
 

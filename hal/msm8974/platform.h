@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -609,6 +609,8 @@ enum {
 #define QCHAT_CALL_PCM_DEVICE -1
 #define VOWLAN_CALL_PCM_DEVICE -1
 #else
+#define HOST_LESS_RX_ID 44
+#define HOST_LESS_TX_ID 45
 #define VOICE_CALL_PCM_DEVICE 2
 #define VOICE2_CALL_PCM_DEVICE 22
 #define VOLTE_CALL_PCM_DEVICE 14
@@ -616,9 +618,19 @@ enum {
 #define VOWLAN_CALL_PCM_DEVICE 36
 #endif
 
+#ifndef HOST_LESS_RX_ID
+#define HOST_LESS_RX_ID -1
+#endif
+#ifndef HOST_LESS_TX_ID
+#define HOST_LESS_TX_ID -1
+#endif
+
 #ifdef PLATFORM_MSM8996
 #define VOICEMMODE1_CALL_PCM_DEVICE 2
 #define VOICEMMODE2_CALL_PCM_DEVICE 22
+#elif PLATFORM_MSMNILE
+#define VOICEMMODE1_CALL_PCM_DEVICE 46
+#define VOICEMMODE2_CALL_PCM_DEVICE 46
 #else
 #define VOICEMMODE1_CALL_PCM_DEVICE 44
 #define VOICEMMODE2_CALL_PCM_DEVICE 45
