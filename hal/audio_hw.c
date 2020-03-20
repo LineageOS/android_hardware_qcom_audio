@@ -1393,12 +1393,13 @@ int enable_snd_device(struct audio_device *adev,
             goto err;
         }
 
-        if (((SND_DEVICE_OUT_BT_SCO_SWB == snd_device) ||
-             (SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC == snd_device) ||
-             (SND_DEVICE_IN_BT_SCO_MIC_SWB == snd_device)) &&
-            (audio_extn_sco_start_configuration() < 0)) {
-            ALOGE(" fail to configure sco control path ");
-            goto err;
+        if ((SND_DEVICE_OUT_BT_SCO_SWB == snd_device) ||
+            (SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC == snd_device) ||
+            (SND_DEVICE_IN_BT_SCO_MIC_SWB == snd_device)) {
+            if (!adev->bt_sco_on || (audio_extn_sco_start_configuration() < 0)) {
+                ALOGE(" fail to configure sco control path ");
+                goto err;
+            }
         }
 
         configure_btsco_sample_rate(snd_device);
@@ -3699,7 +3700,7 @@ int start_output_stream(struct stream_out *out)
         CARD_STATUS_OFFLINE == adev->card_status) {
         ALOGW("out->card_status or adev->card_status offline, try again");
         ret = -EIO;
-        goto error_config;
+        goto error_fatal;
     }
 
     //Update incall music usecase to reflect correct voice session
@@ -4037,12 +4038,13 @@ error_open:
     audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
     stop_output_stream(out);
-error_config:
+error_fatal:
     /*
      * sleep 50ms to allow sufficient time for kernel
      * drivers to recover incases like SSR.
      */
     usleep(50000);
+error_config:
     ATRACE_END();
     enable_gcov();
     return ret;
@@ -4722,6 +4724,18 @@ int route_output_stream(struct stream_out *out,
             goto error;
         }
         str_parms_destroy(parms);
+    }
+
+    // Workaround: If routing to an non existing hdmi device, fail gracefully
+    if (compare_device_type(&new_devices, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+        (platform_get_edid_info_v2(adev->platform,
+                                   out->extconn.cs.controller,
+                                   out->extconn.cs.stream) != 0)) {
+        ALOGW("out_set_parameters() ignoring rerouting to non existing HDMI/DP");
+        pthread_mutex_unlock(&adev->lock);
+        pthread_mutex_unlock(&out->lock);
+        ret = -ENOSYS;
+        goto error;
     }
 
     /*
@@ -6544,9 +6558,6 @@ static int in_standby(struct audio_stream *stream)
             in->pcm = NULL;
         }
 
-        if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION)
-            adev->enable_voicerx = false;
-
         if (do_stop)
             status = stop_input_stream(in);
 
@@ -7603,10 +7614,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             ret = -EINVAL;
             goto error_open;
         }
-        /* save car audio stream and address for bus device */
-        strlcpy(out->address, address, AUDIO_DEVICE_MAX_ADDRESS_LEN);
-        ALOGV("%s: address %s, car_audio_stream %x",
-            __func__, out->address, out->car_audio_stream);
+        ALOGV("%s: car_audio_stream %x", __func__, out->car_audio_stream);
     }
 
     /* Check for VOIP usecase */
@@ -9447,6 +9455,10 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
         adev->pcm_record_uc_state = 0;
     }
 
+    if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) {
+        adev->enable_voicerx = false;
+    }
+
     if (audio_extn_ssr_get_stream() == in) {
         audio_extn_ssr_deinit();
     }
@@ -10216,7 +10228,6 @@ static int adev_open(const hw_module_t *module, const char *name,
     list_init(&adev->active_inputs_list);
     list_init(&adev->active_outputs_list);
     list_init(&adev->audio_patch_record_list);
-    adev->audio_patch_index = 0;
     adev->io_streams_map = hashmapCreate(AUDIO_IO_PORTS_MAX, audio_extn_utils_hash_fn,
                                          audio_extn_utils_hash_eq);
     if (!adev->io_streams_map) {

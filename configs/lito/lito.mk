@@ -47,9 +47,7 @@ AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL := true
 AUDIO_FEATURE_ENABLED_A2DP_OFFLOAD := true
-ifeq ($(filter R% r%,$(TARGET_PLATFORM_VERSION)),)
 AUDIO_FEATURE_ENABLED_3D_AUDIO := true
-endif
 AUDIO_FEATURE_ENABLED_AHAL_EXT := true
 ifneq ($(GENERIC_ODM_IMAGE),true)
 AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
@@ -185,12 +183,14 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_platform_info_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_qrd.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_platform_info_lagoon_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_lagoon_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_platform_info_intcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_intcodec.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_cdp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_lagoonqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_lagoonqrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_cdp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_configs_stock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs_stock.xml \
@@ -406,6 +406,10 @@ persist.vendor.bt.aac_frm_ctl.enabled=true
 #enable AAC frame ctl for A2DP sinks
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.aac_frm_ctl.enabled=true
+
+#enable VBR frame ctl
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.aac_vbr_frm_ctl.enabled=true
 
 #add dynamic feature flags here
 ifeq ($(GENERIC_ODM_IMAGE),true)

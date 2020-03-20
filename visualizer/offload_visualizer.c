@@ -192,11 +192,6 @@ int thread_status;
 
 #define DSP_OUTPUT_LATENCY_MS 0 /* Fudge factor for latency after capture point in audio DSP */
 
-/* Retry for delay for mixer open */
-#define RETRY_NUMBER 10
-#define RETRY_US 500000
-
-#define MIXER_CARD 0
 #define SOUND_CARD 0
 
 #ifndef CAPTURE_DEVICE
@@ -471,12 +466,12 @@ void *capture_thread_loop(void *arg)
 
     pthread_mutex_lock(&lock);
 
-    mixer = mixer_open(MIXER_CARD);
-    while (mixer == NULL && retry_num < RETRY_NUMBER) {
-        usleep(RETRY_US);
-        mixer = mixer_open(MIXER_CARD);
-        retry_num++;
-    }
+    sound_card =
+        parse_pcm_device("AFE-PROXY TX", SND_CARD_NUM);
+    sound_card =
+        (sound_card == -1)? SOUND_CARD : sound_card;
+
+    mixer = mixer_open(sound_card);
     if (mixer == NULL) {
         pthread_mutex_unlock(&lock);
         return NULL;
@@ -490,10 +485,6 @@ void *capture_thread_loop(void *arg)
             if (!capture_enabled) {
                 ret = configure_proxy_capture(mixer, 1);
                 if (ret == 0) {
-                    sound_card =
-                       parse_pcm_device("AFE-PROXY TX", SND_CARD_NUM);
-                    sound_card =
-                       (sound_card == -1)? SOUND_CARD : sound_card;
                     capture_device =
                        parse_pcm_device("AFE-PROXY TX", DEVICE_ID);
                     capture_device =
