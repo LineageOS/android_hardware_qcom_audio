@@ -9197,10 +9197,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->stream.create_mmap_buffer = in_create_mmap_buffer;
         in->stream.get_mmap_position = in_get_mmap_position;
         ALOGV("%s: USECASE_AUDIO_RECORD_MMAP", __func__);
-    } else if (in->realtime) {
-        in->config = pcm_config_audio_capture_rt;
-        in->config.format = pcm_format_from_audio_format(config->format);
-        in->af_period_multiplier = af_period_multiplier;
     } else if (is_usb_dev && may_use_hifi_record) {
         in->usecase = USECASE_AUDIO_RECORD_HIFI;
         in->config = pcm_config_audio_capture;
