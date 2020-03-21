@@ -50,6 +50,8 @@ bool is_a2dp_in_device_type(struct listnode *devices);
 bool is_a2dp_out_device_type(struct listnode *devices);
 int clear_devices(struct listnode *devices);
 bool compare_device_type(struct listnode *devices, audio_devices_t device_type);
+bool compare_device_type_and_address(struct listnode *devices,
+                                     audio_devices_t type, const char* address);
 bool compare_devices_for_any_match(struct listnode *d1, struct listnode *d2);
 audio_devices_t get_device_types(struct listnode *devices);
 bool is_single_device_type_equal(struct listnode *devices,
