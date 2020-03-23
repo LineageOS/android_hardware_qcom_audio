@@ -3665,7 +3665,7 @@ int audio_extn_set_device_cfg_params(struct audio_device *adev,
     /* Create an out stream to get snd device from audio device */
     reassign_device_list(&out.device_list, device_cfg_params->device, "");
     out.sample_rate = device_cfg_params->sample_rate;
-    snd_device = platform_get_output_snd_device(adev->platform, &out);
+    snd_device = platform_get_output_snd_device(adev->platform, &out, USECASE_TYPE_MAX);
     backend_idx = platform_get_backend_index(snd_device);
 
     ALOGV("%s:: device %d sample_rate %d snd_device %d backend_idx %d",

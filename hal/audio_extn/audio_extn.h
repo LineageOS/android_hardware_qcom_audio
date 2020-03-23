@@ -613,7 +613,8 @@ enum {
 typedef bool (*fp_platform_is_edid_supported_format_t)(void*, int);
 typedef int (*fp_platform_set_device_params_t)(struct stream_out*, int, int);
 typedef int (*fp_platform_edid_get_max_channels_t)(void*);
-typedef snd_device_t (*fp_platform_get_output_snd_device_t)(void*, struct stream_out*);
+typedef snd_device_t (*fp_platform_get_output_snd_device_t)(void*, struct stream_out*,
+                                                            usecase_type_t);
 typedef int (*fp_platform_get_codec_backend_cfg_t)(struct audio_device*,
                                                 snd_device_t, struct audio_backend_cfg*);
 typedef bool (*fp_platform_is_edid_supported_sample_rate_t)(void*, int);

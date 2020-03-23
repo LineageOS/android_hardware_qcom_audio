@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -363,8 +363,7 @@ static int update_call_states(struct audio_device *adev,
          * occured, otherwise voice calls will be started unintendedly on
          * speaker.
          */
-        if (is_call_active ||
-                (adev->voice.in_call && adev->mode == AUDIO_MODE_IN_CALL)) {
+        if (is_call_active || voice_is_in_call(adev)) {
             /* Device routing is not triggered for voice calls on the subsequent
              * subs, Hence update the call states if voice call is already
              * active on other sub.

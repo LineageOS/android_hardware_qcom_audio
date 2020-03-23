@@ -1810,7 +1810,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                                                            usecase->out_snd_device,
                                                            platform_get_input_snd_device(
                                                                adev->platform, NULL,
-                                                               &uc_info->device_list));
+                                                               &uc_info->device_list,
+                                                               usecase->type));
                     enable_audio_route(adev, usecase);
                     if (usecase->stream.out && usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
                         out_set_voip_volume(&usecase->stream.out->stream,
@@ -1863,9 +1864,12 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
         /*
          * TODO: Enhance below condition to handle BT sco/USB multi recording
          */
-        if (usecase->type != PCM_PLAYBACK &&
-                usecase != uc_info &&
-                (usecase->in_snd_device != snd_device || force_routing) &&
+
+        bool capture_uc_needs_routing = usecase->type != PCM_PLAYBACK && (usecase != uc_info &&
+                                       (usecase->in_snd_device != snd_device || force_routing));
+        bool call_proxy_snd_device = platform_is_call_proxy_snd_device(snd_device) ||
+                                platform_is_call_proxy_snd_device(usecase->in_snd_device);
+        if (capture_uc_needs_routing && !call_proxy_snd_device &&
                 ((backend_check_cond &&
                  (is_codec_backend_in_device_type(&usecase->device_list) ||
                   (usecase->type == VOIP_CALL))) ||
@@ -1875,7 +1879,7 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
                  platform_check_backends_match(snd_device,\
                                               usecase->in_snd_device))) &&
                 (usecase->id != USECASE_AUDIO_SPKR_CALIB_TX)) {
-            ALOGV("%s: Usecase (%s) is active on (%s) - disabling ..",
+            ALOGD("%s: Usecase (%s) is active on (%s) - disabling ..",
                   __func__, use_case_table[usecase->id],
                   platform_get_snd_device_name(usecase->in_snd_device));
             disable_audio_route(adev, usecase);
@@ -1912,10 +1916,15 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
                 usecase->in_snd_device = snd_device;
                 if (usecase->type != VOICE_CALL) {
                     /* Update voc calibration before enabling VoIP route */
-                    if (usecase->type == VOIP_CALL)
+                    if (usecase->type == VOIP_CALL) {
+                        snd_device_t voip_snd_device;
+                        voip_snd_device = platform_get_output_snd_device(adev->platform,
+                                                                         uc_info->stream.out,
+                                                                         usecase->type);
                         status = platform_switch_voice_call_device_post(adev->platform,
-                                                                        platform_get_output_snd_device(adev->platform, uc_info->stream.out),
+                                                                        voip_snd_device,
                                                                         usecase->in_snd_device);
+                    }
                     enable_audio_route(adev, usecase);
                 }
             }
@@ -2586,10 +2595,11 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                                      uc_id);
         } else {
             out_snd_device = platform_get_output_snd_device(adev->platform,
-                                                            usecase->stream.out);
+                                                            usecase->stream.out, usecase->type);
             in_snd_device = platform_get_input_snd_device(adev->platform,
                                                           NULL,
-                                                          &usecase->stream.out->device_list);
+                                                          &usecase->stream.out->device_list,
+                                                          usecase->type);
         }
         assign_devices(&usecase->device_list, &usecase->stream.out->device_list);
     } else if (usecase->type == TRANSCODE_LOOPBACK_RX) {
@@ -2601,8 +2611,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         stream_out.sample_rate = usecase->stream.inout->out_config.sample_rate;
         stream_out.format = usecase->stream.inout->out_config.format;
         stream_out.channel_mask = usecase->stream.inout->out_config.channel_mask;
-        out_snd_device = platform_get_output_snd_device(adev->platform,
-                                                        &stream_out);
+        out_snd_device = platform_get_output_snd_device(adev->platform, &stream_out, usecase->type);
         assign_devices(&usecase->device_list,
                        &usecase->stream.inout->out_config.device_list);
     } else if (usecase->type == TRANSCODE_LOOPBACK_TX ) {
@@ -2610,7 +2619,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             ALOGE("%s: stream.inout is NULL", __func__);
             return -EINVAL;
         }
-        in_snd_device = platform_get_input_snd_device(adev->platform, NULL, NULL);
+        in_snd_device = platform_get_input_snd_device(adev->platform, NULL, NULL, usecase->type);
         assign_devices(&usecase->device_list,
                        &usecase->stream.inout->in_config.device_list);
     } else {
@@ -2647,7 +2656,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                    voip_usecase->out_snd_device,
                                                    platform_get_output_snd_device(
                                                        adev->platform,
-                                                       usecase->stream.out));
+                                                       usecase->stream.out, usecase->type));
             }
             if ((voip_usecase) && (is_codec_backend_out_device_type(&voip_usecase->device_list) &&
                 (is_codec_backend_out_device_type(&usecase->device_list) ||
@@ -2679,7 +2688,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                     out_snd_device = audio_extn_auto_hal_get_output_snd_device(adev, uc_id);
                 else
                     out_snd_device = platform_get_output_snd_device(adev->platform,
-                                                                    usecase->stream.out);
+                                                                    usecase->stream.out,
+                                                                    usecase->type);
                 voip_usecase = get_usecase_from_list(adev, USECASE_AUDIO_PLAYBACK_VOIP);
 
                 if (voip_usecase)
@@ -2730,7 +2740,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
                 in_snd_device = platform_get_input_snd_device(adev->platform,
                                                               priority_in,
-                                                              &out_devices);
+                                                              &out_devices,
+                                                              usecase->type);
             }
         }
     }
@@ -2796,12 +2807,12 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
          (usecase->type == VOIP_CALL)) &&
         (usecase->out_snd_device != SND_DEVICE_NONE)) {
         /* Disable sidetone only if voice/voip call already exists */
-        if (voice_is_call_state_active(adev) ||
+        if (voice_is_call_state_active_in_call(adev) ||
             voice_extn_compress_voip_is_started(adev))
             voice_set_sidetone(adev, usecase->out_snd_device, false);
 
         /* Disable aanc only if voice call exists */
-        if (voice_is_call_state_active(adev))
+        if (voice_is_call_state_active_in_call(adev))
             voice_check_and_update_aanc_path(adev, usecase->out_snd_device, false);
     }
 
@@ -2899,11 +2910,11 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
         /* Enable aanc only if voice call exists */
-        if (voice_is_call_state_active(adev))
+        if (voice_is_call_state_active_in_call(adev))
             voice_check_and_update_aanc_path(adev, out_snd_device, true);
 
         /* Enable sidetone only if other voice/voip call already exists */
-        if (voice_is_call_state_active(adev) ||
+        if (voice_is_call_state_active_in_call(adev) ||
             voice_extn_compress_voip_is_started(adev))
             voice_set_sidetone(adev, out_snd_device, true);
     }
@@ -8816,9 +8827,13 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 
     pthread_mutex_lock(&adev->lock);
     if (adev->mode != mode) {
-        ALOGD("%s: mode %d\n", __func__, mode);
+        ALOGD("%s: mode %d , prev_mode %d \n", __func__, mode , adev->mode);
+        adev->prev_mode = adev->mode; /* prev_mode is kept to handle voip concurrency*/
         adev->mode = mode;
-        if (voice_is_in_call(adev) &&
+        if( mode == AUDIO_MODE_CALL_SCREEN ){
+            adev->current_call_output = adev->primary_output;
+            voice_start_call(adev);
+        } else if (voice_is_in_call_or_call_screen(adev) &&
             (mode == AUDIO_MODE_NORMAL ||
              (mode == AUDIO_MODE_IN_COMMUNICATION && !voice_is_call_state_active(adev)))) {
             list_for_each(node, &adev->usecase_list) {

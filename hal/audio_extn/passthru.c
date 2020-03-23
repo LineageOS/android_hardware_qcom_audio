@@ -592,7 +592,7 @@ bool passthru_is_supported_backend_edid_cfg(struct audio_device *adev,
     snd_device_t out_snd_device = SND_DEVICE_NONE;
     int max_edid_channels = fp_platform_edid_get_max_channels(out->dev->platform);
 
-    out_snd_device = fp_platform_get_output_snd_device(adev->platform, out);
+    out_snd_device = fp_platform_get_output_snd_device(adev->platform, out, USECASE_TYPE_MAX);
 
     if (fp_platform_get_codec_backend_cfg(adev, out_snd_device, &backend_cfg)) {
         ALOGE("%s: ERROR: Unable to get current backend config!!!", __func__);
