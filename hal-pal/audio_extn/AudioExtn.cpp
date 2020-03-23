@@ -34,6 +34,23 @@
 #include "AudioCommon.h"
 #define AUDIO_OUTPUT_BIT_WIDTH ((config_->offload_info.bit_width == 32) ? 24:config_->offload_info.bit_width)
 
+#ifdef PAL_HIDL_ENABLED
+#include <hidl/HidlTransportSupport.h>
+#include <hidl/LegacySupport.h>
+
+#include <pal_server_wrapper.h>
+
+#include <vendor/qti/hardware/pal/1.0/IPAL.h>
+using vendor::qti::hardware::pal::V1_0::IPAL;
+using vendor::qti::hardware::pal::V1_0::implementation::PAL;
+using android::hardware::defaultPassthroughServiceImplementation;
+using android::sp;
+#endif
+
+using namespace android::hardware;
+using android::OK;
+
+
 static batt_listener_init_t batt_listener_init;
 static batt_listener_deinit_t batt_listener_deinit;
 static batt_prop_is_charging_t batt_prop_is_charging;
@@ -491,6 +508,29 @@ bool AudioExtn::audio_devices_empty(const std::set<audio_devices_t>& devs){
            || (devs.size() == 1 && *devs.begin() == AUDIO_DEVICE_NONE);
 }
 // END: DEVICE UTILS ===============================================================
+
+// START: PAL HIDL =================================================
+
+int AudioExtn::audio_extn_hidl_init() {
+
+#ifdef PAL_HIDL_ENABLED
+   /* register audio PAL HIDL */
+    sp<IPAL> service = new PAL();
+    ALOGE("Register PAL service");
+    /*
+     *We request for more threads as the same number of threads would be divided
+     *between PAL and audio HAL HIDL
+     */
+    configureRpcThreadpool(32, false /*callerWillJoin*/);
+    if(android::OK !=  service->registerAsService())
+        ALOGW("Could not register AHAL extension");
+#endif
+    /* to register other hidls */
+    return 0;
+}
+
+
+// END: PAL HIDL ===================================================
 
 //START: KPI_OPTIMIZE =============================================================================
 void AudioExtn::audio_extn_kpi_optimize_feature_init(bool is_feature_enabled)
