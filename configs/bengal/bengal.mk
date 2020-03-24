@@ -125,6 +125,9 @@ BOARD_VENDOR_KERNEL_MODULES += \
     $(KERNEL_MODULES_OUT)/audio_native.ko \
     $(KERNEL_MODULES_OUT)/audio_wcd937x.ko \
     $(KERNEL_MODULES_OUT)/audio_wcd937x_slave.ko \
+    $(KERNEL_MODULES_OUT)/audio_rouleur.ko \
+    $(KERNEL_MODULES_OUT)/audio_rouleur_slave.ko \
+    $(KERNEL_MODULES_OUT)/audio_pm2250_spmi.ko \
     $(KERNEL_MODULES_OUT)/audio_bolero_cdc.ko \
     $(KERNEL_MODULES_OUT)/audio_va_macro.ko \
     $(KERNEL_MODULES_OUT)/audio_rx_macro.ko \
