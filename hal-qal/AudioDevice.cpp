@@ -728,7 +728,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         else
             param_bt_sco.bt_sco_on = false;
 
-        ALOGE("%s: BTSCO on = %d", __func__, param_bt_sco.bt_sco_on);
+        ALOGI("%s: BTSCO on = %d", __func__, param_bt_sco.bt_sco_on);
         ret = qal_set_param(QAL_PARAM_ID_BT_SCO, (void *)&param_bt_sco,
                             sizeof(qal_param_btsco_t));
     }
@@ -741,7 +741,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         else
             param_bt_sco.bt_wb_speech_enabled = false;
 
-        ALOGE("%s: BTSCO WB mode = %d", __func__, param_bt_sco.bt_wb_speech_enabled);
+        ALOGI("%s: BTSCO WB mode = %d", __func__, param_bt_sco.bt_wb_speech_enabled);
         ret = qal_set_param(QAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
                             sizeof(qal_param_btsco_t));
      }
@@ -751,7 +751,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         qal_param_bta2dp_t param_bt_a2dp;
         param_bt_a2dp.reconfigured = true;
 
-        ALOGE("%s: BT A2DP Reconfig command received", __func__);
+        ALOGI("%s: BT A2DP Reconfig command received", __func__);
         ret = qal_set_param(QAL_PARAM_ID_BT_A2DP_RECONFIG, (void *)&param_bt_a2dp,
                             sizeof(qal_param_bta2dp_t));
     }
@@ -765,8 +765,21 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         else
             param_bt_a2dp.a2dp_suspended = false;
 
-        ALOGE("%s: BT A2DP Suspended = %s, command received", __func__, value);
+        ALOGI("%s: BT A2DP Suspended = %s, command received", __func__, value);
         ret = qal_set_param(QAL_PARAM_ID_BT_A2DP_SUSPENDED, (void *)&param_bt_a2dp,
+                            sizeof(qal_param_bta2dp_t));
+    }
+
+    ret = str_parms_get_str(parms, "TwsChannelConfig", value, sizeof(value));
+    if (ret >= 0) {
+        qal_param_bta2dp_t param_bt_a2dp;
+
+        ALOGI("Setting tws channel mode to %s", value);
+        if (!(strncmp(value, "mono", strlen(value))))
+           param_bt_a2dp.is_tws_mono_mode_on = true;
+        else if (!(strncmp(value,"dual-mono",strlen(value))))
+            param_bt_a2dp.is_tws_mono_mode_on = false;
+        ret = qal_set_param(QAL_PARAM_ID_BT_A2DP_TWS_CONFIG, (void *)&param_bt_a2dp,
                             sizeof(qal_param_bta2dp_t));
     }
 
