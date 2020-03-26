@@ -783,6 +783,16 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                             sizeof(qal_param_bta2dp_t));
     }
 
+    ret = str_parms_get_str(parms, "bt_swb", value, sizeof(value));
+    if (ret >= 0) {
+        qal_param_btsco_t param_bt_sco;
+
+        param_bt_sco.bt_swb_speech_mode = val;
+        ALOGI("%s: BTSCO SWB mode = 0x%x", __func__, val);
+        ret = qal_set_param(QAL_PARAM_ID_BT_SCO_SWB, (void *)&param_bt_sco,
+                            sizeof(qal_param_btsco_t));
+    }
+
     str_parms_destroy(parms);
 
     ALOGD("%s: exit: %s", __func__, kvpairs);
