@@ -1904,13 +1904,14 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
         if ((mAndroidInDevices != val) && (val != 0) && audio_is_input_device(val)) {
             //re-allocate mQalOutDevice and mQalOutDeviceIds
             if (popcount(val & ~AUDIO_DEVICE_BIT_IN) != mNoOfInDevices) {
-                deviceId = (qal_device_id_t*) realloc(mQalInDeviceIds, popcount(val & ~AUDIO_DEVICE_BIT_IN));
-                deviceIdConfigs = (struct qal_device*) realloc(mQalInDevice, noQalDevices);
+                deviceId = (qal_device_id_t*) realloc(mQalInDeviceIds, popcount(val & ~AUDIO_DEVICE_BIT_IN) * sizeof(qal_device_id_t));
+                deviceIdConfigs = (struct qal_device*) realloc(mQalInDevice, popcount(val & ~AUDIO_DEVICE_BIT_IN) * sizeof(struct qal_device));
                 if (!deviceId || !deviceIdConfigs) {
                     ret = -ENOMEM;
                     goto exit;
                 }
                 mQalInDeviceIds = deviceId;
+                mQalInDevice = deviceIdConfigs;
             }
 
             noQalDevices = getQalDeviceIds(val, mQalInDeviceIds);
@@ -1934,7 +1935,7 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
                     mQalInDevice[i].address.device_num = adevice->usb_dev_num_;
                 }
             }
-
+            mAndroidInDevices = val;
             ret = qal_stream_set_device(qal_stream_handle_, mNoOfInDevices, mQalInDevice);
         }
     }
@@ -1953,6 +1954,7 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
    }
 #endif
 exit:
+   ALOGE("%s: exit %d", __func__, ret);
    return ret;
 }
 
