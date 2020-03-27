@@ -2174,7 +2174,7 @@ int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_s
 ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     int ret = 0;
     int retry_count = MAX_READ_RETRY_COUNT;
-    size_t size = 0;
+    ssize_t size = 0;
     struct qal_buffer qalBuffer;
     uint32_t local_bytes_read = 0;
     qalBuffer.buffer = (void*)buffer;
@@ -2191,6 +2191,9 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
         while (retry_count--) {
             size = qal_stream_read(qal_stream_handle_, &qalBuffer);
             if (size < 0) {
+                memset(qalBuffer.buffer, 0, qalBuffer.size);
+                local_bytes_read = qalBuffer.size;
+                total_bytes_read_ += local_bytes_read;
                 ALOGE("%s: error, failed to read data from QAL", __func__);
                 goto exit;
             } else if (size == 0) {
