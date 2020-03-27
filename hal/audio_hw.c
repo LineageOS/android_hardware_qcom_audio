@@ -3054,6 +3054,9 @@ int start_input_stream(struct stream_in *in)
     else
         ALOGV("%s: usecase(%d)", __func__, in->usecase);
 
+    if (audio_extn_cin_attached_usecase(in))
+        audio_extn_cin_acquire_usecase(in);
+
     if (get_usecase_from_list(adev, in->usecase) != NULL) {
         ALOGE("%s: use case assigned already in use, stream(%p)usecase(%d: %s)",
             __func__, &in->stream, in->usecase, use_case_table[in->usecase]);
@@ -3095,7 +3098,7 @@ int start_input_stream(struct stream_in *in)
 
     android_atomic_acquire_cas(true, false, &(in->capture_stopped));
 
-    if (audio_extn_cin_attached_usecase(in->usecase)) {
+    if (audio_extn_cin_attached_usecase(in)) {
        ret = audio_extn_cin_open_input_stream(in);
        if (ret)
            goto error_open;
@@ -6482,7 +6485,7 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
         return voice_extn_compress_voip_in_get_buffer_size(in);
     else if(audio_extn_compr_cap_usecase_supported(in->usecase))
         return audio_extn_compr_cap_get_buffer_size(in->config.format);
-    else if(audio_extn_cin_attached_usecase(in->usecase))
+    else if(audio_extn_cin_attached_usecase(in))
         return audio_extn_cin_get_buffer_size(in);
 
     return in->config.period_size * in->af_period_multiplier *
@@ -6547,7 +6550,7 @@ static int in_standby(struct audio_stream *stream)
                 in->mmap_shared_memory_fd = -1;
             }
         } else {
-            if (audio_extn_cin_attached_usecase(in->usecase))
+            if (audio_extn_cin_attached_usecase(in))
                 audio_extn_cin_close_input_stream(in);
         }
 
@@ -6883,7 +6886,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         goto exit;
     bool use_mmap = is_mmap_usecase(in->usecase) || in->realtime;
 
-    if (audio_extn_cin_attached_usecase(in->usecase)) {
+    if (audio_extn_cin_attached_usecase(in)) {
         ret = audio_extn_cin_read(in, buffer, bytes, &bytes_read);
     } else if (in->pcm) {
         if (audio_extn_ssr_get_stream() == in) {
@@ -6944,7 +6947,7 @@ exit:
             pthread_mutex_unlock(&adev->lock);
             in->standby = true;
         }
-        if (!audio_extn_cin_attached_usecase(in->usecase)) {
+        if (!audio_extn_cin_attached_usecase(in)) {
             bytes_read = bytes;
             memset(buffer, 0, bytes);
         }
@@ -7461,6 +7464,12 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         devices = AUDIO_DEVICE_OUT_SPEAKER;
         ALOGW("%s: ignore set device to non existing USB card, use output device(%#x)",
               __func__, devices);
+        if (config->format == AUDIO_FORMAT_DEFAULT)
+            config->format = AUDIO_FORMAT_PCM_16_BIT;
+        if (config->sample_rate == 0)
+            config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        if (config->channel_mask == AUDIO_CHANNEL_NONE)
+            config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
     }
 
     *stream_out = NULL;
@@ -9471,7 +9480,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
             audio_extn_compr_cap_format_supported(in->config.format))
         audio_extn_compr_cap_deinit();
 
-    if (audio_extn_cin_attached_usecase(in->usecase))
+    if (audio_extn_cin_attached_usecase(in))
         audio_extn_cin_free_input_stream_resources(in);
 
     if (in->is_st_session) {
@@ -9881,9 +9890,10 @@ int adev_release_audio_patch(struct audio_hw_device *dev,
     }
 
     // Remove patch and reset patch handle in stream info
+    patch_type_t patch_type = p_info->patch_type;
     patch_map_remove_l(adev, handle);
-    if (p_info->patch_type == PATCH_PLAYBACK ||
-        p_info->patch_type == PATCH_CAPTURE) {
+    if (patch_type == PATCH_PLAYBACK ||
+        patch_type == PATCH_CAPTURE) {
         struct audio_stream_info *s_info =
             hashmapGet(adev->io_streams_map, (void *) (intptr_t) io_handle);
         if (s_info == NULL) {
@@ -9899,9 +9909,9 @@ int adev_release_audio_patch(struct audio_hw_device *dev,
     if (stream != NULL) {
         struct listnode devices;
         list_init(&devices);
-        if (p_info->patch_type == PATCH_PLAYBACK)
+        if (patch_type == PATCH_PLAYBACK)
             ret = route_output_stream((struct stream_out *) stream, &devices);
-        else if (p_info->patch_type == PATCH_CAPTURE)
+        else if (patch_type == PATCH_CAPTURE)
             ret = route_input_stream((struct stream_in *) stream, &devices, input_source);
     }
 

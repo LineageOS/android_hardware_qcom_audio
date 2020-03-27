@@ -131,6 +131,8 @@ BOARD_VENDOR_KERNEL_MODULES := \
     $(KERNEL_MODULES_OUT)/audio_mbhc.ko \
     $(KERNEL_MODULES_OUT)/audio_wcd938x.ko \
     $(KERNEL_MODULES_OUT)/audio_wcd938x_slave.ko \
+    $(KERNEL_MODULES_OUT)/audio_wcd937x.ko \
+    $(KERNEL_MODULES_OUT)/audio_wcd937x_slave.ko \
     $(KERNEL_MODULES_OUT)/audio_bolero_cdc.ko \
     $(KERNEL_MODULES_OUT)/audio_wsa_macro.ko \
     $(KERNEL_MODULES_OUT)/audio_va_macro.ko \
@@ -161,6 +163,8 @@ AUDIO_DLKM += audio_mbhc.ko
 AUDIO_DLKM += audio_native.ko
 AUDIO_DLKM += audio_wcd938x.ko
 AUDIO_DLKM += audio_wcd938x_slave.ko
+AUDIO_DLKM += audio_wcd937x.ko
+AUDIO_DLKM += audio_wcd937x_slave.ko
 AUDIO_DLKM += audio_bolero_cdc.ko
 AUDIO_DLKM += audio_wsa_macro.ko
 AUDIO_DLKM += audio_va_macro.ko
@@ -188,6 +192,7 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_cdp.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_lagoonqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_lagoonqrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_lagoonqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_lagoonqrd.xml \
