@@ -65,23 +65,27 @@
 #define PLATFORM_INFO_XML_PATH_SKUSH  "/etc/audio_platform_info_skush.xml"
 #define PLATFORM_INFO_XML_PATH_SKUW  "/etc/audio_platform_info_skuw.xml"
 #define PLATFORM_INFO_XML_PATH_QRD  "/etc/audio_platform_info_qrd.xml"
+#define PLATFORM_INFO_XML_PATH_LAGOON_QRD  "/etc/audio_platform_info_lagoon_qrd.xml"
 #define PLATFORM_INFO_XML_PATH "/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_AUXPCM "/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_I2S "/etc/mixer_paths_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_I2S "/etc/audio_platform_info_extcodec.xml"
 #define PLATFORM_INFO_XML_PATH_WSA  "/etc/audio_platform_info_wsa.xml"
 #define PLATFORM_INFO_XML_PATH_TDM  "/etc/audio_platform_info_tdm.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_IDP "/etc/audio_platform_info_scubaidp.xml"
 #else
 #define PLATFORM_INFO_XML_PATH_INTCODEC  "/vendor/etc/audio_platform_info_intcodec.xml"
 #define PLATFORM_INFO_XML_PATH_SKUSH "/vendor/etc/audio_platform_info_skush.xml"
 #define PLATFORM_INFO_XML_PATH_SKUW "/vendor/etc/audio_platform_info_skuw.xml"
 #define PLATFORM_INFO_XML_PATH_QRD "/vendor/etc/audio_platform_info_qrd.xml"
+#define PLATFORM_INFO_XML_PATH_LAGOON_QRD  "/vendor/etc/audio_platform_info_lagoon_qrd.xml"
 #define PLATFORM_INFO_XML_PATH "/vendor/etc/audio_platform_info.xml"
 #define MIXER_XML_PATH_AUXPCM "/vendor/etc/mixer_paths_auxpcm.xml"
 #define MIXER_XML_PATH_I2S "/vendor/etc/mixer_paths_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_I2S "/vendor/etc/audio_platform_info_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_WSA  "/vendor/etc/audio_platform_info_wsa.xml"
 #define PLATFORM_INFO_XML_PATH_TDM  "/vendor/etc/audio_platform_info_tdm.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_IDP "/vendor/etc/audio_platform_info_scubaidp.xml"
 #endif
 
 #include <linux/msm_audio.h>
@@ -312,6 +316,7 @@ struct platform_data {
     bool gsm_mode_enabled;
     bool is_slimbus_interface;
     bool is_internal_codec;
+    bool is_default_be_config;
     int mono_speaker;
     bool voice_speaker_stereo;
     /* Audio calibration related functions */
@@ -1710,14 +1715,25 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("atoll-qrd-snd-card")) ||
          !strncmp(snd_card_name, "bengal-idp-snd-card",
                    sizeof("bengal-idp-snd-card")) ||
+         !strncmp(snd_card_name, "bengal-scubaidp-snd-card",
+                   sizeof("bengal-scubaidp-snd-card")) ||
          !strncmp(snd_card_name, "bengal-qrd-snd-card",
                    sizeof("bengal-qrd-snd-card")) ||
          !strncmp(snd_card_name, "lito-lagoonmtp-snd-card",
-                   sizeof("lito-lagoonmtp-snd-card"))) {
+                   sizeof("lito-lagoonmtp-snd-card")) ||
+         !strncmp(snd_card_name, "lito-lagoonqrd-snd-card",
+                   sizeof("lito-lagoonqrd-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
      }
+
+    if (!strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
+        !strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
+        !strncmp(snd_card_name, "qcs605", strlen("qcs605")) ||
+        !strncmp(snd_card_name, "sdm439", strlen("sdm439"))) {
+        my_data->is_default_be_config = true;
+    }
 }
 
 static bool can_enable_mbdrc_on_device(snd_device_t snd_device)
@@ -1904,6 +1920,15 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
                     MIXER_PATH_MAX_LENGTH);
         else if (out_device & AUDIO_DEVICE_OUT_USB_HEADSET)
             strlcat(ec_ref_mixer_path, " usb-headphones",
+                    MIXER_PATH_MAX_LENGTH);
+        else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_BT_SCO_WB] > 0)
+            strlcat(ec_ref_mixer_path, " bt-sco-wb",
+                    MIXER_PATH_MAX_LENGTH);
+        else if (adev->snd_dev_ref_cnt[SND_DEVICE_OUT_BT_SCO_SWB] > 0)
+            strlcat(ec_ref_mixer_path, " bt-sco-swb",
+                    MIXER_PATH_MAX_LENGTH);
+        else if (out_device & AUDIO_DEVICE_OUT_ALL_SCO)
+            strlcat(ec_ref_mixer_path, " bt-sco",
                     MIXER_PATH_MAX_LENGTH);
 
         if (audio_route_apply_and_update_path(adev->audio_route,
@@ -3003,6 +3028,7 @@ void *platform_init(struct audio_device *adev)
 
     my_data->is_slimbus_interface = true;
     my_data->is_internal_codec = false;
+    my_data->is_default_be_config = false;
 
     my_data->hw_info = hw_info_init(snd_card_name);
     if (!my_data->hw_info) {
@@ -3199,12 +3225,18 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "lito-qrd-snd-card",
                sizeof("lito-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "lito-lagoonqrd-snd-card",
+               sizeof("lito-lagoonqrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_LAGOON_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "atoll-qrd-snd-card",
                sizeof("atoll-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "bengal-qrd-snd-card",
                sizeof("bengal-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
+               sizeof("bengal-scubaidp-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_IDP, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_WSA, my_data, PLATFORM);
@@ -3572,7 +3604,8 @@ acdb_init_fail:
             if (default_rx_backend)
                 free(default_rx_backend);
             default_rx_backend = strdup("WSA_CDC_DMA_RX_0");
-            if(!strncmp(snd_card_name, "bengal", strlen("bengal"))) {
+            if(!strncmp(snd_card_name, "bengal", strlen("bengal")) &&
+               strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba"))) {
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                         strdup("RX_CDC_DMA_RX_1 Format");
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
@@ -3580,6 +3613,9 @@ acdb_init_fail:
                 default_rx_backend = strdup("RX_CDC_DMA_RX_1");
                 my_data->is_multiple_sample_rate_combo_supported = false;
             }
+
+            if (!strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba")))
+                my_data->is_multiple_sample_rate_combo_supported = false;
         } else if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
                !strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
                !strncmp(snd_card_name, "qcs605", strlen("qcs605"))) {
@@ -9680,7 +9716,9 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
         bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
-    } else if (my_data->is_internal_codec && !audio_is_usb_in_device(snd_device)) {
+    } else if (my_data->is_internal_codec &&
+               my_data->is_default_be_config &&
+               !audio_is_usb_in_device(snd_device)) {
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
         if (in && in->bit_width == 24)
@@ -9710,6 +9748,11 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
                 if (channels < uc_channels)
                     channels = uc_channels;
             }
+        }
+        if ((sample_rate % INPUT_SAMPLING_RATE_11025 == 0) &&
+            (!audio_is_usb_in_device(snd_device))) {
+            ALOGV("%s:txbecf: afe: set sample rate to default Sample Rate(48k)",__func__);
+            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
     }
     if (backend_idx == USB_AUDIO_TX_BACKEND) {
