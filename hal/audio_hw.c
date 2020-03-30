@@ -10412,8 +10412,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     audio_device_ref_count++;
 
     int trial;
-    if ((property_get("vendor.audio_hal.period_size", value, NULL) > 0) ||
-        (property_get("audio_hal.period_size", value, NULL) > 0)) {
+    if (property_get("vendor.audio_hal.period_size", value, NULL) > 0) {
         trial = atoi(value);
         if (period_size_is_plausible_for_low_latency(trial)) {
             pcm_config_low_latency.period_size = trial;
@@ -10434,8 +10433,7 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     adev->camera_orientation = CAMERA_DEFAULT;
 
-    if ((property_get("vendor.audio_hal.period_multiplier",value,NULL) > 0) ||
-        (property_get("audio_hal.period_multiplier",value,NULL) > 0)) {
+    if (property_get("vendor.audio_hal.period_multiplier",value,NULL) > 0) {
         af_period_multiplier = atoi(value);
         if (af_period_multiplier < 0)
             af_period_multiplier = 2;
