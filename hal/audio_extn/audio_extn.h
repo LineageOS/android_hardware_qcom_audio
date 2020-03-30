@@ -613,7 +613,8 @@ enum {
 typedef bool (*fp_platform_is_edid_supported_format_t)(void*, int);
 typedef int (*fp_platform_set_device_params_t)(struct stream_out*, int, int);
 typedef int (*fp_platform_edid_get_max_channels_t)(void*);
-typedef snd_device_t (*fp_platform_get_output_snd_device_t)(void*, struct stream_out*);
+typedef snd_device_t (*fp_platform_get_output_snd_device_t)(void*, struct stream_out*,
+                                                            usecase_type_t);
 typedef int (*fp_platform_get_codec_backend_cfg_t)(struct audio_device*,
                                                 snd_device_t, struct audio_backend_cfg*);
 typedef bool (*fp_platform_is_edid_supported_sample_rate_t)(void*, int);
@@ -1093,8 +1094,9 @@ int audio_extn_gef_retrieve_audio_cal(void* adev, int acdb_dev_id, int acdb_devi
 
 // START: COMPRESS_INPUT_ENABLED ===============================
 bool audio_extn_cin_applicable_stream(struct stream_in *in);
-bool audio_extn_cin_attached_usecase(audio_usecase_t uc_id);
+bool audio_extn_cin_attached_usecase(struct stream_in *in);
 bool audio_extn_cin_format_supported(audio_format_t format);
+int audio_extn_cin_acquire_usecase(struct stream_in *in);
 size_t audio_extn_cin_get_buffer_size(struct stream_in *in);
 int audio_extn_cin_open_input_stream(struct stream_in *in);
 void audio_extn_cin_stop_input_stream(struct stream_in *in);

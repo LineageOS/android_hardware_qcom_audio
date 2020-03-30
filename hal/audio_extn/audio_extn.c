@@ -95,8 +95,9 @@ int keep_alive_set_parameters(struct audio_device *adev,
                                          struct str_parms *parms);
 
 bool cin_applicable_stream(struct stream_in *in);
-bool cin_attached_usecase(audio_usecase_t uc_id);
+bool cin_attached_usecase(struct stream_in *in);
 bool cin_format_supported(audio_format_t format);
+int cin_acquire_usecase(struct stream_in *in);
 size_t cin_get_buffer_size(struct stream_in *in);
 int cin_open_input_stream(struct stream_in *in);
 void cin_stop_input_stream(struct stream_in *in);
@@ -3664,7 +3665,7 @@ int audio_extn_set_device_cfg_params(struct audio_device *adev,
     /* Create an out stream to get snd device from audio device */
     reassign_device_list(&out.device_list, device_cfg_params->device, "");
     out.sample_rate = device_cfg_params->sample_rate;
-    snd_device = platform_get_output_snd_device(adev->platform, &out);
+    snd_device = platform_get_output_snd_device(adev->platform, &out, USECASE_TYPE_MAX);
     backend_idx = platform_get_backend_index(snd_device);
 
     ALOGV("%s:: device %d sample_rate %d snd_device %d backend_idx %d",
@@ -5161,13 +5162,17 @@ bool audio_extn_cin_applicable_stream(struct stream_in *in)
 {
     return (audio_extn_compress_in_enabled? cin_applicable_stream(in): false);
 }
-bool audio_extn_cin_attached_usecase(audio_usecase_t uc_id)
+bool audio_extn_cin_attached_usecase(struct stream_in *in)
 {
-    return (audio_extn_compress_in_enabled? cin_attached_usecase(uc_id): false);
+    return (audio_extn_compress_in_enabled? cin_attached_usecase(in): false);
 }
 bool audio_extn_cin_format_supported(audio_format_t format)
 {
     return (audio_extn_compress_in_enabled? cin_format_supported(format): false);
+}
+int audio_extn_cin_acquire_usecase(struct stream_in *in)
+{
+    return (audio_extn_compress_in_enabled? cin_acquire_usecase(in): 0);
 }
 size_t audio_extn_cin_get_buffer_size(struct stream_in *in)
 {

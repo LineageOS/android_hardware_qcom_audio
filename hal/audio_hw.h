@@ -612,6 +612,7 @@ struct audio_device {
     pthread_mutex_t cal_lock;
     struct mixer *mixer;
     audio_mode_t mode;
+    audio_mode_t prev_mode;
     audio_devices_t out_device;
     struct stream_out *primary_output;
     struct stream_out *voice_tx_output;

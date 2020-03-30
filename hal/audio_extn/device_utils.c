@@ -449,13 +449,14 @@ audio_devices_t get_device_types(struct listnode *devices)
 bool is_single_device_type_equal(struct listnode *devices,
                                  audio_devices_t type)
 {
-    struct listnode *node = devices;
+    struct listnode *node;
     struct audio_device_info *item = NULL;
 
     if (devices == NULL)
         return false;
 
     if (list_length(devices) == 1) {
+        node = devices->next;
         item = node_to_item(node, struct audio_device_info, list);
         if (item != NULL && (item->type == type))
             return true;
