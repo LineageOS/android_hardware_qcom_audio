@@ -2080,6 +2080,29 @@
         <ctl name="TX DMIC MUX2" value="DMIC5" />
     </path>
 
+    <path name="va-mic">
+         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+         <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
+         <ctl name="VA DMIC MUX0" value="DMIC4" />
+     </path>
+
+    <path name="dual-va-mic">
+         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+         <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
+         <ctl name="VA DMIC MUX0" value="DMIC4" />
+         <ctl name="VA_AIF1_CAP Mixer DEC1" value="1" />
+         <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
+         <ctl name="VA DMIC MUX1" value="DMIC3" />
+     </path>
+    <path name="headset-va-mic">
+         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+         <ctl name="VA DEC0 MUX" value="SWR_MIC" />
+         <ctl name="VA SMIC MUX0" value="ADC1" />
+         <ctl name="ADC2 Volume" value="62" />
+         <ctl name="ADC2_MIXER Switch" value="1" />
+         <ctl name="ADC2 MUX" value="INP2" />
+     </path>
+
     <path name="speaker">
         <ctl name="WSA_CDC_DMA_RX_0 Channels" value="Two" />
         <ctl name="WSA RX0 MUX" value="AIF1_PB" />
