@@ -2792,13 +2792,15 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                 a2dp.a2dp_source_suspended = true;
                 if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED)
                     goto param_handled;
-                list_for_each(node, &a2dp.adev->usecase_list) {
-                    uc_info = node_to_item(node, struct audio_usecase, list);
-                    if (uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
-                         (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
-                        pthread_mutex_unlock(&a2dp.adev->lock);
-                        fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
-                        pthread_mutex_lock(&a2dp.adev->lock);
+                if (a2dp.adev->usecase_list.next != NULL) {
+                    list_for_each(node, &a2dp.adev->usecase_list) {
+                        uc_info = node_to_item(node, struct audio_usecase, list);
+                        if (uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
+                             (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
+                            pthread_mutex_unlock(&a2dp.adev->lock);
+                            fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
+                            pthread_mutex_lock(&a2dp.adev->lock);
+                        }
                     }
                 }
                 if (!a2dp.swb_configured)
@@ -2833,13 +2835,15 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
                         }
                     }
                 }
-                list_for_each(node, &a2dp.adev->usecase_list) {
-                    uc_info = node_to_item(node, struct audio_usecase, list);
-                    if (uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
-                         (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
-                        pthread_mutex_unlock(&a2dp.adev->lock);
-                        fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
-                        pthread_mutex_lock(&a2dp.adev->lock);
+                if (a2dp.adev->usecase_list.next != NULL) {
+                    list_for_each(node, &a2dp.adev->usecase_list) {
+                        uc_info = node_to_item(node, struct audio_usecase, list);
+                        if (uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
+                             (uc_info->stream.out->devices & AUDIO_DEVICE_OUT_ALL_A2DP)) {
+                            pthread_mutex_unlock(&a2dp.adev->lock);
+                            fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
+                            pthread_mutex_lock(&a2dp.adev->lock);
+                        }
                     }
                 }
             }
