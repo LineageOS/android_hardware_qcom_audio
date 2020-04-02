@@ -767,7 +767,7 @@ static int voip_start_call(struct audio_device *adev,
               __func__, adev->snd_card, pcm_dev_tx_id);
         voip_data.pcm_tx = pcm_open(adev->snd_card,
                                     pcm_dev_tx_id,
-                                    PCM_IN, voip_config);
+                                    PCM_IN|PCM_MONOTONIC, voip_config);
         if (voip_data.pcm_tx && !pcm_is_ready(voip_data.pcm_tx)) {
             ALOGE("%s: %s", __func__, pcm_get_error(voip_data.pcm_tx));
             pcm_close(voip_data.pcm_tx);
