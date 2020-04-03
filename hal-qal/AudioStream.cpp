@@ -94,9 +94,6 @@ static qal_stream_type_t GetQalStreamType(audio_output_flags_t flags) {
 std::shared_ptr<AudioDevice> AudioDevice::adev_ = nullptr;
 std::shared_ptr<audio_hw_device_t> AudioDevice::device_ = nullptr;
 
-AudioDevice::~AudioDevice() {
-}
-
 static int32_t qal_callback(qal_stream_handle_t *stream_handle,
                             uint32_t event_id, uint32_t *event_data,
                             void *cookie)

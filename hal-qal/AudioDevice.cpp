@@ -55,6 +55,12 @@
 #include "audio_extn.h"
 #include "audio_hidl.h"
 
+AudioDevice::~AudioDevice() {
+    audio_extn_gef_deinit(adev_);
+    audio_extn_sound_trigger_deinit(adev_);
+    qal_deinit();
+}
+
 std::shared_ptr<AudioDevice> AudioDevice::GetInstance() {
     if (!adev_) {
         adev_ = std::shared_ptr<AudioDevice> (new AudioDevice());
