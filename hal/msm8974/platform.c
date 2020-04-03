@@ -73,6 +73,7 @@
 #define PLATFORM_INFO_XML_PATH_WSA  "/etc/audio_platform_info_wsa.xml"
 #define PLATFORM_INFO_XML_PATH_TDM  "/etc/audio_platform_info_tdm.xml"
 #define PLATFORM_INFO_XML_PATH_SCUBA_IDP "/etc/audio_platform_info_scubaidp.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_QRD "/etc/audio_platform_info_scubaqrd.xml"
 #else
 #define PLATFORM_INFO_XML_PATH_INTCODEC  "/vendor/etc/audio_platform_info_intcodec.xml"
 #define PLATFORM_INFO_XML_PATH_SKUSH "/vendor/etc/audio_platform_info_skush.xml"
@@ -86,6 +87,7 @@
 #define PLATFORM_INFO_XML_PATH_WSA  "/vendor/etc/audio_platform_info_wsa.xml"
 #define PLATFORM_INFO_XML_PATH_TDM  "/vendor/etc/audio_platform_info_tdm.xml"
 #define PLATFORM_INFO_XML_PATH_SCUBA_IDP "/vendor/etc/audio_platform_info_scubaidp.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_QRD "/vendor/etc/audio_platform_info_scubaqrd.xml"
 #endif
 
 #include <linux/msm_audio.h>
@@ -1717,6 +1719,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("bengal-idp-snd-card")) ||
          !strncmp(snd_card_name, "bengal-scubaidp-snd-card",
                    sizeof("bengal-scubaidp-snd-card")) ||
+         !strncmp(snd_card_name, "bengal-scubaqrd-snd-card",
+                   sizeof("bengal-scubaqrd-snd-card")) ||
          !strncmp(snd_card_name, "bengal-qrd-snd-card",
                    sizeof("bengal-qrd-snd-card")) ||
          !strncmp(snd_card_name, "lito-lagoonmtp-snd-card",
@@ -3237,6 +3241,9 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
                sizeof("bengal-scubaidp-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_IDP, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "bengal-scubaqrd-snd-card",
+               sizeof("bengal-scubaqrd-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_QRD, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_WSA, my_data, PLATFORM);
