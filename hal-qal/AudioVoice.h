@@ -49,6 +49,7 @@
 #define AUDIO_PARAMETER_KEY_CALL_STATE          "call_state"
 #define AUDIO_PARAMETER_KEY_DEVICE_MUTE         "device_mute"
 #define AUDIO_PARAMETER_KEY_DIRECTION           "direction"
+#define AUDIO_PARAMETER_KEY_VOLUME_BOOST        "volume_boost"
 
 /* TTY mode selection */
 #define AUDIO_PARAMETER_KEY_TTY_MODE "tty_mode"
@@ -72,6 +73,7 @@ public:
             uint32_t vsid;
             uint32_t tty_mode;
             qal_stream_handle_t*  qal_voice_handle;
+            bool volume_boost;
     };
 
     struct voice_t {

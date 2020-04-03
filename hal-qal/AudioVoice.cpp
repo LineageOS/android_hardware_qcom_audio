@@ -88,7 +88,6 @@ int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
             goto done;
         }
     }
-
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, c_value, sizeof(c_value));
     if (err >= 0) {
         str_parms_del(parms, AUDIO_PARAMETER_KEY_TTY_MODE);
@@ -109,6 +108,26 @@ int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
             voice_.session[i].tty_mode = params.tty_mode;
             if (IsCallActive(&voice_.session[i])) {
                 qal_stream_set_param(voice_.session[i].qal_voice_handle, QAL_PARAM_ID_TTY_MODE, &params);
+            }
+        }
+    }
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST, c_value, sizeof(c_value));
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST);
+        if (strcmp(c_value, "on") == 0)
+            params.volume_boost = true;
+        else if (strcmp(c_value, "off") == 0) {
+            params.volume_boost = false;
+        }
+        else {
+            ret = -EINVAL;
+            goto done;
+        }
+
+        for ( i = 0; i < max_voice_sessions_; i++) {
+            voice_.session[i].volume_boost = params.volume_boost;
+            if (IsCallActive(&voice_.session[i])) {
+                qal_stream_set_param(voice_.session[i].qal_voice_handle, QAL_PARAM_ID_VOLUME_BOOST, &params);
             }
         }
     }
@@ -340,6 +359,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     struct qal_device qalDevices[2];
     uint8_t channels = 0;
     struct qal_channel_info *out_ch_info = NULL, *in_ch_info = NULL;
+    qal_param_payload param_payload;
 
     channels = 1;
     in_ch_info = (struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*channels);
@@ -419,6 +439,11 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
                 ALOGE("%s Qal Stream close failed %x", __func__, ret);
             session->qal_voice_handle = NULL;
             ret = -EINVAL;
+        }
+        /*apply chached voice effects features*/
+        if (session->volume_boost) {
+            param_payload.volume_boost = session->volume_boost;
+            qal_stream_set_param(session->qal_voice_handle, QAL_PARAM_ID_VOLUME_BOOST, &param_payload);
         }
         else
             ALOGD("%s Qal Stream Start Success", __func__);
@@ -568,6 +593,7 @@ AudioVoice::AudioVoice() {
         voice_.session[i].vsid = VOICEMMODE1_VSID;
         voice_.session[i].qal_voice_handle = NULL;
         voice_.session[i].tty_mode = QAL_TTY_OFF;
+        voice_.session[i].volume_boost= false;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
@@ -585,6 +611,7 @@ AudioVoice::~AudioVoice() {
         voice_.session[i].state.new_ = CALL_INACTIVE;
         voice_.session[i].vsid = VOICEMMODE1_VSID;
         voice_.session[i].tty_mode = QAL_TTY_OFF;
+        voice_.session[i].volume_boost = false;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
