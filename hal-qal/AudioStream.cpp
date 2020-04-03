@@ -1177,6 +1177,11 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
             }
             mAndroidOutDevices = val;
             ret = qal_stream_set_device(qal_stream_handle_, mNoOfOutDevices, mQalOutDevice);
+            if (ret) {
+                audio_extn_gef_notify_device_config(mAndroidOutDevices, config_.channel_mask, config_.sample_rate);
+            } else {
+                ALOGE("%s: failed to set device. Error %d", __func__ ,ret);
+            }
         }
     }
     //TBD: check if its offload and check call the following
@@ -1780,6 +1785,8 @@ StreamOutPrimary::StreamOutPrimary(
 
     (void)FillHalFnPtrs();
     mInitialized = true;
+    audio_extn_gef_notify_device_config(devices, config_.channel_mask, config_.sample_rate);
+
 error:
     return;
 }
