@@ -1586,6 +1586,14 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
     }
 
     if (!stream_started_) {
+        /* set cached volume if any, dont return failure back up */
+        if (volume_) {
+            ret = qal_stream_set_volume(qal_stream_handle_, volume_);
+            if (ret) {
+                ALOGE("Qal Stream volume Error (%x)", ret);
+            }
+        }
+
         ret = qal_stream_start(qal_stream_handle_);
         if (ret) {
             ALOGE("%s:failed to start stream. ret=%d", __func__, ret);
@@ -1598,14 +1606,6 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
 
         if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
             ret = StartOffloadEffects(handle_, qal_stream_handle_);
-        }
-
-        /* set cached volume if any, dont return failure back up */
-        if (volume_) {
-            ret = qal_stream_set_volume(qal_stream_handle_, volume_);
-            if (ret) {
-                ALOGE("Qal Stream volume Error (%x)", ret);
-            }
         }
     }
 
