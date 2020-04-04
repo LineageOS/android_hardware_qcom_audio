@@ -42,9 +42,7 @@ AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL := true
 AUDIO_FEATURE_ENABLED_A2DP_OFFLOAD := true
-ifeq ($(filter R% r%,$(TARGET_PLATFORM_VERSION)),)
 AUDIO_FEATURE_ENABLED_3D_AUDIO := true
-endif
 AUDIO_FEATURE_ENABLED_AHAL_EXT := true
 AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
 DOLBY_ENABLE := false
@@ -227,19 +225,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.spv3.enable=true\
 persist.vendor.audio.avs.afe_api_version=2
 
-#
-#snapdragon value add features
-#
-PRODUCT_PROPERTY_OVERRIDES += \
-ro.qc.sdk.audio.ssr=false
-
-##fluencetype can be "fluence" or "fluencepro" or "none"
-PRODUCT_PROPERTY_OVERRIDES += \
-ro.qc.sdk.audio.fluencetype=none\
-persist.audio.fluence.voicecall=true\
-persist.audio.fluence.voicerec=false\
-persist.audio.fluence.speaker=true
-
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.tunnel.encode=false
@@ -331,14 +316,6 @@ vendor.audio.use.sw.ape.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
 
-#audio becoming noisy intent broadcast delay
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.sys.noisy.broadcast.delay=600
-
-#offload pausetime out duration to 3 secs to inline with other outputs
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.sys.offload.pstimeout.secs=3
-
 #Set AudioFlinger client heap size
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.af.client_heap_size_kbyte=7168
@@ -361,7 +338,7 @@ vendor.audio.volume.headset.gain.depcal=true
 
 #enable dualmic fluence for voice communication
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.audio.fluence.voicecomm=true
+persist.vendor.audio.fluence.voicecomm=true
 endif
 
 USE_XML_AUDIO_POLICY_CONF := 1

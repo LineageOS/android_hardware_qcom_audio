@@ -250,15 +250,19 @@ bool passthru_should_drop_data(struct stream_out * out)
      *stream has PCM format or
      *if a compress offload (DSP decode) session
      */
+
+    if(out->compr_config.codec != NULL) {
 #ifdef AUDIO_GKI_ENABLED
-    /* out->compr_config.codec->reserved[0] is for compr_passthr */
-    compr_passthr = out->compr_config.codec->reserved[0];
+        /* out->compr_config.codec->reserved[0] is for compr_passthr */
+        compr_passthr = out->compr_config.codec->reserved[0];
 #else
-    compr_passthr = out->compr_config.codec->compr_passthr;
+        compr_passthr = out->compr_config.codec->compr_passthr;
 #endif
+    }
+
     if (compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
         (((out->format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_PCM) ||
-        ((out->compr_config.codec != NULL) && (compr_passthr == LEGACY_PCM)))) {
+        (compr_passthr == LEGACY_PCM))) {
         if (android_atomic_acquire_load(&compress_passthru_active) > 0) {
             ALOGI("drop data as pass thru is active");
             return true;
@@ -484,14 +488,14 @@ void passthru_update_stream_configuration(
             ALOGV("%s:NO PASSTHROUGH", __func__);
             compr_passthr = LEGACY_PCM;
        }
+#ifdef AUDIO_GKI_ENABLED
+        /* out->compr_config.codec->reserved[0] is for compr_passthr */
+        out->compr_config.codec->reserved[0] = compr_passthr;
+#else
+        out->compr_config.codec->compr_passthr = compr_passthr;
+#endif
     }
 
-#ifdef AUDIO_GKI_ENABLED
-    /* out->compr_config.codec->reserved[0] is for compr_passthr */
-    out->compr_config.codec->reserved[0] = compr_passthr;
-#else
-    out->compr_config.codec->compr_passthr = compr_passthr;
-#endif
 }
 
 bool passthru_is_passthrough_stream(struct stream_out *out)
@@ -588,7 +592,7 @@ bool passthru_is_supported_backend_edid_cfg(struct audio_device *adev,
     snd_device_t out_snd_device = SND_DEVICE_NONE;
     int max_edid_channels = fp_platform_edid_get_max_channels(out->dev->platform);
 
-    out_snd_device = fp_platform_get_output_snd_device(adev->platform, out);
+    out_snd_device = fp_platform_get_output_snd_device(adev->platform, out, USECASE_TYPE_MAX);
 
     if (fp_platform_get_codec_backend_cfg(adev, out_snd_device, &backend_cfg)) {
         ALOGE("%s: ERROR: Unable to get current backend config!!!", __func__);

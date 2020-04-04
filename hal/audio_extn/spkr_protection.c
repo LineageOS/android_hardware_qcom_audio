@@ -62,6 +62,8 @@
 #define MIN_SPKR_TEMP_Q6 (-30 * (1 << 6))
 #define MAX_SPKR_TEMP_Q6 (80 * (1 << 6))
 #define VI_FEED_CHANNEL "VI_FEED_TX Channels"
+#define SPKR_LEFT_WSA_TEMP "SpkrLeft WSA Temp"
+#define SPKR_RIGHT_WSA_TEMP "SpkrRight WSA Temp"
 #define WSA8815_SPK1_NAME "wsatz.13"
 #define WSA8815_SPK2_NAME "wsatz.14"
 #define WCD_LEFT_BOOST_MAX_STATE "SPKR Left Boost Max State"
@@ -217,6 +219,9 @@ struct speaker_prot_session {
     struct timespec spkr_last_time_used;
     struct spkr_prot_r0t0 sp_r0t0_cal;
     bool wsa_found;
+    bool is_wsa_temp_mixer_ctl;
+    bool is_spkr1_avail;
+    bool is_spkr2_avail;
     int spkr_1_tzn;
     int spkr_2_tzn;
     bool trigger_cal;
@@ -344,11 +349,11 @@ FUNCTION get_tzn
 Utility function to match a sensor name with thermal zone id.
 
 ARGUMENTS
-	sensor_name - name of sensor to match
+    sensor_name - name of sensor to match
 
 RETURN VALUE
-	Thermal zone id on success,
-	-1 on failure.
+    Thermal zone id on success,
+    -1 on failure.
 ===========================================================================*/
 int get_tzn(const char *sensor_name)
 {
@@ -464,7 +469,7 @@ static bool is_speaker_in_use(unsigned long *sec)
 
 
 static int get_spkr_prot_cal(int cal_fd,
-				struct audio_cal_info_msm_spk_prot_status *status)
+                struct audio_cal_info_msm_spk_prot_status *status)
 {
     int ret = 0;
     struct audio_cal_fb_spk_prot_status    cal_data;
@@ -504,7 +509,7 @@ done:
 }
 
 static int set_spkr_prot_cal(int cal_fd,
-				struct audio_cal_info_spk_prot_cfg *protCfg)
+                struct audio_cal_info_spk_prot_cfg *protCfg)
 {
     int ret = 0;
     struct audio_cal_fb_spk_prot_cfg    cal_data;
@@ -572,6 +577,37 @@ static int set_spkr_prot_cal(int cal_fd,
     }
 done:
     return ret;
+}
+
+enum {
+    WSA_SPKR_LEFT = 0,
+    WSA_SPKR_RIGHT,
+};
+
+static int spkr_get_temp(struct audio_device *adev, int spkr_pos, int *temp)
+{
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name;
+
+    ALOGV("%s: entry", __func__);
+    if (spkr_pos == WSA_SPKR_LEFT)
+        mixer_ctl_name = SPKR_LEFT_WSA_TEMP;
+    else
+        mixer_ctl_name = SPKR_RIGHT_WSA_TEMP;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        goto error;
+    }
+    if (temp) {
+        *temp = mixer_ctl_get_value(ctl, 0);
+    }
+    return 0;
+
+error:
+     return -EINVAL;
 }
 
 static int vi_feed_get_channels(struct audio_device *adev)
@@ -1202,8 +1238,10 @@ static void* spkr_calibration_thread()
     ALOGV("%s: start calibration", __func__);
     while (!handle.thread_exit) {
         if (handle.wsa_found) {
-            spk_1_tzn = handle.spkr_1_tzn;
-            spk_2_tzn = handle.spkr_2_tzn;
+            if (!handle.is_wsa_temp_mixer_ctl) {
+                spk_1_tzn = handle.spkr_1_tzn;
+                spk_2_tzn = handle.spkr_2_tzn;
+            }
             goahead = false;
             pthread_mutex_lock(&adev->lock);
             if (is_speaker_in_use(&sec)) {
@@ -1228,74 +1266,102 @@ static void* spkr_calibration_thread()
                 continue;
            }
            if (goahead) {
-               if (spk_1_tzn >= 0) {
-                   const char *mixer_ctl_name = "SpkrLeft WSA T0 Init";
-                   snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_1_tzn);
-                   ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
-                   thermal_fd = -1;
+               if (handle.is_wsa_temp_mixer_ctl) {
+                   ret = spkr_get_temp(adev, WSA_SPKR_LEFT, &t0_spk_1);
+                   if (!ret) {
+                       if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
+                           t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
+                           pthread_mutex_unlock(&adev->lock);
+                           spkr_calibrate_wait();
+                           continue;
+                       }
+                       ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
+                       /*Convert temp into q6 format*/
+                       t0_spk_1 = (t0_spk_1 * (1 << 6));
+                   }
+                   ret = spkr_get_temp(adev, WSA_SPKR_RIGHT, &t0_spk_2);
+                   if (!ret) {
+                       if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
+                           t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
+                           pthread_mutex_unlock(&adev->lock);
+                           spkr_calibrate_wait();
+                           continue;
+                       }
+                       ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
+                       /*Convert temp into q6 format*/
+                       t0_spk_2 = (t0_spk_2 * (1 << 6));
+                   }
+               } else {
+                   if (spk_1_tzn >= 0) {
+                       const char *mixer_ctl_name = "SpkrLeft WSA T0 Init";
+                       snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_1_tzn);
+                       ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
+                       thermal_fd = -1;
 
-                   ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-                   if (ctl) {
-                       ALOGD("%s: Got ctl for mixer cmd %s",
-                                             __func__, mixer_ctl_name);
-                       mixer_ctl_set_value(ctl, 0, 1);
+                       ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+                       if (ctl) {
+                           ALOGD("%s: Got ctl for mixer cmd %s",
+                                 __func__, mixer_ctl_name);
+                            mixer_ctl_set_value(ctl, 0, 1);
+                        }
+                       thermal_fd = open(wsa_path, O_RDONLY);
+                       if (thermal_fd > 0) {
+                           if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
+                               t0_spk_1 = atoi(buf);
+                           else
+                               ALOGE("%s: read fail for %s err:%d\n",
+                                     __func__, wsa_path, ret);
+                            close(thermal_fd);
+                       } else {
+                           ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                       }
+                       if (ctl) {
+                           mixer_ctl_set_value(ctl, 0, 0);
+                       }
+                       if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
+                           t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
+                           pthread_mutex_unlock(&adev->lock);
+                           spkr_calibrate_wait();
+                           continue;
+                       }
+                       ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
+                       /*Convert temp into q6 format*/
+                       t0_spk_1 = (t0_spk_1 * (1 << 6));
                    }
-
-                   thermal_fd = open(wsa_path, O_RDONLY);
-                   if (thermal_fd > 0) {
-                       if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
-                            t0_spk_1 = atoi(buf);
-                       else
-                           ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
-                       close(thermal_fd);
-                   } else {
-                       ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                   if (spk_2_tzn >= 0) {
+                       const char *mixer_ctl_name = "SpkrRight WSA T0 Init";
+                       snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
+                       ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
+                       ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+                       if (ctl) {
+                           ALOGD("%s: Got ctl for mixer cmd %s",
+                                     __func__, mixer_ctl_name);
+                           mixer_ctl_set_value(ctl, 0, 1);
+                        }
+                        thermal_fd = open(wsa_path, O_RDONLY);
+                        if (thermal_fd > 0) {
+                           if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
+                               t0_spk_2 = atoi(buf);
+                           else
+                               ALOGE("%s: read fail for %s err:%d\n",
+                                     __func__, wsa_path, ret);
+                           close(thermal_fd);
+                        } else {
+                           ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                        }
+                        if (ctl) {
+                           mixer_ctl_set_value(ctl, 0, 0);
+                        }
+                        if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
+                           t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
+                           pthread_mutex_unlock(&adev->lock);
+                           spkr_calibrate_wait();
+                           continue;
+                        }
+                        ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
+                        /*Convert temp into q6 format*/
+                        t0_spk_2 = (t0_spk_2 * (1 << 6));
                    }
-                   if (ctl) {
-                       mixer_ctl_set_value(ctl, 0, 0);
-                   }
-                   if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
-                       t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
-                       pthread_mutex_unlock(&adev->lock);
-                       spkr_calibrate_wait();
-                       continue;
-                   }
-                   ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
-                   /*Convert temp into q6 format*/
-                   t0_spk_1 = (t0_spk_1 * (1 << 6));
-               }
-               if (spk_2_tzn >= 0) {
-                   const char *mixer_ctl_name = "SpkrRight WSA T0 Init";
-                   snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
-                   ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
-                   ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-                   if (ctl) {
-                       ALOGD("%s: Got ctl for mixer cmd %s",
-                                             __func__, mixer_ctl_name);
-                       mixer_ctl_set_value(ctl, 0, 1);
-                   }
-                   thermal_fd = open(wsa_path, O_RDONLY);
-                   if (thermal_fd > 0) {
-                       if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
-                           t0_spk_2 = atoi(buf);
-                       else
-                           ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
-                       close(thermal_fd);
-                   } else {
-                       ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
-                   }
-                   if (ctl) {
-                       mixer_ctl_set_value(ctl, 0, 0);
-                   }
-                   if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
-                       t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
-                       pthread_mutex_unlock(&adev->lock);
-                       spkr_calibrate_wait();
-                       continue;
-                   }
-                   ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
-                   /*Convert temp into q6 format*/
-                   t0_spk_2 = (t0_spk_2 * (1 << 6));
                }
            }
            pthread_mutex_unlock(&adev->lock);
@@ -1351,10 +1417,17 @@ static void* spkr_calibration_thread()
                  * sensor data comes in 2nd channel. Therefore, we have to swap
                  * sensor channel to fix the mismatch.
                  */
-                if ( handle.spkr_1_tzn <= 0 && handle.spkr_2_tzn > 0)
-                     status = spkr_calibrate(t0_spk_2, t0_spk_1);
-                else
-                     status = spkr_calibrate(t0_spk_1, t0_spk_2);
+                if (handle.is_wsa_temp_mixer_ctl) {
+                    if (!handle.is_spkr1_avail && handle.is_spkr1_avail)
+                        status = spkr_calibrate(t0_spk_2, t0_spk_1);
+                    else
+                        status = spkr_calibrate(t0_spk_1, t0_spk_2);
+                } else {
+                    if ( handle.spkr_1_tzn <= 0 && handle.spkr_2_tzn > 0)
+                         status = spkr_calibrate(t0_spk_2, t0_spk_1);
+                    else
+                         status = spkr_calibrate(t0_spk_1, t0_spk_2);
+                }
                 pthread_mutex_unlock(&adev->lock);
                 if (status == -EAGAIN) {
                     ALOGE("%s: failed to calibrate try again %s",
@@ -1425,6 +1498,7 @@ void spkr_prot_set_parameters(struct str_parms *parms,
 static int spkr_vi_channels(struct audio_device *adev)
 {
     int vi_channels, vi_channel_num_by_wsa = 0;
+    int temp = 0, ret = 0;
 
     vi_channels = vi_feed_get_channels(adev);
     ALOGD("%s: vi_channels %d", __func__, vi_channels);
@@ -1433,22 +1507,38 @@ static int spkr_vi_channels(struct audio_device *adev)
         vi_channels = SP_V2_NUM_MAX_SPKRS;
     }
 
-    ALOGD("%s: tz1: %s, tz2: %s", __func__,
-           tz_names.spkr_1_name, tz_names.spkr_2_name);
-    handle.spkr_1_tzn = get_tzn(tz_names.spkr_1_name);
-    handle.spkr_2_tzn = get_tzn(tz_names.spkr_2_name);
-    /* Update VI channel number by WSA number */
-    if (handle.spkr_1_tzn >= 0)
+    ret = spkr_get_temp(adev, WSA_SPKR_LEFT, &temp);
+    if (!ret) {
         vi_channel_num_by_wsa++;
-
-    if (handle.spkr_2_tzn >= 0)
+        handle.is_spkr1_avail = true;
+    }
+    ret = spkr_get_temp(adev, WSA_SPKR_RIGHT, &temp);
+    if (!ret) {
         vi_channel_num_by_wsa++;
+        handle.is_spkr2_avail = true;
+    }
 
-    if (vi_channel_num_by_wsa > 0)
+    if (handle.is_spkr1_avail || handle.is_spkr2_avail) {
         handle.wsa_found = true;
+        handle.is_wsa_temp_mixer_ctl = true;
+    } else {
+        ALOGD("%s: tz1: %s, tz2: %s", __func__,
+               tz_names.spkr_1_name, tz_names.spkr_2_name);
+        handle.spkr_1_tzn = get_tzn(tz_names.spkr_1_name);
+        handle.spkr_2_tzn = get_tzn(tz_names.spkr_2_name);
+        /* Update VI channel number by WSA number */
+        if (handle.spkr_1_tzn >= 0)
+            vi_channel_num_by_wsa++;
+
+        if (handle.spkr_2_tzn >= 0)
+            vi_channel_num_by_wsa++;
+
+         if (vi_channel_num_by_wsa > 0)
+            handle.wsa_found = true;
+    }
 
     if (vi_channel_num_by_wsa < vi_channels)
-        vi_channels = vi_channel_num_by_wsa;
+            vi_channels = vi_channel_num_by_wsa;
 
     return vi_channels;
 }

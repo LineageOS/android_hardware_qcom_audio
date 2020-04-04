@@ -376,6 +376,30 @@ bool compare_device_type(struct listnode *devices, audio_devices_t device_type)
 }
 
 /*
+ * Check if a device with given type and address is present in devices list
+ */
+bool compare_device_type_and_address(struct listnode *devices,
+                                     audio_devices_t type, const char* address)
+{
+    struct listnode *node = devices;
+    struct audio_device_info *item = NULL;
+
+    if (devices == NULL)
+        return false;
+
+    list_for_each (node, devices) {
+        item = node_to_item(node, struct audio_device_info, list);
+        if (item != NULL && (item->type == type) &&
+            (strcmp((const char *)&item->address[0], address) == 0)) {
+            ALOGV("%s: device type %x and address %s match", __func__,
+                item->type, (const char *)&item->address[0]);
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
  * Returns true if intersection of d1 and d2 is not NULL
  */
 bool compare_devices_for_any_match(struct listnode *d1, struct listnode *d2)
@@ -425,13 +449,14 @@ audio_devices_t get_device_types(struct listnode *devices)
 bool is_single_device_type_equal(struct listnode *devices,
                                  audio_devices_t type)
 {
-    struct listnode *node = devices;
+    struct listnode *node;
     struct audio_device_info *item = NULL;
 
     if (devices == NULL)
         return false;
 
     if (list_length(devices) == 1) {
+        node = devices->next;
         item = node_to_item(node, struct audio_device_info, list);
         if (item != NULL && (item->type == type))
             return true;

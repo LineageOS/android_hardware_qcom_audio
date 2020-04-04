@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-#include <audio_hw.h>
+#include <system/audio.h>
 
 #define AUDIO_HAL_PLUGIN_EOK (0)
 #define AUDIO_HAL_PLUGIN_EFAIL (-1) /**< Undefined error */
@@ -156,7 +156,7 @@ typedef struct audio_hal_plugin_buint32
  */
 typedef struct audio_hal_plugin_codec_enable
 {
-    snd_device_t snd_dev;  /**< Requested endpoint device to be enabled. @enum: SND_DEVICE_XXX */
+    int snd_dev;  /**< Requested endpoint device to be enabled. @enum: SND_DEVICE_XXX */
     audio_hal_plugin_usecase_type_t usecase;
             /**< Requested use case. @enum: AUDIO_HAL_PLUGIN_USECASE_XXX */
     uint32_t sample_rate;  /**< Requested sample rate for the endpoint device */
@@ -169,7 +169,7 @@ typedef struct audio_hal_plugin_codec_enable
  */
 typedef struct audio_hal_plugin_codec_disable
 {
-    snd_device_t snd_dev; /**< Requested the endpoint device to be disabled */
+    int snd_dev; /**< Requested the endpoint device to be disabled */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
 } audio_hal_plugin_codec_disable_t;
 
@@ -178,7 +178,7 @@ typedef struct audio_hal_plugin_codec_disable
  */
 typedef struct audio_hal_plugin_codec_set_pp_vol
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     audio_channel_mask_t ch_mask; /**< Requested audio channel mask */
     uint32_t gain; /**< The requested volume setting. */
@@ -189,7 +189,7 @@ typedef struct audio_hal_plugin_codec_set_pp_vol
  */
 typedef struct audio_hal_plugin_codec_set_pp_mute
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     audio_channel_mask_t ch_mask; /**< Requested audio channel mask */
     bool flag; /**< Enable/Disable mute flag. 1: mute, 0: unmute */
@@ -200,7 +200,7 @@ typedef struct audio_hal_plugin_codec_set_pp_mute
  */
 typedef struct audio_hal_plugin_codec_set_pp_fade
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     int32_t fade; /**< The requested fade configuration. */
 } audio_hal_plugin_codec_set_pp_fade_t;
@@ -210,7 +210,7 @@ typedef struct audio_hal_plugin_codec_set_pp_fade
  */
 typedef struct audio_hal_plugin_codec_set_pp_balance
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     int32_t balance; /**< The requested balance configuration. */
 } audio_hal_plugin_codec_set_pp_balance_t;
@@ -229,7 +229,7 @@ typedef enum
 
 typedef struct audio_hal_plugin_codec_set_pp_bmt
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     audio_hal_plugin_codec_pp_filter_type_t filter_type; /**< Requested filter type */
     bool enable_flag; /**< Enable flag. 0 - Disable, 1 - Enable */
@@ -248,7 +248,7 @@ typedef struct audio_hal_plugin_codec_pp_eq_subband
 
 typedef struct audio_hal_plugin_codec_set_pp_eq
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     bool enable_flag; /**< Enable flag. 0 - Disable, 1 - Enable */
     int32_t preset_id; /**< Specify to use either pre-defined preset EQ or
@@ -264,7 +264,7 @@ typedef struct audio_hal_plugin_codec_set_pp_eq
  */
 typedef struct audio_hal_plugin_codec_get_pp_vol
 {
-    snd_device_t snd_dev; /**< Requested endpoint device */
+    int snd_dev; /**< Requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     audio_channel_mask_t ch_mask; /**< Requested audio channel mask */
     audio_hal_plugin_buint32_t ret_gain; /**< Returned volume range and value */
@@ -275,7 +275,7 @@ typedef struct audio_hal_plugin_codec_get_pp_vol
  */
 typedef struct audio_hal_plugin_codec_get_pp_fade
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     audio_hal_plugin_bint32_t ret_fade; /**< Returned fade range and value. */
 } audio_hal_plugin_codec_get_pp_fade_t;
@@ -285,7 +285,7 @@ typedef struct audio_hal_plugin_codec_get_pp_fade
  */
 typedef struct audio_hal_plugin_codec_get_pp_balance
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     audio_hal_plugin_bint32_t ret_balance; /**< Returned balance range and value. */
 } audio_hal_plugin_codec_get_pp_balance_t;
@@ -295,7 +295,7 @@ typedef struct audio_hal_plugin_codec_get_pp_balance
  */
 typedef struct audio_hal_plugin_codec_get_pp_bmt
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     audio_hal_plugin_codec_pp_filter_type_t filter_type; /**< Requested filter type */
     audio_hal_plugin_bint32_t ret_value; /**< Returned range and value */
@@ -306,7 +306,7 @@ typedef struct audio_hal_plugin_codec_get_pp_bmt
  */
 typedef struct audio_hal_plugin_codec_get_pp_eq
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     audio_hal_plugin_bint32_t ret_preset_id; /**< Returned preset id
                                         -1      - custom equalizer speficied through 'bands' struct
@@ -330,7 +330,7 @@ typedef struct audio_hal_plugin_pp_eq_subband_binfo
  */
 typedef struct audio_hal_plugin_codec_get_pp_eq_subbands
 {
-    snd_device_t snd_dev; /**< The requested endpoint device */
+    int snd_dev; /**< The requested endpoint device */
     audio_hal_plugin_usecase_type_t usecase; /**< Requested use case */
     uint32_t num_bands; /**< number of EQ subbands supported for custom eq
                                           returned from get_pp_eq query */
