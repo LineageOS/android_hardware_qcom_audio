@@ -132,6 +132,27 @@ int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
         }
     }
 
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SLOWTALK, c_value, sizeof(c_value));
+    if (err >= 0) {
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_SLOWTALK);
+        if (strcmp(c_value, "true") == 0)
+            params.slow_talk = true;
+        else if (strcmp(c_value, "false") == 0) {
+            params.slow_talk = false;
+        }
+        else {
+            ret = -EINVAL;
+            goto done;
+        }
+
+        for ( i = 0; i < max_voice_sessions_; i++) {
+            voice_.session[i].slow_talk = params.slow_talk;
+            if (IsCallActive(&voice_.session[i])) {
+                qal_stream_set_param(voice_.session[i].qal_voice_handle, QAL_PARAM_ID_SLOW_TALK, &params);
+            }
+        }
+    }
+
 done:
     return ret;
 }
@@ -339,17 +360,8 @@ int AudioVoice::StopCall() {
 }
 
 bool AudioVoice::IsCallActive(AudioVoice::voice_session_t *pSession) {
-    int i;
-    AudioVoice::voice_session_t *session = NULL;
 
-    for (i = 0; i < max_voice_sessions_; i++) {
-        session = &pSession[i];
-        if (session->state.current_ != CALL_INACTIVE)
-            return true;
-    }
-
-    return false;
-
+    return (pSession->state.current_ != CALL_INACTIVE) ? true : false;
 }
 
 int AudioVoice::VoiceStart(voice_session_t *session) {
@@ -426,29 +438,40 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
                           &session->qal_voice_handle);// Need to add this to the audio stream structure.
 
     ALOGD("%s:qal_stream_open() ret:%d line:%d", __func__, ret, __LINE__);
-
     if (ret) {
         ALOGE("%s Qal Stream Open Error (%x)", __func__, ret);
         ret = -EINVAL;
-    } else {
-        ret = qal_stream_start(session->qal_voice_handle);
-        if (ret) {
-            ALOGE("%s Qal Stream Start Error (%x)", __func__, ret);
-            ret = qal_stream_close(session->qal_voice_handle);
-            if (ret)
-                ALOGE("%s Qal Stream close failed %x", __func__, ret);
-            session->qal_voice_handle = NULL;
-            ret = -EINVAL;
-        }
-        /*apply chached voice effects features*/
-        if (session->volume_boost) {
-            param_payload.volume_boost = session->volume_boost;
-            qal_stream_set_param(session->qal_voice_handle, QAL_PARAM_ID_VOLUME_BOOST, &param_payload);
-        }
-        else
-            ALOGD("%s Qal Stream Start Success", __func__);
+        goto error_open;
     }
 
+    /*apply cached voice effects features*/
+    if (session->slow_talk) {
+        param_payload.slow_talk = session->slow_talk;
+        ret = qal_stream_set_param(session->qal_voice_handle, QAL_PARAM_ID_SLOW_TALK,
+                                   &param_payload);
+        if (ret)
+            ALOGE("%s Slow Talk enable failed %x", __func__, ret);
+    }
+
+    if (session->volume_boost) {
+        param_payload.volume_boost = session->volume_boost;
+        ret = qal_stream_set_param(session->qal_voice_handle, QAL_PARAM_ID_VOLUME_BOOST,
+                                   &param_payload);
+        if (ret)
+            ALOGE("%s Volume Boost enable failed %x", __func__, ret);
+    }
+
+   ret = qal_stream_start(session->qal_voice_handle);
+   if (ret) {
+       ALOGE("%s Qal Stream Start Error (%x)", __func__, ret);
+       ret = qal_stream_close(session->qal_voice_handle);
+       if (ret)
+           ALOGE("%s Qal Stream close failed %x", __func__, ret);
+           session->qal_voice_handle = NULL;
+           ret = -EINVAL;
+   } else {
+      ALOGD("%s Qal Stream Start Success", __func__);
+   }
 
 error_open:
     if (in_ch_info)
@@ -593,7 +616,9 @@ AudioVoice::AudioVoice() {
         voice_.session[i].vsid = VOICEMMODE1_VSID;
         voice_.session[i].qal_voice_handle = NULL;
         voice_.session[i].tty_mode = QAL_TTY_OFF;
-        voice_.session[i].volume_boost= false;
+        voice_.session[i].volume_boost = false;
+        voice_.session[i].slow_talk = false;
+        voice_.session[i].qal_voice_handle = NULL;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
@@ -612,6 +637,8 @@ AudioVoice::~AudioVoice() {
         voice_.session[i].vsid = VOICEMMODE1_VSID;
         voice_.session[i].tty_mode = QAL_TTY_OFF;
         voice_.session[i].volume_boost = false;
+        voice_.session[i].slow_talk = false;
+        voice_.session[i].qal_voice_handle = NULL;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
