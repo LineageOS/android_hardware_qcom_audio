@@ -58,11 +58,9 @@
                 <item>Nav Guidance Bus</item>
                 <item>Phone Bus</item>
                 <item>Rear Seat Bus</item>
-                <item>Telephony Tx</item>
                 <item>Built-In Mic</item>
                 <item>Built-In Back Mic</item>
                 <item>FM Tuner</item>
-                <item>Telephony Rx</item>
             </attachedDevices>
             <defaultOutputDevice>Media Bus</defaultOutputDevice>
             <mixPorts>

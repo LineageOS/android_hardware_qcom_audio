@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -80,6 +80,7 @@ void voice_get_parameters(struct audio_device *adev, struct str_parms *query,
                           struct str_parms *reply);
 void voice_init(struct audio_device *adev);
 bool voice_is_in_call(const struct audio_device *adev);
+bool voice_is_in_call_or_call_screen(const struct audio_device *adev);
 bool voice_is_in_call_rec_stream(const struct stream_in *in);
 int voice_set_mic_mute(struct audio_device *dev, bool state);
 bool voice_get_mic_mute(struct audio_device *dev);
@@ -99,6 +100,7 @@ void voice_check_and_update_aanc_path(struct audio_device *adev,
                                       snd_device_t out_snd_device,
                                       bool enable);
 bool voice_is_call_state_active(struct audio_device *adev);
+bool voice_is_call_state_active_in_call(struct audio_device *adev);
 void voice_set_device_mute_flag (struct audio_device *adev, bool state);
 snd_device_t voice_get_incall_rec_backend_device(struct stream_in *in);
 bool voice_check_voicecall_usecases_active(struct audio_device *adev);
