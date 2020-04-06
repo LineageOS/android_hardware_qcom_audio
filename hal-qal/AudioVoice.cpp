@@ -66,13 +66,11 @@ int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
 
     err = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_VSID, &value);
     if (err >= 0) {
-        str_parms_del(parms, AUDIO_PARAMETER_KEY_VSID);
         uint32_t vsid = value;
         int call_state = -1;
         err = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_CALL_STATE, &value);
         if (err >= 0) {
             call_state = value;
-            str_parms_del(parms, AUDIO_PARAMETER_KEY_CALL_STATE);
         } else {
             ALOGE("%s: call_state key not found", __func__);
             ret = -EINVAL;
@@ -90,7 +88,6 @@ int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
     }
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, c_value, sizeof(c_value));
     if (err >= 0) {
-        str_parms_del(parms, AUDIO_PARAMETER_KEY_TTY_MODE);
         if (strcmp(c_value, AUDIO_PARAMETER_VALUE_TTY_OFF) == 0)
             params.tty_mode = QAL_TTY_OFF;
         else if (strcmp(c_value, AUDIO_PARAMETER_VALUE_TTY_VCO) == 0)
@@ -113,7 +110,6 @@ int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
     }
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST, c_value, sizeof(c_value));
     if (err >= 0) {
-        str_parms_del(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST);
         if (strcmp(c_value, "on") == 0)
             params.volume_boost = true;
         else if (strcmp(c_value, "off") == 0) {
@@ -134,7 +130,6 @@ int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SLOWTALK, c_value, sizeof(c_value));
     if (err >= 0) {
-        str_parms_del(parms, AUDIO_PARAMETER_KEY_SLOWTALK);
         if (strcmp(c_value, "true") == 0)
             params.slow_talk = true;
         else if (strcmp(c_value, "false") == 0) {
