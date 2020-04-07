@@ -2080,20 +2080,54 @@
         <ctl name="TX DMIC MUX2" value="DMIC5" />
     </path>
 
-    <path name="va-mic">
+    <path name="va-mic-mono">
          <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
          <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
          <ctl name="VA DMIC MUX0" value="DMIC4" />
-     </path>
+    </path>
 
-    <path name="dual-va-mic">
+    <path name="va-mic-dmic">
          <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
          <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
          <ctl name="VA DMIC MUX0" value="DMIC4" />
          <ctl name="VA_AIF1_CAP Mixer DEC1" value="1" />
          <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
          <ctl name="VA DMIC MUX1" value="DMIC3" />
-     </path>
+    </path>
+
+    <path name="va-mic-tmic">
+        <ctl name="VA_CDC_DMA_TX_0 Channels" value="Three" />
+        <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+        <ctl name="VA_AIF1_CAP Mixer DEC1" value="1" />
+        <ctl name="VA_AIF1_CAP Mixer DEC2" value="1" />
+        <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
+        <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
+        <ctl name="VA DEC2 MUX" value="MSM_DMIC" />
+        <ctl name="VA DMIC MUX0" value="DMIC4" />
+        <ctl name="VA DMIC MUX1" value="DMIC0" />
+        <ctl name="VA DMIC MUX2" value="DMIC1" />
+    </path>
+
+    <path name="va-mic-qmic">
+        <ctl name="VA_CDC_DMA_TX_0 Channels" value="Four" />
+        <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+        <ctl name="VA_AIF1_CAP Mixer DEC1" value="1" />
+        <ctl name="VA_AIF1_CAP Mixer DEC2" value="1" />
+        <ctl name="VA_AIF1_CAP Mixer DEC3" value="1" />
+        <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
+        <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
+        <ctl name="VA DEC2 MUX" value="MSM_DMIC" />
+        <ctl name="VA DEC3 MUX" value="MSM_DMIC" />
+        <ctl name="VA DMIC MUX0" value="DMIC4" />
+        <ctl name="VA DMIC MUX1" value="DMIC0" />
+        <ctl name="VA DMIC MUX2" value="DMIC1" />
+        <ctl name="VA DMIC MUX3" value="DMIC2" />
+    </path>
+
+    <path name="va-mic">
+        <path name="va-mic-dmic" />
+    </path>
+
     <path name="headset-va-mic">
          <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
          <ctl name="VA DEC0 MUX" value="SWR_MIC" />
