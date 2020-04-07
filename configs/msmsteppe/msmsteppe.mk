@@ -193,7 +193,7 @@ PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/audio_policy_configuration_odm.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
 else
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
+    $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
 endif
 
 PRODUCT_COPY_FILES += \
@@ -207,10 +207,6 @@ PRODUCT_COPY_FILES += \
 # Listen configuration file
 PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/listen_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/listen_platform_info.xml
-
-# Reduce client buffer size for fast audio output tracks
-PRODUCT_PROPERTY_OVERRIDES += \
-    af.fast_track_multiplier=1
 
 # Low latency audio buffer size in frames
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -257,17 +253,9 @@ vendor.audio.offload.buffer.size.kb=32
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.min.duration.secs=30
 
-#Enable offload audio video playback by default
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.video=true
-
 #Enable audio track offload by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.track.enable=true
-
-#Enable music through deep buffer
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.deep_buffer.media=true
 
 #enable voice path for PCM VoIP by default
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -343,10 +331,6 @@ audio.sys.noisy.broadcast.delay=600
 #offload pausetime out duration to 3 secs to inline with other outputs
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.sys.offload.pstimeout.secs=3
-
-#Set AudioFlinger client heap size
-PRODUCT_PROPERTY_OVERRIDES += \
-ro.af.client_heap_size_kbyte=7168
 
 #Set HAL buffer size to samples equal to 3 ms
 PRODUCT_PROPERTY_OVERRIDES += \
