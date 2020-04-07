@@ -8142,7 +8142,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             else
                 adev->haptics_config = pcm_config_haptics;
 
-            out->config.channels =
+            channels =
                 audio_channel_count_from_out_mask(out->channel_mask & ~AUDIO_CHANNEL_HAPTIC_ALL);
 
             if (force_haptic_path) {
