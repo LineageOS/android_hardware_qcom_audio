@@ -1409,14 +1409,7 @@ int StreamOutPrimary::Open() {
     uint32_t inBufCount = NO_OF_BUF;
     uint32_t outBufCount = NO_OF_BUF;
     uint32_t pcmFormat;
-    convertBuffer = NULL;
-/*
-    ret = qal_init();
-    if ( ret ) {
-      ALOGD("%s:(%d) qal_init failed ret=(%d)", __func__, __LINE__, ret);
-      return -EINVAL;
-    }
-*/
+
     if (!mInitialized) {
         ALOGE("%s: Not initialized, returning error", __func__);
         goto error_open;
@@ -1502,7 +1495,7 @@ int StreamOutPrimary::Open() {
  //   }
     if (halInputFormat != halOutputFormat) {
         convertBufSize = outBufSize;
-        convertBuffer = calloc(1, convertBufSize);
+        convertBuffer = realloc(convertBuffer, convertBufSize);
         if (!convertBuffer) {
             ret = -ENOMEM;
             ALOGE("convert Buffer allocation failed. ret %d", ret);
@@ -1743,6 +1736,7 @@ StreamOutPrimary::StreamOutPrimary(
     writeAt.tv_sec = 0;
     writeAt.tv_nsec = 0;
     total_bytes_written_ = 0;
+    convertBuffer = NULL;
 
     mNoOfOutDevices = popcount(devices);
     if (!mNoOfOutDevices) {
