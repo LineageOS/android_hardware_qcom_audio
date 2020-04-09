@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -75,6 +75,8 @@
 /* default limiter threshold is 0dB(0x7FFFFFF in natural value) */
 #define DEFAULT_LIMITER_TH (0x07FFFFFF)
 #define AFE_API_VERSION_SUPPORT_SPV3 (0x2)
+/* Made equivalent to AFE API version that supports SPV4. */
+#define AFE_API_VERSION_SUPPORT_SPV4 (0x9)
 enum wcd_boost_max_state {
     BOOST_NO_MAX_STATE,
     BOOST_MAX_STATE_1,
@@ -84,6 +86,7 @@ enum wcd_boost_max_state {
 enum sp_version {
     SP_V2 = 0x1,
     SP_V3 = AFE_API_VERSION_SUPPORT_SPV3,
+    SP_V4 = AFE_API_VERSION_SUPPORT_SPV4,
 };
 /*Set safe temp value to 40C*/
 #define SAFE_SPKR_TEMP 40
@@ -111,7 +114,7 @@ enum sp_version {
 #define MIN_SPKR_IDLE_SEC (60 * 30)
 #define WAKEUP_MIN_IDLE_CHECK 30
 
-/*Once calibration is started sleep for 1 sec to allow
+/*Once calibration is started sleep for 3 sec to allow
   the calibration to kick off*/
 #define SLEEP_AFTER_CALIB_START (3000)
 
@@ -744,7 +747,7 @@ static int spkr_boost_update(struct audio_device *adev,
 }
 
 static void set_boost_and_limiter(struct audio_device *adev,
-                bool spv3_enable, unsigned int afe_api_version)
+                unsigned int afe_api_version, enum sp_version sp_prop_version)
 {
     int chn = 0;
     int chn_in_use = 0;
@@ -786,8 +789,11 @@ static void set_boost_and_limiter(struct audio_device *adev,
      * If spv3 is disabld or ADSP version doesn't comply,
      * ADSP works with SP_V2 version.
      */
-    if (!spv3_enable || afe_api_version < AFE_API_VERSION_SUPPORT_SPV3)
+    if (sp_prop_version < SP_V3 || afe_api_version < AFE_API_VERSION_SUPPORT_SPV3)
         handle.sp_version = SP_V2;
+
+    if(sp_prop_version == SP_V4)
+        handle.sp_version = SP_V4;
 }
 
 static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
@@ -837,6 +843,7 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
                 t0_spk_2 = SAFE_SPKR_TEMP_Q6;
             }
         }
+        protCfg.sp_version = handle.sp_version;
         protCfg.t0[SP_V2_SPKR_1] = t0_spk_1;
         protCfg.t0[SP_V2_SPKR_2] = t0_spk_2;
         if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
@@ -1022,6 +1029,7 @@ exit:
             pcm_close(handle.pcm_tx);
         handle.pcm_tx = NULL;
         if (!v_validation) {
+            protCfg.sp_version = handle.sp_version;
             if (!status.status) {
                 protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
                 protCfg.r0[SP_V2_SPKR_1] = status.r0[SP_V2_SPKR_1];
@@ -1105,6 +1113,8 @@ static void* spkr_calibration_thread()
     char buf[32] = {0};
     int ret;
     bool spv3_enable = false;
+    bool spv4_enable = false;
+    enum sp_version sp_prop_version = 0;
     unsigned int afe_api_version = 0;
     struct mixer_ctl *ctl;
 
@@ -1123,11 +1133,27 @@ static void* spkr_calibration_thread()
             min_idle_time = atoi(value);
     }
     handle.speaker_prot_threadid = pthread_self();
-    ALOGD("spkr_prot_thread enable prot Entry");
+    spv3_enable = property_get_bool("persist.vendor.audio.spv3.enable", false);
+    property_get("persist.vendor.audio.avs.afe_api_version", afe_version_value,
+                 "0");
+    if (atoi(afe_version_value) > 0)
+        afe_api_version = atoi(afe_version_value);
+
+    spv4_enable = property_get_bool("persist.vendor.audio.spv4.enable", false);
+    if (spv3_enable)
+        sp_prop_version = SP_V3;
+    else if (spv4_enable)
+        sp_prop_version = SP_V4;
+
+    if(spv4_enable)
+        handle.sp_version = SP_V4;
+    ALOGD("spkr_prot_thread enable prot Entryi sp_version %d", handle.sp_version);
+
     acdb_fd = open("/dev/msm_audio_cal",O_RDWR | O_NONBLOCK);
     if (acdb_fd > 0) {
         /*Set processing mode with t0/r0*/
         protCfg.mode = MSM_SPKR_PROT_NOT_CALIBRATED;
+        protCfg.sp_version = handle.sp_version;
         if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
             ALOGE("%s: spkr_prot_thread enable prot failed", __func__);
             handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
@@ -1143,12 +1169,6 @@ static void* spkr_calibration_thread()
         pthread_exit(0);
         return NULL;
     }
-
-    spv3_enable = property_get_bool("persist.vendor.audio.spv3.enable", false);
-    property_get("persist.vendor.audio.avs.afe_api_version", afe_version_value,
-                 "0");
-    if (atoi(afe_version_value) > 0)
-        afe_api_version = atoi(afe_version_value);
 
     if (!handle.spkr_cal_dynamic || handle.apply_cal) {
         bool spkr_calibrated = false;
@@ -1178,13 +1198,14 @@ static void* spkr_calibration_thread()
             if (spkr_calibrated) {
                 ALOGD("%s: Spkr calibrated", __func__);
                 protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
+                protCfg.sp_version = handle.sp_version;
                 if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
                     ALOGE("%s: enable prot failed", __func__);
                     handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
                 } else
                     handle.spkr_prot_mode = MSM_SPKR_PROT_CALIBRATED;
 
-                set_boost_and_limiter(adev, spv3_enable, afe_api_version);
+                set_boost_and_limiter(adev, afe_api_version, sp_prop_version);
             }
         }
         if (handle.spkr_cal_dynamic || spkr_calibrated) {
@@ -1373,7 +1394,7 @@ static void* spkr_calibration_thread()
         dlclose(handle.thermal_handle);
     handle.thermal_handle = NULL;
 
-    set_boost_and_limiter(adev, spv3_enable, afe_api_version);
+    set_boost_and_limiter(adev, afe_api_version, sp_prop_version);
 
     pthread_exit(0);
     return NULL;
@@ -1534,8 +1555,15 @@ static void get_spkr_prot_ftm_param(char *param)
 {
     struct audio_cal_sp_th_vi_param th_vi_cal_data;
     struct audio_cal_sp_ex_vi_param ex_vi_cal_data;
+#ifdef MSM_SPKR_PROT_SPV4
+    struct audio_cal_sp_v4_ex_vi_param spv4_ex_vi_cal_data;
+    double re[SP_V2_NUM_MAX_SPKRS] = {0}, Bl[SP_V2_NUM_MAX_SPKRS] = {0};
+    double rms[SP_V2_NUM_MAX_SPKRS] = {0}, kms[SP_V2_NUM_MAX_SPKRS] = {0};
+    double fre[SP_V2_NUM_MAX_SPKRS] = {0}, qms[SP_V2_NUM_MAX_SPKRS] = {0};
+#endif
     int i;
     int ftm_status[SP_V2_NUM_MAX_SPKRS] = {0};
+    int ex_vi_status[SP_V2_NUM_MAX_SPKRS] = {0};
     double rdc[SP_V2_NUM_MAX_SPKRS] = {0}, temp[SP_V2_NUM_MAX_SPKRS] = {0};
     double f[SP_V2_NUM_MAX_SPKRS] = {0}, r[SP_V2_NUM_MAX_SPKRS] = {0}, q[SP_V2_NUM_MAX_SPKRS] = {0};
 
@@ -1564,46 +1592,93 @@ static void get_spkr_prot_ftm_param(char *param)
     if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &th_vi_cal_data))
         ALOGE("%s: Error %d in getting th_vi_cal_data", __func__, errno);
 
-    memset(&ex_vi_cal_data, 0, sizeof(ex_vi_cal_data));
-    ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_1] = -EINVAL;
-    ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_2] = -EINVAL;
-    ex_vi_cal_data.hdr.data_size = sizeof(ex_vi_cal_data);
-    ex_vi_cal_data.hdr.version = VERSION_0_0;
-    ex_vi_cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_EX_VI_CAL_TYPE;
-    ex_vi_cal_data.hdr.cal_type_size = sizeof(ex_vi_cal_data.cal_type);
-    ex_vi_cal_data.cal_type.cal_hdr.version = VERSION_0_0;
-    ex_vi_cal_data.cal_type.cal_hdr.buffer_number = 0;
-    ex_vi_cal_data.cal_type.cal_data.mem_handle = -1;
+   if (handle.sp_version == SP_V4) {
+#ifdef MSM_SPKR_PROT_SPV4
+        memset(&spv4_ex_vi_cal_data, 0, sizeof(spv4_ex_vi_cal_data));
+        spv4_ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_1] = -EINVAL;
+        spv4_ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_2] = -EINVAL;
+        spv4_ex_vi_cal_data.hdr.data_size = sizeof(spv4_ex_vi_cal_data);
+        spv4_ex_vi_cal_data.hdr.version = VERSION_0_0;
+        spv4_ex_vi_cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_V4_EX_VI_CAL_TYPE;
+        spv4_ex_vi_cal_data.hdr.cal_type_size = sizeof(spv4_ex_vi_cal_data.cal_type);
+        spv4_ex_vi_cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+        spv4_ex_vi_cal_data.cal_type.cal_hdr.buffer_number = 0;
+        spv4_ex_vi_cal_data.cal_type.cal_data.mem_handle = -1;
 
-    if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &ex_vi_cal_data))
-        ALOGE("%s: Error %d in getting ex_vi_cal_data", __func__, errno);
+        if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &spv4_ex_vi_cal_data))
+            ALOGE("%s: Error %d in getting spv4_ex_vi_cal_data", __func__, errno);
+#endif
+    } else {
+        memset(&ex_vi_cal_data, 0, sizeof(ex_vi_cal_data));
+        ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_1] = -EINVAL;
+        ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_2] = -EINVAL;
+        ex_vi_cal_data.hdr.data_size = sizeof(ex_vi_cal_data);
+        ex_vi_cal_data.hdr.version = VERSION_0_0;
+        ex_vi_cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_EX_VI_CAL_TYPE;
+        ex_vi_cal_data.hdr.cal_type_size = sizeof(ex_vi_cal_data.cal_type);
+        ex_vi_cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+        ex_vi_cal_data.cal_type.cal_hdr.buffer_number = 0;
+        ex_vi_cal_data.cal_type.cal_data.mem_handle = -1;
+
+        if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &ex_vi_cal_data))
+            ALOGE("%s: Error %d in getting ex_vi_cal_data", __func__, errno);
+    }
 
     for (i = 0; i < vi_feed_no_channels; i++) {
         /* Convert from ADSP format to readable format */
         rdc[i] = ((double)th_vi_cal_data.cal_type.cal_info.r_dc_q24[i])/(1<<24);
         temp[i] = ((double)th_vi_cal_data.cal_type.cal_info.temp_q22[i])/(1<<22);
-        f[i] = ((double)ex_vi_cal_data.cal_type.cal_info.freq_q20[i])/(1<<20);
-        r[i] = ((double)ex_vi_cal_data.cal_type.cal_info.resis_q24[i])/(1<<24);
-        q[i] = ((double)ex_vi_cal_data.cal_type.cal_info.qmct_q24[i])/(1<<24);
+
+       if (handle.sp_version == SP_V4) {
+#ifdef MSM_SPKR_PROT_SPV4
+            re[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_re_q24[i])/(1<<24);
+            Bl[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_Bl_q24[i])/(1<<24);
+            rms[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_Rms_q24[i])/(1<<24);
+            kms[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_Kms_q24[i])/(1<<24);
+            fre[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_freq_q20[i])/(1<<20);
+            qms[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_Qms_q24[i])/(1<<24);
+            ex_vi_status[i] = spv4_ex_vi_cal_data.cal_type.cal_info.status[i];
+#endif
+        } else {
+            f[i] = ((double)ex_vi_cal_data.cal_type.cal_info.freq_q20[i])/(1<<20);
+            r[i] = ((double)ex_vi_cal_data.cal_type.cal_info.resis_q24[i])/(1<<24);
+            q[i] = ((double)ex_vi_cal_data.cal_type.cal_info.qmct_q24[i])/(1<<24);
+            ex_vi_status[i] = ex_vi_cal_data.cal_type.cal_info.status[i];
+        }
 
         if (th_vi_cal_data.cal_type.cal_info.status[i] == 0 &&
-            ex_vi_cal_data.cal_type.cal_info.status[i] == 0) {
+            ex_vi_status[i] == 0) {
             ftm_status[i] = 0;
         } else if (th_vi_cal_data.cal_type.cal_info.status[i] == -EAGAIN &&
-                   ex_vi_cal_data.cal_type.cal_info.status[i] == -EAGAIN) {
+                   ex_vi_status[i] == -EAGAIN) {
             ftm_status[i] = -EAGAIN;
         } else {
             ftm_status[i] = -EINVAL;
         }
     }
-    snprintf(param, MAX_STR_SIZE - strlen(param) - 1,
+
+   if (handle.sp_version == SP_V4) {
+#ifdef MSM_SPKR_PROT_SPV4
+        snprintf(param, MAX_STR_SIZE - strlen(param) - 1,
+            "SpkrParamStatus: %d, %d; Rdc: %lf, %lf; Temp: %lf, %lf;"
+            " Res: %lf, %lf; Bl: %lf, %lf; Rms: %lf, %lf;"
+            " Kms: %lf, %lf; Fres: %lf, %lf; Qms: %lf, %lf",
+            ftm_status[SP_V2_SPKR_1], ftm_status[SP_V2_SPKR_2],
+            rdc[SP_V2_SPKR_1], rdc[SP_V2_SPKR_2], temp[SP_V2_SPKR_1],
+            temp[SP_V2_SPKR_2], re[SP_V2_SPKR_1], re[SP_V2_SPKR_2],
+            Bl[SP_V2_SPKR_1], Bl[SP_V2_SPKR_2], rms[SP_V2_SPKR_1], rms[SP_V2_SPKR_2],
+            kms[SP_V2_SPKR_1], kms[SP_V2_SPKR_2],
+            fre[SP_V2_SPKR_1], fre[SP_V2_SPKR_2], qms[SP_V2_SPKR_1], qms[SP_V2_SPKR_2]);
+#endif
+    } else {
+        snprintf(param, MAX_STR_SIZE - strlen(param) - 1,
             "SpkrParamStatus: %d, %d; Rdc: %lf, %lf; Temp: %lf, %lf;"
             " Freq: %lf, %lf; Rect: %lf, %lf; Qmct: %lf, %lf",
             ftm_status[SP_V2_SPKR_1], ftm_status[SP_V2_SPKR_2],
             rdc[SP_V2_SPKR_1], rdc[SP_V2_SPKR_2], temp[SP_V2_SPKR_1],
             temp[SP_V2_SPKR_2], f[SP_V2_SPKR_1], f[SP_V2_SPKR_2],
             r[SP_V2_SPKR_1], r[SP_V2_SPKR_2], q[SP_V2_SPKR_1], q[SP_V2_SPKR_2]);
-    ALOGD("%s:: param = %s\n", __func__, param);
+    }
 
     if (cal_fd > 0)
         close(cal_fd);
