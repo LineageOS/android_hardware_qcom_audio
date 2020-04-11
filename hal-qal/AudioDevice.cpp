@@ -918,7 +918,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADSET, QAL_DEVICE_OUT_WIRED_HEADSET));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADPHONE, QAL_DEVICE_OUT_WIRED_HEADPHONE));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO, QAL_DEVICE_OUT_BLUETOOTH_SCO));
-    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET, QAL_DEVICE_OUT_BLUETOOTH_SCO_HEADSET));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET, QAL_DEVICE_OUT_BLUETOOTH_SCO));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT, QAL_DEVICE_OUT_BLUETOOTH_SCO_CARKIT));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP, QAL_DEVICE_OUT_BLUETOOTH_A2DP));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES, QAL_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES));

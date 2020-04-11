@@ -188,6 +188,10 @@ audio_devices_t AudioVoice::GetMatchingTxDevice(audio_devices_t halRxDeviceId) {
         case AUDIO_DEVICE_OUT_USB_HEADSET:
             halTxDeviceId = AUDIO_DEVICE_IN_USB_HEADSET;
             break;
+        case AUDIO_DEVICE_OUT_BLUETOOTH_SCO:
+        case AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
+            halTxDeviceId = AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
+            break;
         default:
             halTxDeviceId = AUDIO_DEVICE_NONE;
             ALOGE("%s: unsupported Device Id of %d", __func__, halRxDeviceId);
