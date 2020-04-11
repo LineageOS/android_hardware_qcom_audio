@@ -2955,6 +2955,9 @@ int start_input_stream(struct stream_in *in)
     else
         ALOGV("%s: usecase(%d)", __func__, in->usecase);
 
+    if (audio_extn_cin_attached_usecase(in))
+        audio_extn_cin_acquire_usecase(in);
+
     if (get_usecase_from_list(adev, in->usecase) != NULL) {
         ALOGE("%s: use case assigned already in use, stream(%p)usecase(%d: %s)",
             __func__, &in->stream, in->usecase, use_case_table[in->usecase]);
@@ -2995,7 +2998,7 @@ int start_input_stream(struct stream_in *in)
 
     android_atomic_acquire_cas(true, false, &(in->capture_stopped));
 
-    if (audio_extn_cin_attached_usecase(in->usecase)) {
+    if (audio_extn_cin_attached_usecase(in)) {
        ret = audio_extn_cin_open_input_stream(in);
        if (ret)
            goto error_open;
@@ -4509,15 +4512,6 @@ static void out_snd_mon_cb(void * stream, struct str_parms * parms)
     return;
 }
 
-static int get_alive_usb_card(struct str_parms* parms) {
-    int card;
-    if ((str_parms_get_int(parms, "card", &card) >= 0) &&
-        !audio_extn_usb_alive(card)) {
-        return card;
-    }
-    return -ENODEV;
-}
-
 static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -4583,7 +4577,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 val = AUDIO_DEVICE_OUT_SPEAKER;
         }
         /*
-        * When USB headset is disconnected the music platback paused
+        * When USB headset is disconnected the music playback paused
         * and the policy manager send routing=0. But if the USB is connected
         * back before the standby time, AFE is not closed and opened
         * when USB is connected back. So routing to speker will guarantee
@@ -4591,7 +4585,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         */
         if ((out->devices & AUDIO_DEVICE_OUT_ALL_USB) &&
                 (val == AUDIO_DEVICE_NONE) &&
-                 !audio_extn_usb_connected(parms)) {
+                 !audio_extn_usb_connected(NULL)) {
                  val = AUDIO_DEVICE_OUT_SPEAKER;
          }
         /* To avoid a2dp to sco overlapping / BT device improper state
@@ -4622,11 +4616,10 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
         // Workaround: If routing to an non existing usb device, fail gracefully
         // The routing request will otherwise block during 10 second
-        int card;
-        if (audio_is_usb_out_device(new_dev) &&
-            (card = get_alive_usb_card(parms)) >= 0) {
+        if ((new_dev & AUDIO_DEVICE_OUT_ALL_USB) &&
+            !audio_extn_usb_connected(NULL)) {
 
-            ALOGW("out_set_parameters() ignoring rerouting to non existing USB card %d", card);
+            ALOGW("out_set_parameters() ignoring rerouting to non existing USB card");
             pthread_mutex_unlock(&adev->lock);
             pthread_mutex_unlock(&out->lock);
             ret = -ENOSYS;
@@ -5552,6 +5545,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         }
     }
 
+    if ((out->devices & AUDIO_DEVICE_OUT_ALL_USB) &&
+            !audio_extn_usb_connected(NULL)) {
+        ret = -EIO;
+        goto exit;
+    }
+
     if (out->standby) {
         out->standby = false;
         pthread_mutex_lock(&adev->lock);
@@ -6350,7 +6349,7 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
         return voice_extn_compress_voip_in_get_buffer_size(in);
     else if(audio_extn_compr_cap_usecase_supported(in->usecase))
         return audio_extn_compr_cap_get_buffer_size(in->config.format);
-    else if(audio_extn_cin_attached_usecase(in->usecase))
+    else if(audio_extn_cin_attached_usecase(in))
         return audio_extn_cin_get_buffer_size(in);
 
     return in->config.period_size * in->af_period_multiplier *
@@ -6415,7 +6414,7 @@ static int in_standby(struct audio_stream *stream)
                 in->mmap_shared_memory_fd = -1;
             }
         } else {
-            if (audio_extn_cin_attached_usecase(in->usecase))
+            if (audio_extn_cin_attached_usecase(in))
                 audio_extn_cin_close_input_stream(in);
         }
 
@@ -6546,11 +6545,9 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
             // Workaround: If routing to an non existing usb device, fail gracefully
             // The routing request will otherwise block during 10 second
-            int card;
             if (audio_is_usb_in_device(val) &&
-                (card = get_alive_usb_card(parms)) >= 0) {
-
-                ALOGW("in_set_parameters() ignoring rerouting to non existing USB card %d", card);
+                !audio_extn_usb_connected(NULL)) {
+                ALOGW("in_set_parameters() ignoring rerouting to non existing USB");
                 ret = -ENOSYS;
             } else {
 
@@ -6741,7 +6738,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         goto exit;
     bool use_mmap = is_mmap_usecase(in->usecase) || in->realtime;
 
-    if (audio_extn_cin_attached_usecase(in->usecase)) {
+    if (audio_extn_cin_attached_usecase(in)) {
         ret = audio_extn_cin_read(in, buffer, bytes, &bytes_read);
     } else if (in->pcm) {
         if (audio_extn_ssr_get_stream() == in) {
@@ -6802,7 +6799,7 @@ exit:
             pthread_mutex_unlock(&adev->lock);
             in->standby = true;
         }
-        if (!audio_extn_cin_attached_usecase(in->usecase)) {
+        if (!audio_extn_cin_attached_usecase(in)) {
             bytes_read = bytes;
             memset(buffer, 0, bytes);
         }
@@ -9025,10 +9022,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->stream.create_mmap_buffer = in_create_mmap_buffer;
         in->stream.get_mmap_position = in_get_mmap_position;
         ALOGV("%s: USECASE_AUDIO_RECORD_MMAP", __func__);
-    } else if (in->realtime) {
-        in->config = pcm_config_audio_capture_rt;
-        in->config.format = pcm_format_from_audio_format(config->format);
-        in->af_period_multiplier = af_period_multiplier;
     } else if (is_usb_dev && may_use_hifi_record) {
         in->usecase = USECASE_AUDIO_RECORD_HIFI;
         in->config = pcm_config_audio_capture;
@@ -9293,7 +9286,7 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
             audio_extn_compr_cap_format_supported(in->config.format))
         audio_extn_compr_cap_deinit();
 
-    if (audio_extn_cin_attached_usecase(in->usecase))
+    if (audio_extn_cin_attached_usecase(in))
         audio_extn_cin_free_input_stream_resources(in);
 
     if (in->is_st_session) {
