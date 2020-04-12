@@ -406,7 +406,8 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     std::ignore = stream;
     std::ignore = dsp_frames;
     ALOGD("%s: enter", __func__);
-    return 0;
+    //Temporary fix for Compressed offload SSR
+    return -EINVAL;
 }
 
 static int astream_out_set_parameters(struct audio_stream *stream,
@@ -1481,6 +1482,7 @@ int StreamOutPrimary::Open() {
     if (ret) {
         ALOGE("Qal Stream Open Error (%x)", ret);
         ret = -EINVAL;
+        goto error_open;
     }
     if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
        ret = qal_stream_set_param(qal_stream_handle_, 0, &qparam_payload);
