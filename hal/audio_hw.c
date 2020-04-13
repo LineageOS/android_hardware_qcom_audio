@@ -6401,6 +6401,8 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
         step = "begin";
         goto exit;
     }
+
+    info->flags = 0;
     info->buffer_size_frames = pcm_get_buffer_size(out->pcm);
     buffer_size = pcm_frames_to_bytes(out->pcm, info->buffer_size_frames);
     info->burst_size_frames = out->config.period_size;
@@ -6419,8 +6421,7 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
             step = "mmap";
             goto exit;
         }
-        // FIXME: indicate exclusive mode support by returning a negative buffer size
-        info->buffer_size_frames *= -1;
+        info->flags |= AUDIO_MMAP_APPLICATION_SHAREABLE;
     }
     memset(info->shared_memory_address, 0, pcm_frames_to_bytes(out->pcm,
                                                                info->buffer_size_frames));
@@ -7296,6 +7297,7 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
         goto exit;
     }
 
+    info->flags = 0;
     info->buffer_size_frames = pcm_get_buffer_size(in->pcm);
     buffer_size = pcm_frames_to_bytes(in->pcm, info->buffer_size_frames);
     info->burst_size_frames = in->config.period_size;
@@ -7314,8 +7316,7 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
             step = "mmap";
             goto exit;
         }
-        // FIXME: indicate exclusive mode support by returning a negative buffer size
-        info->buffer_size_frames *= -1;
+        info->flags |= AUDIO_MMAP_APPLICATION_SHAREABLE;
     }
 
     memset(info->shared_memory_address, 0, buffer_size);
