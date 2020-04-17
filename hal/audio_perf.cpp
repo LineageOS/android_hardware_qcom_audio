@@ -61,7 +61,7 @@ static hal_version connectPowerHalLocked() {
                     android::hardware::power::V1_2::IPower::getService();
         }
         if (gPowerHal_1_2_) {
-            ALOGI("Successfully connected to Power Hal Hidl service.");
+            ALOGV("Successfully connected to Power Hal Hidl service.");
             return HIDL_1_2;
         } else {
             // no more try on this handle
@@ -77,7 +77,7 @@ static hal_version connectPowerHalLocked() {
             gPowerHal_Aidl_ = aidl::android::hardware::power::IPower::fromBinder(pwBinder);
         }
         if (gPowerHal_Aidl_) {
-            ALOGI("Successfully connected to Power Hal Aidl service.");
+            ALOGV("Successfully connected to Power Hal Aidl service.");
             return AIDL;
         } else {
             // no more try on this handle
