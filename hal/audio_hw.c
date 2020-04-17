@@ -2621,7 +2621,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             ALOGE("%s: stream.inout is NULL", __func__);
             return -EINVAL;
         }
-        in_snd_device = platform_get_input_snd_device(adev->platform, NULL, NULL, usecase->type);
+        struct listnode out_devices;
+        list_init(&out_devices);
+        in_snd_device = platform_get_input_snd_device(adev->platform, NULL,
+                                                      &out_devices, usecase->type);
         assign_devices(&usecase->device_list,
                        &usecase->stream.inout->in_config.device_list);
     } else {
