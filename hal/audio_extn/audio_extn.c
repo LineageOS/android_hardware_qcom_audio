@@ -5485,6 +5485,11 @@ typedef void (*maxxaudio_set_parameters_t)(struct audio_device *,
                                   struct str_parms *);
 static maxxaudio_set_parameters_t maxxaudio_set_parameters;
 
+typedef void (*maxxaudio_get_parameters_t)(struct audio_device *,
+                                  struct str_parms *,
+                                  struct str_parms *);
+static maxxaudio_get_parameters_t maxxaudio_get_parameters;
+
 typedef bool (*maxxaudio_supported_usb_t)();
 static maxxaudio_supported_usb_t maxxaudio_supported_usb;
 
@@ -5512,6 +5517,8 @@ int maxx_audio_feature_init(bool is_feature_enabled)
                  (maxxaudio_set_device_t)dlsym(maxxaudio_lib_handle, "ma_set_device")) ||
             !(maxxaudio_set_parameters =
                  (maxxaudio_set_parameters_t)dlsym(maxxaudio_lib_handle, "ma_set_parameters")) ||
+            !(maxxaudio_get_parameters =
+                 (maxxaudio_get_parameters_t)dlsym(maxxaudio_lib_handle, "ma_get_parameters")) ||
             !(maxxaudio_supported_usb =
                  (maxxaudio_supported_usb_t)dlsym(
                                     maxxaudio_lib_handle, "ma_supported_usb"))) {
@@ -5533,6 +5540,7 @@ feature_disabled:
     maxxaudio_set_state = NULL;
     maxxaudio_set_device = NULL;
     maxxaudio_set_parameters = NULL;
+    maxxaudio_get_parameters = NULL;
     maxxaudio_supported_usb = NULL;
     ALOGW(":: %s: ---- Feature MAXX_AUDIO is disabled ----", __func__);
     return -ENOSYS;
@@ -5578,6 +5586,14 @@ void audio_extn_ma_set_parameters(struct audio_device *adev,
 {
     if (maxxaudio_set_parameters)
         maxxaudio_set_parameters(adev, parms);
+}
+
+void audio_extn_ma_get_parameters(struct audio_device *adev,
+                                  struct str_parms *query,
+                                  struct str_parms *reply)
+{
+    if (maxxaudio_get_parameters)
+        maxxaudio_get_parameters(adev, query, reply);
 }
 
 bool audio_extn_ma_supported_usb()

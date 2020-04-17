@@ -361,6 +361,9 @@ bool audio_extn_ma_set_state(struct audio_device *adev, int stream_type,
 void audio_extn_ma_set_device(struct audio_usecase *usecase);
 void audio_extn_ma_set_parameters(struct audio_device *adev,
                                   struct str_parms *parms);
+void audio_extn_ma_get_parameters(struct audio_device *adev,
+                                  struct str_parms *query,
+                                  struct str_parms *reply);
 bool audio_extn_ma_supported_usb();
 bool audio_extn_is_maxx_audio_enabled();
 // --- Function pointers from audio_extn needed by MAXX_AUDIO

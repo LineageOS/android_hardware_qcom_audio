@@ -5269,13 +5269,13 @@ static void set_audiocal(void *platform, struct str_parms *parms, char *value, i
         goto done_key_audcal;
     }
 
-    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
-    /* parse audio calibration keys */
-    ret = parse_audiocal_cfg(parms, &cal);
-
     /* handle audio calibration data now */
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_AUD_CALDATA, value, len);
     if (err >= 0) {
+        memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+        /* parse audio calibration keys */
+        ret = parse_audiocal_cfg(parms, &cal);
+
         str_parms_del(parms, AUDIO_PARAMETER_KEY_AUD_CALDATA);
         dlen = strlen(value);
         if(dlen <= 0) {
@@ -5604,15 +5604,16 @@ static void get_audiocal(void *platform, void *keys, void *pReply) {
         goto done;
     }
 
-    memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
-    /* parse audiocal configuration keys */
-    ret = parse_audiocal_cfg(query, &cal);
-    if(ret == 0) {
-        /* No calibration keys found */
-        goto done;
-    }
     err = str_parms_get_str(query, AUDIO_PARAMETER_KEY_AUD_CALDATA, value, sizeof(value));
     if (err >= 0) {
+        memset(&cal, 0, sizeof(acdb_audio_cal_cfg_t));
+        /* parse audiocal configuration keys */
+        ret = parse_audiocal_cfg(query, &cal);
+        if (ret == 0) {
+            /* No calibration keys found */
+            goto done;
+        }
+
         str_parms_del(query, AUDIO_PARAMETER_KEY_AUD_CALDATA);
     } else {
         goto done;
