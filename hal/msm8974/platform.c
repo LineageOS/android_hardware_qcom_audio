@@ -363,6 +363,7 @@ struct platform_data {
     struct snd_device_to_mic_map mic_map[SND_DEVICE_MAX];
     struct  spkr_device_chmap *spkr_ch_map;
     bool use_sprk_default_sample_rate;
+    bool is_multiple_sample_rate_combo_supported;
     struct listnode custom_mtmx_params_list;
     struct listnode custom_mtmx_in_params_list;
 };
@@ -3085,6 +3086,7 @@ void *platform_init(struct audio_device *adev)
     my_data->use_sprk_default_sample_rate = true;
     my_data->fluence_in_voice_comm = false;
     my_data->ec_car_state = false;
+    my_data->is_multiple_sample_rate_combo_supported = true;
     platform_reset_edid_info(my_data);
 
     //set max volume step for voice call
@@ -3626,6 +3628,7 @@ acdb_init_fail:
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
                         strdup("RX_CDC_DMA_RX_1 SampleRate");
                 default_rx_backend = strdup("RX_CDC_DMA_RX_1");
+                my_data->is_multiple_sample_rate_combo_supported = false;
             }
         } else if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
                !strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
@@ -5078,6 +5081,23 @@ int codec_device_supports_native_playback(struct listnode *out_devices)
         ret = true;
 
     return ret;
+}
+
+int is_hdset_combo_device(struct listnode *out_devices)
+{
+     int ret = false;
+
+     if ((compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) &&
+          compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) ||
+         (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADSET) &&
+          compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) ||
+         (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) &&
+          compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER)) ||
+         (compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADSET) &&
+          compare_device_type(out_devices, AUDIO_DEVICE_OUT_SPEAKER)))
+         ret = true;
+
+     return ret;
 }
 
 int platform_get_backend_index(snd_device_t snd_device)
@@ -9473,6 +9493,12 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
             ALOGD("%s:becf: afe: set sample rate to default Sample Rate(48k)",__func__);
         }
+
+        /*set sample rate to 48khz if multiple sample rates are not supported in spkr and hdset*/
+        if (is_hdset_combo_device(&usecase->device_list) &&
+            !my_data->is_multiple_sample_rate_combo_supported)
+            sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+            ALOGD("%s:becf: afe: set default Sample Rate(48k) for combo device",__func__);
     }
 
     if (backend_idx != platform_get_voice_call_backend(adev)
