@@ -4416,6 +4416,20 @@ static int out_standby(struct audio_stream *stream)
                 pcm_close(out->pcm);
                 out->pcm = NULL;
             }
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+                if (adev->haptic_pcm) {
+                    pcm_close(adev->haptic_pcm);
+                    adev->haptic_pcm = NULL;
+                }
+
+                if (adev->haptic_buffer != NULL) {
+                    free(adev->haptic_buffer);
+                    adev->haptic_buffer = NULL;
+                    adev->haptic_buffer_size = 0;
+                }
+                adev->haptic_pcm_device_id = 0;
+            }
+
             if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
                 do_stop = out->playback_started;
                 out->playback_started = false;
