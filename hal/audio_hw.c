@@ -2289,7 +2289,8 @@ bool is_btsco_device(snd_device_t out_snd_device, snd_device_t in_snd_device)
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_NREC ||
-        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC)
+        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC ||
+        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC)
         ret = true;
 
    return ret;
