@@ -621,6 +621,32 @@ int AudioDevice::SetMode(const audio_mode_t mode) {
     return ret;
 }
 
+int AudioDevice::add_input_headset_if_usb_out_headset(int *device_count,
+                                                      qal_device_id_t* qal_device_ids)
+{
+    bool is_usb_headset = false;
+    int count = *device_count;
+    qal_device_id_t* temp = NULL;
+
+    for (int i = 0; i < count; i++) {
+         if (qal_device_ids[i] == QAL_DEVICE_OUT_USB_HEADSET) {
+             is_usb_headset = true;
+             break;
+         }
+    }
+
+    if (is_usb_headset) {
+        temp = (qal_device_id_t *) realloc(qal_device_ids, (count + 1));
+        if (!temp)
+            return -ENOMEM;
+        qal_device_ids = temp;
+        qal_device_ids[count] = QAL_DEVICE_IN_USB_HEADSET;
+        *device_count = count + 1;
+        usb_input_dev_enabled = true;
+    }
+    return 0;
+}
+
 int AudioDevice::SetParameters(const char *kvpairs) {
     int ret = 0;
     int val = 0;
@@ -628,7 +654,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     char value[32];
     int device_count = 0;
     int qal_device_count = 0;
-    qal_device_id_t* qal_device_ids = nullptr;
+    qal_device_id_t* qal_device_ids = NULL;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -662,6 +688,13 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             ret = str_parms_get_str(parms, "card", value, sizeof(value));
             if (ret >= 0) {
                 param_device_connection.device_config.usb_addr.card_id = atoi(value);
+                if ((usb_card_id_ == param_device_connection.device_config.usb_addr.card_id) &&
+                    (audio_is_usb_in_device(device)) && (usb_input_dev_enabled == true)) {
+                    ALOGI("%s: plugin card :%d device num=%d already added", __func__, usb_card_id_,
+                          param_device_connection.device_config.usb_addr.device_num);
+                    return 0;
+                }
+
                 usb_card_id_ = param_device_connection.device_config.usb_addr.card_id;
                 ALOGI("%s: plugin card=%d", __func__,
                     param_device_connection.device_config.usb_addr.card_id);
@@ -686,9 +719,15 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         device_count = popcount(device);
         if (device_count) {
             if (qal_device_ids)
-                delete qal_device_ids;
-            qal_device_ids = new qal_device_id_t[device_count];
+                free(qal_device_ids);
+            qal_device_ids = (qal_device_id_t *) calloc(device_count, sizeof(qal_device_id_t));
             qal_device_count = GetQalDeviceIds(device, qal_device_ids);
+            ret = add_input_headset_if_usb_out_headset(&qal_device_count, qal_device_ids);
+            if (ret) {
+                free(qal_device_ids);
+                ALOGE("%s: adding input headset failed, error:%d", __func__, ret);
+                return ret;
+            }
             for (int i = 0; i < qal_device_count; i++) {
                 param_device_connection.connection_state = true;
                 param_device_connection.id = qal_device_ids[i];
@@ -696,7 +735,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                         (void*)&param_device_connection,
                         sizeof(qal_param_device_connection_t));
                 if (ret!=0) {
-                    ALOGE("%s: qal set param failed for device connection", __func__);
+                    ALOGE("%s: qal set param failed for device connection, qal_device_ids:%d",
+                          __func__, qal_device_ids[i]);
                 }
                 ALOGI("%s: qal set param success  for device connection", __func__);
             }
@@ -760,6 +800,10 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             ret = str_parms_get_str(parms, "device", value, sizeof(value));
             if (ret >= 0)
                 param_device_connection.device_config.usb_addr.device_num = atoi(value);
+            if ((usb_card_id_ == param_device_connection.device_config.usb_addr.card_id) &&
+                (audio_is_usb_in_device(device)) && (usb_input_dev_enabled == true)) {
+                   usb_input_dev_enabled = false;
+            }
         } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             int controller = -1, stream = -1;
             AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
@@ -771,8 +815,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         device_count = popcount(device);
         if (device_count) {
             if (qal_device_ids)
-                delete qal_device_ids;
-            qal_device_ids = new qal_device_id_t[device_count];
+                free(qal_device_ids);
+            qal_device_ids = (qal_device_id_t *) calloc(device_count, sizeof(qal_device_id_t));
             qal_device_count = GetQalDeviceIds(device, qal_device_ids);
             for (int i = 0; i < qal_device_count; i++) {
                 param_device_connection.connection_state = false;
@@ -789,7 +833,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     }
 
     if (qal_device_ids)
-        delete qal_device_ids;
+        free(qal_device_ids);
 
     ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
     if (ret >= 0) {
