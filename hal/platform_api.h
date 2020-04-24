@@ -236,7 +236,8 @@ int platform_stop_incall_music_usecase(void *platform);
 int platform_update_lch(void *platform, struct voice_session *session,
                         enum voice_lch_mode lch_mode);
 /* returns the latency for a usecase in Us */
-int64_t platform_render_latency(audio_usecase_t usecase);
+int64_t platform_render_latency(struct audio_device* adev, audio_usecase_t usecase);
+int64_t platform_capture_latency(struct audio_device* adev, audio_usecase_t usecase);
 int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
 
 bool platform_listen_device_needs_event(snd_device_t snd_device);
@@ -314,6 +315,7 @@ int platform_split_snd_device(void *platform,
                               int *num_devices,
                               snd_device_t *new_snd_devices);
 
+bool platform_check_all_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 int platform_set_sidetone(struct audio_device *adev,
                           snd_device_t out_snd_device,
@@ -418,4 +420,9 @@ int platform_set_hdmi_channels_v2(void *platform, int channel_count,
                                   int controller, int stream);
 int platform_get_display_port_ctl_index(int controller, int stream);
 bool platform_is_call_proxy_snd_device(snd_device_t snd_device);
+void platform_set_snd_device_delay(snd_device_t snd_device, int delay_ms);
+void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms);
+
+int platform_get_audio_source_index(const char *audio_source_name);
+
 #endif // AUDIO_PLATFORM_API_H

@@ -1520,11 +1520,29 @@ static int msm_be_id_array_len  =
     sizeof(msm_device_to_be_id) / sizeof(msm_device_to_be_id[0]);
 #endif
 
+static int snd_device_delay_ms[SND_DEVICE_MAX] = {0};
+
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 #define ULL_PLATFORM_DELAY         (3*1000LL)
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
+
+static int audio_source_delay_ms[AUDIO_SOURCE_CNT] = {0};
+
+static struct name_to_index audio_source_index[AUDIO_SOURCE_CNT] = {
+    {TO_NAME_INDEX(AUDIO_SOURCE_DEFAULT)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_MIC)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_UPLINK)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_DOWNLINK)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_CALL)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_CAMCORDER)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_RECOGNITION)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_COMMUNICATION)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_REMOTE_SUBMIX)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_UNPROCESSED)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_PERFORMANCE)},
+};
 
 static bool is_usb_snd_dev(snd_device_t snd_device)
 {
@@ -2154,6 +2172,7 @@ static void set_platform_defaults(struct platform_data * my_data)
         hw_interface_table[dev] = NULL;
         operator_specific_device_table[dev] = NULL;
         external_specific_device_table[dev] = NULL;
+        snd_device_delay_ms[dev] = 0;
     }
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
         backend_bit_width_table[dev] = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
@@ -4645,6 +4664,11 @@ int platform_get_snd_device_index(char *device_name)
 int platform_get_usecase_index(const char *usecase_name)
 {
     return find_index(usecase_name_index, AUDIO_USECASE_MAX, usecase_name);
+}
+
+int platform_get_audio_source_index(const char *audio_source_name)
+{
+    return find_index(audio_source_index, AUDIO_SOURCE_CNT, audio_source_name);
 }
 
 void platform_add_operator_specific_device(snd_device_t snd_device,
@@ -8602,31 +8626,110 @@ done:
     return NULL;
 }
 
+void platform_set_snd_device_delay(snd_device_t snd_device, int delay_ms)
+{
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
+        return;
+    }
+
+    snd_device_delay_ms[snd_device] = delay_ms;
+}
+
+/* return delay in Us */
+int64_t platform_get_snd_device_delay(snd_device_t snd_device)
+{
+    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
+        ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
+        return 0;
+    }
+    return 1000LL * (int64_t)snd_device_delay_ms[snd_device];
+}
+
+void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms)
+{
+    if ((audio_source < AUDIO_SOURCE_DEFAULT) ||
+           (audio_source > AUDIO_SOURCE_MAX)) {
+        ALOGE("%s: Invalid audio_source = %d", __func__, audio_source);
+        return;
+    }
+
+    audio_source_delay_ms[audio_source] = delay_ms;
+}
+
+/* Delay in Us */
+int64_t platform_get_audio_source_delay(audio_source_t audio_source)
+{
+    if ((audio_source < AUDIO_SOURCE_DEFAULT) ||
+            (audio_source > AUDIO_SOURCE_MAX)) {
+        ALOGE("%s: Invalid audio_source = %d", __func__, audio_source);
+        return 0;
+    }
+
+    return 1000LL * audio_source_delay_ms[audio_source];
+}
+
 /* Delay in Us */
 /* Delay in Us, only to be used for PCM formats */
-int64_t platform_render_latency(audio_usecase_t usecase)
+int64_t platform_render_latency(struct audio_device *adev, audio_usecase_t usecase)
 {
+    int64_t delay = 0LL;
+    struct audio_usecase *uc_info;
+
     switch (usecase) {
         case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
         case USECASE_AUDIO_PLAYBACK_MEDIA:
         case USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE:
         case USECASE_AUDIO_PLAYBACK_REAR_SEAT:
-            return DEEP_BUFFER_PLATFORM_DELAY;
+            delay = DEEP_BUFFER_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
         case USECASE_AUDIO_PLAYBACK_WITH_HAPTICS:
         case USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION:
         case USECASE_AUDIO_PLAYBACK_PHONE:
-            return LOW_LATENCY_PLATFORM_DELAY;
+            delay = LOW_LATENCY_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_OFFLOAD:
         case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
-             return PCM_OFFLOAD_PLATFORM_DELAY;
+            delay = PCM_OFFLOAD_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_ULL:
-             return ULL_PLATFORM_DELAY;
+            delay = ULL_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_MMAP:
-             return MMAP_PLATFORM_DELAY;
+            delay = MMAP_PLATFORM_DELAY;
+            break;
         default:
-            return 0;
+            break;
     }
+
+    uc_info = get_usecase_from_list(adev, usecase);
+
+    if (uc_info != NULL) {
+        if (uc_info->type == PCM_PLAYBACK)
+            delay += platform_get_snd_device_delay(uc_info->out_snd_device);
+        else
+            ALOGE("%s: Invalid uc_info->type %d", __func__, uc_info->type);
+    }
+
+    return delay;
+}
+
+int64_t platform_capture_latency(struct audio_device *adev, audio_usecase_t usecase)
+{
+    int64_t delay = 0LL;
+    struct audio_usecase *uc_info;
+
+    uc_info = get_usecase_from_list(adev, usecase);
+
+    if (uc_info != NULL) {
+        if (uc_info->type == PCM_CAPTURE)
+            delay += platform_get_snd_device_delay(uc_info->in_snd_device);
+        else
+            ALOGE("%s: Invalid uc_info->type %d", __func__, uc_info->type);
+    }
+
+    return delay;
 }
 
 int platform_update_usecase_from_source(int source, int usecase)
