@@ -56,13 +56,18 @@ int AudioVoice::SetMode(const audio_mode_t mode) {
     return ret;
 }
 
-int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
+int AudioVoice::VoiceSetParameters(const char *kvpairs) {
     int value, i;
     char c_value[32];
     int ret = 0, err;
+    struct str_parms *parms;
     qal_param_payload params;
 
     ALOGD("%s: Enter", __func__);
+
+    parms = str_parms_create_str(kvpairs);
+    if (!parms)
+       return  -EINVAL;
 
     err = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_VSID, &value);
     if (err >= 0) {
@@ -149,6 +154,7 @@ int AudioVoice::VoiceSetParameters(struct str_parms *parms) {
     }
 
 done:
+    str_parms_destroy(parms);
     return ret;
 }
 
@@ -201,16 +207,23 @@ audio_devices_t AudioVoice::GetMatchingTxDevice(audio_devices_t halRxDeviceId) {
     return halTxDeviceId;
 }
 
-int AudioVoice::VoiceOutSetParameters(struct str_parms *parms) {
+int AudioVoice::VoiceOutSetParameters(const char *kvpairs) {
     char value[32];
     int ret = 0, rx_device = 0, tx_device = 0, err;
     qal_device_id_t qal_rx_device = (qal_device_id_t) NULL;
     qal_device_id_t qal_tx_device = (qal_device_id_t) NULL;
     qal_device_id_t* qal_device_ids = NULL;
     uint16_t device_count = 0;
+    struct str_parms *parms = (str_parms *)NULL;
 
     ALOGD("%s Enter", __func__);
+    parms = str_parms_create_str(kvpairs);
+
+    if (!parms) {
+       return -EINVAL;
+    }
     err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
+    str_parms_destroy(parms);
     if (err >= 0) {
         rx_device = atoi(value);
         if ((device_count = popcount(rx_device)) == 0) {

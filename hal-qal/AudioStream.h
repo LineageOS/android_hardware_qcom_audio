@@ -415,7 +415,7 @@ public:
     int SetVolume(float left, float right);
     int64_t GetFramesWritten(struct timespec *timestamp);
     int SetParameters(struct str_parms *parms);
-    int VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, struct str_parms *parms);
+    int VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, const char *kvpairs);
     int Pause();
     int Resume();
     int Drain(audio_drain_type_t type);

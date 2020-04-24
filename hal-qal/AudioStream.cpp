@@ -424,17 +424,18 @@ static int astream_out_set_parameters(struct audio_stream *stream,
     ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, astream_out->GetUseCase(), use_case_table[astream_out->GetUseCase()], kvpairs);
 
+    ret = astream_out->VoiceSetParameters(adevice, kvpairs);
+    if (ret) {
+        ALOGE("Voice Stream SetParameters Error (%x)", ret);
+        goto exit;
+    }
+
     parms = str_parms_create_str(kvpairs);
     if (!parms) {
        ret = -EINVAL;
        goto exit;
     }
 
-    ret = astream_out->VoiceSetParameters(adevice, parms);
-    if (ret) {
-        ALOGE("Voice Stream SetParameters Error (%x)", ret);
-        goto exit;
-    }
 
    // if (astream_out->flags_ == (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
        ret = astream_out->SetParameters(parms);
@@ -444,7 +445,8 @@ static int astream_out_set_parameters(struct audio_stream *stream,
        }
    // }
 exit:
-    str_parms_destroy(parms);
+    if (parms)
+        str_parms_destroy(parms);
     return ret;
 }
 
@@ -1195,12 +1197,12 @@ error:
     return ret;
 }
 
-int StreamOutPrimary::VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, struct str_parms *parms) {
+int StreamOutPrimary::VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, const char *kvpairs) {
     int ret = 0;
 
     ALOGD("%s Enter", __func__);
     if (adevice->voice_)
-        ret = adevice->voice_->VoiceOutSetParameters(parms);
+        ret = adevice->voice_->VoiceOutSetParameters(kvpairs);
 
     return ret;
 }

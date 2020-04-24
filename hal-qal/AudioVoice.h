@@ -91,8 +91,8 @@ public:
 
     std::shared_ptr<StreamOutPrimary> stream_out_primary_;
 
-    int VoiceSetParameters(struct str_parms *parms);
-    int VoiceOutSetParameters(struct str_parms *parms);
+    int VoiceSetParameters(const char *kvpairs);
+    int VoiceOutSetParameters(const char *kvpairs);
     bool is_valid_call_state(int call_state);
     bool is_valid_vsid(uint32_t vsid);
     int max_voice_sessions_;

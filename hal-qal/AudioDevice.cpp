@@ -657,10 +657,11 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     qal_device_id_t* qal_device_ids = NULL;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
+    ret = voice_->VoiceSetParameters(kvpairs);
+    if (ret)
+        ALOGE("%s: Error in VoiceSetParameters %d", __func__, ret);
+
     parms = str_parms_create_str(kvpairs);
-
-    ret = voice_->VoiceSetParameters(parms);
-
     ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
 
     if (ret >= 0) {
