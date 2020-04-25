@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -28,8 +28,15 @@
  */
 
 #define LOG_TAG "ahal_AudioExtn"
+#include <dlfcn.h>
 #include "AudioExtn.h"
 #define AUDIO_OUTPUT_BIT_WIDTH ((config_->offload_info.bit_width == 32) ? 24:config_->offload_info.bit_width)
+
+static batt_listener_init_t batt_listener_init;
+static batt_listener_deinit_t batt_listener_deinit;
+static batt_prop_is_charging_t batt_prop_is_charging;
+static bool battery_listener_enabled;
+static void *batt_listener_lib_handle;
 
 int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, qal_param_payload *param_payload, str_parms *parms, uint32_t *sr, uint16_t *ch) {
    int ret = 0;
@@ -261,3 +268,62 @@ int AudioExtn::get_controller_stream_from_params(struct str_parms *parms,
     }
     return 0;
 }
+
+// START: BATTERY_LISTENER ==================================================
+#ifdef __LP64__
+#define BATTERY_LISTENER_LIB_PATH "/vendor/lib64/libbatterylistener.so"
+#else
+#define BATTERY_LISTENER_LIB_PATH "/vendor/lib/libbatterylistener.so"
+#endif
+
+void AudioExtn::battery_listener_feature_init(bool is_feature_enabled) {
+    battery_listener_enabled = is_feature_enabled;
+    if (is_feature_enabled) {
+        batt_listener_lib_handle = dlopen(BATTERY_LISTENER_LIB_PATH, RTLD_NOW);
+
+        if (!batt_listener_lib_handle) {
+            ALOGE("%s: dlopen failed", __func__);
+            goto feature_disabled;
+        }
+        if (!(batt_listener_init = (batt_listener_init_t)dlsym(
+                            batt_listener_lib_handle, "battery_properties_listener_init")) ||
+                !(batt_listener_deinit =
+                     (batt_listener_deinit_t)dlsym(
+                        batt_listener_lib_handle, "battery_properties_listener_deinit")) ||
+                !(batt_prop_is_charging =
+                     (batt_prop_is_charging_t)dlsym(
+                        batt_listener_lib_handle, "battery_properties_is_charging"))) {
+             ALOGE("%s: dlsym failed", __func__);
+                goto feature_disabled;
+        }
+        ALOGD("%s: ---- Feature BATTERY_LISTENER is enabled ----", __func__);
+        return;
+    }
+
+    feature_disabled:
+    if (batt_listener_lib_handle) {
+        dlclose(batt_listener_lib_handle);
+        batt_listener_lib_handle = NULL;
+    }
+
+    batt_listener_init = NULL;
+    batt_listener_deinit = NULL;
+    batt_prop_is_charging = NULL;
+    ALOGW(":: %s: ---- Feature BATTERY_LISTENER is disabled ----", __func__);
+}
+
+void AudioExtn::battery_properties_listener_init(battery_status_change_fn_t fn)
+{
+    if(batt_listener_init)
+        batt_listener_init(fn);
+}
+void AudioExtn::battery_properties_listener_deinit()
+{
+    if(batt_listener_deinit)
+        batt_listener_deinit();
+}
+bool AudioExtn::battery_properties_is_charging()
+{
+    return (batt_prop_is_charging)? batt_prop_is_charging(): false;
+}
+// END: BATTERY_LISTENER ================================================================

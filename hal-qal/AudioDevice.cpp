@@ -54,6 +54,7 @@
 #include "QalApi.h"
 #include "audio_extn.h"
 #include "audio_hidl.h"
+#include "battery_listener.h"
 
 std::shared_ptr<AudioDevice> AudioDevice::GetInstance() {
     if (!adev_) {
@@ -144,6 +145,14 @@ static int adev_close(hw_device_t *device __unused) {
 
 static int adev_init_check(const struct audio_hw_device *dev __unused) {
     return 0;
+}
+
+void adev_on_battery_status_changed(bool charging)
+{
+    std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance();
+    ALOGD("%s: battery status changed to %scharging",
+        __func__, charging ? "" : "not ");
+    adevice->SetChargingMode(charging);
 }
 
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume) {
@@ -484,6 +493,9 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
         }
     }
     audio_extn_sound_trigger_init(adev_);
+    /* no feature configurations yet */
+    AudioExtn::battery_listener_feature_init(true);
+    AudioExtn::battery_properties_listener_init(adev_on_battery_status_changed);
     audio_extn_hidl_init();
     voice_ = VoiceInit();
     mute_ = false;
@@ -1025,6 +1037,23 @@ int AudioDevice::GetQalDeviceIds(const audio_devices_t hal_device_id,
 
 error:
     return device_count_used;
+}
+
+void AudioDevice::SetChargingMode(bool is_charging) {
+    int32_t result = 0;
+    qal_param_charging_state_t charge_state;
+
+    ALOGD("%s: enter, is_charging %d", __func__, is_charging);
+    is_charging_ = is_charging;
+    charge_state.charging_state = is_charging;
+
+    result = qal_set_param(QAL_PARAM_ID_CHARGING_STATE, (void*)&charge_state,
+                        sizeof(qal_param_charging_state_t));
+    if (result)
+        ALOGD("%s: error while handling charging event result(%d)\n",
+            __func__, result);
+
+    ALOGD("%s: exit", __func__);
 }
 
 static int adev_open(const hw_module_t *module, const char *name __unused,
