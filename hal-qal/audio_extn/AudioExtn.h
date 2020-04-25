@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,12 +33,22 @@
 #include "QalDefs.h"
 #include "audio_defs.h"
 #include <log/log.h>
+#include "battery_listener.h"
+
+typedef void (*batt_listener_init_t)(battery_status_change_fn_t);
+typedef void (*batt_listener_deinit_t)();
+typedef bool (*batt_prop_is_charging_t)();
 
 class AudioExtn
-{	
+{
 public:
-   static int audio_extn_parse_compress_metadata(struct audio_config *config_, qal_param_payload *param_payload, str_parms *parms, uint32_t *sr, uint16_t *ch);
-   static int get_controller_stream_from_params(struct str_parms *parms, int *controller, int *stream);
+    static int audio_extn_parse_compress_metadata(struct audio_config *config_, qal_param_payload *param_payload, str_parms *parms, uint32_t *sr, uint16_t *ch);
+    static int get_controller_stream_from_params(struct str_parms *parms, int *controller, int *stream);
+    static void battery_listener_feature_init(bool is_feature_enabled);
+    static void battery_properties_listener_init(battery_status_change_fn_t fn);
+    static void battery_properties_listener_deinit();
+    static bool battery_properties_is_charging();
+private:
 };
 
 #endif /* AUDIOEXTN_H */

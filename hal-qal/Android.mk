@@ -18,7 +18,10 @@ LOCAL_SRC_FILES := \
     AudioVoice.cpp \
     audio_extn/soundtrigger.cpp \
     audio_extn/audio_hidl.cpp \
-    audio_extn/AudioExtn.cpp
+    audio_extn/AudioExtn.cpp \
+    ../hal/audio_extn/battery_listener.cpp
+LOCAL_STATIC_LIBRARIES := \
+    libhealthhalutils
 
 LOCAL_SHARED_LIBRARIES := \
     libbase \
@@ -32,7 +35,10 @@ LOCAL_SHARED_LIBRARIES := \
     libhidltransport \
     libprocessgroup \
     libutils \
-    libqal
+    libqal \
+    android.hardware.health@1.0 \
+    android.hardware.health@2.0 \
+    android.hardware.power@1.2 \
 
 LOCAL_C_INCLUDES += \
     external/tinyalsa/include \
@@ -41,7 +47,8 @@ LOCAL_C_INCLUDES += \
     vendor/qcom/opensource/core-utils/fwk-detect \
     vendor/qcom/opensource/qal \
     $(call include-path-for, audio-effects) \
-    $(LOCAL_PATH)/audio_extn
+    $(LOCAL_PATH)/audio_extn \
+    $(LOCAL_PATH)/../hal/audio_extn
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AHAL_EXT)),true)
     LOCAL_CFLAGS += -DAHAL_EXT_ENABLED
