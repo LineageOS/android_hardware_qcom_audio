@@ -328,6 +328,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = "deep-buffer-playback",
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
     [USECASE_AUDIO_PLAYBACK_WITH_HAPTICS] = "audio-with-haptics-playback",
+    [USECASE_AUDIO_PLAYBACK_HAPTICS] = "haptics-playback",
     [USECASE_AUDIO_PLAYBACK_ULL]         = "audio-ull-playback",
     [USECASE_AUDIO_PLAYBACK_MULTI_CH]    = "multi-channel-playback",
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] = "compress-offload-playback",
@@ -3780,7 +3781,8 @@ int start_output_stream(struct stream_out *out)
     }
 
     if (is_haptic_usecase) {
-        adev->haptic_pcm_device_id = platform_get_haptics_pcm_device_id();
+        adev->haptic_pcm_device_id = platform_get_pcm_device_id(
+                     USECASE_AUDIO_PLAYBACK_HAPTICS, PCM_PLAYBACK);
         if (adev->haptic_pcm_device_id < 0) {
             ALOGE("%s: Invalid Haptics pcm device id(%d) for the usecase(%d)",
                   __func__, adev->haptic_pcm_device_id, out->usecase);
