@@ -1090,8 +1090,9 @@ int StreamOutPrimary::Standby() {
     }
 
     stream_started_ = false;
-    if (streamAttributes_.type == QAL_STREAM_COMPRESSED)
+    if (CheckOffloadEffectsType(streamAttributes_.type)) {
         ret = StopOffloadEffects(handle_, qal_stream_handle_);
+    }
 
     if (qal_stream_handle_) {
         ret = qal_stream_close(qal_stream_handle_);
@@ -1601,7 +1602,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
 
         stream_started_ = true;
 
-        if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
+        if (CheckOffloadEffectsType(streamAttributes_.type)) {
             ret = StartOffloadEffects(handle_, qal_stream_handle_);
         }
     }
@@ -1618,6 +1619,15 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
     total_bytes_written_ += local_bytes_written;
     clock_gettime(CLOCK_MONOTONIC, &writeAt);
     return local_bytes_written;
+}
+
+bool StreamOutPrimary::CheckOffloadEffectsType(qal_stream_type_t qal_stream_type) {
+    if (qal_stream_type == QAL_STREAM_COMPRESSED  ||
+        qal_stream_type == QAL_STREAM_PCM_OFFLOAD) {
+        return true;
+    }
+
+    return false;
 }
 
 int StreamOutPrimary::StartOffloadEffects(
@@ -1791,7 +1801,7 @@ StreamOutPrimary::~StreamOutPrimary() {
           handle_, qal_stream_handle_);
 
     if (qal_stream_handle_) {
-        if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
+        if (CheckOffloadEffectsType(streamAttributes_.type)) {
             StopOffloadEffects(handle_, qal_stream_handle_);
         }
         qal_stream_close(qal_stream_handle_);

@@ -429,6 +429,7 @@ public:
     int GetOutputUseCase(audio_output_flags_t halStreamFlags);
     int StartOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     int StopOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
+    bool CheckOffloadEffectsType(qal_stream_type_t qal_stream_type);
     audio_output_flags_t flags_;
 protected:
     struct timespec writeAt;
