@@ -115,6 +115,9 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
 
 #define AUDIO_PARAMETER_KEY_HIFI_AUDIO_FILTER "hifi_filter"
 
+#define VENDOR_CONFIG_PATH_MAX_LENGTH 128
+#define VENDOR_CONFIG_FILE_MAX_LENGTH 128
+
 struct snd_card_split {
     char device[HW_INFO_ARRAY_MAX_SIZE];
     char snd_card[HW_INFO_ARRAY_MAX_SIZE];
@@ -1402,4 +1405,6 @@ void audio_extn_set_custom_mtmx_params_v1(struct audio_device *adev,
 snd_device_t audio_extn_get_loopback_snd_device(struct audio_device *adev,
                                                 struct audio_usecase *usecase,
                                                 int channel_count);
+
+void audio_get_vendor_config_path(char* config_file_path, int path_size);
 #endif /* AUDIO_EXTN_H */
