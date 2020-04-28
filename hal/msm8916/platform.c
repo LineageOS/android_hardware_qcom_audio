@@ -694,7 +694,11 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_BT_SCO_MIC_WB_NREC] = 123,
     [SND_DEVICE_IN_CAMCORDER_MIC] = 4,
     [SND_DEVICE_IN_VOICE_DMIC] = 41,
+#ifdef USES_AW8898_AMPLIFIER
+    [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = 42,
+#else
     [SND_DEVICE_IN_VOICE_SPEAKER_DMIC] = 43,
+#endif
     [SND_DEVICE_IN_VOICE_SPEAKER_TMIC] = 161,
     [SND_DEVICE_IN_VOICE_SPEAKER_QMIC] = 19,
     [SND_DEVICE_IN_VOICE_TTY_FULL_HEADSET_MIC] = 16,
@@ -1610,6 +1614,10 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET] = strdup("speaker-and-headphones");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_STEREO_AND_VOICE_HEADPHONES] = strdup("speaker-and-headphones");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_STEREO_AND_VOICE_ANC_HEADSET] = strdup("speaker-and-headphones");
+#ifdef USES_AW8898_AMPLIFIER
+    backend_tag_table[SND_DEVICE_OUT_HANDSET] = strdup("handset");
+    backend_tag_table[SND_DEVICE_OUT_VOICE_HANDSET] = strdup("voice-handset");
+#endif
 
     hw_interface_table[SND_DEVICE_OUT_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER] = strdup("SLIMBUS_0_RX");
@@ -4590,6 +4598,16 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
             in_device & AUDIO_DEVICE_IN_BACK_MIC) {
 
+#ifdef USES_AW8898_AMPLIFIER
+            if (str_bitwidth == 16) {
+                if ((my_data->fluence_type & FLUENCE_DUAL_MIC) &&
+                    (my_data->source_mic_type & SOURCE_DUAL_MIC) &&
+                    (channel_count == 2))
+                    snd_device = SND_DEVICE_IN_CAMCORDER_MIC;
+                else
+                    snd_device = SND_DEVICE_IN_CAMCORDER_MIC;
+            }
+#else
             if (str_bitwidth == 16) {
                 if ((my_data->fluence_type & FLUENCE_DUAL_MIC) &&
                     (my_data->source_mic_type & SOURCE_DUAL_MIC) &&
@@ -4598,6 +4616,8 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 else
                     snd_device = SND_DEVICE_IN_CAMCORDER_MIC;
             }
+#endif
+
             /*
              * for other bit widths
              */
@@ -4732,7 +4752,11 @@ snd_device_t platform_get_input_snd_device(void *platform, audio_devices_t out_d
                 snd_device = SND_DEVICE_IN_QUAD_MIC;
             else if ((my_data->fluence_type & (FLUENCE_DUAL_MIC | FLUENCE_TRI_MIC | FLUENCE_QUAD_MIC)) &&
                     (channel_count == 2) && (my_data->source_mic_type & SOURCE_DUAL_MIC))
+#ifdef USES_AW8898_AMPLIFIER
+                snd_device = SND_DEVICE_IN_HANDSET_MIC;
+#else
                 snd_device = SND_DEVICE_IN_HANDSET_STEREO_DMIC;
+#endif
             else
                 snd_device = SND_DEVICE_IN_HANDSET_MIC;
         } else if (in_device & AUDIO_DEVICE_IN_BACK_MIC) {
