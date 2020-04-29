@@ -65,6 +65,7 @@
 #include <hardware/audio_alsaops.h>
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
+#include <utils/Timers.h> // systemTime
 #include <audio_effects/effect_aec.h>
 #include <audio_effects/effect_ns.h>
 #include <audio_utils/format.h>
@@ -1957,9 +1958,10 @@ static int read_hdmi_sink_caps(struct stream_out *out)
     reset_hdmi_sink_caps(out);
 
     /* Cache ext disp type */
-    if (platform_get_ext_disp_type_v2(adev->platform,
+    ret = platform_get_ext_disp_type_v2(adev->platform,
                                       out->extconn.cs.controller,
-                                      out->extconn.cs.stream <= 0)) {
+                                      out->extconn.cs.stream);
+    if(ret < 0) {
         ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
         return -EINVAL;
     }
@@ -2392,7 +2394,8 @@ bool is_btsco_device(snd_device_t out_snd_device, snd_device_t in_snd_device)
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_NREC ||
-        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC)
+        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC ||
+        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC)
         ret = true;
 
    return ret;
@@ -2619,7 +2622,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             ALOGE("%s: stream.inout is NULL", __func__);
             return -EINVAL;
         }
-        in_snd_device = platform_get_input_snd_device(adev->platform, NULL, NULL, usecase->type);
+        struct listnode out_devices;
+        list_init(&out_devices);
+        in_snd_device = platform_get_input_snd_device(adev->platform, NULL,
+                                                      &out_devices, usecase->type);
         assign_devices(&usecase->device_list,
                        &usecase->stream.inout->in_config.device_list);
     } else {
@@ -2642,7 +2648,11 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                  is_single_device_type_equal(&vc_usecase->device_list,
                                                         AUDIO_DEVICE_OUT_HEARING_AID) ||
                                  is_single_device_type_equal(&usecase->device_list,
-                                                     AUDIO_DEVICE_IN_VOICE_CALL))) {
+                                                     AUDIO_DEVICE_IN_VOICE_CALL) ||
+                                 (is_single_device_type_equal(&usecase->device_list,
+                                                     AUDIO_DEVICE_IN_USB_HEADSET) &&
+                                 is_single_device_type_equal(&vc_usecase->device_list,
+                                                        AUDIO_DEVICE_OUT_USB_HEADSET)))) {
                 in_snd_device = vc_usecase->in_snd_device;
                 out_snd_device = vc_usecase->out_snd_device;
             }
@@ -3927,8 +3937,15 @@ int start_output_stream(struct stream_out *out)
             out_set_pcm_volume(&out->stream, out->volume_l, out->volume_r);
         }
     } else {
-        platform_set_stream_channel_map(adev->platform, out->channel_mask,
-                   out->pcm_device_id, &out->channel_map_param.channel_map[0]);
+        /*
+         * set custom channel map if:
+         *   1. neither mono nor stereo clips i.e. channels > 2 OR
+         *   2. custom channel map has been set by client
+         * else default channel map of FC/FR/FL can always be set to DSP
+         */
+        if (popcount(out->channel_mask) > 2 || out->channel_map_param.channel_map[0])
+            platform_set_stream_channel_map(adev->platform, out->channel_mask,
+                       out->pcm_device_id, &out->channel_map_param.channel_map[0]);
         audio_enable_asm_bit_width_enforce_mode(adev->mixer,
                                                 adev->dsp_bit_width_enforce_mode,
                                                 true);
@@ -4284,8 +4301,10 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out, struct ti
     /* This adjustment accounts for buffering after app processor.
      * It is based on estimated DSP latency per use case, rather than exact.
      */
-    int64_t platform_latency =  platform_render_latency(out->usecase) *
+    pthread_mutex_lock(&adev->lock);
+    int64_t platform_latency =  platform_render_latency(out->dev, out->usecase) *
                                 out->sample_rate / 1000000LL;
+    pthread_mutex_unlock(&adev->lock);
 
     pthread_mutex_lock(&out->position_query_lock);
     /* not querying actual state of buffering in kernel as it would involve an ioctl call
@@ -4403,6 +4422,20 @@ static int out_standby(struct audio_stream *stream)
                 pcm_close(out->pcm);
                 out->pcm = NULL;
             }
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+                if (adev->haptic_pcm) {
+                    pcm_close(adev->haptic_pcm);
+                    adev->haptic_pcm = NULL;
+                }
+
+                if (adev->haptic_buffer != NULL) {
+                    free(adev->haptic_buffer);
+                    adev->haptic_buffer = NULL;
+                    adev->haptic_buffer_size = 0;
+                }
+                adev->haptic_pcm_device_id = 0;
+            }
+
             if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
                 do_stop = out->playback_started;
                 out->playback_started = false;
@@ -4541,6 +4574,17 @@ static int out_dump(const struct audio_stream *stream, int fd)
     const bool locked = (pthread_mutex_trylock(&out->lock) == 0);
     dprintf(fd, "      Standby: %s\n", out->standby ? "yes" : "no");
     dprintf(fd, "      Frames written: %lld\n", (long long)out->written);
+
+    char buffer[256]; // for statistics formatting
+    if (!is_offload_usecase(out->usecase)) {
+        simple_stats_to_string(&out->fifo_underruns, buffer, sizeof(buffer));
+        dprintf(fd, "      Fifo frame underruns: %s\n", buffer);
+    }
+
+    if (out->start_latency_ms.n > 0) {
+        simple_stats_to_string(&out->start_latency_ms, buffer, sizeof(buffer));
+        dprintf(fd, "      Start latency ms: %s\n", buffer);
+    }
 
     if (locked) {
         pthread_mutex_unlock(&out->lock);
@@ -4863,7 +4907,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
     err = platform_get_controller_stream_from_params(parms, &ext_controller,
                                                        &ext_stream);
-    if (err >= 0) {
+    if (err == 0) {
         out->extconn.cs.controller = ext_controller;
         out->extconn.cs.stream = ext_stream;
         ALOGD("%s: usecase(%s) new controller/stream (%d/%d)", __func__,
@@ -5226,7 +5270,9 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
                          1000) / (out->config.rate);
         else
             period_ms = 0;
-        latency = period_ms + platform_render_latency(out->usecase)/1000;
+        pthread_mutex_lock(&adev->lock);
+        latency = period_ms + platform_render_latency(out->dev, out->usecase)/1000;
+        pthread_mutex_unlock(&adev->lock);
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
            (out->config.rate);
@@ -5698,6 +5744,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
 
     if (out->standby) {
         out->standby = false;
+        const int64_t startNs = systemTime(SYSTEM_TIME_MONOTONIC);
+
         pthread_mutex_lock(&adev->lock);
         if (out->usecase == USECASE_COMPRESS_VOIP_CALL)
             ret = voice_extn_compress_voip_start_output_stream(out);
@@ -5710,6 +5758,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             goto exit;
         }
         out->started = 1;
+        out->last_fifo_valid = false; // we're coming out of standby, last_fifo isn't valid.
         if (last_known_cal_step != -1) {
             ALOGD("%s: retry previous failed cal level set", __func__);
             audio_hw_send_gain_dep_calibration(last_known_cal_step);
@@ -5724,6 +5773,10 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         }
         if (out->set_dual_mono)
             audio_extn_send_dual_mono_mixing_coefficients(out);
+
+        // log startup time in ms.
+        simple_stats_log(
+                &out->start_latency_ms, (systemTime(SYSTEM_TIME_MONOTONIC) - startNs) * 1e-6);
     }
 
     if (adev->is_channel_status_set == false &&
@@ -5878,6 +5931,30 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                     bytes_to_write /= 2;
                 }
             }
+
+            // Note: since out_get_presentation_position() is called alternating with out_write()
+            // by AudioFlinger, we can check underruns using the prior timestamp read.
+            // (Alternately we could check if the buffer is empty using pcm_get_htimestamp().
+            if (out->last_fifo_valid) {
+                // compute drain to see if there is an underrun.
+                const int64_t current_ns = systemTime(SYSTEM_TIME_MONOTONIC); // sys call
+                const int64_t frames_by_time =
+                        (current_ns - out->last_fifo_time_ns) * out->config.rate / NANOS_PER_SECOND;
+                const int64_t underrun = frames_by_time - out->last_fifo_frames_remaining;
+
+                if (underrun > 0) {
+                    simple_stats_log(&out->fifo_underruns, underrun);
+
+                    ALOGW("%s: underrun(%lld) "
+                            "frames_by_time(%lld) > out->last_fifo_frames_remaining(%lld)",
+                            __func__,
+                            (long long)out->fifo_underruns.n,
+                            (long long)frames_by_time,
+                            (long long)out->last_fifo_frames_remaining);
+                }
+                out->last_fifo_valid = false;  // we're writing below, mark fifo info as stale.
+            }
+
             ALOGVV("%s: writing buffer (%zu bytes) to pcm device", __func__, bytes);
 
             long ns = 0;
@@ -6107,18 +6184,32 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
         if (out->pcm) {
             unsigned int avail;
             if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
-                size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
-
                 uint64_t signed_frames = 0;
                 uint64_t frames_temp = 0;
 
-                frames_temp = (kernel_buffer_size > avail) ? (kernel_buffer_size - avail) : 0;
+                if (out->kernel_buffer_size > avail) {
+                    frames_temp = out->last_fifo_frames_remaining = out->kernel_buffer_size - avail;
+                } else {
+                    ALOGW("%s: avail:%u > kernel_buffer_size:%zu clamping!",
+                            __func__, avail, out->kernel_buffer_size);
+                    avail = out->kernel_buffer_size;
+                    frames_temp = out->last_fifo_frames_remaining = 0;
+                }
+                out->last_fifo_valid = true;
+                out->last_fifo_time_ns = audio_utils_ns_from_timespec(timestamp);
+
                 if (out->written >= frames_temp)
                     signed_frames = out->written - frames_temp;
 
+                ALOGVV("%s: frames:%lld  avail:%u  kernel_buffer_size:%zu",
+                        __func__, (long long)signed_frames, avail, out->kernel_buffer_size);
+
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
-                frames_temp = platform_render_latency(out->usecase) * out->sample_rate / 1000000LL;
+                pthread_mutex_lock(&adev->lock);
+                frames_temp = platform_render_latency(out->dev, out->usecase) *
+                              out->sample_rate / 1000000LL;
+                pthread_mutex_unlock(&adev->lock);
                 if (signed_frames >= frames_temp)
                     signed_frames -= frames_temp;
 
@@ -6134,7 +6225,9 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                 *frames = signed_frames;
                 ret = 0;
             }
-        } else if (out->card_status == CARD_STATUS_OFFLINE) {
+        } else if (out->card_status == CARD_STATUS_OFFLINE ||
+            // audioflinger still needs position updates when A2DP is suspended
+            (is_a2dp_out_device_type(&out->device_list) && audio_extn_a2dp_source_is_suspended())) {
             *frames = out->written;
             clock_gettime(CLOCK_MONOTONIC, timestamp);
             if (is_offload_usecase(out->usecase))
@@ -6177,6 +6270,7 @@ static int out_pause(struct audio_stream_out* stream)
     ALOGV("%s", __func__);
     if (is_offload_usecase(out->usecase)) {
         ALOGD("copl(%p):pause compress driver", out);
+        status = -ENODATA;
         lock_output_stream(out);
         if (out->compr != NULL && out->offload_state == OFFLOAD_STATE_PLAYING) {
             if (out->card_status != CARD_STATUS_OFFLINE)
@@ -6206,7 +6300,7 @@ static int out_resume(struct audio_stream_out* stream)
     ALOGV("%s", __func__);
     if (is_offload_usecase(out->usecase)) {
         ALOGD("copl(%p):resume compress driver", out);
-        status = 0;
+        status = -ENODATA;
         lock_output_stream(out);
         if (out->compr != NULL && out->offload_state == OFFLOAD_STATE_PAUSED) {
             if (out->card_status != CARD_STATUS_OFFLINE) {
@@ -6351,7 +6445,7 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
         ret = -EIO;
         goto exit;
     }
-    if (info == NULL || min_size_frames == 0) {
+    if (info == NULL || !(min_size_frames > 0 && min_size_frames < INT32_MAX)) {
         ALOGE("%s: info = %p, min_size_frames = %d", __func__, info, min_size_frames);
         ret = -EINVAL;
         goto exit;
@@ -6393,6 +6487,8 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
         step = "begin";
         goto exit;
     }
+
+    info->flags = 0;
     info->buffer_size_frames = pcm_get_buffer_size(out->pcm);
     buffer_size = pcm_frames_to_bytes(out->pcm, info->buffer_size_frames);
     info->burst_size_frames = out->config.period_size;
@@ -6411,8 +6507,7 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
             step = "mmap";
             goto exit;
         }
-        // FIXME: indicate exclusive mode support by returning a negative buffer size
-        info->buffer_size_frames *= -1;
+        info->flags |= AUDIO_MMAP_APPLICATION_SHAREABLE;
     }
     memset(info->shared_memory_address, 0, pcm_frames_to_bytes(out->pcm,
                                                                info->buffer_size_frames));
@@ -6600,6 +6695,12 @@ static int in_dump(const struct audio_stream *stream,
     dprintf(fd, "      Frames read: %lld\n", (long long)in->frames_read);
     dprintf(fd, "      Frames muted: %lld\n", (long long)in->frames_muted);
 
+    char buffer[256]; // for statistics formatting
+    if (in->start_latency_ms.n > 0) {
+        simple_stats_to_string(&in->start_latency_ms, buffer, sizeof(buffer));
+        dprintf(fd, "      Start latency ms: %s\n", buffer);
+    }
+
     if (locked) {
         pthread_mutex_unlock(&in->lock);
     }
@@ -6717,7 +6818,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     struct audio_device *adev = in->dev;
     struct str_parms *parms;
     char value[32];
-    int ret = 0;
+    int err = 0;
 
     ALOGD("%s: enter: kvpairs=%s", __func__, kvpairs);
     parms = str_parms_create_str(kvpairs);
@@ -6727,8 +6828,8 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
     lock_input_stream(in);
     pthread_mutex_lock(&adev->lock);
 
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_PROFILE, value, sizeof(value));
-    if (ret >= 0) {
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_PROFILE, value, sizeof(value));
+    if (err >= 0) {
         strlcpy(in->profile, value, sizeof(in->profile));
         ALOGV("updating stream profile with value '%s'", in->profile);
         audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
@@ -6743,8 +6844,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
     str_parms_destroy(parms);
 error:
-    ALOGV("%s: exit: status(%d)", __func__, ret);
-    return ret;
+    return 0;
 }
 
 static char* in_get_parameters(const struct audio_stream *stream,
@@ -6862,6 +6962,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     }
 
     if (in->standby) {
+        const int64_t startNs = systemTime(SYSTEM_TIME_MONOTONIC);
+
         pthread_mutex_lock(&adev->lock);
         if (in->usecase == USECASE_COMPRESS_VOIP_CALL)
             ret = voice_extn_compress_voip_start_input_stream(in);
@@ -6876,6 +6978,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             goto exit;
         }
         in->standby = 0;
+
+        // log startup time in ms.
+        simple_stats_log(
+                &in->start_latency_ms, (systemTime(SYSTEM_TIME_MONOTONIC) - startNs) * 1e-6);
     }
 
     /* Avoid read if capture_stopped is set */
@@ -7000,7 +7106,10 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
         unsigned int avail;
         if (pcm_get_htimestamp(in->pcm, &avail, &timestamp) == 0) {
             *frames = in->frames_read + avail;
-            *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec;
+            pthread_mutex_lock(&adev->lock);
+            *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec
+                    - platform_capture_latency(in->dev, in->usecase) * 1000LL;
+            pthread_mutex_unlock(&adev->lock);
             ret = 0;
         }
     }
@@ -7244,7 +7353,7 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
         goto exit;
     }
 
-    if (info == NULL || min_size_frames == 0) {
+    if (info == NULL || !(min_size_frames > 0 && min_size_frames < INT32_MAX)) {
         ALOGE("%s invalid argument info %p min_size_frames %d", __func__, info, min_size_frames);
         ret = -EINVAL;
         goto exit;
@@ -7289,6 +7398,7 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
         goto exit;
     }
 
+    info->flags = 0;
     info->buffer_size_frames = pcm_get_buffer_size(in->pcm);
     buffer_size = pcm_frames_to_bytes(in->pcm, info->buffer_size_frames);
     info->burst_size_frames = in->config.period_size;
@@ -7307,8 +7417,7 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
             step = "mmap";
             goto exit;
         }
-        // FIXME: indicate exclusive mode support by returning a negative buffer size
-        info->buffer_size_frames *= -1;
+        info->flags |= AUDIO_MMAP_APPLICATION_SHAREABLE;
     }
 
     memset(info->shared_memory_address, 0, buffer_size);
@@ -8142,7 +8251,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             else
                 adev->haptics_config = pcm_config_haptics;
 
-            out->config.channels =
+            channels =
                 audio_channel_count_from_out_mask(out->channel_mask & ~AUDIO_CHANNEL_HAPTIC_ALL);
 
             if (force_haptic_path) {
@@ -8247,6 +8356,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->af_period_multiplier = af_period_multiplier;
     else
         out->af_period_multiplier = 1;
+
+    out->kernel_buffer_size = out->config.period_size * out->config.period_count;
 
     out->standby = 1;
     /* out->muted = false; by calloc() */
@@ -8764,6 +8875,7 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     voice_get_parameters(adev, query, reply);
     audio_extn_a2dp_get_parameters(query, reply);
     platform_get_parameters(adev->platform, query, reply);
+    audio_extn_ma_get_parameters(adev, query, reply);
     pthread_mutex_unlock(&adev->lock);
 
 exit:
@@ -10275,6 +10387,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->use_old_pspd_mix_ctrl = false;
     adev->adm_routing_changed = false;
 
+    audio_extn_perf_lock_init();
+
     /* Loads platform specific libraries dynamically */
     adev->platform = platform_init(adev);
     if (!adev->platform) {
@@ -10452,7 +10566,6 @@ static int adev_open(const hw_module_t *module, const char *name,
         adev->adm_data = adev->adm_init();
 
     qahwi_init(*device);
-    audio_extn_perf_lock_init();
     audio_extn_adsp_hdlr_init(adev->mixer);
 
     audio_extn_snd_mon_init();
