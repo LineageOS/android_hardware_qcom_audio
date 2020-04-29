@@ -355,8 +355,8 @@
     <ctl name="RX_RX0 Digital Volume" value="84" />
     <ctl name="RX_RX1 Digital Volume" value="84" />
     <ctl name="RX_RX2 Digital Volume" value="78" />
-    <ctl name="HPHL Volume" value="20" />
-    <ctl name="HPHR Volume" value="20" />
+    <ctl name="HPHL Volume" value="12" />
+    <ctl name="HPHR Volume" value="12" />
     <ctl name="EAR SPKR PA Gain" value="G_DEFAULT" />
 
     <ctl name="TX_DEC0 Volume" value="102" />
@@ -2695,10 +2695,6 @@
         <ctl name="RX INT1_1 MIX1 INP0" value="RX1" />
         <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
         <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT" />
-        <ctl name="RX_COMP1 Switch" value="1" />
-        <ctl name="RX_COMP2 Switch" value="1" />
-        <ctl name="HPHL_COMP Switch" value="1" />
-        <ctl name="HPHR_COMP Switch" value="1" />
         <ctl name="HPHL_RDAC Switch" value="1" />
         <ctl name="HPHR_RDAC Switch" value="1" />
         <ctl name="LO_RDAC Switch" value="1" />
