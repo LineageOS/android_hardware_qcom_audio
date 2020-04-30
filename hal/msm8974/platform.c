@@ -3370,7 +3370,9 @@ snd_device_t platform_get_input_snd_device(void *platform,
                         snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
                 }
                 in->enable_ec_port = true;
-            } else if ((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) &&
+            } else if (((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
+                       (channel_mask == AUDIO_CHANNEL_IN_STEREO) ||
+                       (channel_mask == AUDIO_CHANNEL_INDEX_MASK_2)) &&
                        (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
                 snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_STEREO;
             } else if ((channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) &&
@@ -3401,7 +3403,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
     } else if (source == AUDIO_SOURCE_UNPROCESSED) {
         if (in_device & AUDIO_DEVICE_IN_BUILTIN_MIC) {
             if (((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
-                 (channel_mask == AUDIO_CHANNEL_IN_STEREO)) &&
+                 (channel_mask == AUDIO_CHANNEL_IN_STEREO) ||
+                 (channel_mask == AUDIO_CHANNEL_INDEX_MASK_2)) &&
                        (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
                 snd_device = SND_DEVICE_IN_UNPROCESSED_STEREO_MIC;
             } else if ((channel_mask == AUDIO_CHANNEL_INDEX_MASK_3) &&
