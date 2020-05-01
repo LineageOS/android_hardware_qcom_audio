@@ -28,9 +28,9 @@
     - Volume groups
   in the car environment.
 -->
-<carAudioConfiguration version="1">
+<carAudioConfiguration version="2">
     <zones>
-        <zone name="primary zone" isPrimary="true">
+        <zone name="primary zone" isPrimary="true" occupantZoneId="0">
             <volumeGroups>
                 <group>
                     <device address="BUS00_MEDIA">
@@ -42,6 +42,10 @@
                         <context context="alarm"/>
                         <context context="notification"/>
                         <context context="system_sound"/>
+                        <context context="emergency"/>
+                        <context context="safety"/>
+                        <context context="vehicle_status"/>
+                        <context context="announcement"/>
                     </device>
                 </group>
                 <group>
@@ -68,10 +72,10 @@
                 where port is the physical port of the display (See DisplayAddress.Phyisical)
             -->
         </zone>
-        <zone name="rear seat zone">
+        <zone name="front passenger zone" audioZoneId="1">
             <volumeGroups>
                 <group>
-                    <device address="BUS08_REAR_SEAT">
+                    <device address="BUS08_FRONT_PASSENGER">
                         <context context="music"/>
                         <context context="navigation"/>
                         <context context="voice_command"/>
@@ -80,11 +84,38 @@
                         <context context="alarm"/>
                         <context context="notification"/>
                         <context context="system_sound"/>
+                        <context context="emergency"/>
+                        <context context="safety"/>
+                        <context context="vehicle_status"/>
+                        <context context="announcement"/>
                     </device>
                 </group>
             </volumeGroups>
             <displays>
                 <display port="1"/>
+            </displays>
+        </zone>
+        <zone name="rear seat zone" audioZoneId="2">
+            <volumeGroups>
+                <group>
+                    <device address="BUS16_REAR_SEAT">
+                        <context context="music"/>
+                        <context context="navigation"/>
+                        <context context="voice_command"/>
+                        <context context="call_ring"/>
+                        <context context="call"/>
+                        <context context="alarm"/>
+                        <context context="notification"/>
+                        <context context="system_sound"/>
+                        <context context="emergency"/>
+                        <context context="safety"/>
+                        <context context="vehicle_status"/>
+                        <context context="announcement"/>
+                    </device>
+                </group>
+            </volumeGroups>
+            <displays>
+                <display port="2"/>
             </displays>
         </zone>
     </zones>
