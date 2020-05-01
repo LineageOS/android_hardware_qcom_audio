@@ -2394,7 +2394,8 @@ bool is_btsco_device(snd_device_t out_snd_device, snd_device_t in_snd_device)
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_WB ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB ||
         in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_NREC ||
-        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC)
+        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC ||
+        in_snd_device == SND_DEVICE_IN_BT_SCO_MIC_SWB_NREC)
         ret = true;
 
    return ret;
@@ -2621,7 +2622,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             ALOGE("%s: stream.inout is NULL", __func__);
             return -EINVAL;
         }
-        in_snd_device = platform_get_input_snd_device(adev->platform, NULL, NULL, usecase->type);
+        struct listnode out_devices;
+        list_init(&out_devices);
+        in_snd_device = platform_get_input_snd_device(adev->platform, NULL,
+                                                      &out_devices, usecase->type);
         assign_devices(&usecase->device_list,
                        &usecase->stream.inout->in_config.device_list);
     } else {
@@ -4297,8 +4301,10 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out, struct ti
     /* This adjustment accounts for buffering after app processor.
      * It is based on estimated DSP latency per use case, rather than exact.
      */
-    int64_t platform_latency =  platform_render_latency(out->usecase) *
+    pthread_mutex_lock(&adev->lock);
+    int64_t platform_latency =  platform_render_latency(out->dev, out->usecase) *
                                 out->sample_rate / 1000000LL;
+    pthread_mutex_unlock(&adev->lock);
 
     pthread_mutex_lock(&out->position_query_lock);
     /* not querying actual state of buffering in kernel as it would involve an ioctl call
@@ -4416,6 +4422,20 @@ static int out_standby(struct audio_stream *stream)
                 pcm_close(out->pcm);
                 out->pcm = NULL;
             }
+            if (out->usecase == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+                if (adev->haptic_pcm) {
+                    pcm_close(adev->haptic_pcm);
+                    adev->haptic_pcm = NULL;
+                }
+
+                if (adev->haptic_buffer != NULL) {
+                    free(adev->haptic_buffer);
+                    adev->haptic_buffer = NULL;
+                    adev->haptic_buffer_size = 0;
+                }
+                adev->haptic_pcm_device_id = 0;
+            }
+
             if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
                 do_stop = out->playback_started;
                 out->playback_started = false;
@@ -5250,7 +5270,9 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
                          1000) / (out->config.rate);
         else
             period_ms = 0;
-        latency = period_ms + platform_render_latency(out->usecase)/1000;
+        pthread_mutex_lock(&adev->lock);
+        latency = period_ms + platform_render_latency(out->dev, out->usecase)/1000;
+        pthread_mutex_unlock(&adev->lock);
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
            (out->config.rate);
@@ -6184,7 +6206,10 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
 
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
-                frames_temp = platform_render_latency(out->usecase) * out->sample_rate / 1000000LL;
+                pthread_mutex_lock(&adev->lock);
+                frames_temp = platform_render_latency(out->dev, out->usecase) *
+                              out->sample_rate / 1000000LL;
+                pthread_mutex_unlock(&adev->lock);
                 if (signed_frames >= frames_temp)
                     signed_frames -= frames_temp;
 
@@ -7081,7 +7106,10 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
         unsigned int avail;
         if (pcm_get_htimestamp(in->pcm, &avail, &timestamp) == 0) {
             *frames = in->frames_read + avail;
-            *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec;
+            pthread_mutex_lock(&adev->lock);
+            *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec
+                    - platform_capture_latency(in->dev, in->usecase) * 1000LL;
+            pthread_mutex_unlock(&adev->lock);
             ret = 0;
         }
     }

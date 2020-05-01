@@ -311,6 +311,10 @@ vendor.audio.use.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.ape.decoder=true
 
+#enable software decoder for MPEG-H
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.use.sw.mpegh.decoder=true
+
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
@@ -361,6 +365,10 @@ persist.vendor.audio.voicecall.speaker.stereo=true
 #enable AAC frame ctl for A2DP sinks
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.aac_frm_ctl.enabled=true
+
+#enable VBR frame ctl
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.aac_vbr_frm_ctl.enabled=true
 
 #add dynamic feature flags here
 PRODUCT_PROPERTY_OVERRIDES += \

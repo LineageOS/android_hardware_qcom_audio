@@ -32,6 +32,7 @@ AUDIO_FEATURE_ENABLED_WMA_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_ALAC_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_APE_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_AAC_ADTS_OFFLOAD := true
+AUDIO_FEATURE_ENABLED_MPEGH_SW_DECODER := true
 AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
 AUDIO_FEATURE_ENABLED_SSR := true
 AUDIO_FEATURE_ENABLED_DTS_EAGLE := false
@@ -207,6 +208,14 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.audio_hal.period_size=192
 
+##Ambisonic Capture
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.ambisonic.capture=false \
+persist.vendor.audio.ambisonic.auto.profile=false
+
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.apptype.multirec.enabled=false
+
 ##fluencetype can be "fluence" or "fluencepro" or "none"
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.fluencetype=none\
@@ -311,6 +320,10 @@ PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.ape.decoder=true
+
+#enable software decoder for MPEG-H
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.use.sw.mpegh.decoder=true
 
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \

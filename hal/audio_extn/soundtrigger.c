@@ -186,6 +186,8 @@ do {\
 #define SVA_PARAM_CHANNEL_INDEX "st_channel_index"
 #define MAX_STR_LENGTH_FFV_PARAMS 30
 #define MAX_FFV_SESSION_ID 100
+
+#define ST_DEVICE SND_DEVICE_IN_HANDSET_MIC
 /*
  * Current proprietary API version used by AHAL. Queried by STHAL
  * for compatibility check with AHAL
@@ -254,7 +256,8 @@ static int populate_usecase(struct audio_hal_usecase *usecase,
         break;
 
     case PCM_CAPTURE:
-        if (uc_info->id == USECASE_AUDIO_RECORD_VOIP)
+        if (uc_info->stream.in != NULL &&
+             uc_info->stream.in->source == AUDIO_SOURCE_VOICE_COMMUNICATION)
             usecase->type = USECASE_TYPE_VOIP_CALL;
         else
             usecase->type = USECASE_TYPE_PCM_CAPTURE;
@@ -474,14 +477,7 @@ void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
 
 bool is_same_as_st_device(snd_device_t snd_device)
 {
-    if (snd_device == SND_DEVICE_IN_HANDSET_MIC_AEC ||
-        snd_device == SND_DEVICE_IN_HANDSET_MIC ||
-        snd_device == SND_DEVICE_IN_HANDSET_MIC_AEC_NS ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC ||
-        snd_device == SND_DEVICE_IN_VOICE_SPEAKER_MIC ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC_AEC ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC_AEC_NS ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC_NS) {
+    if (platform_check_all_backends_match(ST_DEVICE, snd_device)) {
         ALOGD("audio HAL using same device %d as ST", snd_device);
         return true;
     }
@@ -529,20 +525,40 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
 {
     bool raise_event = false;
     int device_type = -1;
+    struct audio_event_info ev_info;
+
+    ev_info.u.usecase.type = -1;
 
     if (!st_dev)
        return;
+
+    list_init(&ev_info.device_info.devices);
 
     if (snd_device >= SND_DEVICE_OUT_BEGIN &&
         snd_device < SND_DEVICE_OUT_END)
         device_type = PCM_PLAYBACK;
     else if (snd_device >= SND_DEVICE_IN_BEGIN &&
-        snd_device < SND_DEVICE_IN_END)
+        snd_device < SND_DEVICE_IN_END) {
         device_type = PCM_CAPTURE;
-    else {
+        if (is_same_as_st_device(snd_device))
+            update_device_list(&ev_info.device_info.devices, ST_DEVICE_HANDSET_MIC, "", true);
+    } else {
         ALOGE("%s: invalid device 0x%x, for event %d",
                            __func__, snd_device, event);
         return;
+    }
+
+    struct stream_in *active_input = adev_get_active_input(st_dev->adev);
+    audio_source_t  source = (active_input == NULL) ?
+                               AUDIO_SOURCE_DEFAULT : active_input->source;
+    if (st_dev->adev->mode == AUDIO_MODE_IN_CALL) {
+        ev_info.u.usecase.type = USECASE_TYPE_VOICE_CALL;
+    } else if ((st_dev->adev->mode == AUDIO_MODE_IN_COMMUNICATION ||
+                source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
+               active_input) {
+        ev_info.u.usecase.type  = USECASE_TYPE_VOIP_CALL;
+    } else if (device_type == PCM_CAPTURE) {
+        ev_info.u.usecase.type  = USECASE_TYPE_PCM_CAPTURE;
     }
 
     raise_event = platform_sound_trigger_device_needs_event(snd_device);
@@ -551,10 +567,10 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
     if (raise_event && (device_type == PCM_CAPTURE)) {
         switch(event) {
         case ST_EVENT_SND_DEVICE_FREE:
-            st_dev->st_callback(AUDIO_EVENT_CAPTURE_DEVICE_INACTIVE, NULL);
+            st_dev->st_callback(AUDIO_EVENT_CAPTURE_DEVICE_INACTIVE, &ev_info);
             break;
         case ST_EVENT_SND_DEVICE_BUSY:
-            st_dev->st_callback(AUDIO_EVENT_CAPTURE_DEVICE_ACTIVE, NULL);
+            st_dev->st_callback(AUDIO_EVENT_CAPTURE_DEVICE_ACTIVE, &ev_info);
             break;
         default:
             ALOGW("%s:invalid event %d for device 0x%x",

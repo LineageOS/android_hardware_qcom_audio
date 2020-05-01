@@ -1034,6 +1034,22 @@ static int msm_device_to_be_id_external_codec [][NO_COLS] = {
 #define ULL_PLATFORM_DELAY (6*1000LL)
 #define MMAP_PLATFORM_DELAY (3*1000LL)
 
+static int audio_source_delay_ms[AUDIO_SOURCE_CNT] = {0};
+
+static struct name_to_index audio_source_index[AUDIO_SOURCE_CNT] = {
+    {TO_NAME_INDEX(AUDIO_SOURCE_DEFAULT)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_MIC)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_UPLINK)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_DOWNLINK)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_CALL)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_CAMCORDER)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_RECOGNITION)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_COMMUNICATION)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_REMOTE_SUBMIX)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_UNPROCESSED)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_PERFORMANCE)},
+};
+
 static const char *platform_get_mixer_control(struct mixer_ctl *);
 
 static void update_interface(const char *snd_card_name) {
@@ -3213,6 +3229,11 @@ int platform_get_snd_device_index(char *device_name)
 int platform_get_usecase_index(const char *usecase_name)
 {
     return find_index(usecase_name_index, AUDIO_USECASE_MAX, usecase_name);
+}
+
+int platform_get_audio_source_index(const char *audio_source_name)
+{
+    return find_index(audio_source_index, AUDIO_SOURCE_CNT, audio_source_name);
 }
 
 int platform_get_effect_config_data(snd_device_t snd_device,
@@ -5767,24 +5788,80 @@ unsigned char* platform_get_license(void *platform __unused, int *size __unused)
 }
 
 
-/* Delay in Us, only to be used for PCM formats */
-int64_t platform_render_latency(audio_usecase_t usecase)
+void platform_set_snd_device_delay(snd_device_t snd_device __unused, int delay_ms __unused)
 {
+}
+
+void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms)
+{
+    if ((audio_source < AUDIO_SOURCE_DEFAULT) ||
+           (audio_source > AUDIO_SOURCE_MAX)) {
+        ALOGE("%s: Invalid audio_source = %d", __func__, audio_source);
+        return;
+    }
+
+    audio_source_delay_ms[audio_source] = delay_ms;
+}
+
+/* Delay in Us */
+int64_t platform_get_audio_source_delay(audio_source_t audio_source)
+{
+    if ((audio_source < AUDIO_SOURCE_DEFAULT) ||
+            (audio_source > AUDIO_SOURCE_MAX)) {
+        ALOGE("%s: Invalid audio_source = %d", __func__, audio_source);
+        return 0;
+    }
+
+    return 1000LL * audio_source_delay_ms[audio_source];
+}
+
+int64_t platform_capture_latency(struct audio_device *adev __unused,
+                                 audio_usecase_t usecase)
+{
+}
+
+/* Delay in Us, only to be used for PCM formats */
+int64_t platform_render_latency(struct audio_device *adev __unused,
+                                audio_usecase_t usecase)
+{
+    int64_t delay = 0LL;
+
     switch (usecase) {
         case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
-            return DEEP_BUFFER_PLATFORM_DELAY;
+            delay = DEEP_BUFFER_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
-            return LOW_LATENCY_PLATFORM_DELAY;
+            delay = LOW_LATENCY_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_OFFLOAD:
         case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
-            return PCM_OFFLOAD_PLATFORM_DELAY;
+            delay = PCM_OFFLOAD_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_ULL:
-            return ULL_PLATFORM_DELAY;
+            delay = ULL_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_MMAP:
-            return MMAP_PLATFORM_DELAY;
+            delay = MMAP_PLATFORM_DELAY;
+            break;
         default:
-            return 0;
+            break;
     }
+
+    /* out->device could be used to add delay time if it's necessary */
+    return delay;
+}
+
+int64_t platform_capture_latency(struct stream_in *in)
+{
+    int64_t delay = 0LL;
+
+    if (!in)
+        return delay;
+
+    delay = platform_get_audio_source_delay(in->source);
+
+    /* in->device could be used to add delay time if it's necessary */
+    return delay;
 }
 
 int platform_update_usecase_from_source(int source, int usecase)
