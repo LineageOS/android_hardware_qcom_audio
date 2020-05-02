@@ -344,6 +344,10 @@ persist.vendor.audio.voicecall.speaker.stereo=true
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.aac_frm_ctl.enabled=true
 
+#enable VBR frame ctl
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.bt.aac_vbr_frm_ctl.enabled=true
+
 #add dynamic feature flags here
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.feature.a2dp_offload.enable=true \

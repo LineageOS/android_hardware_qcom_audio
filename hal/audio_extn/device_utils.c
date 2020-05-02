@@ -337,13 +337,13 @@ bool is_a2dp_out_device_type(struct listnode *devices)
 
 int clear_devices(struct listnode *devices)
 {
-    struct listnode *node;
+    struct listnode *node, *temp;
     struct audio_device_info *item = NULL;
 
     if (devices == NULL)
         return 0;
 
-    list_for_each (node, devices) {
+    list_for_each_safe (node, temp, devices) {
         item = node_to_item(node, struct audio_device_info, list);
         if (item != NULL) {
             list_remove(&item->list);
