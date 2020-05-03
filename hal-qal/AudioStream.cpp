@@ -140,6 +140,102 @@ static int32_t qal_callback(qal_stream_handle_t *stream_handle,
 }
 
 
+static int astream_out_mmap_noirq_start(const struct audio_stream_out *stream)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device", __func__);
+        return -EINVAL;
+    }
+
+    astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    if (!astream_out) {
+        ALOGE("%s: unable to get audio OutStream", __func__);
+        return -EINVAL;
+    }
+
+    return astream_out->Start();
+}
+
+static int astream_out_mmap_noirq_stop(const struct audio_stream_out *stream)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device", __func__);
+        return -EINVAL;
+    }
+
+    astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    if (!astream_out) {
+        ALOGE("%s: unable to get audio OutStream", __func__);
+        return -EINVAL;
+    }
+
+    return astream_out->Stop();
+}
+
+static int astream_out_create_mmap_buffer(const struct audio_stream_out *stream,
+        int32_t min_size_frames, struct audio_mmap_buffer_info *info)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+    int ret = 0;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device", __func__);
+        return -EINVAL;
+    }
+
+    astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    if (!astream_out) {
+        ALOGE("%s: unable to get audio OutStream", __func__);
+        return -EINVAL;
+    }
+
+    if (info == NULL || !(min_size_frames > 0 && min_size_frames < INT32_MAX)) {
+        ALOGE("%s: info = %p, min_size_frames = %d", __func__, info, min_size_frames);
+        return -EINVAL;
+    }
+    if (astream_out->GetUseCase() != USECASE_AUDIO_PLAYBACK_MMAP) {
+         ALOGE("%s: usecase = %d", __func__, astream_out->GetUseCase());
+         return -ENOSYS;
+    }
+
+    ret = astream_out->CreateMmapBuffer(min_size_frames, info);
+    if (ret)
+        ALOGE("%s: failed %d\n", __func__, ret);
+
+    return ret;
+}
+
+static int astream_out_get_mmap_position(const struct audio_stream_out *stream,
+        struct audio_mmap_position *position)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device", __func__);
+        return -EINVAL;
+    }
+
+    astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    if (!astream_out) {
+        ALOGE("%s: unable to get audio OutStream", __func__);
+        return -EINVAL;
+    }
+    if (astream_out->GetUseCase() != USECASE_AUDIO_PLAYBACK_MMAP) {
+         ALOGE("%s: usecase = %d", __func__, astream_out->GetUseCase());
+         return -ENOSYS;
+    }
+
+    return astream_out->GetMmapPosition(position);
+}
+
 static uint32_t astream_out_get_sample_rate(const struct audio_stream *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
@@ -355,7 +451,27 @@ static int astream_dump(const struct audio_stream *stream, int fd) {
 
 static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
     std::ignore = stream;
-    return LOW_LATENCY_OUTPUT_PERIOD_SIZE;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+    uint32_t period_ms, latency = 0;
+
+    if (adevice) {
+        astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    } else {
+        ALOGE("%s: unable to get audio device", __func__);
+        return -EINVAL;
+    }
+
+    if ((astream_out->GetUseCase() == USECASE_AUDIO_PLAYBACK_ULL) ||
+            (astream_out->GetUseCase() == USECASE_AUDIO_PLAYBACK_MMAP)) {
+        period_ms = (ULL_PERIOD_MULTIPLIER * ULL_PERIOD_SIZE *
+                1000) / DEFAULT_OUTPUT_SAMPLING_RATE;
+        latency = period_ms +
+            astream_out->platform_render_latency(astream_out->flags_)/1000;
+        ALOGD("%s: Latency: %d", __func__, latency);
+        return latency;
+    } else
+        return LOW_LATENCY_OUTPUT_PERIOD_SIZE;
 }
 
 static int astream_out_get_presentation_position(
@@ -620,6 +736,97 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     return 0;
+}
+
+static int astream_in_mmap_noirq_start(const struct audio_stream_in *stream)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamInPrimary> astream_in;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device", __func__);
+        return -EINVAL;
+    }
+
+    astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    if (!astream_in) {
+        ALOGE("%s: unable to get audio InStream", __func__);
+        return -EINVAL;
+    }
+
+    return astream_in->Start();
+}
+
+static int astream_in_mmap_noirq_stop(const struct audio_stream_in *stream)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamInPrimary> astream_in;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device", __func__);
+        return -EINVAL;
+    }
+
+    astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    if (!astream_in) {
+        ALOGE("%s: unable to get audio InStream", __func__);
+        return -EINVAL;
+    }
+
+    return astream_in->Stop();
+}
+
+static int astream_in_create_mmap_buffer(const struct audio_stream_in *stream,
+        int32_t min_size_frames, struct audio_mmap_buffer_info *info)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamInPrimary> astream_in;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device", __func__);
+        return -EINVAL;
+    }
+
+    astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    if (!astream_in) {
+        ALOGE("%s: unable to get audio InStream", __func__);
+        return -EINVAL;
+    }
+
+    if (info == NULL || !(min_size_frames > 0 && min_size_frames < INT32_MAX)) {
+        ALOGE("%s: info = %p, min_size_frames = %d", __func__, info, min_size_frames);
+        return -EINVAL;
+    }
+    if (astream_in->GetUseCase() != USECASE_AUDIO_RECORD_MMAP) {
+         ALOGE("%s: usecase = %d", __func__, astream_in->GetUseCase());
+         return -ENOSYS;
+    }
+
+    return astream_in->CreateMmapBuffer(min_size_frames, info);
+}
+
+static int astream_in_get_mmap_position(const struct audio_stream_in *stream,
+        struct audio_mmap_position *position)
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamInPrimary> astream_in;
+
+    if (!adevice) {
+        ALOGE("%s: unable to get audio device", __func__);
+        return -EINVAL;
+    }
+
+    astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    if (!astream_in) {
+        ALOGE("%s: unable to get audio InStream", __func__);
+        return -EINVAL;
+    }
+    if (astream_in->GetUseCase() != USECASE_AUDIO_RECORD_MMAP) {
+         ALOGE("%s: usecase = %d", __func__, astream_in->GetUseCase());
+         return -ENOSYS;
+    }
+
+    return astream_in->GetMmapPosition(position);
 }
 
 static int astream_in_set_microphone_direction(
@@ -901,15 +1108,23 @@ int StreamPrimary::GetLookupTableIndex(const struct string_to_enum *table,
 }
 
 qal_stream_type_t StreamInPrimary::GetQalStreamType(
-                                        audio_input_flags_t halStreamFlags) {
+                                        audio_input_flags_t halStreamFlags,
+                                        uint32_t sample_rate) {
     qal_stream_type_t qalStreamType = QAL_STREAM_LOW_LATENCY;
     if ((halStreamFlags & AUDIO_INPUT_FLAG_VOIP_TX)!=0) {
          qalStreamType = QAL_STREAM_VOIP_TX;
          return qalStreamType;
     }
+
+    if (sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
+            (halStreamFlags & AUDIO_INPUT_FLAG_TIMESTAMP) == 0 &&
+            (halStreamFlags & AUDIO_INPUT_FLAG_COMPRESS) == 0 &&
+            (halStreamFlags & AUDIO_INPUT_FLAG_FAST) != 0) {
+        qalStreamType = QAL_STREAM_ULTRA_LOW_LATENCY;
+        return qalStreamType;
+    }
     switch (halStreamFlags) {
         case AUDIO_INPUT_FLAG_FAST:
-        case AUDIO_INPUT_FLAG_MMAP_NOIRQ:
             qalStreamType = QAL_STREAM_LOW_LATENCY;
             break;
         case AUDIO_INPUT_FLAG_RAW:
@@ -918,6 +1133,9 @@ qal_stream_type_t StreamInPrimary::GetQalStreamType(
             break;
         case AUDIO_INPUT_FLAG_VOIP_TX:
             qalStreamType = QAL_STREAM_VOIP_TX;
+            break;
+        case AUDIO_INPUT_FLAG_MMAP_NOIRQ:
+            qalStreamType = QAL_STREAM_ULTRA_LOW_LATENCY;
             break;
         default:
             /*
@@ -942,7 +1160,9 @@ qal_stream_type_t StreamOutPrimary::GetQalStreamType(
         qalStreamType = QAL_STREAM_VOIP_RX;
         return qalStreamType;
     }
-    if ((halStreamFlags & AUDIO_OUTPUT_FLAG_FAST) != 0) {
+    if ((halStreamFlags & AUDIO_OUTPUT_FLAG_RAW) != 0) {
+        qalStreamType = QAL_STREAM_ULTRA_LOW_LATENCY;
+    } else if ((halStreamFlags & AUDIO_OUTPUT_FLAG_FAST) != 0) {
         qalStreamType = QAL_STREAM_LOW_LATENCY;
     } else if (halStreamFlags ==
                     (AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_RAW)) {
@@ -952,7 +1172,11 @@ qal_stream_type_t StreamOutPrimary::GetQalStreamType(
     } else if (halStreamFlags ==
                     (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_MMAP_NOIRQ)) {
         // mmap_no_irq_out: to be confirmed
-        qalStreamType = QAL_STREAM_LOW_LATENCY;
+        qalStreamType = QAL_STREAM_ULTRA_LOW_LATENCY;
+    } else if (halStreamFlags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) {
+        qalStreamType = QAL_STREAM_ULTRA_LOW_LATENCY;
+    } else if (halStreamFlags & AUDIO_OUTPUT_FLAG_RAW) {
+        qalStreamType = QAL_STREAM_ULTRA_LOW_LATENCY;
     } else if (halStreamFlags == (AUDIO_OUTPUT_FLAG_DIRECT|
                                       AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|
                                   AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
@@ -1012,6 +1236,94 @@ int StreamOutPrimary::FillHalFnPtrs() {
     stream_.get()->drain = astream_drain;
     stream_.get()->flush = astream_flush;
     stream_.get()->set_callback = astream_set_callback;
+    return ret;
+}
+
+int StreamOutPrimary::GetMmapPosition(struct audio_mmap_position *position)
+{
+    struct qal_mmap_position qal_mmap_pos;
+    int32_t ret = 0;
+
+    if (qal_stream_handle_ == nullptr) {
+        ALOGE("%s: qal handle is null\n", __func__);
+        return -EINVAL;
+    }
+
+    ret = qal_stream_get_mmap_position(qal_stream_handle_, &qal_mmap_pos);
+    if (ret) {
+        ALOGE("%s: failed to get mmap position %d\n", __func__, ret);
+        return ret;
+    }
+    position->position_frames = qal_mmap_pos.position_frames;
+    position->time_nanoseconds = qal_mmap_pos.time_nanoseconds;
+
+#if 0
+    /** Check if persist vendor property is available */
+    const int32_t kDefaultOffsetMicros = 0;
+    int32_t mmap_time_offset_micros = property_get_int32(
+            "persist.vendor.audio.out_mmap_delay_micros", kDefaultOffsetMicros);
+
+    position->time_nanoseconds += mmap_time_offset_micros * (int64_t)1000;
+#endif
+
+    return 0;
+}
+
+int StreamOutPrimary::CreateMmapBuffer(int32_t min_size_frames,
+        struct audio_mmap_buffer_info *info)
+{
+    int ret;
+    struct qal_mmap_buffer qalMmapBuf;
+
+    if (qal_stream_handle_) {
+        ALOGE("%s: qal handle already created\n", __func__);
+        return -EINVAL;
+    }
+
+    ret = Open();
+    if (ret) {
+        ALOGE("%s: failed to open stream.", __func__);
+        return ret;
+    }
+    ret = qal_stream_create_mmap_buffer(qal_stream_handle_,
+            min_size_frames, &qalMmapBuf);
+    if (ret) {
+        ALOGE("%s: failed to create mmap buffer: %d", __func__, ret);
+        Standby();
+        return ret;
+    }
+    info->shared_memory_address = qalMmapBuf.buffer;
+    info->shared_memory_fd = qalMmapBuf.fd;
+    info->buffer_size_frames = qalMmapBuf.buffer_size_frames;
+    info->burst_size_frames = qalMmapBuf.burst_size_frames;
+    info->flags = (audio_mmap_buffer_flag) AUDIO_MMAP_APPLICATION_SHAREABLE;
+
+    return ret;
+}
+
+int StreamOutPrimary::Stop() {
+    int ret = -ENOSYS;
+
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP &&
+            qal_stream_handle_ && stream_started_) {
+
+        ret = qal_stream_stop(qal_stream_handle_);
+        if (ret == 0)
+            stream_started_ = false;
+    }
+    return ret;
+}
+
+int StreamOutPrimary::Start() {
+    int ret = -ENOSYS;
+
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP &&
+            qal_stream_handle_ && !stream_started_) {
+
+        ret = qal_stream_start(qal_stream_handle_);
+        if (ret == 0)
+            stream_started_ = true;
+    }
     return ret;
 }
 
@@ -1259,6 +1571,8 @@ int64_t StreamOutPrimary::platform_render_latency(audio_output_flags_t flags_)
          case QAL_STREAM_COMPRESSED:
          case QAL_STREAM_PCM_OFFLOAD:
               return PCM_OFFLOAD_PLATFORM_DELAY;
+         case QAL_STREAM_ULTRA_LOW_LATENCY:
+              return ULL_PLATFORM_DELAY;
     //TODO: Add more usecases/type as in current hal, once they are available in qal
          default:
              return 0;
@@ -1347,6 +1661,11 @@ uint32_t StreamOutPrimary::GetBufferSize() {
         return get_pcm_buffer_size();
     } else if (streamAttributes_.type == QAL_STREAM_LOW_LATENCY) {
         return LOW_LATENCY_PLAYBACK_PERIOD_SIZE *
+            audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+    } else if (streamAttributes_.type == QAL_STREAM_ULTRA_LOW_LATENCY) {
+        return ULL_PERIOD_SIZE * ULL_PERIOD_MULTIPLIER *
             audio_bytes_per_frame(
                     audio_channel_count_from_out_mask(config_.channel_mask),
                     config_.format);
@@ -1439,7 +1758,7 @@ int StreamOutPrimary::Open() {
         ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
     streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
-    streamAttributes_.flags = (qal_stream_flags_t)flags_;
+    streamAttributes_.flags = (qal_stream_flags_t)0;
     streamAttributes_.direction = QAL_AUDIO_OUTPUT;
     streamAttributes_.out_media_config.sample_rate = config_.sample_rate;
     streamAttributes_.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
@@ -1447,7 +1766,7 @@ int StreamOutPrimary::Open() {
     streamAttributes_.out_media_config.ch_info = ch_info;
 
     if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
-        streamAttributes_.flags = (qal_stream_flags_t)(1 << QAL_STREAM_FLAG_NON_BLOCKING);
+        streamAttributes_.flags = (qal_stream_flags_t)(QAL_STREAM_FLAG_NON_BLOCKING);
         if (config_.offload_info.format == 0)
             config_.offload_info.format = config_.format;
         if (config_.offload_info.sample_rate == 0)
@@ -1467,6 +1786,12 @@ int StreamOutPrimary::Open() {
         streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[halOutputFormat];
         if (streamAttributes_.out_media_config.bit_width == 0)
             streamAttributes_.out_media_config.bit_width = 16;
+    } else if ((streamAttributes_.type == QAL_STREAM_ULTRA_LOW_LATENCY) &&
+            (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP)) {
+        streamAttributes_.flags = (qal_stream_flags_t)(QAL_STREAM_FLAG_MMAP_NO_IRQ);
+    } else if ((streamAttributes_.type == QAL_STREAM_ULTRA_LOW_LATENCY) &&
+            (usecase_ == USECASE_AUDIO_PLAYBACK_ULL)) {
+        streamAttributes_.flags = (qal_stream_flags_t)(QAL_STREAM_FLAG_MMAP);
     }
 
     ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
@@ -1498,10 +1823,19 @@ int StreamOutPrimary::Open() {
        }
     }
 
-    outBufSize = StreamOutPrimary::GetBufferSize();
-//    if (streamAttributes_.type != QAL_STREAM_VOIP_RX) {
- //       outBufSize = outBufSize/NO_OF_BUF;
- //   }
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP) {
+        outBufSize = MMAP_PERIOD_SIZE * audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+        outBufCount = MMAP_PERIOD_COUNT_DEFAULT;
+    } else if (usecase_ == USECASE_AUDIO_PLAYBACK_ULL) {
+        outBufSize = ULL_PERIOD_SIZE * audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+        outBufCount = ULL_PERIOD_COUNT_DEFAULT;
+    } else
+        outBufSize = StreamOutPrimary::GetBufferSize();
+
     if (halInputFormat != halOutputFormat) {
         convertBufSize = outBufSize;
         convertBuffer = realloc(convertBuffer, convertBufSize);
@@ -1512,7 +1846,8 @@ int StreamOutPrimary::Open() {
         }
         ALOGD("convert buffer allocated for size %d", convertBufSize);
     }
-    ret = qal_stream_set_buffer_size(qal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
+    ret = qal_stream_set_buffer_size(qal_stream_handle_, (size_t*)&inBufSize,
+            inBufCount, (size_t*)&outBufSize, outBufCount);
     if (ret) {
         ALOGE("Qal Stream set buffer size Error  (%x)", ret);
     }
@@ -1569,6 +1904,8 @@ int StreamOutPrimary::GetOutputUseCase(audio_output_flags_t halStreamFlags)
         usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
     else if (halStreamFlags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER)
         usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
+    else if (halStreamFlags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ)
+        usecase = USECASE_AUDIO_PLAYBACK_MMAP;
 
     return usecase;
 }
@@ -1799,6 +2136,12 @@ StreamOutPrimary::StreamOutPrimary(
         }
     }
 
+    if (flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) {
+        stream_.get()->start = astream_out_mmap_noirq_start;
+        stream_.get()->stop = astream_out_mmap_noirq_stop;
+        stream_.get()->create_mmap_buffer = astream_out_create_mmap_buffer;
+        stream_.get()->get_mmap_position = astream_out_get_mmap_position;
+    }
     (void)FillHalFnPtrs();
     mInitialized = true;
     audio_extn_gef_notify_device_config(devices, config_.channel_mask, config_.sample_rate);
@@ -1820,6 +2163,85 @@ StreamOutPrimary::~StreamOutPrimary() {
     }
     if (convertBuffer)
         free(convertBuffer);
+}
+
+int StreamInPrimary::Stop() {
+    int ret = -ENOSYS;
+
+    if (usecase_ == USECASE_AUDIO_RECORD_MMAP &&
+            qal_stream_handle_ && stream_started_) {
+
+        ret = qal_stream_stop(qal_stream_handle_);
+        if (ret == 0)
+            stream_started_ = false;
+    }
+    return ret;
+}
+
+int StreamInPrimary::Start() {
+    int ret = -ENOSYS;
+
+    if (usecase_ == USECASE_AUDIO_RECORD_MMAP &&
+            qal_stream_handle_ && !stream_started_) {
+
+        ret = qal_stream_start(qal_stream_handle_);
+        if (ret == 0)
+            stream_started_ = true;
+    }
+    return ret;
+}
+
+int StreamInPrimary::CreateMmapBuffer(int32_t min_size_frames,
+        struct audio_mmap_buffer_info *info)
+{
+    int ret;
+    struct qal_mmap_buffer qalMmapBuf;
+
+    if (qal_stream_handle_) {
+        ALOGE("%s: qal handle already created\n", __func__);
+        return -EINVAL;
+    }
+
+    ret = Open();
+    if (ret) {
+        ALOGE("%s: failed to open stream.", __func__);
+        return ret;
+    }
+    ret = qal_stream_create_mmap_buffer(qal_stream_handle_,
+            min_size_frames, &qalMmapBuf);
+    if (ret) {
+        ALOGE("%s: failed to create mmap buffer: %d", __func__, ret);
+        Standby();
+        return ret;
+    }
+    info->shared_memory_address = qalMmapBuf.buffer;
+    info->shared_memory_fd = qalMmapBuf.fd;
+    info->buffer_size_frames = qalMmapBuf.buffer_size_frames;
+    info->burst_size_frames = qalMmapBuf.burst_size_frames;
+    info->flags = (audio_mmap_buffer_flag)qalMmapBuf.flags;
+
+    return ret;
+}
+
+int StreamInPrimary::GetMmapPosition(struct audio_mmap_position *position)
+{
+    struct qal_mmap_position qal_mmap_pos;
+    int32_t ret = 0;
+
+    if (qal_stream_handle_ == nullptr) {
+        ALOGE("%s: qal handle is null\n", __func__);
+        return -EINVAL;
+    }
+
+    ret = qal_stream_get_mmap_position(qal_stream_handle_, &qal_mmap_pos);
+    if (ret) {
+        ALOGE("%s: failed to get mmap position %d\n", __func__, ret);
+        return ret;
+    }
+    position->position_frames = qal_mmap_pos.position_frames;
+    position->time_nanoseconds = qal_mmap_pos.time_nanoseconds;
+
+    return 0;
 }
 
 int StreamInPrimary::Standby() {
@@ -2107,13 +2529,23 @@ int StreamInPrimary::Open() {
       ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
     }
 
-    streamAttributes_.type = StreamInPrimary::GetQalStreamType(flags_);;
+    streamAttributes_.type = StreamInPrimary::GetQalStreamType(flags_,
+            config_.sample_rate);
     streamAttributes_.flags = (qal_stream_flags_t)0;
     streamAttributes_.direction = QAL_AUDIO_INPUT;
     streamAttributes_.in_media_config.sample_rate = config_.sample_rate;
     streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     streamAttributes_.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
     streamAttributes_.in_media_config.ch_info = ch_info;
+
+    if (streamAttributes_.type == QAL_STREAM_ULTRA_LOW_LATENCY) {
+            if (usecase_ == USECASE_AUDIO_RECORD_MMAP)
+                streamAttributes_.flags = (qal_stream_flags_t)
+                    (QAL_STREAM_FLAG_MMAP_NO_IRQ);
+            else if (usecase_ == USECASE_AUDIO_RECORD_LOW_LATENCY)
+                streamAttributes_.flags = (qal_stream_flags_t)
+                    (QAL_STREAM_FLAG_MMAP);
+    }
     ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
 
     ret = qal_stream_open(&streamAttributes_,
@@ -2134,7 +2566,18 @@ int StreamInPrimary::Open() {
     }
 
 set_buff_size:
-    inBufSize = StreamInPrimary::GetBufferSize();
+    if (usecase_ == USECASE_AUDIO_RECORD_MMAP) {
+        inBufSize = MMAP_PERIOD_SIZE * audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+        inBufCount = MMAP_PERIOD_COUNT_DEFAULT;
+    } else if (usecase_ == USECASE_AUDIO_RECORD_LOW_LATENCY) {
+        inBufSize = ULL_PERIOD_SIZE * audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+        inBufCount = ULL_PERIOD_COUNT_DEFAULT;
+    } else
+        inBufSize = StreamInPrimary::GetBufferSize();
     if (!handle) {
         ret = qal_stream_set_buffer_size(qal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
         if (ret) {
@@ -2151,14 +2594,21 @@ error_open:
 }
 
 
+/* in bytes */
 uint32_t StreamInPrimary::GetBufferSize() {
     struct qal_stream_attributes streamAttributes_;
 
-    streamAttributes_.type = StreamInPrimary::GetQalStreamType(flags_);
+    streamAttributes_.type = StreamInPrimary::GetQalStreamType(flags_,
+            config_.sample_rate);
     if (streamAttributes_.type == QAL_STREAM_VOIP_TX) {
         return voip_get_buffer_size(config_.sample_rate);
     } else if (streamAttributes_.type == QAL_STREAM_LOW_LATENCY) {
         return LOW_LATENCY_CAPTURE_PERIOD_SIZE *
+            audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+    } else if (streamAttributes_.type == QAL_STREAM_ULTRA_LOW_LATENCY) {
+        return ULL_PERIOD_SIZE * ULL_PERIOD_MULTIPLIER *
             audio_bytes_per_frame(
                     audio_channel_count_from_out_mask(config_.channel_mask),
                     config_.format);
@@ -2171,7 +2621,8 @@ int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_s
 {
     // TODO: cover other usecases
     int usecase = USECASE_AUDIO_RECORD;
-    if ((halStreamFlags & AUDIO_INPUT_FLAG_TIMESTAMP) == 0 &&
+    if (config_.sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
+        (halStreamFlags & AUDIO_INPUT_FLAG_TIMESTAMP) == 0 &&
         (halStreamFlags & AUDIO_INPUT_FLAG_COMPRESS) == 0 &&
         (halStreamFlags & AUDIO_INPUT_FLAG_FAST) != 0)
         usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
@@ -2368,6 +2819,12 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
         }
     }
 
+    if (flags & AUDIO_INPUT_FLAG_MMAP_NOIRQ) {
+        stream_.get()->start = astream_in_mmap_noirq_start;
+        stream_.get()->stop = astream_in_mmap_noirq_stop;
+        stream_.get()->create_mmap_buffer = astream_in_create_mmap_buffer;
+        stream_.get()->get_mmap_position = astream_in_get_mmap_position;
+    }
     (void)FillHalFnPtrs();
     mInitialized = true;
 error:

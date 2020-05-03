@@ -48,9 +48,12 @@
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
-#define ULL_PLATFORM_DELAY         (3*1000LL)
+#define ULL_PLATFORM_DELAY         (4*1000LL)
 #define DEFAULT_OUTPUT_SAMPLING_RATE    48000
-#define LOW_LATENCY_PLAYBACK_PERIOD_SIZE 240
+#define LOW_LATENCY_PLAYBACK_PERIOD_SIZE 240 /** 5ms; frames */
+#define ULL_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE / 1000) /** 1ms; frames */
+#define ULL_PERIOD_COUNT_DEFAULT 512
+#define ULL_PERIOD_MULTIPLIER  4
 #define BUF_SIZE_PLAYBACK 1024
 #define BUF_SIZE_CAPTURE 960
 #define NO_OF_BUF 4
@@ -420,6 +423,8 @@ public:
     int Resume();
     int Drain(audio_drain_type_t type);
     int Flush();
+    int Start();
+    int Stop();
     ssize_t Write(const void *buffer, size_t bytes);
     int Open();
     void GetStreamHandle(audio_stream_out** stream);
@@ -431,11 +436,13 @@ public:
     int StopOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     bool CheckOffloadEffectsType(qal_stream_type_t qal_stream_type);
     audio_output_flags_t flags_;
+    int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
+    int GetMmapPosition(struct audio_mmap_position *position);
+    int64_t platform_render_latency(audio_output_flags_t flags_);
 protected:
     struct timespec writeAt;
     int get_compressed_buffer_size();
     int get_pcm_buffer_size();
-    int64_t platform_render_latency(audio_output_flags_t flags_);
     audio_format_t halInputFormat = AUDIO_FORMAT_DEFAULT;
     audio_format_t halOutputFormat = AUDIO_FORMAT_DEFAULT;
     uint32_t convertBufSize;
@@ -474,15 +481,20 @@ public:
     int SetGain(float gain);
     void GetStreamHandle(audio_stream_in** stream);
     int Open();
+    int Start();
+    int Stop();
     ssize_t Read(const void *buffer, size_t bytes);
     uint32_t GetBufferSize();
-    static qal_stream_type_t GetQalStreamType(audio_input_flags_t halStreamFlags);
+    static qal_stream_type_t GetQalStreamType(audio_input_flags_t halStreamFlags,
+            uint32_t sample_rate);
     int GetInputUseCase(audio_input_flags_t halStreamFlags, audio_source_t source);
     int addRemoveAudioEffect(const struct audio_stream *stream, effect_handle_t effect,bool enable);
     int SetParameters(const char *kvpairs);
     bool is_st_session;
     bool is_st_session_active;
     audio_input_flags_t                 flags_;
+    int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
+    int GetMmapPosition(struct audio_mmap_position *position);
 protected:
     int FillHalFnPtrs();
     std::shared_ptr<audio_stream_in>    stream_;
