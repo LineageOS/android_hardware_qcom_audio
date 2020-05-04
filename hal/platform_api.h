@@ -127,7 +127,8 @@ int platform_get_gain_level_mapping(struct amp_db_and_gain_table *mapping_tbl,
                                     int table_size);
 
 /* returns the latency for a usecase in Us */
-int64_t platform_render_latency(audio_usecase_t usecase);
+int64_t platform_render_latency(struct stream_out *out);
+int64_t platform_capture_latency(struct stream_in *in);
 
 int platform_set_incall_recording_session_id(void *platform,
                                              uint32_t session_id, int rec_mode);
@@ -208,6 +209,12 @@ int platform_get_usb_service_interval(void *platform,
                                       bool playback,
                                       unsigned long *service_interval);
 int platform_get_haptics_pcm_device_id();
+
+void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms);
+
+int platform_get_audio_source_index(const char *audio_source_name);
+
+void platform_set_audio_usecase_delay(audio_usecase_t usecase, int delay_ms);
 
 /* callback functions from platform to common audio HAL */
 struct stream_in *adev_get_active_input(const struct audio_device *adev);
