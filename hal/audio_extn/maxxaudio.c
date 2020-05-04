@@ -20,6 +20,7 @@
 #include <audio_hw.h>
 #include <cutils/str_parms.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <log/log.h>
 #include <math.h>
 #include <platform_api.h>
