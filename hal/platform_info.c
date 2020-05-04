@@ -55,6 +55,8 @@ typedef enum {
     MIC_INFO,
     ACDB_METAINFO_KEY,
     EXTERNAL_DEVICE_SPECIFIC,
+    AUDIO_SOURCE_DELAY,
+    AUDIO_OUTPUT_USECASE_DELAY,
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
@@ -75,6 +77,8 @@ static void process_snd_dev(const XML_Char **attr);
 static void process_mic_info(const XML_Char **attr);
 static void process_acdb_metainfo_key(const XML_Char **attr);
 static void process_external_dev(const XML_Char **attr);
+static void process_audio_source_delay(const XML_Char **attr);
+static void process_audio_usecase_delay(const XML_Char **attr);
 
 static section_process_fn section_table[] = {
     [ROOT] = process_root,
@@ -92,6 +96,8 @@ static section_process_fn section_table[] = {
     [MIC_INFO] = process_mic_info,
     [ACDB_METAINFO_KEY] = process_acdb_metainfo_key,
     [EXTERNAL_DEVICE_SPECIFIC] = process_external_dev,
+    [AUDIO_SOURCE_DELAY] = process_audio_source_delay,
+    [AUDIO_OUTPUT_USECASE_DELAY] = process_audio_usecase_delay,
 };
 
 static section_t section;
@@ -518,6 +524,61 @@ static void process_external_dev(const XML_Char **attr)
     }
 
     platform_add_external_specific_device(snd_device, (char *)attr[3], atoi((char *)attr[5]));
+
+done:
+    return;
+}
+
+static void process_audio_source_delay(const XML_Char **attr)
+{
+    audio_source_t audio_source = -1;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found", __func__);
+        goto done;
+    }
+
+    audio_source = platform_get_audio_source_index((const char *)attr[1]);
+
+    if (audio_source < 0) {
+        ALOGE("%s: audio_source %s is not defined",
+              __func__, (char *)attr[1]);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "delay") != 0) {
+        ALOGE("%s: 'delay' not found", __func__);
+        goto done;
+    }
+
+    platform_set_audio_source_delay(audio_source, atoi((char *)attr[3]));
+
+done:
+    return;
+}
+
+static void process_audio_usecase_delay(const XML_Char **attr)
+{
+    int index;
+
+    if (strcmp(attr[0], "name") != 0) {
+        ALOGE("%s: 'name' not found", __func__);
+        goto done;
+    }
+
+    index = platform_get_usecase_index((char *)attr[1]);
+    if (index < 0) {
+        ALOGE("%s: usecase %s in %s not found!",
+              __func__, attr[1], PLATFORM_INFO_XML_PATH);
+        goto done;
+    }
+
+    if (strcmp(attr[2], "delay") != 0) {
+        ALOGE("%s: 'delay' not found", __func__);
+        goto done;
+    }
+
+    platform_set_audio_usecase_delay(index, atoi((char *)attr[3]));
 
 done:
     return;
@@ -954,6 +1015,16 @@ static void start_tag(void *userdata __unused, const XML_Char *tag_name,
                 return;
             }
             section = NS;
+        } else if (strcmp(tag_name, "audio_input_source_delay") == 0) {
+            section = AUDIO_SOURCE_DELAY;
+        } else if (strcmp(tag_name, "audio_source_delay") == 0) {
+            section_process_fn fn = section_table[section];
+            fn(attr);
+        } else if (strcmp(tag_name, "audio_output_usecase_delay") == 0) {
+            section = AUDIO_OUTPUT_USECASE_DELAY;
+        } else if (strcmp(tag_name, "audio_usecase_delay") == 0) {
+            section_process_fn fn = section_table[section];
+            fn(attr);
         }
     } else {
         if(strcmp(tag_name, "config_params") == 0) {

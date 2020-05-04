@@ -3286,7 +3286,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
         // return a smaller number
         period_ms = (out->af_period_multiplier * out->config.period_size *
                      1000) / (out->config.rate);
-        hw_delay = platform_render_latency(out->usecase)/1000;
+        hw_delay = platform_render_latency(out)/1000;
         return period_ms + hw_delay;
     }
 
@@ -3770,7 +3770,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
                 signed_frames -=
-                    (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
+                    (platform_render_latency(out) * out->sample_rate / 1000000LL);
 
                 // Adjustment accounts for A2DP encoder latency with non-offload usecases
                 // Note: Encoder latency is returned in ms, while platform_render_latency in us.
@@ -4490,7 +4490,8 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
         unsigned int avail;
         if (pcm_get_htimestamp(in->pcm, &avail, &timestamp) == 0) {
             *frames = in->frames_read + avail;
-            *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec;
+            *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec
+                    - platform_capture_latency(in) * 1000LL;
             ret = 0;
         }
     }
