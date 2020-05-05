@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <log/log.h>
@@ -740,6 +741,24 @@ static struct listnode app_type_entry_list;
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
 #define ULL_PLATFORM_DELAY         (3*1000LL)
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
+
+static int audio_usecase_delay_ms[AUDIO_USECASE_MAX] = {0};
+
+static int audio_source_delay_ms[AUDIO_SOURCE_CNT] = {0};
+
+static struct name_to_index audio_source_index[AUDIO_SOURCE_CNT] = {
+    {TO_NAME_INDEX(AUDIO_SOURCE_DEFAULT)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_MIC)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_UPLINK)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_DOWNLINK)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_CALL)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_CAMCORDER)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_RECOGNITION)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_COMMUNICATION)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_REMOTE_SUBMIX)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_UNPROCESSED)},
+    {TO_NAME_INDEX(AUDIO_SOURCE_VOICE_PERFORMANCE)},
+};
 
 static pthread_once_t check_op_once_ctl = PTHREAD_ONCE_INIT;
 static bool is_tmus = false;
@@ -2252,6 +2271,11 @@ int platform_set_effect_config_data(snd_device_t snd_device,
 
 done:
     return ret;
+}
+
+int platform_get_audio_source_index(const char *audio_source_name)
+{
+    return find_index(audio_source_index, AUDIO_SOURCE_CNT, audio_source_name);
 }
 
 void platform_add_operator_specific_device(snd_device_t snd_device,
@@ -3828,22 +3852,92 @@ done:
     return ret;
 }
 
-/* Delay in Us */
-int64_t platform_render_latency(audio_usecase_t usecase)
+void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms)
 {
-    switch (usecase) {
+    if ((audio_source < AUDIO_SOURCE_DEFAULT) ||
+           (audio_source > AUDIO_SOURCE_MAX)) {
+        ALOGE("%s: Invalid audio_source = %d", __func__, audio_source);
+        return;
+    }
+
+    audio_source_delay_ms[audio_source] = delay_ms;
+}
+
+/* Delay in Us */
+int64_t platform_get_audio_source_delay(audio_source_t audio_source)
+{
+    if ((audio_source < AUDIO_SOURCE_DEFAULT) ||
+            (audio_source > AUDIO_SOURCE_MAX)) {
+        ALOGE("%s: Invalid audio_source = %d", __func__, audio_source);
+        return 0;
+    }
+
+    return 1000LL * audio_source_delay_ms[audio_source];
+}
+
+void platform_set_audio_usecase_delay(audio_usecase_t usecase, int delay_ms)
+{
+    if ((usecase <= USECASE_INVALID) || (usecase >= AUDIO_USECASE_MAX)) {
+        ALOGE("%s: invalid usecase case idx %d", __func__, usecase);
+        return;
+    }
+
+    audio_usecase_delay_ms[usecase] = delay_ms;
+}
+
+/* Delay in Us */
+int64_t platform_get_audio_usecase_delay(audio_usecase_t usecase)
+{
+    if ((usecase <= USECASE_INVALID) || (usecase >= AUDIO_USECASE_MAX)) {
+        ALOGE("%s: invalid usecase case idx %d", __func__, usecase);
+        return 0;
+    }
+
+    return 1000LL *  audio_usecase_delay_ms[usecase] ;
+}
+
+/* Delay in Us */
+int64_t platform_render_latency(struct stream_out *out)
+{
+    int64_t delay = 0LL;
+
+    if (!out)
+        return delay;
+
+    switch (out->usecase) {
         case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
-            return DEEP_BUFFER_PLATFORM_DELAY;
+            delay = DEEP_BUFFER_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
         case USECASE_AUDIO_PLAYBACK_WITH_HAPTICS:
-            return LOW_LATENCY_PLATFORM_DELAY;
+            delay = LOW_LATENCY_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_ULL:
-            return ULL_PLATFORM_DELAY;
+            delay = ULL_PLATFORM_DELAY;
+            break;
         case USECASE_AUDIO_PLAYBACK_MMAP:
-            return MMAP_PLATFORM_DELAY;
+            delay = MMAP_PLATFORM_DELAY;
+            break;
         default:
-            return 0;
+            break;
     }
+
+/* out->usecase could be used to add delay time if it's necessary */
+    delay += platform_get_audio_usecase_delay(out->usecase);
+    return delay;
+}
+
+int64_t platform_capture_latency(struct stream_in *in)
+{
+    int64_t delay = 0LL;
+
+    if (!in)
+        return delay;
+
+    delay = platform_get_audio_source_delay(in->source);
+
+/* in->device could be used to add delay time if it's necessary */
+    return delay;
 }
 
 int platform_set_snd_device_backend(snd_device_t device, const char *backend_tag,
