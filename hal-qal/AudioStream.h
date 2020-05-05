@@ -58,9 +58,9 @@
 #define LOW_LATENCY_CAPTURE_PERIOD_SIZE 240
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
 #define LOW_LATENCY_CAPTURE_USE_CASE 1
-#define PCM_OFFLOAD_BUFFER_DURATION 80 /** millisec */
-#define MIN_PCM_OFFLOAD_FRAGMENT_SIZE 512
-#define MAX_PCM_OFFLOAD_FRAGMENT_SIZE (240 * 1024)
+#define PCM_BUFFER_DURATION 80 /** millisec */
+#define MIN_PCM_FRAGMENT_SIZE 512
+#define MAX_PCM_FRAGMENT_SIZE (240 * 1024)
 #define MMAP_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE/1000)
 #define MMAP_PERIOD_COUNT_MIN 32
 #define MMAP_PERIOD_COUNT_MAX 512
@@ -434,7 +434,7 @@ public:
 protected:
     struct timespec writeAt;
     int get_compressed_buffer_size();
-    int get_pcm_offload_buffer_size();
+    int get_pcm_buffer_size();
     int64_t platform_render_latency(audio_output_flags_t flags_);
     audio_format_t halInputFormat = AUDIO_FORMAT_DEFAULT;
     audio_format_t halOutputFormat = AUDIO_FORMAT_DEFAULT;
