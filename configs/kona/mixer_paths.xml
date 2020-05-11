@@ -116,6 +116,7 @@
     <ctl name="RX_EAR Mode" value="OFF" />
 
     <!-- TX Controls -->
+    <ctl name="LPI Enable" value="1" />
     <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
     <ctl name="MultiMedia1 Mixer TX_CDC_DMA_TX_3" value="0" />
     <ctl name="ADC2_MIXER Switch" value="0" />
