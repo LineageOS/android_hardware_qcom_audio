@@ -60,7 +60,7 @@ endif
 LOCAL_HEADER_LIBRARIES := libhardware_headers \
                           libsystem_headers \
                           libutils_headers \
-                          libcasa-acdbdata
+                          libar-acdbdata
 
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
