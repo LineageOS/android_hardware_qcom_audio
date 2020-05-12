@@ -281,8 +281,8 @@
     <!-- RT Proxy Cal end -->
 
     <!-- Incall Recording -->
-    <ctl name="MultiMedia1 Mixer VOC_REC_UL" value="0" />
-    <ctl name="MultiMedia1 Mixer VOC_REC_DL" value="0" />
+    <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="0" />
+    <ctl name="MultiMedia9 Mixer VOC_REC_DL" value="0" />
     <ctl name="MultiMedia8 Mixer VOC_REC_UL" value="0" />
     <ctl name="MultiMedia8 Mixer VOC_REC_DL" value="0" />
     <ctl name="MultiMedia17 Mixer VOC_REC_UL" value="0" />
@@ -1667,7 +1667,7 @@
     </path>
 
     <path name="incall-rec-uplink">
-        <ctl name="MultiMedia1 Mixer VOC_REC_UL" value="1" />
+        <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="1" />
     </path>
 
     <path name="incall-rec-uplink bt-sco">
@@ -1715,7 +1715,7 @@
     </path>
 
     <path name="incall-rec-downlink">
-        <ctl name="MultiMedia1 Mixer VOC_REC_DL"  value="1" />
+        <ctl name="MultiMedia9 Mixer VOC_REC_DL"  value="1" />
     </path>
 
     <path name="incall-rec-downlink bt-sco">
@@ -1893,23 +1893,22 @@
     <path name="voicemmode1-call headphones">
         <ctl name="SLIMBUS6_DL_HL Switch" value="1" />
         <ctl name="QUAT_MI2S_RX_DL_HL Switch" value="1" />
-        <ctl name="Voice Stub Tx Mixer SLIM_1_TX" value="1" />
+        <ctl name="Voice Stub Tx Mixer SLIM_0_TX" value="1" />
         <ctl name="QUAT_MI2S_RX_Voice Mixer Voice Stub" value="1" />
         <ctl name="Voice Stub Tx Mixer QUAT_MI2S_TX" value="1" />
         <ctl name="SLIM_6_RX_Voice Mixer Voice Stub" value="1" />
-        <ctl name="Voice Stub Tx Mixer SLIM_1_TX" value="1" />
-        <ctl name="QUAT_MI2S_RX Port Mixer SLIM_1_TX" value="1" />
+        <ctl name="QUAT_MI2S_RX Port Mixer SLIM_0_TX" value="1" />
         <ctl name="SLIMBUS_6_RX Port Mixer QUAT_MI2S_TX" value="1" />
     </path>
 
     <path name="voicemmode1-call headset">
         <ctl name="SLIMBUS6_DL_HL Switch" value="1" />
         <ctl name="QUAT_MI2S_RX_DL_HL Switch" value="1" />
-        <ctl name="Voice Stub Tx Mixer SLIM_1_TX" value="1" />
+        <ctl name="Voice Stub Tx Mixer SLIM_0_TX" value="1" />
         <ctl name="QUAT_MI2S_RX_Voice Mixer Voice Stub" value="1" />
         <ctl name="Voice Stub Tx Mixer QUAT_MI2S_TX" value="1" />
         <ctl name="SLIM_6_RX_Voice Mixer Voice Stub" value="1" />
-        <ctl name="QUAT_MI2S_RX Port Mixer SLIM_1_TX" value="1" />
+        <ctl name="QUAT_MI2S_RX Port Mixer SLIM_0_TX" value="1" />
         <ctl name="SLIMBUS_6_RX Port Mixer QUAT_MI2S_TX" value="1" />
     </path>
 
@@ -1953,23 +1952,35 @@
     </path>
 
     <path name="voicemmode2-call">
-        <ctl name="SLIM_0_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
+        <ctl name="SLIMBUS6_DL_HL Switch" value="1" />
+        <ctl name="QUAT_MI2S_RX_DL_HL Switch" value="1" />
+        <ctl name="Voice Stub Tx Mixer SLIM_0_TX" value="1" />
+        <ctl name="QUAT_MI2S_RX_Voice Mixer Voice Stub" value="1" />
+        <ctl name="Voice Stub Tx Mixer QUAT_MI2S_TX" value="1" />
+        <ctl name="SLIM_6_RX_Voice Mixer Voice Stub" value="1" />
+        <ctl name="QUAT_MI2S_RX Port Mixer SLIM_0_TX" value="1" />
+        <ctl name="SLIMBUS_6_RX Port Mixer QUAT_MI2S_TX" value="1" />
     </path>
 
     <path name="voicemmode2-call headphones">
-        <ctl name="SLIM_6_RX_Voice Mixer VoiceMMode2" value="1" />
-        <ctl name="VoiceMMode2_Tx Mixer SLIM_0_TX_MMode2" value="1" />
+        <ctl name="SLIMBUS6_DL_HL Switch" value="1" />
+        <ctl name="QUAT_MI2S_RX_DL_HL Switch" value="1" />
+        <ctl name="Voice Stub Tx Mixer SLIM_0_TX" value="1" />
+        <ctl name="QUAT_MI2S_RX_Voice Mixer Voice Stub" value="1" />
+        <ctl name="Voice Stub Tx Mixer QUAT_MI2S_TX" value="1" />
+        <ctl name="SLIM_6_RX_Voice Mixer Voice Stub" value="1" />
+        <ctl name="QUAT_MI2S_RX Port Mixer SLIM_0_TX" value="1" />
+        <ctl name="SLIMBUS_6_RX Port Mixer QUAT_MI2S_TX" value="1" />
     </path>
 
     <path name="voicemmode2-call headset">
         <ctl name="SLIMBUS6_DL_HL Switch" value="1" />
         <ctl name="QUAT_MI2S_RX_DL_HL Switch" value="1" />
-        <ctl name="Voice Stub Tx Mixer SLIM_1_TX" value="1" />
+        <ctl name="Voice Stub Tx Mixer SLIM_0_TX" value="1" />
         <ctl name="QUAT_MI2S_RX_Voice Mixer Voice Stub" value="1" />
         <ctl name="Voice Stub Tx Mixer QUAT_MI2S_TX" value="1" />
         <ctl name="SLIM_6_RX_Voice Mixer Voice Stub" value="1" />
-        <ctl name="QUAT_MI2S_RX Port Mixer SLIM_1_TX" value="1" />
+        <ctl name="QUAT_MI2S_RX Port Mixer SLIM_0_TX" value="1" />
         <ctl name="SLIMBUS_6_RX Port Mixer QUAT_MI2S_TX" value="1" />
     </path>
 

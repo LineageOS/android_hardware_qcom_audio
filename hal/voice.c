@@ -57,16 +57,43 @@ static bool voice_external_baseband_supported(struct audio_device *adev)
      * symbols. Voice call is handled by MDM and apps processor talks to
      * MDM through CSD Client
      */
-    char * snd_card_name;
+    char *snd_card_name = NULL;
     char baseband[100];
     snd_card_name = strdup(mixer_get_name(adev->mixer));
+    if (!snd_card_name)
+        return 0;
     property_get("ro.baseband", baseband, "");
-    if ((!strncmp("hana55", snd_card_name, sizeof("hana55"))) &&
+    if (((!strncmp("hana55", snd_card_name, sizeof("hana55"))) &&
+        ( !strncmp("mdm", baseband, (sizeof("mdm")-1)) ||
+          !strncmp("sdx", baseband, (sizeof("sdx")-1)))) ||
+        ((!strncmp("sm8150-pcie-snd-card", snd_card_name, sizeof("sm8150-pcie-snd-card"))) &&
+        ( !strncmp("mdm", baseband, (sizeof("mdm")-1)) ||
+          !strncmp("sdx", baseband, (sizeof("sdx")-1))))) {
+         return 1;
+    } else {
+         return 0;
+    }
+}
+
+static bool voice_update_pcm_config(struct audio_device *adev)
+{
+    /* If platform is apq8084 and baseband is MDM, load CSD Client specific
+     * symbols. Voice call is handled by MDM and apps processor talks to
+     * MDM through CSD Client
+     */
+    char *snd_card_name = NULL;
+    char baseband[100];
+    snd_card_name = strdup(mixer_get_name(adev->mixer));
+    if (!snd_card_name)
+        return 0;
+    property_get("ro.baseband", baseband, "");
+    if ((!strncmp("sm8150-pcie-snd-card", snd_card_name, sizeof("sm8150-pcie-snd-card"))) &&
         ( !strncmp("mdm", baseband, (sizeof("mdm")-1)) ||
           !strncmp("sdx", baseband, (sizeof("sdx")-1)))) {
          return 1;
-    } else
+    } else {
          return 0;
+    }
 }
 
 static struct voice_session *voice_get_session_from_use_case(struct audio_device *adev,
@@ -256,6 +283,11 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     uc_info->stream.out = adev->current_call_output;
     uc_info->devices = adev->current_call_output->devices;
 
+    if (voice_update_pcm_config(adev)) {
+        sample_rate = 48000;
+        voice_config.rate = 48000;
+    }
+
     if (popcount(uc_info->devices) == 2) {
         ALOGE("%s: Invalid combo device(%#x) for voice call", __func__,
               uc_info->devices);
@@ -281,6 +313,11 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     if (voice_external_baseband_supported(adev)) {
         pcm_dev_loopback_rx_id = HOST_LESS_RX_ID;
         pcm_dev_loopback_tx_id = HOST_LESS_TX_ID;
+    }
+
+    if (voice_update_pcm_config(adev)) {
+        pcm_dev_loopback_rx_id = PCIE_HOST_LESS_RX_ID;
+        pcm_dev_loopback_tx_id = PCIE_HOST_LESS_TX_ID;
     }
 
     pcm_dev_rx_id = platform_get_pcm_device_id(uc_info->id, PCM_PLAYBACK);
