@@ -41,6 +41,13 @@
         <library name="volume_listener" path="libvolumelistener.so"/>
         <library name="audiosphere" path="libasphere.so"/>
         <library name="shoebox" path="libshoebox.so"/>
+        <library name="audio_bmt" path="libqtiautobundle.so"/>
+        <library name="audio_fnb" path="libqtiautobundle.so"/>
+        <library name="audio_delay" path="libqtiautobundle.so"/>
+        <library name="audio_volume" path="libqtiautobundle.so"/>
+        <library name="audio_avc" path="libqtiautobundle.so"/>
+        <library name="audio_sumx" path="libqtiautobundle.so"/>
+        <library name="audio_synth" path="libqtiautobundle.so"/>
     </libraries>
     <effects>
         <effectProxy name="bassboost" library="proxy" uuid="14804144-a5ee-4d24-aa88-0002a5d5c51b">
@@ -89,6 +96,13 @@
         <effect name="notification_helper" library="volume_listener" uuid="0b776dde-0590-11e5-81ba-0025b32654a0"/>
         <effect name="audiosphere" library="audiosphere" uuid="184e62ab-2d19-4364-9d1b-c0a40733866c"/>
         <effect name="shoebox" library="shoebox" uuid="1eab784c-1a36-4b2a-b7fc-e34c44cab89e"/>
+        <effect name="audio_bmt" library="audio_bmt" uuid="e039757b-a367-44e9-9bbb-634af0c51cb7"/>
+        <effect name="audio_fnb" library="audio_fnb" uuid="6bc88c84-a544-11e8-98d0-529269fb1459"/>
+        <effect name="audio_delay" library="audio_delay" uuid="a31574a6-a5e7-11e8-98d0-529269fb1459"/>
+        <effect name="audio_volume" library="audio_volume" uuid="3d844dd4-a367-11e8-9eb6-529269fb1459"/>
+        <effect name="audio_avc" library="audio_avc" uuid="2130c69e-6a3a-4e35-9890-71687f0b78bf"/>
+        <effect name="audio_sumx" library="audio_sumx" uuid="32e9fe7f-de63-4d1b-a5d2-281e8492f3ce"/>
+        <effect name="audio_synth" library="audio_synth" uuid="a124b54f-4026-4ed2-9316-4ba2d5effdb8"/>
     </effects>
     <postprocess>
         <stream type="music">

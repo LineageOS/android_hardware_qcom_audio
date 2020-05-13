@@ -48,6 +48,8 @@
 
 #include <audio_route/audio_route.h>
 #include <audio_utils/ErrorLog.h>
+#include <audio_utils/Statistics.h>
+#include <audio_utils/clock.h>
 #include "audio_defs.h"
 #include "voice.h"
 #include "audio_hw_extn_api.h"
@@ -213,6 +215,7 @@ enum {
 
     USECASE_AUDIO_PLAYBACK_AFE_PROXY,
     USECASE_AUDIO_RECORD_AFE_PROXY,
+    USECASE_AUDIO_RECORD_AFE_PROXY2,
     USECASE_AUDIO_DSM_FEEDBACK,
 
     USECASE_AUDIO_PLAYBACK_SILENCE,
@@ -238,6 +241,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
     USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
     USECASE_AUDIO_PLAYBACK_PHONE,
+    USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER,
     USECASE_AUDIO_PLAYBACK_REAR_SEAT,
 
     /*Audio FM Tuner usecase*/
@@ -310,18 +314,22 @@ typedef enum render_mode {
     RENDER_MODE_AUDIO_STC_MASTER,
 } render_mode_t;
 
-/* This defines the physical car streams supported in audio HAL,
- * limited by the available frontend PCM driver.
- * Max number of physical streams supported is currently 16 and is
+/* This defines the physical car audio streams supported in
+ * audio HAL, limited by the available frontend PCM devices.
+ * Max number of physical streams supported is 32 and is
  * represented by stream bit flag.
+ *     Primary zone: bit 0 - 7
+ *     Front passenger zone: bit 8 - 15
+ *     Rear seat zone: bit 16 - 23
  */
-#define MAX_CAR_AUDIO_STREAMS    16
+#define MAX_CAR_AUDIO_STREAMS    32
 enum {
     CAR_AUDIO_STREAM_MEDIA            = 0x1,
     CAR_AUDIO_STREAM_SYS_NOTIFICATION = 0x2,
     CAR_AUDIO_STREAM_NAV_GUIDANCE     = 0x4,
     CAR_AUDIO_STREAM_PHONE            = 0x8,
-    CAR_AUDIO_STREAM_REAR_SEAT        = 0x100,
+    CAR_AUDIO_STREAM_FRONT_PASSENGER  = 0x100,
+    CAR_AUDIO_STREAM_REAR_SEAT        = 0x10000,
 };
 
 struct stream_app_type_cfg {
@@ -454,6 +462,16 @@ struct stream_out {
             int stream;
         } cs;
     } extconn;
+
+    size_t kernel_buffer_size;  // cached value of the alsa buffer size, const after open().
+
+    // last out_get_presentation_position() cached info.
+    bool         last_fifo_valid;
+    unsigned int last_fifo_frames_remaining;
+    int64_t      last_fifo_time_ns;
+
+    simple_stats_t fifo_underruns;  // TODO: keep a list of the last N fifo underrun times.
+    simple_stats_t start_latency_ms;
 };
 
 struct stream_in {
@@ -507,6 +525,8 @@ struct stream_in {
     int64_t frames_muted; /* total frames muted, not cleared when entering standby */
 
     error_log_t *error_log;
+
+    simple_stats_t start_latency_ms;
 };
 
 typedef enum {
@@ -718,6 +738,7 @@ struct audio_device {
     struct listnode audio_patch_record_list;
     Hashmap *patch_map;
     Hashmap *io_streams_map;
+    bool ha_proxy_enable;
 };
 
 struct audio_patch_record {

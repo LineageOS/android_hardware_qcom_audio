@@ -155,6 +155,7 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_NAV_GUIDANCE),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_PHONE),
+    STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_FRONT_PASSENGER),
     STRING_TO_ENUM(AUDIO_OUTPUT_FLAG_REAR_SEAT),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_NONE),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_FAST),
@@ -1139,7 +1140,9 @@ int audio_extn_utils_get_app_sample_rate_for_device(
             (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
             /* Reset to default if no native stream is active*/
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        } else if (is_a2dp_out_device_type(&usecase->stream.out->device_list)) {
+        } else if (usecase->out_snd_device == SND_DEVICE_OUT_BT_A2DP ||
+                   usecase->out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP ||
+                   usecase->out_snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP) {
                  /*
                   * For a2dp playback get encoder sampling rate and set copp sampling rate,
                   * for bit width use the stream param only.
