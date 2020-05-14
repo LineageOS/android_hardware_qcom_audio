@@ -16,6 +16,24 @@
       "revId": "9ad047fe5730b9fb5de84ecb5c55f88f780cb7f0",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "cc144ac4_49aa2b49",
+        "filename": "hal/audio_extn/a2dp.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2798,
+      "author": {
+        "id": 2681
+      },
+      "writtenOn": "2020-05-14T09:32:10Z",
+      "side": 1,
+      "message": "That might be a remnant of me trying to figure this out - I\u0027ll have to check if it works with it removed later",
+      "parentUuid": "f6e801b9_c614b550",
+      "revId": "9ad047fe5730b9fb5de84ecb5c55f88f780cb7f0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
