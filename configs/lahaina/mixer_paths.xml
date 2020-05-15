@@ -2990,11 +2990,13 @@
 
     <path name="voice-tty-hco-headset-mic">
         <ctl name="TX DEC6 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX6" value="ADC1" />
+        <ctl name="TX SMIC MUX6" value="SWR_MIC1" />
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
         <ctl name="TX_AIF1_CAP Mixer DEC6" value="1" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP2" />
+        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
+        <ctl name="HDR12 MUX" value="NO_HDR12" />
     </path>
 
     <path name="voice-tty-vco-handset-mic">
