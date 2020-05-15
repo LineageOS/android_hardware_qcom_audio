@@ -8751,8 +8751,10 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         struct listnode *node;
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
-                is_a2dp_out_device_type(&usecase->device_list)) {
+            if ((usecase->stream.out == NULL) || (usecase->type != PCM_PLAYBACK))
+                continue;
+
+            if (is_a2dp_out_device_type(&usecase->device_list)) {
                 ALOGD("reconfigure a2dp... forcing device switch");
                 pthread_mutex_unlock(&adev->lock);
                 lock_output_stream(usecase->stream.out);
