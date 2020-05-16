@@ -384,6 +384,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
     [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
+    [USECASE_AUDIO_RECORD_AFE_PROXY2] = "afe-proxy-record2",
     [USECASE_AUDIO_PLAYBACK_SILENCE] = "silence-playback",
 
     /* Transcode loopback cases */
@@ -410,6 +411,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = "sys-notification-playback",
     [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = "nav-guidance-playback",
     [USECASE_AUDIO_PLAYBACK_PHONE] = "phone-playback",
+    [USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER] = "front-passenger-playback",
     [USECASE_AUDIO_PLAYBACK_REAR_SEAT] = "rear-seat-playback",
     [USECASE_AUDIO_FM_TUNER_EXT] = "fm-tuner-ext",
 };
@@ -881,6 +883,7 @@ static bool is_supported_format(audio_format_t format)
 static inline bool is_mmap_usecase(audio_usecase_t uc_id)
 {
     return (uc_id == USECASE_AUDIO_RECORD_AFE_PROXY) ||
+           (uc_id == USECASE_AUDIO_RECORD_AFE_PROXY2) ||
            (uc_id == USECASE_AUDIO_PLAYBACK_AFE_PROXY);
 }
 
@@ -2727,7 +2730,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
                     usecase->stream.in->enable_ec_port = false;
 
-                    if (usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY) {
+                    bool is_ha_usecase = adev->ha_proxy_enable ?
+                        usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY2 :
+                        usecase->id == USECASE_AUDIO_RECORD_AFE_PROXY;
+                    if (is_ha_usecase) {
                         reassign_device_list(&out_devices, AUDIO_DEVICE_OUT_TELEPHONY_TX, "");
                     } else if (voip_usecase) {
                         assign_devices(&out_devices, &voip_usecase->stream.out->device_list);
@@ -3141,7 +3147,8 @@ int start_input_stream(struct stream_in *in)
         unsigned int flags = PCM_IN | PCM_MONOTONIC;
         unsigned int pcm_open_retry_count = 0;
 
-        if (in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY) {
+        if ((in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY) ||
+             (in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY2)) {
             flags |= PCM_MMAP | PCM_NOIRQ;
             pcm_open_retry_count = PROXY_OPEN_RETRY_COUNT;
         } else if (in->realtime) {
@@ -7041,7 +7048,8 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
      */
     if ((ret == 0 && voice_get_mic_mute(adev) &&
          !voice_is_in_call_rec_stream(in) &&
-         in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY) ||
+         (in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY &&
+          in->usecase != USECASE_AUDIO_RECORD_AFE_PROXY2)) ||
         (adev->num_va_sessions &&
          in->source != AUDIO_SOURCE_VOICE_RECOGNITION &&
          property_get_bool("persist.vendor.audio.va_concurrency_mute_enabled",
@@ -7519,6 +7527,7 @@ static void in_update_sink_metadata(struct audio_stream_in *stream,
     struct stream_in *in = (struct stream_in *)stream;
     struct audio_device *adev = in->dev;
     struct listnode devices;
+    bool is_ha_usecase = false;
 
     list_init(&devices);
 
@@ -7529,8 +7538,10 @@ static void in_update_sink_metadata(struct audio_stream_in *stream,
     pthread_mutex_lock(&adev->lock);
     ALOGV("%s: in->usecase: %d, device: %x", __func__, in->usecase, get_device_types(&devices));
 
-    if (in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY
-            && !list_empty(&devices)
+    is_ha_usecase = adev->ha_proxy_enable ?
+        in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY2 :
+        in->usecase == USECASE_AUDIO_RECORD_AFE_PROXY;
+    if (is_ha_usecase && !list_empty(&devices)
             && adev->voice_tx_output != NULL) {
         /* Use the rx device from afe-proxy record to route voice call because
            there is no routing if tx device is on primary hal and rx device
@@ -9367,6 +9378,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         }
 
         in->usecase = USECASE_AUDIO_RECORD_AFE_PROXY;
+        if (adev->ha_proxy_enable &&
+            is_single_device_type_equal(&in->device_list,
+                                        AUDIO_DEVICE_IN_TELEPHONY_RX))
+            in->usecase = USECASE_AUDIO_RECORD_AFE_PROXY2;
         in->config = pcm_config_afe_proxy_record;
         in->config.rate = config->sample_rate;
         in->af_period_multiplier = 1;
@@ -10560,6 +10575,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     audio_extn_qdsp_init(adev->platform);
 
     adev->multi_offload_enable = property_get_bool("vendor.audio.offload.multiple.enabled", false);
+    adev->ha_proxy_enable = property_get_bool("persist.vendor.audio.ha_proxy.enabled", false);
     pthread_mutex_unlock(&adev_init_lock);
 
     if (adev->adm_init)

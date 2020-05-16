@@ -1315,8 +1315,11 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #ifndef AUDIO_OUTPUT_FLAG_PHONE
 #define AUDIO_OUTPUT_FLAG_PHONE 0x800000
 #endif
+#ifndef AUDIO_OUTPUT_FLAG_FRONT_PASSENGER
+#define AUDIO_OUTPUT_FLAG_FRONT_PASSENGER 0x1000000
+#endif
 #ifndef AUDIO_OUTPUT_FLAG_REAR_SEAT
-#define AUDIO_OUTPUT_FLAG_REAR_SEAT 0x1000000
+#define AUDIO_OUTPUT_FLAG_REAR_SEAT 0x2000000
 #endif
 int audio_extn_auto_hal_init(struct audio_device *adev);
 void audio_extn_auto_hal_deinit(void);

@@ -346,8 +346,8 @@
     <ctl name="RX_RX0 Digital Volume" value="84" />
     <ctl name="RX_RX1 Digital Volume" value="84" />
     <ctl name="RX_RX2 Digital Volume" value="84" />
-    <ctl name="HPHL Volume" value="20" />
-    <ctl name="HPHR Volume" value="20" />
+    <ctl name="HPHL Volume" value="12" />
+    <ctl name="HPHR Volume" value="12" />
     <ctl name="EAR SPKR PA Gain" value="G_DEFAULT" />
 
     <ctl name="TX_DEC0 Volume" value="84" />
@@ -2496,7 +2496,6 @@
         <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
         <ctl name="LO_RDAC Switch" value="1" />
         <ctl name="SpkrMono WSA_RDAC" value="Switch" />
-        <ctl name="LO_RDAC Switch" value="1" />
     </path>
 
     <path name="speaker-mono">
@@ -2589,6 +2588,8 @@
         <ctl name="HPHR_COMP Switch" value="1" />
         <ctl name="HPHL_RDAC Switch" value="1" />
         <ctl name="HPHR_RDAC Switch" value="1" />
+        <ctl name="RX_RX0 Digital Volume" value="65" />
+        <ctl name="RX_RX1 Digital Volume" value="65" />
     </path>
 
     <path name="headphones-44.1">
@@ -2694,13 +2695,23 @@
     </path>
 
     <path name="speaker-and-headphones">
-        <path name="headphones" />
-        <path name="speaker" />
+        <ctl name="RX_MACRO RX0 MUX" value="AIF1_PB" />
+        <ctl name="RX_MACRO RX1 MUX" value="AIF1_PB" />
+        <ctl name="RX_CDC_DMA_RX_0 Channels" value="Two" />
+        <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
+        <ctl name="RX INT1_1 MIX1 INP0" value="RX1" />
+        <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
+        <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT" />
+        <ctl name="HPHL_RDAC Switch" value="1" />
+        <ctl name="HPHR_RDAC Switch" value="1" />
+        <ctl name="LO_RDAC Switch" value="1" />
+        <ctl name="SpkrMono WSA_RDAC" value="Switch" />
+        <ctl name="RX_RX0 Digital Volume" value="65" />
+        <ctl name="RX_RX1 Digital Volume" value="65" />
     </path>
 
     <path name="speaker-and-headphones-hifi-filter">
-        <path name="headphones" />
-        <path name="speaker" />
+        <path name="speaker-and-headphones" />
     </path>
 
     <path name="speaker-safe-and-headphones">
@@ -2717,8 +2728,7 @@
     </path>
 
     <path name="speaker-and-headphones-liquid">
-        <path name="headphones" />
-        <path name="speaker" />
+        <path name="speaker-and-headphones" />
     </path>
 
     <path name="speaker-safe-and-headphones-liquid">
