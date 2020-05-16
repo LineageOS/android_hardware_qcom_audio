@@ -7261,37 +7261,37 @@ snd_device_t platform_get_input_snd_device(void *platform,
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) ||
             compare_device_type(&in_devices, AUDIO_DEVICE_IN_BACK_MIC)) {
-            switch (adev->camera_orientation) {
-            case CAMERA_BACK_LANDSCAPE:
-                snd_device = SND_DEVICE_IN_CAMCORDER_LANDSCAPE;
-                break;
-            case CAMERA_BACK_INVERT_LANDSCAPE:
-                snd_device = SND_DEVICE_IN_CAMCORDER_INVERT_LANDSCAPE;
-                break;
-            case CAMERA_BACK_PORTRAIT:
-                snd_device = SND_DEVICE_IN_CAMCORDER_PORTRAIT;
-                break;
-            case CAMERA_FRONT_LANDSCAPE:
-                snd_device = SND_DEVICE_IN_CAMCORDER_SELFIE_LANDSCAPE;
-                break;
-            case CAMERA_FRONT_INVERT_LANDSCAPE:
-                snd_device = SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE;
-                break;
-            case CAMERA_FRONT_PORTRAIT:
-                snd_device = SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT;
-                break;
-            default:
-                ALOGW("%s: invalid camera orientation %08x", __func__, adev->camera_orientation);
-                snd_device = SND_DEVICE_IN_CAMCORDER_LANDSCAPE;
-                break;
-            }
+
             if (str_bitwidth == 16) {
                 if ((my_data->fluence_type & FLUENCE_DUAL_MIC) &&
                     (my_data->source_mic_type & SOURCE_DUAL_MIC) &&
                     (channel_count == 2))
                     snd_device = SND_DEVICE_IN_HANDSET_DMIC_STEREO;
                 else
-                    snd_device = SND_DEVICE_IN_CAMCORDER_MIC;
+                    switch (adev->camera_orientation) {
+                        case CAMERA_BACK_LANDSCAPE:
+                            snd_device = SND_DEVICE_IN_CAMCORDER_LANDSCAPE;
+                            break;
+                        case CAMERA_BACK_INVERT_LANDSCAPE:
+                            snd_device = SND_DEVICE_IN_CAMCORDER_INVERT_LANDSCAPE;
+                            break;
+                        case CAMERA_BACK_PORTRAIT:
+                            snd_device = SND_DEVICE_IN_CAMCORDER_PORTRAIT;
+                            break;
+                        case CAMERA_FRONT_LANDSCAPE:
+                            snd_device = SND_DEVICE_IN_CAMCORDER_SELFIE_LANDSCAPE;
+                            break;
+                        case CAMERA_FRONT_INVERT_LANDSCAPE:
+                            snd_device = SND_DEVICE_IN_CAMCORDER_SELFIE_INVERT_LANDSCAPE;
+                            break;
+                        case CAMERA_FRONT_PORTRAIT:
+                            snd_device = SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT;
+                            break;
+                        default:
+                            ALOGW("%s: invalid camera orientation %08x", __func__, adev->camera_orientation);
+                            snd_device = SND_DEVICE_IN_CAMCORDER_LANDSCAPE;
+                            break;
+                    }
             }
             /*
              * for other bit widths
