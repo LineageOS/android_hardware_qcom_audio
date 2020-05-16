@@ -1296,7 +1296,7 @@ int StreamOutPrimary::get_compressed_buffer_size()
     return COMPRESS_OFFLOAD_FRAGMENT_SIZE;
 }
 
-int StreamOutPrimary::get_pcm_offload_buffer_size()
+int StreamOutPrimary::get_pcm_buffer_size()
 {
     uint8_t channels = audio_channel_count_from_out_mask(config_.channel_mask);
     uint8_t bytes_per_sample = audio_bytes_per_sample(config_.format);
@@ -1305,14 +1305,14 @@ int StreamOutPrimary::get_pcm_offload_buffer_size()
     ALOGD("%s:%d config_ format:%x, SR %d ch_mask 0x%x",
             __func__, __LINE__, config_.format, config_.sample_rate,
             config_.channel_mask);
-    fragment_size = PCM_OFFLOAD_BUFFER_DURATION *
+    fragment_size = PCM_BUFFER_DURATION *
         config_.sample_rate * bytes_per_sample * channels;
     fragment_size /= 1000;
 
-    if (fragment_size < MIN_PCM_OFFLOAD_FRAGMENT_SIZE)
-        fragment_size = MIN_PCM_OFFLOAD_FRAGMENT_SIZE;
-    else if (fragment_size > MAX_PCM_OFFLOAD_FRAGMENT_SIZE)
-        fragment_size = MAX_PCM_OFFLOAD_FRAGMENT_SIZE;
+    if (fragment_size < MIN_PCM_FRAGMENT_SIZE)
+        fragment_size = MIN_PCM_FRAGMENT_SIZE;
+    else if (fragment_size > MAX_PCM_FRAGMENT_SIZE)
+        fragment_size = MAX_PCM_FRAGMENT_SIZE;
 
     fragment_size = ALIGN(fragment_size, (bytes_per_sample * channels * 32));
 
@@ -1342,8 +1342,9 @@ uint32_t StreamOutPrimary::GetBufferSize() {
         return voip_get_buffer_size(config_.sample_rate);
     } else if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
         return get_compressed_buffer_size();
-    } else if (streamAttributes_.type == QAL_STREAM_PCM_OFFLOAD) {
-        return get_pcm_offload_buffer_size();
+    } else if (streamAttributes_.type == QAL_STREAM_PCM_OFFLOAD
+              || streamAttributes_.type == QAL_STREAM_DEEP_BUFFER) {
+        return get_pcm_buffer_size();
     } else if (streamAttributes_.type == QAL_STREAM_LOW_LATENCY) {
         return LOW_LATENCY_PLAYBACK_PERIOD_SIZE *
             audio_bytes_per_frame(
@@ -1457,7 +1458,8 @@ int StreamOutPrimary::Open() {
         if (mchannels)
             streamAttributes_.out_media_config.ch_info->channels = mchannels;
         streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
-    } else if (streamAttributes_.type == QAL_STREAM_PCM_OFFLOAD) {
+    } else if (streamAttributes_.type == QAL_STREAM_PCM_OFFLOAD ||
+               streamAttributes_.type == QAL_STREAM_DEEP_BUFFER) {
         halInputFormat = config_.format;
         pcmFormat = HaltoAlsaFormat(halInputFormat);
         halOutputFormat = AlsatoHalFormat(pcmFormat);
@@ -2384,7 +2386,7 @@ StreamPrimary::StreamPrimary(audio_io_handle_t handle,
 {
     memset(&streamAttributes_, 0, sizeof(streamAttributes_));
     memset(&address_, 0, sizeof(address_));
-    ALOGE("%s: SATISH ::: handle: %d channel_mask: %d ", __func__, handle_, config_.channel_mask);
+    ALOGE("%s: handle: %d channel_mask: %d ", __func__, handle_, config_.channel_mask);
 }
 
 StreamPrimary::~StreamPrimary(void)
