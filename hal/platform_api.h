@@ -423,5 +423,14 @@ void platform_set_snd_device_delay(snd_device_t snd_device, int delay_ms);
 void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms);
 
 int platform_get_audio_source_index(const char *audio_source_name);
-
+bool platform_check_and_update_island_power_status(void *platform,
+                                                   struct audio_usecase* usecase,
+                                                    snd_device_t snd_device);
+bool platform_get_power_mode_on_device(void *platform, snd_device_t snd_device);
+bool platform_get_island_cfg_on_device(void *platform, snd_device_t snd_device);
+int platform_set_power_mode_on_device(struct audio_device* adev, snd_device_t snd_device,
+                                      bool enable);
+int platform_set_island_cfg_on_device(struct audio_device* adev, snd_device_t snd_device,
+                                      bool enable);
+void platform_reset_island_power_status(void *platform, snd_device_t snd_device);
 #endif // AUDIO_PLATFORM_API_H
