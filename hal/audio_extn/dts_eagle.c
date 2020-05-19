@@ -61,7 +61,7 @@ static struct dts_eagle_param_desc_alsa *fade_out_data = NULL;
 //static int32_t mCurrDevice = 0;
 //static const char* DTS_EAGLE_STR = DTS_EAGLE_KEY;
 
-static int do_DTS_Eagle_params_stream(struct stream_out *out, struct dts_eagle_param_desc_alsa *t, bool get) {
+static int do_DTS_Eagle_params_stream(const struct stream_out *out, struct dts_eagle_param_desc_alsa *t, bool get) {
     char mixer_string[128];
     char mixer_str_query[128];
     struct mixer_ctl *ctl;
@@ -316,7 +316,7 @@ void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_p
         }
 
         if (dts_found && count > 1 && size != (int)(count * sizeof(int))) {
-            ALOGE("DTS_EAGLE_HAL (%s): size/count mismatch (size = %i bytes, count = %i integers / %u bytes).", __func__, size, count, count*sizeof(int));
+            ALOGE("DTS_EAGLE_HAL (%s): size/count mismatch (size = %i bytes, count = %i integers / %zu bytes).", __func__, size, count, count*sizeof(int));
         } else if (dts_found) {
             ALOGI("DTS_EAGLE_HAL (%s): param detected: %s", __func__, str_parms_to_str(parms));
             if (!(*t))
