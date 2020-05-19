@@ -1757,6 +1757,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("lahaina-mtp-snd-card")) ||
          !strncmp(snd_card_name, "lahaina-qrd-snd-card",
                    sizeof("lahaina-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-cdp-snd-card",
+                   sizeof("lahaina-cdp-snd-card")) ||
          !strncmp(snd_card_name, "kona-mtp-snd-card",
                    sizeof("kona-mtp-snd-card")) ||
          !strncmp(snd_card_name, "kona-qrd-snd-card",
