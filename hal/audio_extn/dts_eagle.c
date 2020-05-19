@@ -21,6 +21,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <log/log.h>
 #include <cutils/properties.h>
 #include <cutils/str_parms.h>
