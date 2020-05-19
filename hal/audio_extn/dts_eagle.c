@@ -44,7 +44,7 @@
 #define AUDIO_PARAMETER_KEY_DTS_EAGLE   "DTS_EAGLE"
 #define STATE_NOTIFY_FILE               "/data/misc/dts/stream"
 #define FADE_NOTIFY_FILE                "/data/misc/dts/fade"
-#define DTS_EAGLE_KEY                   "DTS_EAGLE"
+//#define DTS_EAGLE_KEY                   "DTS_EAGLE"
 #define DEVICE_NODE                     "/dev/snd/hwC0D3"
 #define MAX_LENGTH_OF_INTEGER_IN_STRING 13
 #define PARAM_GET_MAX_SIZE              512
@@ -56,9 +56,9 @@ struct dts_eagle_param_desc_alsa {
 
 static struct dts_eagle_param_desc_alsa *fade_in_data = NULL;
 static struct dts_eagle_param_desc_alsa *fade_out_data = NULL;
-static int32_t mDevices = 0;
-static int32_t mCurrDevice = 0;
-static const char* DTS_EAGLE_STR = DTS_EAGLE_KEY;
+//static int32_t mDevices = 0;
+//static int32_t mCurrDevice = 0;
+//static const char* DTS_EAGLE_STR = DTS_EAGLE_KEY;
 
 static int do_DTS_Eagle_params_stream(struct stream_out *out, struct dts_eagle_param_desc_alsa *t, bool get) {
     char mixer_string[128];
@@ -219,7 +219,7 @@ void audio_extn_dts_eagle_send_lic() {
 }
 
 void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_parms *parms) {
-    int ret, val;
+    int ret;
     char value[32] = { 0 }, prop[PROPERTY_VALUE_MAX];
 
     ALOGV("DTS_EAGLE_HAL (%s): enter", __func__);
@@ -351,7 +351,7 @@ void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_p
 
 int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
                   struct str_parms *query, struct str_parms *reply) {
-    int ret, val;
+    int ret;
     char value[32] = { 0 }, prop[PROPERTY_VALUE_MAX];
     char params[PARAM_GET_MAX_SIZE];
 
