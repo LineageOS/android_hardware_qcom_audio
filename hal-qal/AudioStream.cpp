@@ -1952,7 +1952,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
             ret = StartOffloadEffects(handle_, qal_stream_handle_);
         }
 
-        if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
+        if (CheckOffloadEffectsType(streamAttributes_.type)) {
             ret = StartOffloadVisualizer(handle_, qal_stream_handle_);
         }
 
@@ -2205,7 +2205,7 @@ StreamOutPrimary::~StreamOutPrimary() {
             StopOffloadEffects(handle_, qal_stream_handle_);
         }
 
-        if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
+        if (CheckOffloadEffectsType(streamAttributes_.type)) {
             StopOffloadVisualizer(handle_, qal_stream_handle_);
         }
 
