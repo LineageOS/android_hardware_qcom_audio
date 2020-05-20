@@ -61,7 +61,10 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
     char c_value[32];
     int ret = 0, err;
     struct str_parms *parms;
-    qal_param_payload params;
+    qal_param_payload *params = nullptr;
+    uint32_t tty_mode;
+    bool volume_boost;
+    bool slow_talk;
 
     ALOGD("%s: Enter", __func__);
 
@@ -94,62 +97,98 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_TTY_MODE, c_value, sizeof(c_value));
     if (err >= 0) {
         if (strcmp(c_value, AUDIO_PARAMETER_VALUE_TTY_OFF) == 0)
-            params.tty_mode = QAL_TTY_OFF;
+            tty_mode = QAL_TTY_OFF;
         else if (strcmp(c_value, AUDIO_PARAMETER_VALUE_TTY_VCO) == 0)
-            params.tty_mode = QAL_TTY_VCO;
+            tty_mode = QAL_TTY_VCO;
         else if (strcmp(c_value, AUDIO_PARAMETER_VALUE_TTY_HCO) == 0)
-            params.tty_mode = QAL_TTY_HCO;
+            tty_mode = QAL_TTY_HCO;
         else if (strcmp(c_value, AUDIO_PARAMETER_VALUE_TTY_FULL) == 0)
-            params.tty_mode = QAL_TTY_FULL;
+            tty_mode = QAL_TTY_FULL;
         else {
             ret = -EINVAL;
             goto done;
         }
 
         for ( i = 0; i < max_voice_sessions_; i++) {
-            voice_.session[i].tty_mode = params.tty_mode;
+            voice_.session[i].tty_mode = tty_mode;
             if (IsCallActive(&voice_.session[i])) {
-                qal_stream_set_param(voice_.session[i].qal_voice_handle, QAL_PARAM_ID_TTY_MODE, &params);
+                params = (qal_param_payload *)calloc(1,
+                                   sizeof(qal_param_payload) + sizeof(tty_mode));
+                if (!params) {
+                    ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+                            sizeof(qal_param_payload) + sizeof(tty_mode));
+                    continue;
+                }
+                params->payload_size = sizeof(tty_mode);
+                memcpy(params->payload, &tty_mode, params->payload_size);
+                qal_stream_set_param(voice_.session[i].qal_voice_handle,
+                                     QAL_PARAM_ID_TTY_MODE, params);
+                free(params);
+                params = nullptr;
             }
         }
     }
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_VOLUME_BOOST, c_value, sizeof(c_value));
     if (err >= 0) {
         if (strcmp(c_value, "on") == 0)
-            params.volume_boost = true;
+            volume_boost = true;
         else if (strcmp(c_value, "off") == 0) {
-            params.volume_boost = false;
+            volume_boost = false;
         }
         else {
             ret = -EINVAL;
             goto done;
         }
+        params = (qal_param_payload *)calloc(1, sizeof(qal_param_payload) +
+                                                sizeof(volume_boost));
+        if (!params) {
+            ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+                   sizeof(qal_param_payload) + sizeof(volume_boost));
+        } else {
+            params->payload_size = sizeof(volume_boost);
+            params->payload[0] = volume_boost;
 
-        for ( i = 0; i < max_voice_sessions_; i++) {
-            voice_.session[i].volume_boost = params.volume_boost;
-            if (IsCallActive(&voice_.session[i])) {
-                qal_stream_set_param(voice_.session[i].qal_voice_handle, QAL_PARAM_ID_VOLUME_BOOST, &params);
+            for ( i = 0; i < max_voice_sessions_; i++) {
+                voice_.session[i].volume_boost = volume_boost;
+                if (IsCallActive(&voice_.session[i])) {
+                    qal_stream_set_param(voice_.session[i].qal_voice_handle,
+                                        QAL_PARAM_ID_VOLUME_BOOST, params);
+                }
             }
+            free(params);
+            params = nullptr;
         }
     }
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_SLOWTALK, c_value, sizeof(c_value));
     if (err >= 0) {
         if (strcmp(c_value, "true") == 0)
-            params.slow_talk = true;
+            slow_talk = true;
         else if (strcmp(c_value, "false") == 0) {
-            params.slow_talk = false;
+            slow_talk = false;
         }
         else {
             ret = -EINVAL;
             goto done;
         }
+        params = (qal_param_payload *)calloc(1, sizeof(qal_param_payload) +
+                                                sizeof(slow_talk));
+        if (!params) {
+            ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+                   sizeof(qal_param_payload) + sizeof(slow_talk));
+        } else {
+            params->payload_size = sizeof(slow_talk);
+            params->payload[0] = slow_talk;
 
-        for ( i = 0; i < max_voice_sessions_; i++) {
-            voice_.session[i].slow_talk = params.slow_talk;
-            if (IsCallActive(&voice_.session[i])) {
-                qal_stream_set_param(voice_.session[i].qal_voice_handle, QAL_PARAM_ID_SLOW_TALK, &params);
+            for ( i = 0; i < max_voice_sessions_; i++) {
+                voice_.session[i].slow_talk = slow_talk;
+                if (IsCallActive(&voice_.session[i])) {
+                    qal_stream_set_param(voice_.session[i].qal_voice_handle,
+                                         QAL_PARAM_ID_SLOW_TALK, params);
+                }
             }
+            free(params);
+            params = nullptr;
         }
     }
 
@@ -381,33 +420,15 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     struct qal_stream_attributes streamAttributes;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     struct qal_device qalDevices[2];
-    uint8_t channels = 0;
-    struct qal_channel_info *out_ch_info = NULL, *in_ch_info = NULL;
-    qal_param_payload param_payload;
+    struct qal_channel_info out_ch_info = {0, {0}}, in_ch_info = {0, {0}};
+    qal_param_payload *param_payload = nullptr;
 
-    channels = 1;
-    in_ch_info = (struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*channels);
+    in_ch_info.channels = 1;
+    in_ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
 
-    if (in_ch_info == NULL) {
-        ALOGE("Allocation failed for channel map");
-        ret = -ENOMEM;
-        goto error_open;
-    }
-
-    channels = 2;
-    out_ch_info = (struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*channels);
-    if (out_ch_info == NULL) {
-        ALOGE("Allocation failed for channel map");
-        ret = -ENOMEM;
-        goto error_open;
-    }
-
-    in_ch_info->channels = 1;
-    in_ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-
-    out_ch_info->channels = 2;
-    out_ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-    out_ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+    out_ch_info.channels = 2;
+    out_ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+    out_ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
     qalDevices[0].id = qal_voice_tx_device_id_;
     qalDevices[0].config.ch_info = in_ch_info;
@@ -458,19 +479,40 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
 
     /*apply cached voice effects features*/
     if (session->slow_talk) {
-        param_payload.slow_talk = session->slow_talk;
-        ret = qal_stream_set_param(session->qal_voice_handle, QAL_PARAM_ID_SLOW_TALK,
-                                   &param_payload);
-        if (ret)
-            ALOGE("%s Slow Talk enable failed %x", __func__, ret);
+        param_payload = (qal_param_payload *)calloc(1, sizeof(qal_param_payload) +
+                                             sizeof(session->slow_talk));
+        if (!param_payload) {
+            ALOGE("%s:%d calloc for size %zu failed", __func__, __LINE__,
+                   sizeof(qal_param_payload) + sizeof(session->slow_talk));
+        } else {
+            param_payload->payload_size = sizeof(session->slow_talk);
+            param_payload->payload[0] = session->slow_talk;
+            ret = qal_stream_set_param(session->qal_voice_handle,
+                                       QAL_PARAM_ID_SLOW_TALK,
+                                       param_payload);
+            if (ret)
+                ALOGE("%s Slow Talk enable failed %x", __func__, ret);
+            free(param_payload);
+            param_payload = nullptr;
+        }
     }
 
     if (session->volume_boost) {
-        param_payload.volume_boost = session->volume_boost;
-        ret = qal_stream_set_param(session->qal_voice_handle, QAL_PARAM_ID_VOLUME_BOOST,
-                                   &param_payload);
-        if (ret)
-            ALOGE("%s Volume Boost enable failed %x", __func__, ret);
+        param_payload = (qal_param_payload *)calloc(1, sizeof(qal_param_payload) +
+                                             sizeof(session->volume_boost));
+        if (!param_payload) {
+            ALOGE("%s:%d calloc for size %zu failed", __func__, __LINE__,
+                  sizeof(qal_param_payload) + sizeof(session->volume_boost));
+        } else {
+            param_payload->payload_size = sizeof(session->volume_boost);
+            param_payload->payload[0] = session->volume_boost;
+            ret = qal_stream_set_param(session->qal_voice_handle, QAL_PARAM_ID_VOLUME_BOOST,
+                                   param_payload);
+            if (ret)
+                ALOGE("%s Volume Boost enable failed %x", __func__, ret);
+            free(param_payload);
+            param_payload = nullptr;
+        }
     }
 
    ret = qal_stream_start(session->qal_voice_handle);
@@ -486,10 +528,6 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
    }
 
 error_open:
-    if (in_ch_info)
-        free(in_ch_info);
-    if (out_ch_info)
-        free(out_ch_info);
 
     return ret;
 }
@@ -516,27 +554,15 @@ int AudioVoice::VoiceStop(voice_session_t *session) {
 int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     int ret = 0;
     struct qal_device qalDevices[2];
-    uint8_t channels = 0;
-    struct qal_channel_info *out_ch_info = NULL, *in_ch_info = NULL;
+    struct qal_channel_info out_ch_info = {0, {0}}, in_ch_info = {0, {0}};
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    channels = 1;
-    in_ch_info = (struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*channels);
+    in_ch_info.channels = 1;
+    in_ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
 
-    if (in_ch_info == NULL) {
-        ALOGE("Allocation failed for channel map");
-        ret = -ENOMEM;
-        goto error_open;
-    }
-
-    channels = 2;
-    out_ch_info = (struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*channels);
-    if (out_ch_info == NULL) {
-        ALOGE("Allocation failed for channel map");
-        ret = -ENOMEM;
-        goto error_open;
-    }
-
+    out_ch_info.channels = 2;
+    out_ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+    out_ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
     qalDevices[0].id = qal_voice_tx_device_id_;
     qalDevices[0].config.ch_info = in_ch_info;
@@ -561,12 +587,6 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     } else {
         ALOGE("%s Voice handle not found", __func__);
     }
-
-error_open:
-    if (in_ch_info)
-        free(in_ch_info);
-    if (out_ch_info)
-        free(out_ch_info);
 
     if (ret)
         return -EINVAL;

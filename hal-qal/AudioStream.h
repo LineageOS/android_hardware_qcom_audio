@@ -458,7 +458,7 @@ protected:
     audio_format_t halInputFormat = AUDIO_FORMAT_DEFAULT;
     audio_format_t halOutputFormat = AUDIO_FORMAT_DEFAULT;
     uint32_t convertBufSize;
-    qal_param_payload qparam_payload;
+    qal_snd_dec_t qalSndDec;
     uint32_t msample_rate;
     uint16_t mchannels;
     std::shared_ptr<audio_stream_out>   stream_;

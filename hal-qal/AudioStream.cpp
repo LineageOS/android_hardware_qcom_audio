@@ -97,13 +97,14 @@ std::shared_ptr<audio_hw_device_t> AudioDevice::device_ = nullptr;
 
 static int32_t qal_callback(qal_stream_handle_t *stream_handle,
                             uint32_t event_id, uint32_t *event_data,
-                            void *cookie)
+                            uint32_t event_size, void *cookie)
 {
     stream_callback_event_t event;
     StreamOutPrimary *astream_out = static_cast<StreamOutPrimary *> (cookie);
 
-    ALOGD("%s: stream_handle (%p), event_id (%x), event_data (%p), cookie (%p)",
-          __func__, stream_handle, event_id, event_data, cookie);
+    ALOGD("%s: stream_handle (%p), event_id (%x), event_data (%p), cookie (%p)"
+          "event_size (%d)", __func__, stream_handle, event_id, event_data,
+           cookie, event_size);
 
     switch (event_id)
     {
@@ -1483,8 +1484,7 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
                 mQalOutDevice[i].id = mQalOutDeviceIds[i];
                 mQalOutDevice[i].config.sample_rate = mQalOutDevice[0].config.sample_rate;
                 mQalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-                //ch_info is allocated at resource manager:getDeviceConfig
-                mQalOutDevice[i].config.ch_info = nullptr; //is there a reason to have two different ch_info for device/stream?
+                mQalOutDevice[i].config.ch_info = {0, {0}}; //is there a reason to have two different ch_info for device/stream?
                 mQalOutDevice[i].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
                 if ((mQalOutDeviceIds[i] == QAL_DEVICE_OUT_USB_DEVICE) ||
                    (mQalOutDeviceIds[i] == QAL_DEVICE_OUT_USB_HEADSET)) {
@@ -1502,7 +1502,7 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
         }
     }
     //TBD: check if its offload and check call the following
-    ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &qparam_payload, parms, &msample_rate, &mchannels);
+    ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &qalSndDec, parms, &msample_rate, &mchannels);
     if (ret) {
         ALOGE("parse_compress_metadata Error (%x)", ret);
     }
@@ -1730,7 +1730,7 @@ uint32_t StreamOutPrimary::HaltoAlsaFormat(audio_format_t hal_format) {
 int StreamOutPrimary::Open() {
     int ret = -EINVAL;
     uint8_t channels = 0;
-    struct qal_channel_info *ch_info = NULL;
+    struct qal_channel_info ch_info = {0, {0}};
     uint32_t inBufSize = 0;
     uint32_t outBufSize = 0;
     uint32_t inBufCount = NO_OF_BUF;
@@ -1745,18 +1745,11 @@ int StreamOutPrimary::Open() {
     //need to convert channel mask to qal channel mask
     // Stream channel mask
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
-    ch_info = (struct qal_channel_info *)calloc(
-                            1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
-    if (ch_info == NULL) {
-        ALOGE("Allocation failed for channel map");
-        ret = -ENOMEM;
-        goto error_open;
-    }
 
-    ch_info->channels = channels;
-    ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-    if (ch_info->channels > 1)
-        ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+    ch_info.channels = channels;
+    ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+    if (ch_info.channels > 1)
+        ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
     streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
     streamAttributes_.flags = (qal_stream_flags_t)0;
@@ -1776,7 +1769,7 @@ int StreamOutPrimary::Open() {
         if (msample_rate)
             streamAttributes_.out_media_config.sample_rate = msample_rate;
         if (mchannels)
-            streamAttributes_.out_media_config.ch_info->channels = mchannels;
+            streamAttributes_.out_media_config.ch_info.channels = mchannels;
         streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
     } else if (streamAttributes_.type == QAL_STREAM_PCM_OFFLOAD ||
                streamAttributes_.type == QAL_STREAM_DEEP_BUFFER) {
@@ -1797,7 +1790,7 @@ int StreamOutPrimary::Open() {
 
     ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
     ALOGD("channels %d samplerate %d format id %d, stream type %d  stream bitwidth %d",
-           streamAttributes_.out_media_config.ch_info->channels, streamAttributes_.out_media_config.sample_rate,
+           streamAttributes_.out_media_config.ch_info.channels, streamAttributes_.out_media_config.sample_rate,
            streamAttributes_.out_media_config.aud_fmt_id, streamAttributes_.type,
            streamAttributes_.out_media_config.bit_width);
     ALOGD("msample_rate %d mchannels %d", msample_rate, mchannels);
@@ -1818,10 +1811,23 @@ int StreamOutPrimary::Open() {
         goto error_open;
     }
     if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
-       ret = qal_stream_set_param(qal_stream_handle_, 0, &qparam_payload);
-       if (ret) {
-          ALOGE("Qal Set Param Error (%x)", ret);
-       }
+        qal_param_payload *param_payload = nullptr;
+        param_payload = (qal_param_payload *) calloc (1,
+                                              sizeof(qal_param_payload) +
+                                              sizeof(qal_snd_dec_t));
+        if (!param_payload) {
+            ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+                   sizeof(qal_param_payload) + sizeof(qal_snd_dec_t));
+        } else {
+            param_payload->payload_size = sizeof(qal_snd_dec_t);
+            memcpy(param_payload->payload, &qalSndDec, param_payload->payload_size);
+
+            ret = qal_stream_set_param(qal_stream_handle_,
+                                       QAL_PARAM_ID_CODEC_CONFIGURATION,
+                                       param_payload);
+            if (ret)
+               ALOGE("Qal Set Param Error (%x)", ret);
+        }
     }
 
     if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP) {
@@ -1854,8 +1860,6 @@ int StreamOutPrimary::Open() {
     }
 
 error_open:
-    if (ch_info)
-        free(ch_info);
     return ret;
 }
 
@@ -2174,8 +2178,7 @@ StreamOutPrimary::StreamOutPrimary(
             __func__, mQalOutDevice[i].config.sample_rate,
             mQalOutDevice[i].config.bit_width,
             mQalOutDevice[i].config.aud_fmt_id, __LINE__);
-        // ch_info memory is allocated at resource manager:getdeviceconfig
-        mQalOutDevice[i].config.ch_info = nullptr;
+            mQalOutDevice[i].config.ch_info = {0, {0}};
         if ((mQalOutDeviceIds[i] == QAL_DEVICE_OUT_USB_DEVICE) ||
            (mQalOutDeviceIds[i] == QAL_DEVICE_OUT_USB_HEADSET)) {
             mQalOutDevice[i].address.card_id = adevice->usb_card_id_;
@@ -2443,8 +2446,7 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
     qal_device_id_t * deviceId;
     struct qal_device* deviceIdConfigs;
     int err =  -EINVAL;
-    struct qal_channel_info *ch_info;
-    int channels = 0;
+    struct qal_channel_info ch_info = {0, {0}};
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     ALOGD("%s: enter: kvpairs=%s", __func__, kvpairs);
@@ -2462,19 +2464,11 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
         ALOGV("%s: Found routing for input stream with value %x", __func__, val);
         // TBD: Hard code number of channels to 2 for now.
         //channels = audio_channel_count_from_out_mask(config_.channel_mask);
-        channels = 2;
-        ch_info = (struct qal_channel_info *) calloc(1, sizeof(uint16_t) + sizeof(uint8_t)*channels);
-        if (ch_info == NULL) {
-          ALOGE("Allocation failed for channel map");
-          ret = -ENOMEM;
-          goto exit;
-        }
-
         // need to convert channel mask to qal channel mask
-        ch_info->channels = channels;
-        ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-        if (ch_info->channels > 1 )
-            ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+        ch_info.channels = 2;
+        ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+        if (ch_info.channels > 1 )
+            ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
         /* If its the same device as what was already routed to, dont bother */
         if ((mAndroidInDevices != val) && (val != 0) && audio_is_input_device(val)) {
@@ -2537,7 +2531,7 @@ exit:
 int StreamInPrimary::Open() {
     int ret = -EINVAL;
     uint8_t channels = 0;
-    struct qal_channel_info *ch_info = NULL;
+    struct qal_channel_info ch_info = {0, {0}};
     uint32_t inBufSize = 0;
     uint32_t outBufSize = 0;
     uint32_t inBufCount = NO_OF_BUF;
@@ -2561,24 +2555,19 @@ int StreamInPrimary::Open() {
        ALOGE("invalid channel count");
        return -EINVAL;
     }
-    ch_info = (struct qal_channel_info *) calloc(1,sizeof(uint16_t) + sizeof(uint8_t)*channels);
-    if (!ch_info) {
-       ALOGE("malloc failed for ch_info");
-       return -ENOMEM;
-    }
     //need to convert channel mask to qal channel mask
     if (channels == 3) {
-      ch_info->channels = 3;
-      ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-      ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
-      ch_info->ch_map[2] = QAL_CHMAP_CHANNEL_C;
+      ch_info.channels = 3;
+      ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+      ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+      ch_info.ch_map[2] = QAL_CHMAP_CHANNEL_C;
     } else if (channels == 2) {
-      ch_info->channels = 2;
-      ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-      ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+      ch_info.channels = 2;
+      ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+      ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
     } else {
-      ch_info->channels = 1;
-      ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+      ch_info.channels = 1;
+      ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
     }
 
     streamAttributes_.type = StreamInPrimary::GetQalStreamType(flags_,
@@ -2640,8 +2629,6 @@ set_buff_size:
     total_bytes_read_ = 0; // reset at each open
 
 error_open:
-    if (ch_info)
-        free(ch_info);
     return ret;
 }
 
@@ -2865,7 +2852,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
         mQalInDevice[i].config.sample_rate = config->sample_rate;
         mQalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         // ch_info memory is allocated at resource manager:getdeviceconfig
-        mQalInDevice[i].config.ch_info = nullptr;
+        mQalInDevice[i].config.ch_info = {0, {0}};
         mQalInDevice[i].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
         if ((mQalInDeviceIds[i] == QAL_DEVICE_IN_USB_DEVICE) ||
            (mQalInDeviceIds[i] == QAL_DEVICE_IN_USB_HEADSET)) {

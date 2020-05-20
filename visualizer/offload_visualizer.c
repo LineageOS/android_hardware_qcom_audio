@@ -468,11 +468,11 @@ void *capture_thread_loop(void *arg)
     //int sound_card = SOUND_CARD;
     //int capture_device = CAPTURE_DEVICE;
 
-    void *in_stream_handle = NULL;
+    qal_stream_handle_t *in_stream_handle = NULL;
     uint32_t no_of_devices = 1;
     struct qal_stream_attributes stream_attr;
     struct qal_device devices;
-    struct qal_channel_info* ch_info = NULL;
+    struct qal_channel_info ch_info;
     uint32_t in_buff_size = AUDIO_CAPTURE_PERIOD_SIZE * AUDIO_CAPTURE_CHANNEL_COUNT * sizeof(int16_t);
     uint32_t in_buff_count = 1;
     struct qal_buffer in_buffer;
@@ -481,13 +481,9 @@ void *capture_thread_loop(void *arg)
 
     memset(&stream_attr, 0x0, sizeof(struct qal_stream_attributes));
     memset(&devices, 0x0, sizeof(struct qal_device));
-    ch_info = (struct qal_channel_info *)calloc(
-                            1, sizeof(uint16_t) + sizeof(uint8_t)*AUDIO_CAPTURE_CHANNEL_COUNT);
-    if(ch_info) {
-        ch_info->channels = AUDIO_CAPTURE_CHANNEL_COUNT;
-        ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-        ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
-    }
+    ch_info.channels = AUDIO_CAPTURE_CHANNEL_COUNT;
+    ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+    ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
 
     stream_attr.type = QAL_STREAM_PROXY;
     stream_attr.flags = 0;
@@ -633,11 +629,6 @@ void *capture_thread_loop(void *arg)
         }
     }
     pthread_mutex_unlock(&lock);
-    if(ch_info)
-    {
-        free(ch_info);
-        ch_info = NULL;
-    }
 
     ALOGD("thread exit");
 
