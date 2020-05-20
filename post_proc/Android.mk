@@ -23,6 +23,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GKI)),true)
+    LOCAL_CFLAGS += -DAUDIO_GKI_ENABLED
+endif
+
 LOCAL_SRC_FILES:= \
         bundle.c \
         equalizer.c \
