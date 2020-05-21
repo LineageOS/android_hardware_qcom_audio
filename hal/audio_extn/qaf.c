@@ -952,10 +952,10 @@ static int qaf_get_rendered_frames(struct stream_out *out, uint64_t *frames)
 
         if (qaf_mod->stream_out[QAF_OUT_OFFLOAD])
             platform_latency =
-                platform_render_latency(qaf_mod->stream_out[QAF_OUT_OFFLOAD]->usecase);
+                platform_render_latency(qaf_mod->stream_out[QAF_OUT_OFFLOAD]);
         else
             platform_latency =
-                platform_render_latency(qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH]->usecase);
+                platform_render_latency(qaf_mod->stream_out[QAF_OUT_OFFLOAD_MCH]);
 
         dsp_latency = (platform_latency * sample_rate) / 1000000LL;
     } else if (qaf_mod->stream_out[QAF_OUT_TRANSCODE_PASSTHROUGH] != NULL) {

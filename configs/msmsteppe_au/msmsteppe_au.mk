@@ -4,6 +4,7 @@
 BOARD_USES_ALSA_AUDIO := true
 
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
+USE_CUSTOM_AUDIO_POLICY := 1
 AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := false
 AUDIO_FEATURE_ENABLED_COMPRESS_VOIP := false
 AUDIO_FEATURE_ENABLED_DYNAMIC_ECNS := true
@@ -32,6 +33,7 @@ AUDIO_FEATURE_ENABLED_USB_TUNNEL := true
 AUDIO_FEATURE_ENABLED_A2DP_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_3D_AUDIO := false
 DOLBY_ENABLE := false
+AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
 endif
 
 USE_XML_AUDIO_POLICY_CONF := 1
@@ -255,7 +257,9 @@ vendor.audio.use.sw.ape.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
 
-#enable hardware decoders for WMA & APE by default
+#force offload using hardware decoders for FLAC, WMA & APE
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.use.hw.flac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.hw.wma.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \

@@ -187,6 +187,9 @@
     <ctl name="VoiceMMode1_Tx Mixer USB_AUDIO_TX_MMode1" value="0" />
     <!-- Multimode Voice1 Display-Port -->
     <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode1" value="0" />
+    <!-- Multimode Voice1 proxy-Port -->
+    <ctl name="PROXY_RX_Voice Mixer VoiceMMode1" value="0" />
+    <ctl name="VoiceMMode1_Tx Mixer PROXY_TX_MMode1" value="0" />
     <!-- Miltimode Voice1 end-->
 
     <!-- Multimode Voice2 -->
@@ -204,6 +207,9 @@
     <ctl name="VoiceMMode2_Tx Mixer USB_AUDIO_TX_MMode2" value="0" />
     <!-- Multimode Voice2 Display-Port -->
     <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode2" value="0" />
+    <!-- Multimode Voice2 proxy-Port -->
+    <ctl name="PROXY_RX_Voice Mixer VoiceMMode2" value="0" />
+    <ctl name="VoiceMMode2_Tx Mixer PROXY_TX_MMode2" value="0" />
     <!-- Multimode Voice2 end-->
 
     <!-- Voice external ec. reference -->
@@ -340,8 +346,8 @@
     <ctl name="RX_RX0 Digital Volume" value="84" />
     <ctl name="RX_RX1 Digital Volume" value="84" />
     <ctl name="RX_RX2 Digital Volume" value="84" />
-    <ctl name="HPHL Volume" value="20" />
-    <ctl name="HPHR Volume" value="20" />
+    <ctl name="HPHL Volume" value="12" />
+    <ctl name="HPHR Volume" value="12" />
     <ctl name="EAR SPKR PA Gain" value="G_DEFAULT" />
 
     <ctl name="TX_DEC0 Volume" value="84" />
@@ -2007,6 +2013,10 @@
         <path name="incall-rec-uplink" />
     </path>
 
+    <path name="incall-rec-uplink call-proxy-in">
+        <path name="incall-rec-uplink" />
+    </path>
+
     <path name="incall-rec-uplink-compress">
         <ctl name="MultiMedia8 Mixer VOC_REC_UL" value="1" />
     </path>
@@ -2056,6 +2066,10 @@
     </path>
 
     <path name="incall-rec-downlink afe-proxy">
+        <path name="incall-rec-downlink" />
+    </path>
+
+    <path name="incall-rec-downlink call-proxy-in">
         <path name="incall-rec-downlink" />
     </path>
 
@@ -2113,6 +2127,10 @@
     </path>
 
     <path name="incall-rec-uplink-and-downlink afe-proxy">
+        <path name="incall-rec-uplink-and-downlink" />
+    </path>
+
+    <path name="incall-rec-uplink-and-downlink call-proxy-in">
         <path name="incall-rec-uplink-and-downlink" />
     </path>
 
@@ -2227,6 +2245,11 @@
         <ctl name="VoiceMMode1_Tx Mixer TX_CDC_DMA_TX_3_MMode1" value="1" />
     </path>
 
+    <path name="voicemmode1-call call-proxy">
+        <ctl name="PROXY_RX_Voice Mixer VoiceMMode1" value="1" />
+        <ctl name="VoiceMMode1_Tx Mixer PROXY_TX_MMode1" value="1" />
+    </path>
+
     <path name="voicemmode1-call headphones">
         <ctl name="RX_CDC_DMA_RX_0_Voice Mixer VoiceMMode1" value="1" />
         <ctl name="VoiceMMode1_Tx Mixer TX_CDC_DMA_TX_3_MMode1" value="1" />
@@ -2333,6 +2356,11 @@
     <path name="voicemmode2-call display-port">
         <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode2" value="1" />
         <ctl name="VoiceMMode2_Tx Mixer TX_CDC_DMA_TX_3_MMode2" value="1" />
+    </path>
+
+    <path name="voicemmode2-call call-proxy">
+        <ctl name="PROXY_RX_Voice Mixer VoiceMMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer PROXY_TX_MMode2" value="1" />
     </path>
 
     <!-- VoIP Rx settings -->
@@ -2468,7 +2496,6 @@
         <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
         <ctl name="LO_RDAC Switch" value="1" />
         <ctl name="SpkrMono WSA_RDAC" value="Switch" />
-        <ctl name="LO_RDAC Switch" value="1" />
     </path>
 
     <path name="speaker-mono">
@@ -2666,13 +2693,21 @@
     </path>
 
     <path name="speaker-and-headphones">
-        <path name="headphones" />
-        <path name="speaker" />
+        <ctl name="RX_MACRO RX0 MUX" value="AIF1_PB" />
+        <ctl name="RX_MACRO RX1 MUX" value="AIF1_PB" />
+        <ctl name="RX_CDC_DMA_RX_0 Channels" value="Two" />
+        <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
+        <ctl name="RX INT1_1 MIX1 INP0" value="RX1" />
+        <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
+        <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT" />
+        <ctl name="HPHL_RDAC Switch" value="1" />
+        <ctl name="HPHR_RDAC Switch" value="1" />
+        <ctl name="LO_RDAC Switch" value="1" />
+        <ctl name="SpkrMono WSA_RDAC" value="Switch" />
     </path>
 
     <path name="speaker-and-headphones-hifi-filter">
-        <path name="headphones" />
-        <path name="speaker" />
+        <path name="speaker-and-headphones" />
     </path>
 
     <path name="speaker-safe-and-headphones">
@@ -2689,8 +2724,7 @@
     </path>
 
     <path name="speaker-and-headphones-liquid">
-        <path name="headphones" />
-        <path name="speaker" />
+        <path name="speaker-and-headphones" />
     </path>
 
     <path name="speaker-safe-and-headphones-liquid">
@@ -3404,4 +3438,13 @@
         <path name="incall_music_uplink" />
     </path>
 
+    <path name="incall_music_uplink call-proxy">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="call-proxy">
+    </path>
+
+    <path name="call-proxy-in">
+    </path>
 </mixer>

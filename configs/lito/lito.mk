@@ -215,7 +215,7 @@ PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_policy_configuration_odm.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
 else
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
 endif
 
 PRODUCT_COPY_FILES += \
@@ -329,6 +329,10 @@ PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.ape.decoder=true
+
+#enable software decoder for MPEG-H
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.use.sw.mpegh.decoder=true
 
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -519,10 +523,6 @@ PRODUCT_PACKAGES += \
 # enable sound trigger hidl hal 2.2
 PRODUCT_PACKAGES += \
     android.hardware.soundtrigger@2.2-impl \
-
-# enable sound trigger hidl hal 2.3
-PRODUCT_PACKAGES += \
-    android.hardware.soundtrigger@2.3-impl
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \

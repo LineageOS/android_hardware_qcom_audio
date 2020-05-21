@@ -300,6 +300,10 @@ vendor.audio.use.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.ape.decoder=true
 
+#enable software decoder for MPEG-H
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.use.sw.mpegh.decoder=true
+
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
@@ -437,10 +441,6 @@ PRODUCT_PACKAGES += \
 # enable sound trigger hidl hal 2.2
 PRODUCT_PACKAGES += \
     android.hardware.soundtrigger@2.2-impl \
-
-# enable sound trigger hidl hal 2.3
-PRODUCT_PACKAGES += \
-    android.hardware.soundtrigger@2.3-impl
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \
