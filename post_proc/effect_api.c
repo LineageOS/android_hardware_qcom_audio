@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, 2019-2020 The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -396,6 +396,7 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
         custom_payload.paramId = PARAM_ID_VIRTUALIZER_STRENGTH;
         custom_payload.data = (uint32_t *)malloc(VIRTUALIZER_STRENGTH_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = virtualizer->strength;
+        effect_payload.payload = (uint32_t *)&custom_payload;
 
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
@@ -415,6 +416,7 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
         custom_payload.paramId = PARAM_ID_VIRTUALIZER_OUT_TYPE;
         custom_payload.data = (uint32_t *)malloc(VIRTUALIZER_OUT_TYPE_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = virtualizer->out_type;
+        effect_payload.payload = (uint32_t *)&custom_payload;
 
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
@@ -434,6 +436,7 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
         custom_payload.paramId = PARAM_ID_VIRTUALIZER_GAIN_ADJUST;
         custom_payload.data = (uint32_t *)malloc(VIRTUALIZER_GAIN_ADJUST_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = virtualizer->gain_adjust;
+        effect_payload.payload = (uint32_t *)&custom_payload;
 
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
@@ -772,6 +775,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_MODE;
         custom_payload.data = (uint32_t *)malloc(REVERB_MODE_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->mode;;
+        effect_payload.payload = (uint32_t *)&custom_payload;
 
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
@@ -793,6 +797,8 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.data = (uint32_t *)malloc(REVERB_PRESET_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->preset;
 
+        effect_payload.payload = (uint32_t *)&custom_payload;
+
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -812,6 +818,8 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.data = (uint32_t *)malloc(REVERB_WET_MIX_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->wet_mix;
 
+        effect_payload.payload = (uint32_t *)&custom_payload;
+
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -830,6 +838,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_GAIN_ADJUST;
         custom_payload.data = (uint32_t *)malloc(REVERB_GAIN_ADJUST_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->gain_adjust;
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -848,6 +857,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_ROOM_LEVEL;
         custom_payload.data = (uint32_t *)malloc(REVERB_ROOM_LEVEL_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->room_level;
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -866,6 +876,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_ROOM_HF_LEVEL;
         custom_payload.data = (uint32_t *)malloc(REVERB_ROOM_HF_LEVEL_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->room_hf_level;
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -884,6 +895,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_DECAY_TIME;
         custom_payload.data = (uint32_t *)malloc(REVERB_DECAY_TIME_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->decay_time;
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -901,7 +913,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_DECAY_HF_RATIO;
         custom_payload.data = (uint32_t *)malloc(REVERB_DECAY_HF_RATIO_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->decay_hf_ratio;
-
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -919,6 +931,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_REFLECTIONS_LEVEL;
         custom_payload.data = (uint32_t *)malloc(REVERB_REFLECTIONS_LEVEL_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->reflections_level;
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -936,6 +949,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_REFLECTIONS_DELAY;
         custom_payload.data = (uint32_t *)malloc(REVERB_REFLECTIONS_DELAY_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->reflections_delay;
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -953,6 +967,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_LEVEL;
         custom_payload.data = (uint32_t *)malloc(REVERB_LEVEL_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->level;
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -971,6 +986,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_DELAY;
         custom_payload.data = (uint32_t *)malloc(REVERB_DELAY_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->delay;
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -988,6 +1004,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_DIFFUSION;
         custom_payload.data = (uint32_t *)malloc(REVERB_DIFFUSION_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->diffusion;
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
@@ -1006,6 +1023,7 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload.paramId = PARAM_ID_REVERB_DENSITY;
         custom_payload.data = (uint32_t *)malloc(REVERB_DENSITY_PARAM_LEN * sizeof(uint32_t));
         custom_payload.data[0] = reverb->density;
+        effect_payload.payload = (uint32_t *)&custom_payload;
         qal_payload.has_effect = 0x01;
         qal_payload.effect_payload = (uint32_t *)&effect_payload;
         ret = qal_stream_set_param(qal_stream_handle,
