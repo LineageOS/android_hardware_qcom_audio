@@ -3125,7 +3125,7 @@
     </path>
 
     <path name="speaker-protected">
-        <ctl name="WSA_AIF_VI Mixer WSA_SPKR_VI_2" value="1" />
+        <ctl name="WSA_AIF_VI Mixer WSA_SPKR_VI_1" value="1" />
         <ctl name="WSA_CDC_DMA_0 TX Format" value="PACKED_16B" />
         <path name="speaker" />
         <ctl name="VI_FEED_TX Channels" value="One" />
