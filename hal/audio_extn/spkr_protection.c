@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -62,6 +62,8 @@
 #define MIN_SPKR_TEMP_Q6 (-30 * (1 << 6))
 #define MAX_SPKR_TEMP_Q6 (80 * (1 << 6))
 #define VI_FEED_CHANNEL "VI_FEED_TX Channels"
+#define SPKR_LEFT_WSA_TEMP "SpkrLeft WSA Temp"
+#define SPKR_RIGHT_WSA_TEMP "SpkrRight WSA Temp"
 #define WSA8815_SPK1_NAME "wsatz.13"
 #define WSA8815_SPK2_NAME "wsatz.14"
 #define WCD_LEFT_BOOST_MAX_STATE "SPKR Left Boost Max State"
@@ -75,15 +77,23 @@
 /* default limiter threshold is 0dB(0x7FFFFFF in natural value) */
 #define DEFAULT_LIMITER_TH (0x07FFFFFF)
 #define AFE_API_VERSION_SUPPORT_SPV3 (0x2)
+/* Made equivalent to AFE API version that supports SPV4. */
+#define AFE_API_VERSION_SUPPORT_SPV4 (0x9)
 enum wcd_boost_max_state {
     BOOST_NO_MAX_STATE,
     BOOST_MAX_STATE_1,
     BOOST_MAX_STATE_2,
 };
 
+enum {
+    WSA_SPKR_LEFT = 0,
+    WSA_SPKR_RIGHT,
+};
+
 enum sp_version {
     SP_V2 = 0x1,
     SP_V3 = AFE_API_VERSION_SUPPORT_SPV3,
+    SP_V4 = AFE_API_VERSION_SUPPORT_SPV4,
 };
 /*Set safe temp value to 40C*/
 #define SAFE_SPKR_TEMP 40
@@ -111,7 +121,7 @@ enum sp_version {
 #define MIN_SPKR_IDLE_SEC (60 * 30)
 #define WAKEUP_MIN_IDLE_CHECK 30
 
-/*Once calibration is started sleep for 1 sec to allow
+/*Once calibration is started sleep for 3 sec to allow
   the calibration to kick off*/
 #define SLEEP_AFTER_CALIB_START (3000)
 
@@ -217,6 +227,9 @@ struct speaker_prot_session {
     struct timespec spkr_last_time_used;
     struct spkr_prot_r0t0 sp_r0t0_cal;
     bool wsa_found;
+    bool is_wsa_temp_mixer_ctl;
+    bool is_spkr1_avail;
+    bool is_spkr2_avail;
     int spkr_1_tzn;
     int spkr_2_tzn;
     bool trigger_cal;
@@ -344,11 +357,11 @@ FUNCTION get_tzn
 Utility function to match a sensor name with thermal zone id.
 
 ARGUMENTS
-	sensor_name - name of sensor to match
+    sensor_name - name of sensor to match
 
 RETURN VALUE
-	Thermal zone id on success,
-	-1 on failure.
+    Thermal zone id on success,
+    -1 on failure.
 ===========================================================================*/
 int get_tzn(const char *sensor_name)
 {
@@ -464,7 +477,7 @@ static bool is_speaker_in_use(unsigned long *sec)
 
 
 static int get_spkr_prot_cal(int cal_fd,
-				struct audio_cal_info_msm_spk_prot_status *status)
+                struct audio_cal_info_msm_spk_prot_status *status)
 {
     int ret = 0;
     struct audio_cal_fb_spk_prot_status    cal_data;
@@ -504,7 +517,7 @@ done:
 }
 
 static int set_spkr_prot_cal(int cal_fd,
-				struct audio_cal_info_spk_prot_cfg *protCfg)
+                struct audio_cal_info_spk_prot_cfg *protCfg)
 {
     int ret = 0;
     struct audio_cal_fb_spk_prot_cfg    cal_data;
@@ -572,6 +585,32 @@ static int set_spkr_prot_cal(int cal_fd,
     }
 done:
     return ret;
+}
+
+static int spkr_get_temp(struct audio_device *adev, int spkr_pos, int *temp)
+{
+    struct mixer_ctl *ctl;
+    const char *mixer_ctl_name;
+
+    ALOGV("%s: entry", __func__);
+    if (spkr_pos == WSA_SPKR_LEFT)
+        mixer_ctl_name = SPKR_LEFT_WSA_TEMP;
+    else
+        mixer_ctl_name = SPKR_RIGHT_WSA_TEMP;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+              __func__, mixer_ctl_name);
+        goto error;
+    }
+    if (temp) {
+        *temp = mixer_ctl_get_value(ctl, 0);
+    }
+    return 0;
+
+error:
+     return -EINVAL;
 }
 
 static int vi_feed_get_channels(struct audio_device *adev)
@@ -744,7 +783,7 @@ static int spkr_boost_update(struct audio_device *adev,
 }
 
 static void set_boost_and_limiter(struct audio_device *adev,
-                bool spv3_enable, unsigned int afe_api_version)
+                unsigned int afe_api_version, enum sp_version sp_prop_version)
 {
     int chn = 0;
     int chn_in_use = 0;
@@ -786,8 +825,11 @@ static void set_boost_and_limiter(struct audio_device *adev,
      * If spv3 is disabld or ADSP version doesn't comply,
      * ADSP works with SP_V2 version.
      */
-    if (!spv3_enable || afe_api_version < AFE_API_VERSION_SUPPORT_SPV3)
+    if (sp_prop_version < SP_V3 || afe_api_version < AFE_API_VERSION_SUPPORT_SPV3)
         handle.sp_version = SP_V2;
+
+    if(sp_prop_version == SP_V4)
+        handle.sp_version = SP_V4;
 }
 
 static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
@@ -837,6 +879,7 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
                 t0_spk_2 = SAFE_SPKR_TEMP_Q6;
             }
         }
+        protCfg.sp_version = handle.sp_version;
         protCfg.t0[SP_V2_SPKR_1] = t0_spk_1;
         protCfg.t0[SP_V2_SPKR_2] = t0_spk_2;
         if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
@@ -1022,6 +1065,7 @@ exit:
             pcm_close(handle.pcm_tx);
         handle.pcm_tx = NULL;
         if (!v_validation) {
+            protCfg.sp_version = handle.sp_version;
             if (!status.status) {
                 protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
                 protCfg.r0[SP_V2_SPKR_1] = status.r0[SP_V2_SPKR_1];
@@ -1105,6 +1149,8 @@ static void* spkr_calibration_thread()
     char buf[32] = {0};
     int ret;
     bool spv3_enable = false;
+    bool spv4_enable = false;
+    enum sp_version sp_prop_version = 0;
     unsigned int afe_api_version = 0;
     struct mixer_ctl *ctl;
 
@@ -1123,11 +1169,27 @@ static void* spkr_calibration_thread()
             min_idle_time = atoi(value);
     }
     handle.speaker_prot_threadid = pthread_self();
-    ALOGD("spkr_prot_thread enable prot Entry");
+    spv3_enable = property_get_bool("persist.vendor.audio.spv3.enable", false);
+    property_get("persist.vendor.audio.avs.afe_api_version", afe_version_value,
+                 "0");
+    if (atoi(afe_version_value) > 0)
+        afe_api_version = atoi(afe_version_value);
+
+    spv4_enable = property_get_bool("persist.vendor.audio.spv4.enable", false);
+    if (spv3_enable)
+        sp_prop_version = SP_V3;
+    else if (spv4_enable)
+        sp_prop_version = SP_V4;
+
+    if(spv4_enable)
+        handle.sp_version = SP_V4;
+    ALOGD("spkr_prot_thread enable prot Entryi sp_version %d", handle.sp_version);
+
     acdb_fd = open("/dev/msm_audio_cal",O_RDWR | O_NONBLOCK);
     if (acdb_fd > 0) {
         /*Set processing mode with t0/r0*/
         protCfg.mode = MSM_SPKR_PROT_NOT_CALIBRATED;
+        protCfg.sp_version = handle.sp_version;
         if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
             ALOGE("%s: spkr_prot_thread enable prot failed", __func__);
             handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
@@ -1143,12 +1205,6 @@ static void* spkr_calibration_thread()
         pthread_exit(0);
         return NULL;
     }
-
-    spv3_enable = property_get_bool("persist.vendor.audio.spv3.enable", false);
-    property_get("persist.vendor.audio.avs.afe_api_version", afe_version_value,
-                 "0");
-    if (atoi(afe_version_value) > 0)
-        afe_api_version = atoi(afe_version_value);
 
     if (!handle.spkr_cal_dynamic || handle.apply_cal) {
         bool spkr_calibrated = false;
@@ -1178,13 +1234,14 @@ static void* spkr_calibration_thread()
             if (spkr_calibrated) {
                 ALOGD("%s: Spkr calibrated", __func__);
                 protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
+                protCfg.sp_version = handle.sp_version;
                 if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
                     ALOGE("%s: enable prot failed", __func__);
                     handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
                 } else
                     handle.spkr_prot_mode = MSM_SPKR_PROT_CALIBRATED;
 
-                set_boost_and_limiter(adev, spv3_enable, afe_api_version);
+                set_boost_and_limiter(adev, afe_api_version, sp_prop_version);
             }
         }
         if (handle.spkr_cal_dynamic || spkr_calibrated) {
@@ -1200,8 +1257,10 @@ static void* spkr_calibration_thread()
     ALOGV("%s: start calibration", __func__);
     while (!handle.thread_exit) {
         if (handle.wsa_found) {
-            spk_1_tzn = handle.spkr_1_tzn;
-            spk_2_tzn = handle.spkr_2_tzn;
+            if (!handle.is_wsa_temp_mixer_ctl) {
+                spk_1_tzn = handle.spkr_1_tzn;
+                spk_2_tzn = handle.spkr_2_tzn;
+            }
             goahead = false;
             pthread_mutex_lock(&adev->lock);
             if (is_speaker_in_use(&sec)) {
@@ -1226,74 +1285,102 @@ static void* spkr_calibration_thread()
                 continue;
            }
            if (goahead) {
-               if (spk_1_tzn >= 0) {
-                   const char *mixer_ctl_name = "SpkrLeft WSA T0 Init";
-                   snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_1_tzn);
-                   ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
-                   thermal_fd = -1;
+               if (handle.is_wsa_temp_mixer_ctl) {
+                   ret = spkr_get_temp(adev, WSA_SPKR_LEFT, &t0_spk_1);
+                   if (!ret) {
+                       if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
+                           t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
+                           pthread_mutex_unlock(&adev->lock);
+                           spkr_calibrate_wait();
+                           continue;
+                       }
+                       ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
+                       /*Convert temp into q6 format*/
+                       t0_spk_1 = (t0_spk_1 * (1 << 6));
+                   }
+                   ret = spkr_get_temp(adev, WSA_SPKR_RIGHT, &t0_spk_2);
+                   if (!ret) {
+                       if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
+                           t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
+                           pthread_mutex_unlock(&adev->lock);
+                           spkr_calibrate_wait();
+                           continue;
+                       }
+                       ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
+                       /*Convert temp into q6 format*/
+                       t0_spk_2 = (t0_spk_2 * (1 << 6));
+                   }
+               } else {
+                   if (spk_1_tzn >= 0) {
+                       const char *mixer_ctl_name = "SpkrLeft WSA T0 Init";
+                       snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_1_tzn);
+                       ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
+                       thermal_fd = -1;
 
-                   ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-                   if (ctl) {
-                       ALOGD("%s: Got ctl for mixer cmd %s",
-                                             __func__, mixer_ctl_name);
-                       mixer_ctl_set_value(ctl, 0, 1);
+                       ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+                       if (ctl) {
+                           ALOGD("%s: Got ctl for mixer cmd %s",
+                                 __func__, mixer_ctl_name);
+                            mixer_ctl_set_value(ctl, 0, 1);
+                        }
+                       thermal_fd = open(wsa_path, O_RDONLY);
+                       if (thermal_fd > 0) {
+                           if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
+                               t0_spk_1 = atoi(buf);
+                           else
+                               ALOGE("%s: read fail for %s err:%d\n",
+                                     __func__, wsa_path, ret);
+                            close(thermal_fd);
+                       } else {
+                           ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                       }
+                       if (ctl) {
+                           mixer_ctl_set_value(ctl, 0, 0);
+                       }
+                       if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
+                           t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
+                           pthread_mutex_unlock(&adev->lock);
+                           spkr_calibrate_wait();
+                           continue;
+                       }
+                       ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
+                       /*Convert temp into q6 format*/
+                       t0_spk_1 = (t0_spk_1 * (1 << 6));
                    }
-
-                   thermal_fd = open(wsa_path, O_RDONLY);
-                   if (thermal_fd > 0) {
-                       if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
-                            t0_spk_1 = atoi(buf);
-                       else
-                           ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
-                       close(thermal_fd);
-                   } else {
-                       ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                   if (spk_2_tzn >= 0) {
+                       const char *mixer_ctl_name = "SpkrRight WSA T0 Init";
+                       snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
+                       ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
+                       ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+                       if (ctl) {
+                           ALOGD("%s: Got ctl for mixer cmd %s",
+                                     __func__, mixer_ctl_name);
+                           mixer_ctl_set_value(ctl, 0, 1);
+                        }
+                        thermal_fd = open(wsa_path, O_RDONLY);
+                        if (thermal_fd > 0) {
+                           if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
+                               t0_spk_2 = atoi(buf);
+                           else
+                               ALOGE("%s: read fail for %s err:%d\n",
+                                     __func__, wsa_path, ret);
+                           close(thermal_fd);
+                        } else {
+                           ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
+                        }
+                        if (ctl) {
+                           mixer_ctl_set_value(ctl, 0, 0);
+                        }
+                        if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
+                           t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
+                           pthread_mutex_unlock(&adev->lock);
+                           spkr_calibrate_wait();
+                           continue;
+                        }
+                        ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
+                        /*Convert temp into q6 format*/
+                        t0_spk_2 = (t0_spk_2 * (1 << 6));
                    }
-                   if (ctl) {
-                       mixer_ctl_set_value(ctl, 0, 0);
-                   }
-                   if (t0_spk_1 < TZ_TEMP_MIN_THRESHOLD ||
-                       t0_spk_1 > TZ_TEMP_MAX_THRESHOLD) {
-                       pthread_mutex_unlock(&adev->lock);
-                       spkr_calibrate_wait();
-                       continue;
-                   }
-                   ALOGD("%s: temp T0 for spkr1 %d\n", __func__, t0_spk_1);
-                   /*Convert temp into q6 format*/
-                   t0_spk_1 = (t0_spk_1 * (1 << 6));
-               }
-               if (spk_2_tzn >= 0) {
-                   const char *mixer_ctl_name = "SpkrRight WSA T0 Init";
-                   snprintf(wsa_path, MAX_PATH, TZ_WSA, spk_2_tzn);
-                   ALOGV("%s: wsa_path: %s\n", __func__, wsa_path);
-                   ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-                   if (ctl) {
-                       ALOGD("%s: Got ctl for mixer cmd %s",
-                                             __func__, mixer_ctl_name);
-                       mixer_ctl_set_value(ctl, 0, 1);
-                   }
-                   thermal_fd = open(wsa_path, O_RDONLY);
-                   if (thermal_fd > 0) {
-                       if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0)
-                           t0_spk_2 = atoi(buf);
-                       else
-                           ALOGE("%s: read fail for %s err:%d\n", __func__, wsa_path, ret);
-                       close(thermal_fd);
-                   } else {
-                       ALOGE("%s: fd for %s is NULL\n", __func__, wsa_path);
-                   }
-                   if (ctl) {
-                       mixer_ctl_set_value(ctl, 0, 0);
-                   }
-                   if (t0_spk_2 < TZ_TEMP_MIN_THRESHOLD ||
-                       t0_spk_2 > TZ_TEMP_MAX_THRESHOLD) {
-                       pthread_mutex_unlock(&adev->lock);
-                       spkr_calibrate_wait();
-                       continue;
-                   }
-                   ALOGD("%s: temp T0 for spkr2 %d\n", __func__, t0_spk_2);
-                   /*Convert temp into q6 format*/
-                   t0_spk_2 = (t0_spk_2 * (1 << 6));
                }
            }
            pthread_mutex_unlock(&adev->lock);
@@ -1349,10 +1436,17 @@ static void* spkr_calibration_thread()
                  * sensor data comes in 2nd channel. Therefore, we have to swap
                  * sensor channel to fix the mismatch.
                  */
-                if ( handle.spkr_1_tzn <= 0 && handle.spkr_2_tzn > 0)
-                     status = spkr_calibrate(t0_spk_2, t0_spk_1);
-                else
-                     status = spkr_calibrate(t0_spk_1, t0_spk_2);
+                if (handle.is_wsa_temp_mixer_ctl) {
+                    if (!handle.is_spkr1_avail && handle.is_spkr2_avail)
+                        status = spkr_calibrate(t0_spk_2, t0_spk_1);
+                    else
+                        status = spkr_calibrate(t0_spk_1, t0_spk_2);
+                } else {
+                    if ( handle.spkr_1_tzn <= 0 && handle.spkr_2_tzn > 0)
+                         status = spkr_calibrate(t0_spk_2, t0_spk_1);
+                    else
+                         status = spkr_calibrate(t0_spk_1, t0_spk_2);
+                }
                 pthread_mutex_unlock(&adev->lock);
                 if (status == -EAGAIN) {
                     ALOGE("%s: failed to calibrate try again %s",
@@ -1373,7 +1467,7 @@ static void* spkr_calibration_thread()
         dlclose(handle.thermal_handle);
     handle.thermal_handle = NULL;
 
-    set_boost_and_limiter(adev, spv3_enable, afe_api_version);
+    set_boost_and_limiter(adev, afe_api_version, sp_prop_version);
 
     pthread_exit(0);
     return NULL;
@@ -1416,6 +1510,7 @@ void spkr_prot_set_parameters(struct str_parms *parms,
 static int spkr_vi_channels(struct audio_device *adev)
 {
     int vi_channels, vi_channel_num_by_wsa = 0;
+    int temp = 0, ret = 0;
 
     vi_channels = vi_feed_get_channels(adev);
     ALOGD("%s: vi_channels %d", __func__, vi_channels);
@@ -1424,22 +1519,38 @@ static int spkr_vi_channels(struct audio_device *adev)
         vi_channels = SP_V2_NUM_MAX_SPKRS;
     }
 
-    ALOGD("%s: tz1: %s, tz2: %s", __func__,
-           tz_names.spkr_1_name, tz_names.spkr_2_name);
-    handle.spkr_1_tzn = get_tzn(tz_names.spkr_1_name);
-    handle.spkr_2_tzn = get_tzn(tz_names.spkr_2_name);
-    /* Update VI channel number by WSA number */
-    if (handle.spkr_1_tzn >= 0)
+    ret = spkr_get_temp(adev, WSA_SPKR_LEFT, &temp);
+    if (!ret) {
         vi_channel_num_by_wsa++;
-
-    if (handle.spkr_2_tzn >= 0)
+        handle.is_spkr1_avail = true;
+    }
+    ret = spkr_get_temp(adev, WSA_SPKR_RIGHT, &temp);
+    if (!ret) {
         vi_channel_num_by_wsa++;
+        handle.is_spkr2_avail = true;
+    }
 
-    if (vi_channel_num_by_wsa > 0)
+    if (handle.is_spkr1_avail || handle.is_spkr2_avail) {
         handle.wsa_found = true;
+        handle.is_wsa_temp_mixer_ctl = true;
+    } else {
+        ALOGD("%s: tz1: %s, tz2: %s", __func__,
+               tz_names.spkr_1_name, tz_names.spkr_2_name);
+        handle.spkr_1_tzn = get_tzn(tz_names.spkr_1_name);
+        handle.spkr_2_tzn = get_tzn(tz_names.spkr_2_name);
+        /* Update VI channel number by WSA number */
+        if (handle.spkr_1_tzn >= 0)
+            vi_channel_num_by_wsa++;
+
+        if (handle.spkr_2_tzn >= 0)
+            vi_channel_num_by_wsa++;
+
+         if (vi_channel_num_by_wsa > 0)
+            handle.wsa_found = true;
+    }
 
     if (vi_channel_num_by_wsa < vi_channels)
-        vi_channels = vi_channel_num_by_wsa;
+            vi_channels = vi_channel_num_by_wsa;
 
     return vi_channels;
 }
@@ -1534,8 +1645,15 @@ static void get_spkr_prot_ftm_param(char *param)
 {
     struct audio_cal_sp_th_vi_param th_vi_cal_data;
     struct audio_cal_sp_ex_vi_param ex_vi_cal_data;
+#ifdef MSM_SPKR_PROT_SPV4
+    struct audio_cal_sp_v4_ex_vi_param spv4_ex_vi_cal_data;
+    double re[SP_V2_NUM_MAX_SPKRS] = {0}, Bl[SP_V2_NUM_MAX_SPKRS] = {0};
+    double rms[SP_V2_NUM_MAX_SPKRS] = {0}, kms[SP_V2_NUM_MAX_SPKRS] = {0};
+    double fre[SP_V2_NUM_MAX_SPKRS] = {0}, qms[SP_V2_NUM_MAX_SPKRS] = {0};
+#endif
     int i;
     int ftm_status[SP_V2_NUM_MAX_SPKRS] = {0};
+    int ex_vi_status[SP_V2_NUM_MAX_SPKRS] = {0};
     double rdc[SP_V2_NUM_MAX_SPKRS] = {0}, temp[SP_V2_NUM_MAX_SPKRS] = {0};
     double f[SP_V2_NUM_MAX_SPKRS] = {0}, r[SP_V2_NUM_MAX_SPKRS] = {0}, q[SP_V2_NUM_MAX_SPKRS] = {0};
 
@@ -1564,46 +1682,93 @@ static void get_spkr_prot_ftm_param(char *param)
     if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &th_vi_cal_data))
         ALOGE("%s: Error %d in getting th_vi_cal_data", __func__, errno);
 
-    memset(&ex_vi_cal_data, 0, sizeof(ex_vi_cal_data));
-    ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_1] = -EINVAL;
-    ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_2] = -EINVAL;
-    ex_vi_cal_data.hdr.data_size = sizeof(ex_vi_cal_data);
-    ex_vi_cal_data.hdr.version = VERSION_0_0;
-    ex_vi_cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_EX_VI_CAL_TYPE;
-    ex_vi_cal_data.hdr.cal_type_size = sizeof(ex_vi_cal_data.cal_type);
-    ex_vi_cal_data.cal_type.cal_hdr.version = VERSION_0_0;
-    ex_vi_cal_data.cal_type.cal_hdr.buffer_number = 0;
-    ex_vi_cal_data.cal_type.cal_data.mem_handle = -1;
+   if (handle.sp_version == SP_V4) {
+#ifdef MSM_SPKR_PROT_SPV4
+        memset(&spv4_ex_vi_cal_data, 0, sizeof(spv4_ex_vi_cal_data));
+        spv4_ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_1] = -EINVAL;
+        spv4_ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_2] = -EINVAL;
+        spv4_ex_vi_cal_data.hdr.data_size = sizeof(spv4_ex_vi_cal_data);
+        spv4_ex_vi_cal_data.hdr.version = VERSION_0_0;
+        spv4_ex_vi_cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_V4_EX_VI_CAL_TYPE;
+        spv4_ex_vi_cal_data.hdr.cal_type_size = sizeof(spv4_ex_vi_cal_data.cal_type);
+        spv4_ex_vi_cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+        spv4_ex_vi_cal_data.cal_type.cal_hdr.buffer_number = 0;
+        spv4_ex_vi_cal_data.cal_type.cal_data.mem_handle = -1;
 
-    if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &ex_vi_cal_data))
-        ALOGE("%s: Error %d in getting ex_vi_cal_data", __func__, errno);
+        if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &spv4_ex_vi_cal_data))
+            ALOGE("%s: Error %d in getting spv4_ex_vi_cal_data", __func__, errno);
+#endif
+    } else {
+        memset(&ex_vi_cal_data, 0, sizeof(ex_vi_cal_data));
+        ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_1] = -EINVAL;
+        ex_vi_cal_data.cal_type.cal_info.status[SP_V2_SPKR_2] = -EINVAL;
+        ex_vi_cal_data.hdr.data_size = sizeof(ex_vi_cal_data);
+        ex_vi_cal_data.hdr.version = VERSION_0_0;
+        ex_vi_cal_data.hdr.cal_type = AFE_FB_SPKR_PROT_EX_VI_CAL_TYPE;
+        ex_vi_cal_data.hdr.cal_type_size = sizeof(ex_vi_cal_data.cal_type);
+        ex_vi_cal_data.cal_type.cal_hdr.version = VERSION_0_0;
+        ex_vi_cal_data.cal_type.cal_hdr.buffer_number = 0;
+        ex_vi_cal_data.cal_type.cal_data.mem_handle = -1;
+
+        if (ioctl(cal_fd, AUDIO_GET_CALIBRATION, &ex_vi_cal_data))
+            ALOGE("%s: Error %d in getting ex_vi_cal_data", __func__, errno);
+    }
 
     for (i = 0; i < vi_feed_no_channels; i++) {
         /* Convert from ADSP format to readable format */
         rdc[i] = ((double)th_vi_cal_data.cal_type.cal_info.r_dc_q24[i])/(1<<24);
         temp[i] = ((double)th_vi_cal_data.cal_type.cal_info.temp_q22[i])/(1<<22);
-        f[i] = ((double)ex_vi_cal_data.cal_type.cal_info.freq_q20[i])/(1<<20);
-        r[i] = ((double)ex_vi_cal_data.cal_type.cal_info.resis_q24[i])/(1<<24);
-        q[i] = ((double)ex_vi_cal_data.cal_type.cal_info.qmct_q24[i])/(1<<24);
+
+       if (handle.sp_version == SP_V4) {
+#ifdef MSM_SPKR_PROT_SPV4
+            re[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_re_q24[i])/(1<<24);
+            Bl[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_Bl_q24[i])/(1<<24);
+            rms[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_Rms_q24[i])/(1<<24);
+            kms[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_Kms_q24[i])/(1<<24);
+            fre[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_freq_q20[i])/(1<<20);
+            qms[i] = ((double)spv4_ex_vi_cal_data.cal_type.cal_info.ftm_Qms_q24[i])/(1<<24);
+            ex_vi_status[i] = spv4_ex_vi_cal_data.cal_type.cal_info.status[i];
+#endif
+        } else {
+            f[i] = ((double)ex_vi_cal_data.cal_type.cal_info.freq_q20[i])/(1<<20);
+            r[i] = ((double)ex_vi_cal_data.cal_type.cal_info.resis_q24[i])/(1<<24);
+            q[i] = ((double)ex_vi_cal_data.cal_type.cal_info.qmct_q24[i])/(1<<24);
+            ex_vi_status[i] = ex_vi_cal_data.cal_type.cal_info.status[i];
+        }
 
         if (th_vi_cal_data.cal_type.cal_info.status[i] == 0 &&
-            ex_vi_cal_data.cal_type.cal_info.status[i] == 0) {
+            ex_vi_status[i] == 0) {
             ftm_status[i] = 0;
         } else if (th_vi_cal_data.cal_type.cal_info.status[i] == -EAGAIN &&
-                   ex_vi_cal_data.cal_type.cal_info.status[i] == -EAGAIN) {
+                   ex_vi_status[i] == -EAGAIN) {
             ftm_status[i] = -EAGAIN;
         } else {
             ftm_status[i] = -EINVAL;
         }
     }
-    snprintf(param, MAX_STR_SIZE - strlen(param) - 1,
+
+   if (handle.sp_version == SP_V4) {
+#ifdef MSM_SPKR_PROT_SPV4
+        snprintf(param, MAX_STR_SIZE - strlen(param) - 1,
+            "SpkrParamStatus: %d, %d; Rdc: %lf, %lf; Temp: %lf, %lf;"
+            " Res: %lf, %lf; Bl: %lf, %lf; Rms: %lf, %lf;"
+            " Kms: %lf, %lf; Fres: %lf, %lf; Qms: %lf, %lf",
+            ftm_status[SP_V2_SPKR_1], ftm_status[SP_V2_SPKR_2],
+            rdc[SP_V2_SPKR_1], rdc[SP_V2_SPKR_2], temp[SP_V2_SPKR_1],
+            temp[SP_V2_SPKR_2], re[SP_V2_SPKR_1], re[SP_V2_SPKR_2],
+            Bl[SP_V2_SPKR_1], Bl[SP_V2_SPKR_2], rms[SP_V2_SPKR_1], rms[SP_V2_SPKR_2],
+            kms[SP_V2_SPKR_1], kms[SP_V2_SPKR_2],
+            fre[SP_V2_SPKR_1], fre[SP_V2_SPKR_2], qms[SP_V2_SPKR_1], qms[SP_V2_SPKR_2]);
+#endif
+    } else {
+        snprintf(param, MAX_STR_SIZE - strlen(param) - 1,
             "SpkrParamStatus: %d, %d; Rdc: %lf, %lf; Temp: %lf, %lf;"
             " Freq: %lf, %lf; Rect: %lf, %lf; Qmct: %lf, %lf",
             ftm_status[SP_V2_SPKR_1], ftm_status[SP_V2_SPKR_2],
             rdc[SP_V2_SPKR_1], rdc[SP_V2_SPKR_2], temp[SP_V2_SPKR_1],
             temp[SP_V2_SPKR_2], f[SP_V2_SPKR_1], f[SP_V2_SPKR_2],
             r[SP_V2_SPKR_1], r[SP_V2_SPKR_2], q[SP_V2_SPKR_1], q[SP_V2_SPKR_2]);
-    ALOGD("%s:: param = %s\n", __func__, param);
+    }
 
     if (cal_fd > 0)
         close(cal_fd);
