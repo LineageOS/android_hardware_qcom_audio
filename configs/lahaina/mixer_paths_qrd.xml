@@ -2508,7 +2508,7 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="dmic3" />
+        <path name="dmic5" />
     </path>
 
     <path name="speaker-mic-liquid">
