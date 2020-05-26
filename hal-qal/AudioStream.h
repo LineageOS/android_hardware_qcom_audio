@@ -49,6 +49,11 @@
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
 #define ULL_PLATFORM_DELAY         (4*1000LL)
+
+#define DEEP_BUFFER_OUTPUT_PERIOD_DURATION 40
+#define PCM_OFFLOAD_OUTPUT_PERIOD_DURATION 80
+#define LOW_LATENCY_OUTPUT_PERIOD_DURATION 5
+
 #define DEFAULT_OUTPUT_SAMPLING_RATE    48000
 #define LOW_LATENCY_PLAYBACK_PERIOD_SIZE 240 /** 5ms; frames */
 #define ULL_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE / 1000) /** 1ms; frames */
@@ -61,7 +66,6 @@
 #define LOW_LATENCY_CAPTURE_PERIOD_SIZE 240
 #define LOW_LATENCY_OUTPUT_PERIOD_SIZE 240
 #define LOW_LATENCY_CAPTURE_USE_CASE 1
-#define PCM_BUFFER_DURATION 80 /** millisec */
 #define MIN_PCM_FRAGMENT_SIZE 512
 #define MAX_PCM_FRAGMENT_SIZE (240 * 1024)
 #define MMAP_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE/1000)
@@ -426,7 +430,7 @@ public:
     ~StreamOutPrimary();
     int Standby();
     int SetVolume(float left, float right);
-    int64_t GetFramesWritten(struct timespec *timestamp);
+    uint64_t GetFramesWritten(struct timespec *timestamp);
     int SetParameters(struct str_parms *parms);
     int VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, const char *kvpairs);
     int Pause();
@@ -441,6 +445,7 @@ public:
     uint32_t GetBufferSize();
     int GetFrames(uint64_t *frames);
     static qal_stream_type_t GetQalStreamType(audio_output_flags_t halStreamFlags);
+    static int64_t GetRenderLatency(audio_output_flags_t halStreamFlags);
     int GetOutputUseCase(audio_output_flags_t halStreamFlags);
     int StartOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     int StopOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
@@ -450,7 +455,6 @@ public:
     audio_output_flags_t flags_;
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
     int GetMmapPosition(struct audio_mmap_position *position);
-    int64_t platform_render_latency(audio_output_flags_t flags_);
 protected:
     struct timespec writeAt;
     int get_compressed_buffer_size();

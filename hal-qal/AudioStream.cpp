@@ -451,7 +451,6 @@ static int astream_dump(const struct audio_stream *stream, int fd) {
 }
 
 static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
-    std::ignore = stream;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
     uint32_t period_ms, latency = 0;
@@ -463,16 +462,46 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
         return -EINVAL;
     }
 
-    if ((astream_out->GetUseCase() == USECASE_AUDIO_PLAYBACK_ULL) ||
-            (astream_out->GetUseCase() == USECASE_AUDIO_PLAYBACK_MMAP)) {
+    switch (astream_out->GetUseCase()) {
+    case USECASE_AUDIO_PLAYBACK_OFFLOAD:
+        //TODO: get dsp latency for compress usecase
+        break;
+    case USECASE_AUDIO_PLAYBACK_ULL:
+    case USECASE_AUDIO_PLAYBACK_MMAP:
         period_ms = (ULL_PERIOD_MULTIPLIER * ULL_PERIOD_SIZE *
                 1000) / DEFAULT_OUTPUT_SAMPLING_RATE;
         latency = period_ms +
-            astream_out->platform_render_latency(astream_out->flags_)/1000;
-        ALOGD("%s: Latency: %d", __func__, latency);
-        return latency;
-    } else
-        return LOW_LATENCY_OUTPUT_PERIOD_SIZE;
+            StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
+        break;
+    case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
+        latency = PCM_OFFLOAD_OUTPUT_PERIOD_DURATION;
+        latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
+        break;
+    case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
+        latency = DEEP_BUFFER_OUTPUT_PERIOD_DURATION;
+        latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
+        break;
+    case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
+        latency = LOW_LATENCY_OUTPUT_PERIOD_DURATION;
+        latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
+        break;
+    default:
+        latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
+        break;
+    }
+
+    // accounts for A2DP encoding and sink latency
+    qal_param_bta2dp_t *param_bt_a2dp = NULL;
+    size_t size = 0;
+    int32_t ret;
+
+    ret = qal_get_param(QAL_PARAM_ID_BT_A2DP_ENCODER_LATENCY,
+                        (void **)&param_bt_a2dp, &size, nullptr);
+    if (!ret && param_bt_a2dp)
+        latency += param_bt_a2dp->latency;
+
+    ALOGV("%s: Latency %d", __func__, latency);
+    return latency;
 }
 
 static int astream_out_get_presentation_position(
@@ -554,13 +583,11 @@ static int astream_out_set_parameters(struct audio_stream *stream,
     }
 
 
-   // if (astream_out->flags_ == (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
-       ret = astream_out->SetParameters(parms);
-       if (ret) {
-          ALOGE("Stream SetParameters Error (%x)", ret);
-          goto exit;
-       }
-   // }
+    ret = astream_out->SetParameters(parms);
+    if (ret) {
+        ALOGE("Stream SetParameters Error (%x)", ret);
+        goto exit;
+    }
 exit:
     if (parms)
         str_parms_destroy(parms);
@@ -1523,7 +1550,7 @@ int StreamOutPrimary::VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, c
 
 int StreamOutPrimary::SetVolume(float left , float right) {
     int ret = 0;
-    ALOGE("%s: g", __func__);
+    ALOGD("%s: left %f, right %f", __func__, left, right);
 
     /* free previously cached volume if any */
     if (volume_) {
@@ -1559,10 +1586,10 @@ int StreamOutPrimary::SetVolume(float left , float right) {
 
 /* Delay in Us */
 /* Delay in Us, only to be used for PCM formats */
-int64_t StreamOutPrimary::platform_render_latency(audio_output_flags_t flags_)
+int64_t StreamOutPrimary::GetRenderLatency(audio_output_flags_t halStreamFlags)
 {
     struct qal_stream_attributes streamAttributes_;
-    streamAttributes_.type = StreamOutPrimary::GetQalStreamType(flags_);
+    streamAttributes_.type = StreamOutPrimary::GetQalStreamType(halStreamFlags);
     ALOGV("%s:%d type %d", __func__, __LINE__, streamAttributes_.type);
     switch (streamAttributes_.type) {
          case QAL_STREAM_DEEP_BUFFER:
@@ -1574,34 +1601,67 @@ int64_t StreamOutPrimary::platform_render_latency(audio_output_flags_t flags_)
               return PCM_OFFLOAD_PLATFORM_DELAY;
          case QAL_STREAM_ULTRA_LOW_LATENCY:
               return ULL_PLATFORM_DELAY;
-    //TODO: Add more usecases/type as in current hal, once they are available in qal
+         //TODO: Add more usecases/type as in current hal, once they are available in qal
          default:
              return 0;
      }
 }
 
-int64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
+uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
 {
-    int64_t signed_frames = 0;
-    int64_t written = 0;
+    uint64_t signed_frames = 0;
+    uint64_t written_frames = 0;
+    uint64_t kernel_frames = 0;
+    uint64_t dsp_frames = 0;
+    uint64_t bt_extra_frames = 0;
+    qal_param_bta2dp_t *param_bt_a2dp = NULL;
+    size_t size = 0;
+    int32_t ret;
+
+    /* This adjustment accounts for buffering after app processor
+     * It is based on estimated DSP latency per use case, rather than exact.
+     */
+    dsp_frames = StreamOutPrimary::GetRenderLatency(flags_) *
+        (streamAttributes_.out_media_config.sample_rate) / 1000000LL;
 
     if (!timestamp) {
        ALOGE("%s: timestamp NULL", __func__);
        return 0;
     }
-    written = total_bytes_written_/audio_bytes_per_frame(
-        audio_channel_count_from_out_mask(config_.channel_mask), config_.format);
-    ALOGV("%s: total_bytes_written_ %lld, written %lld", __func__, ((long long) total_bytes_written_), ((long long) written));
-    signed_frames = written; //- kernel_buffer_size + avail;
-    signed_frames -= (platform_render_latency(flags_) * (streamAttributes_.out_media_config.sample_rate) / 1000000LL);
+    written_frames = total_bytes_written_ / audio_bytes_per_frame(
+        audio_channel_count_from_out_mask(config_.channel_mask),
+        config_.format);
 
-    if (signed_frames < 0) {
-       ALOGV("%s: signed_frames -ve %lld", __func__, ((long long) signed_frames));
+    if (written_frames >= dsp_frames)
+        signed_frames = written_frames - dsp_frames;
+
+    // FIXME: subtract kernel buffering
+    // kernel_frames = (kernel_buffer_size - avail) / (bitwidth * channel count);
+    if (signed_frames >= kernel_frames)
+        signed_frames -= kernel_frames;
+
+    // Adjustment accounts for A2dp encoder latency with non offload usecases
+    // Note: Encoder latency is returned in ms, while platform_render_latency in us.
+    ret = qal_get_param(QAL_PARAM_ID_BT_A2DP_ENCODER_LATENCY,
+                        (void **)&param_bt_a2dp, &size, nullptr);
+    if (!ret && param_bt_a2dp) {
+        bt_extra_frames = param_bt_a2dp->latency *
+            (streamAttributes_.out_media_config.sample_rate) / 1000;
+        if (signed_frames >= bt_extra_frames)
+            signed_frames -= bt_extra_frames;
+    }
+
+    if (signed_frames <= 0) {
        clock_gettime(CLOCK_MONOTONIC, timestamp);
        signed_frames = 0;
     } else {
        *timestamp = writeAt;
     }
+
+    ALOGV("%s signed frames %lld written frames %lld kernel frames %lld dsp frames %lld, bt extra frames %lld",
+            __func__, (long long)signed_frames, (long long)written_frames, (long long)kernel_frames,
+            (long long)dsp_frames, (long long)bt_extra_frames);
+
     return signed_frames;
 }
 
@@ -1620,7 +1680,7 @@ int StreamOutPrimary::get_pcm_buffer_size()
     ALOGD("%s:%d config_ format:%x, SR %d ch_mask 0x%x",
             __func__, __LINE__, config_.format, config_.sample_rate,
             config_.channel_mask);
-    fragment_size = PCM_BUFFER_DURATION *
+    fragment_size = PCM_OFFLOAD_OUTPUT_PERIOD_DURATION *
         config_.sample_rate * bytes_per_sample * channels;
     fragment_size /= 1000;
 
@@ -2156,7 +2216,7 @@ StreamOutPrimary::StreamOutPrimary(
         ALOGE("%s: mismatched qal no of devices %d and hal devices %d", __func__, noQalDevices, mNoOfOutDevices);
         goto error;
     }
-    mQalOutDevice = new qal_device [mNoOfOutDevices];
+    mQalOutDevice = new qal_device[mNoOfOutDevices];
     if (!mQalOutDevice) {
         goto error;
     }
