@@ -2424,7 +2424,7 @@ int StreamInPrimary::SetGain(float gain) {
     volume->no_of_volpair = 1;
     volume->volume_pair[0].channel_mask = 0x03;
     volume->volume_pair[0].vol = gain;
-    ret = qal_stream_set_volume(&qal_stream_handle_, volume);
+    ret = qal_stream_set_volume(qal_stream_handle_, volume);
 
     free(volume);
     if (ret) {
