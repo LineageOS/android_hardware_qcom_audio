@@ -1951,6 +1951,11 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
         if (CheckOffloadEffectsType(streamAttributes_.type)) {
             ret = StartOffloadEffects(handle_, qal_stream_handle_);
         }
+
+        if (CheckOffloadEffectsType(streamAttributes_.type)) {
+            ret = StartOffloadVisualizer(handle_, qal_stream_handle_);
+        }
+
     }
 
     if (halInputFormat != halOutputFormat && convertBuffer != NULL) {
@@ -2010,6 +2015,41 @@ int StreamOutPrimary::StopOffloadEffects(
     return ret;
 }
 
+
+int StreamOutPrimary::StartOffloadVisualizer(
+                                    audio_io_handle_t ioHandle,
+                                    qal_stream_handle_t* qal_stream_handle) {
+    int ret  = 0;
+    if (fnp_visualizer_start_output_) {
+        ret = fnp_visualizer_start_output_(ioHandle, qal_stream_handle);
+        if (ret) {
+            ALOGE("%s: failed to visualizer_start.", __func__);
+        }
+    } else {
+        ALOGE("%s: function pointer is null.", __func__);
+        return -EINVAL;
+    }
+
+    return ret;
+}
+
+int StreamOutPrimary::StopOffloadVisualizer(
+                                    audio_io_handle_t ioHandle,
+                                    qal_stream_handle_t* qal_stream_handle) {
+    int ret  = 0;
+    if (fnp_visualizer_stop_output_) {
+        ret = fnp_visualizer_stop_output_(ioHandle, qal_stream_handle);
+        if (ret) {
+            ALOGE("%s: failed to visualizer_stop.\n", __func__);
+        }
+    } else {
+        ALOGE("%s: function pointer is null.", __func__);
+        return -EINVAL;
+    }
+
+    return ret;
+}
+
 StreamOutPrimary::StreamOutPrimary(
                         audio_io_handle_t handle,
                         audio_devices_t devices,
@@ -2017,7 +2057,9 @@ StreamOutPrimary::StreamOutPrimary(
                         struct audio_config *config,
                         const char *address __unused,
                         offload_effects_start_output start_offload_effect,
-                        offload_effects_stop_output stop_offload_effect):
+                        offload_effects_stop_output stop_offload_effect,
+                        visualizer_hal_start_output visualizer_start_output,
+                        visualizer_hal_stop_output visualizer_stop_output):
     StreamPrimary(handle, devices, config),
     flags_(flags)
 {
@@ -2088,6 +2130,10 @@ StreamOutPrimary::StreamOutPrimary(
 
     fnp_offload_effect_start_output_ = start_offload_effect;
     fnp_offload_effect_stop_output_ = stop_offload_effect;
+
+    fnp_visualizer_start_output_ = visualizer_start_output;
+    fnp_visualizer_stop_output_ = visualizer_stop_output;
+
     writeAt.tv_sec = 0;
     writeAt.tv_nsec = 0;
     total_bytes_written_ = 0;
@@ -2158,6 +2204,11 @@ StreamOutPrimary::~StreamOutPrimary() {
         if (CheckOffloadEffectsType(streamAttributes_.type)) {
             StopOffloadEffects(handle_, qal_stream_handle_);
         }
+
+        if (CheckOffloadEffectsType(streamAttributes_.type)) {
+            StopOffloadVisualizer(handle_, qal_stream_handle_);
+        }
+
         qal_stream_close(qal_stream_handle_);
         qal_stream_handle_ = nullptr;
     }

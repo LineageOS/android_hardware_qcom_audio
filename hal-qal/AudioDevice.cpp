@@ -88,7 +88,9 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::CreateStreamOut(
     std::shared_ptr<StreamOutPrimary> astream (new StreamOutPrimary(handle,
                                               devices, flags, config, address,
                                               fnp_offload_effect_start_output_,
-                                              fnp_offload_effect_stop_output_));
+                                              fnp_offload_effect_stop_output_,
+                                              fnp_visualizer_start_output_,
+                                              fnp_visualizer_stop_output_));
     astream->GetStreamHandle(stream_out);
     out_list_mutex.lock();
     stream_out_list_.push_back(astream);
@@ -129,7 +131,7 @@ std::shared_ptr<StreamInPrimary> AudioDevice::CreateStreamIn(
     in_list_mutex.lock();
     stream_in_list_.push_back(astream);
     in_list_mutex.unlock();
-    ALOGD("%s: input stream %d %p", __func__,(int)stream_in_list_.size(), stream_in); 
+    ALOGD("%s: input stream %d %p", __func__,(int)stream_in_list_.size(), stream_in);
     return astream;
 }
 
@@ -477,6 +479,22 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     adev_->device_.get()->get_microphones = adev_get_microphones;
     adev_->device_.get()->common.module = (struct hw_module_t *)module;
     *device = &(adev_->device_.get()->common);
+
+    // visualizer lib
+    if (access(VISUALIZER_LIBRARY_PATH, R_OK) == 0) {
+        visualizer_lib_ = dlopen(VISUALIZER_LIBRARY_PATH, RTLD_NOW);
+        if (visualizer_lib_ == NULL) {
+            ALOGE("%s: DLOPEN failed for %s", __func__, VISUALIZER_LIBRARY_PATH);
+        } else {
+            ALOGV("%s: DLOPEN successful for %s", __func__, VISUALIZER_LIBRARY_PATH);
+            fnp_visualizer_start_output_ =
+                        (int (*)(audio_io_handle_t, qal_stream_handle_t*))dlsym(visualizer_lib_,
+                                                        "visualizer_hal_start_output");
+            fnp_visualizer_stop_output_ =
+                        (int (*)(audio_io_handle_t, qal_stream_handle_t*))dlsym(visualizer_lib_,
+                                                        "visualizer_hal_stop_output");
+        }
+    }
 
     // offload effect lib
     if (access(OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH, R_OK) == 0) {

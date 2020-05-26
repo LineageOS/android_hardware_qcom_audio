@@ -31,6 +31,7 @@
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
 #include <audio_effects/effect_visualizer.h>
+#include "QalApi.h"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define ACDB_DEV_TYPE_OUT 1
@@ -205,9 +206,11 @@ int thread_status;
 
 /* Proxy port supports only MMAP read and those fixed parameters*/
 #define AUDIO_CAPTURE_CHANNEL_COUNT 2
-#define AUDIO_CAPTURE_SMP_RATE 48000
+#define AUDIO_CAPTURE_SMP_RATE (48000)
 #define AUDIO_CAPTURE_PERIOD_SIZE (768)
-#define AUDIO_CAPTURE_PERIOD_COUNT 32
+#define AUDIO_CAPTURE_PERIOD_COUNT (32)
+
+#define AUDIO_CAPTURE_BIT_WIDTH (16)
 
 struct pcm_config pcm_config_capture = {
     .channels = AUDIO_CAPTURE_CHANNEL_COUNT,
@@ -458,12 +461,47 @@ void *capture_thread_loop(void *arg)
     buf.frameCount = AUDIO_CAPTURE_PERIOD_SIZE;
     buf.s16 = data;
     bool capture_enabled = false;
-    struct mixer *mixer;
-    struct pcm *pcm = NULL;
+    //struct mixer *mixer;
+    //struct pcm *pcm = NULL;
     int ret;
-    int retry_num = 0;
-    int sound_card = SOUND_CARD;
-    int capture_device = CAPTURE_DEVICE;
+    //int retry_num = 0;
+    //int sound_card = SOUND_CARD;
+    //int capture_device = CAPTURE_DEVICE;
+
+    void *in_stream_handle = NULL;
+    uint32_t no_of_devices = 1;
+    struct qal_stream_attributes stream_attr;
+    struct qal_device devices;
+    struct qal_channel_info* ch_info = NULL;
+    uint32_t in_buff_size = AUDIO_CAPTURE_PERIOD_SIZE * AUDIO_CAPTURE_CHANNEL_COUNT * sizeof(int16_t);
+    uint32_t in_buff_count = 1;
+    struct qal_buffer in_buffer;
+    ssize_t read_status = 0;
+
+
+    memset(&stream_attr, 0x0, sizeof(struct qal_stream_attributes));
+    memset(&devices, 0x0, sizeof(struct qal_device));
+    ch_info = (struct qal_channel_info *)calloc(
+                            1, sizeof(uint16_t) + sizeof(uint8_t)*AUDIO_CAPTURE_CHANNEL_COUNT);
+    if(ch_info) {
+        ch_info->channels = AUDIO_CAPTURE_CHANNEL_COUNT;
+        ch_info->ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+        ch_info->ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+    }
+
+    stream_attr.type = QAL_STREAM_PROXY;
+    stream_attr.flags = 0;
+    stream_attr.direction = QAL_AUDIO_INPUT;
+    stream_attr.in_media_config.sample_rate = AUDIO_CAPTURE_SMP_RATE;
+    stream_attr.in_media_config.bit_width = AUDIO_CAPTURE_BIT_WIDTH;
+    stream_attr.in_media_config.ch_info = ch_info;
+    stream_attr.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+
+    devices.id = QAL_DEVICE_IN_PROXY;
+    devices.config.sample_rate = AUDIO_CAPTURE_SMP_RATE;
+    devices.config.bit_width = AUDIO_CAPTURE_BIT_WIDTH;
+    devices.config.ch_info = ch_info;
+    devices.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
 
     ALOGD("thread enter");
 
@@ -471,7 +509,7 @@ void *capture_thread_loop(void *arg)
 
     pthread_mutex_lock(&lock);
 
-    mixer = mixer_open(MIXER_CARD);
+    /*mixer = mixer_open(MIXER_CARD);
     while (mixer == NULL && retry_num < RETRY_NUMBER) {
         usleep(RETRY_US);
         mixer = mixer_open(MIXER_CARD);
@@ -480,7 +518,7 @@ void *capture_thread_loop(void *arg)
     if (mixer == NULL) {
         pthread_mutex_unlock(&lock);
         return NULL;
-    }
+    }*/
 
     for (;;) {
         if (exit_thread) {
@@ -488,35 +526,55 @@ void *capture_thread_loop(void *arg)
         }
         if (effects_enabled()) {
             if (!capture_enabled) {
-                ret = configure_proxy_capture(mixer, 1);
-                if (ret == 0) {
-                    sound_card =
-                       parse_pcm_device("AFE-PROXY TX", SND_CARD_NUM);
-                    sound_card =
-                       (sound_card == -1)? SOUND_CARD : sound_card;
-                    capture_device =
-                       parse_pcm_device("AFE-PROXY TX", DEVICE_ID);
-                    capture_device =
-                       (capture_device == -1)? CAPTURE_DEVICE : capture_device;
-                    pcm = pcm_open(sound_card, capture_device,
-                                   PCM_IN|PCM_MMAP|PCM_NOIRQ, &pcm_config_capture);
-                    if (pcm && !pcm_is_ready(pcm)) {
-                        ALOGW("%s: %s", __func__, pcm_get_error(pcm));
-                        pcm_close(pcm);
-                        pcm = NULL;
-                        configure_proxy_capture(mixer, 0);
+
+                ret = qal_stream_open(&stream_attr,
+                    no_of_devices, &devices,
+                    0,
+                    NULL,
+                    NULL,
+                    NULL,
+                    &in_stream_handle);
+                if (ret == 0 && in_stream_handle) {
+                    ret = qal_stream_set_buffer_size(in_stream_handle,
+                        (size_t*)&in_buff_size,
+                        in_buff_count,
+                        NULL,
+                        0);
+                    if(ret != 0)
+                    {
+                        ALOGW("%s: qal_stream_set_buffer_size failed with err=%d", __func__, ret);
+                        qal_stream_close(in_stream_handle);
                         pthread_cond_wait(&cond, &lock);
                     } else {
-                        capture_enabled = true;
-                        ALOGD("%s: capture ENABLED", __func__);
+                        ret = qal_stream_start(in_stream_handle);
+                        if(ret != 0)
+                        {
+                            ALOGW("%s: qal_stream_start failed with err=%d", __func__, ret);
+                            qal_stream_close(in_stream_handle);
+                            pthread_cond_wait(&cond, &lock);
+                        }  else {
+                            capture_enabled = true;
+                            ALOGD("%s: capture ENABLED", __func__);
+                        }
                     }
+                } else {
+                    ALOGW("%s: qal_stream_open failed with err=%d", __func__, ret);
+                    pthread_cond_wait(&cond, &lock);
                 }
             }
         } else {
             if (capture_enabled) {
-                if (pcm != NULL)
-                    pcm_close(pcm);
-                configure_proxy_capture(mixer, 0);
+                if (in_stream_handle != NULL) {
+                    ret = qal_stream_stop(in_stream_handle);
+                    if(ret != 0) {
+                        ALOGW("%s: qal_stream_stop failed with err=%d", __func__, ret);
+                    }
+                    ret = qal_stream_close(in_stream_handle);
+                    if(ret != 0) {
+                        ALOGW("%s: qal_stream_close failed with err=%d", __func__, ret);
+                    }
+                    in_stream_handle = NULL;
+                }
                 ALOGD("%s: capture DISABLED", __func__);
                 capture_enabled = false;
             }
@@ -526,10 +584,19 @@ void *capture_thread_loop(void *arg)
             continue;
 
         pthread_mutex_unlock(&lock);
-        ret = pcm_mmap_read(pcm, data, sizeof(data));
+        if(in_stream_handle)
+        {
+            memset(&in_buffer, 0, sizeof(struct qal_buffer));
+            in_buffer.buffer = (void*)&data[0];
+            in_buffer.size = in_buff_size;
+            read_status = qal_stream_read(in_stream_handle, &in_buffer);
+        }
         pthread_mutex_lock(&lock);
 
-        if (ret == 0) {
+        if (read_status > 0) {
+            ALOGD("%s: qal_stream_read success no_of_bytes_read = %zu",
+                    __func__, read_status );
+
             struct listnode *out_node;
 
             list_for_each(out_node, &active_outputs_list) {
@@ -547,17 +614,30 @@ void *capture_thread_loop(void *arg)
                 }
             }
         } else {
-            ALOGW("%s: read status %d %s", __func__, ret, pcm_get_error(pcm));
+            ALOGW("%s: qal_stream_read failed with read status %zu",
+                __func__, read_status);
         }
     }
 
     if (capture_enabled) {
-        if (pcm != NULL)
-            pcm_close(pcm);
-        configure_proxy_capture(mixer, 0);
+        if (in_stream_handle != NULL) {
+            ret = qal_stream_stop(in_stream_handle);
+            if(ret != 0) {
+                ALOGW("%s: qal_stream_stop failed with err=%d", __func__, ret);
+            }
+            ret = qal_stream_close(in_stream_handle);
+            if(ret != 0) {
+                ALOGW("%s: qal_stream_close failed with err=%d", __func__, ret);
+                }
+            in_stream_handle = NULL;
+        }
     }
-    mixer_close(mixer);
     pthread_mutex_unlock(&lock);
+    if(ch_info)
+    {
+        free(ch_info);
+        ch_info = NULL;
+    }
 
     ALOGD("thread exit");
 
@@ -569,11 +649,12 @@ void *capture_thread_loop(void *arg)
  */
 
 __attribute__ ((visibility ("default")))
-int visualizer_hal_start_output(audio_io_handle_t output, int pcm_id) {
+int visualizer_hal_start_output(audio_io_handle_t output,
+                                    qal_stream_handle_t* qal_stream_handle) {
     int ret = 0;
     struct listnode *node;
 
-    ALOGV("%s output %d pcm_id %d", __func__, output, pcm_id);
+    ALOGV("%s output %d", __func__, output);
 
     if (lib_init() != 0)
         return init_status;
@@ -620,13 +701,14 @@ exit:
 }
 
 __attribute__ ((visibility ("default")))
-int visualizer_hal_stop_output(audio_io_handle_t output, int pcm_id) {
+int visualizer_hal_stop_output(audio_io_handle_t output,
+                                    qal_stream_handle_t* qal_stream_handle) {
     int ret = 0;
     struct listnode *node;
     struct listnode *fx_node;
     output_context_t *out_ctxt;
 
-    ALOGV("%s output %d pcm_id %d", __func__, output, pcm_id);
+    ALOGV("%s output %d", __func__, output);
 
     if (lib_init() != 0)
         return init_status;
@@ -769,7 +851,7 @@ int visualizer_init(effect_context_t *context)
 
     set_config(context, &context->config);
 
-    if (acdb_handle == NULL) {
+    /*if (acdb_handle == NULL) {
         acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
         if (acdb_handle == NULL) {
             ALOGE("%s: DLOPEN failed for %s", __func__, LIB_ACDB_LOADER);
@@ -780,7 +862,7 @@ int visualizer_init(effect_context_t *context)
                 ALOGE("%s: Could not find the symbol acdb_send_audio_cal from %s",
                       __func__, LIB_ACDB_LOADER);
             }
-    }
+    } */
 
     return 0;
 }

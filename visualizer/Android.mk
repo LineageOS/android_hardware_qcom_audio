@@ -43,6 +43,7 @@ LOCAL_SHARED_LIBRARIES := \
     libcutils \
     liblog \
     libdl \
+    libqal \
     libtinyalsa
 
 LOCAL_MODULE_RELATIVE_PATH := soundfx
@@ -51,6 +52,7 @@ LOCAL_VENDOR_MODULE := true
 
 LOCAL_C_INCLUDES := \
     external/tinyalsa/include \
+    vendor/qcom/opensource/qal \
     $(call include-path-for, audio-effects)
 
 LOCAL_CFLAGS += -Wno-unused-variable

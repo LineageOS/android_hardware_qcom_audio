@@ -76,11 +76,14 @@
 #if LINUX_ENABLED
 #if defined(__LP64__)
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/usr/lib64/libqcompostprocbundle.so"
+#define VISUALIZER_LIBRARY_PATH "/usr/lib64/libqcomvisualizer.so"
 #else
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/usr/lib/libqcompostprocbundle.so"
+#define VISUALIZER_LIBRARY_PATH "/usr/lib/libqcomvisualizer.so"
 #endif
 #else
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/vendor/lib/soundfx/libqcompostprocbundle.so"
+#define VISUALIZER_LIBRARY_PATH "/vendor/lib/soundfx/libqcomvisualizer.so"
 #endif
 
 /* These are the supported use cases by the hardware.
@@ -347,6 +350,11 @@ extern "C" typedef int (*offload_effects_start_output)(audio_io_handle_t,
 extern "C" typedef int (*offload_effects_stop_output)(audio_io_handle_t,
                                                       qal_stream_handle_t*);
 
+extern "C" typedef int (*visualizer_hal_start_output)(audio_io_handle_t,
+                                                       qal_stream_handle_t*);
+extern "C" typedef int (*visualizer_hal_stop_output)(audio_io_handle_t,
+                                                      qal_stream_handle_t*);
+
 int adev_open(audio_hw_device_t **device);
 
 class AudioDevice;
@@ -411,7 +419,9 @@ public:
                      struct audio_config *config,
                      const char *address,
                      offload_effects_start_output fnp_start_offload_effect,
-                     offload_effects_stop_output fnp_stop_offload_effect);
+                     offload_effects_stop_output fnp_stop_offload_effect,
+                     visualizer_hal_start_output fnp_visualizer_start_output_,
+                     visualizer_hal_stop_output fnp_visualizer_stop_output_);
 
     ~StreamOutPrimary();
     int Standby();
@@ -435,6 +445,8 @@ public:
     int StartOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     int StopOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
     bool CheckOffloadEffectsType(qal_stream_type_t qal_stream_type);
+    int StartOffloadVisualizer(audio_io_handle_t, qal_stream_handle_t*);
+    int StopOffloadVisualizer(audio_io_handle_t, qal_stream_handle_t*);
     audio_output_flags_t flags_;
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
     int GetMmapPosition(struct audio_mmap_position *position);
@@ -453,6 +465,8 @@ protected:
     uint64_t total_bytes_written_; /* total frames written, not cleared when entering standby */
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;
+    visualizer_hal_start_output fnp_visualizer_start_output_ = nullptr;
+    visualizer_hal_stop_output fnp_visualizer_stop_output_ = nullptr;
     void *convertBuffer;
     int FillHalFnPtrs();
     audio_format_t AlsatoHalFormat(uint32_t pcm_format);
