@@ -94,6 +94,7 @@ public:
     int   dp_controller;
     int   dp_stream;
     qal_speaker_rotation_type current_rotation;
+    static card_status_t sndCardState;
 protected:
     AudioDevice(){
     }
