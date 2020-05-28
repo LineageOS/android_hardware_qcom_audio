@@ -225,10 +225,11 @@ persist.audio.fluence.voicecall=true\
 persist.audio.fluence.voicerec=false\
 persist.audio.fluence.speaker=true
 
-##speaker protection v3 switch and ADSP AFE API version
+##speaker protection v4 switch and ADSP AFE API version
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.vendor.audio.spv3.enable=true\
-persist.vendor.audio.avs.afe_api_version=2
+persist.vendor.audio.speaker.prot.enable=true\
+persist.vendor.audio.spv4.enable=true\
+persist.vendor.audio.avs.afe_api_version=9
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
