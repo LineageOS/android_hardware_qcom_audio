@@ -2028,8 +2028,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
         memcpy_by_audio_format(convertBuffer, halOutputFormat, buffer, halInputFormat,
                                frames);
         qalBuffer.buffer = convertBuffer;
-        qalBuffer.size = convertBufSize;
-        qalBuffer.offset = 0;
+        qalBuffer.size = frames * (format_to_bitwidth_table[halOutputFormat]/8);
     }
     local_bytes_written = qal_stream_write(qal_stream_handle_, &qalBuffer);
     total_bytes_written_ += local_bytes_written;
