@@ -60,33 +60,17 @@
 #define MIXER_XML_BASE_STRING "mixer_paths"
 #define MIXER_XML_DEFAULT_PATH "mixer_paths.xml"
 
-#ifdef LINUX_ENABLED
-#define PLATFORM_INFO_XML_PATH_INTCODEC  "/etc/audio_platform_info_intcodec.xml"
-#define PLATFORM_INFO_XML_PATH_SKUSH  "/etc/audio_platform_info_skush.xml"
-#define PLATFORM_INFO_XML_PATH_SKUW  "/etc/audio_platform_info_skuw.xml"
-#define PLATFORM_INFO_XML_PATH_QRD  "/etc/audio_platform_info_qrd.xml"
-#define PLATFORM_INFO_XML_PATH_LAGOON_QRD  "/etc/audio_platform_info_lagoon_qrd.xml"
-#define PLATFORM_INFO_XML_PATH "/etc/audio_platform_info.xml"
-#define MIXER_XML_PATH_AUXPCM "/etc/mixer_paths_auxpcm.xml"
-#define MIXER_XML_PATH_I2S "/etc/mixer_paths_i2s.xml"
-#define PLATFORM_INFO_XML_PATH_I2S "/etc/audio_platform_info_extcodec.xml"
-#define PLATFORM_INFO_XML_PATH_WSA  "/etc/audio_platform_info_wsa.xml"
-#define PLATFORM_INFO_XML_PATH_TDM  "/etc/audio_platform_info_tdm.xml"
-#define PLATFORM_INFO_XML_PATH_SCUBA_IDP "/etc/audio_platform_info_scubaidp.xml"
-#else
-#define PLATFORM_INFO_XML_PATH_INTCODEC  "/vendor/etc/audio_platform_info_intcodec.xml"
-#define PLATFORM_INFO_XML_PATH_SKUSH "/vendor/etc/audio_platform_info_skush.xml"
-#define PLATFORM_INFO_XML_PATH_SKUW "/vendor/etc/audio_platform_info_skuw.xml"
-#define PLATFORM_INFO_XML_PATH_QRD "/vendor/etc/audio_platform_info_qrd.xml"
-#define PLATFORM_INFO_XML_PATH_LAGOON_QRD  "/vendor/etc/audio_platform_info_lagoon_qrd.xml"
-#define PLATFORM_INFO_XML_PATH "/vendor/etc/audio_platform_info.xml"
-#define MIXER_XML_PATH_AUXPCM "/vendor/etc/mixer_paths_auxpcm.xml"
-#define MIXER_XML_PATH_I2S "/vendor/etc/mixer_paths_i2s.xml"
-#define PLATFORM_INFO_XML_PATH_I2S "/vendor/etc/audio_platform_info_i2s.xml"
-#define PLATFORM_INFO_XML_PATH_WSA  "/vendor/etc/audio_platform_info_wsa.xml"
-#define PLATFORM_INFO_XML_PATH_TDM  "/vendor/etc/audio_platform_info_tdm.xml"
-#define PLATFORM_INFO_XML_PATH_SCUBA_IDP "/vendor/etc/audio_platform_info_scubaidp.xml"
-#endif
+#define PLATFORM_INFO_XML_PATH_INTCODEC_NAME  "audio_platform_info_intcodec.xml"
+#define PLATFORM_INFO_XML_PATH_SKUSH_NAME  "audio_platform_info_skush.xml"
+#define PLATFORM_INFO_XML_PATH_SKUW_NAME  "audio_platform_info_skuw.xml"
+#define PLATFORM_INFO_XML_PATH_QRD_NAME  "audio_platform_info_qrd.xml"
+#define PLATFORM_INFO_XML_PATH_LAGOON_QRD_NAME  "audio_platform_info_lagoon_qrd.xml"
+#define PLATFORM_INFO_XML_PATH_NAME "audio_platform_info.xml"
+#define MIXER_XML_PATH_AUXPCM_NAME "mixer_paths_auxpcm.xml"
+#define MIXER_XML_PATH_I2S_NAME "mixer_paths_i2s.xml"
+#define PLATFORM_INFO_XML_PATH_I2S_NAME "audio_platform_info_extcodec.xml"
+#define PLATFORM_INFO_XML_PATH_WSA_NAME  "audio_platform_info_wsa.xml"
+#define PLATFORM_INFO_XML_PATH_TDM_NAME  "audio_platform_info_tdm.xml"
 
 #include <linux/msm_audio.h>
 #if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || \
@@ -251,6 +235,8 @@ enum {
 };
 
 #define PLATFORM_CONFIG_KEY_OPERATOR_INFO "operator_info"
+char vendor_config_path[VENDOR_CONFIG_PATH_MAX_LENGTH];
+char xml_file_path[VENDOR_CONFIG_FILE_MAX_LENGTH];
 
 struct operator_info {
     struct listnode list;
@@ -1649,6 +1635,14 @@ bool is_operator_tmus()
     default:
         return false;
     }
+}
+
+const char* get_xml_file_path(const char* file_name)
+{
+    audio_get_vendor_config_path(vendor_config_path, sizeof(vendor_config_path));
+    snprintf(xml_file_path, sizeof(xml_file_path),
+        "%s/%s", vendor_config_path, file_name);
+    return xml_file_path;
 }
 
 static char *get_current_operator()
@@ -3319,54 +3313,66 @@ void *platform_init(struct audio_device *adev)
     if (ret || !my_data->is_internal_codec)
         my_data->hifi_audio = true;
     set_platform_defaults(my_data);
-
     /* Initialize ACDB ID's */
-    if (my_data->is_i2s_ext_modem && !is_auto_snd_card(snd_card_name))
-        platform_info_init(PLATFORM_INFO_XML_PATH_I2S, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "sdm660-snd-card-skush",
-               sizeof("sdm660-snd-card-skush")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_SKUSH, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "sdm670-skuw-snd-card",
-               sizeof("sdm670-skuw-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_SKUW, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "sm6150-qrd-snd-card",
-               sizeof("sm6150-qrd-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
-               sizeof("sm6150-wcd9375qrd-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "lahaina-qrd-snd-card",
-               sizeof("lahaina-qrd-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
-               sizeof("kona-qrd-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "sm8150-tavil-qrd-snd-card",
-               sizeof("sm8150-tavil-qrd-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "lito-qrd-snd-card",
-               sizeof("lito-qrd-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "lito-lagoonqrd-snd-card",
-               sizeof("lito-lagoonqrd-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_LAGOON_QRD, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "atoll-qrd-snd-card",
-               sizeof("atoll-qrd-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "bengal-qrd-snd-card",
-               sizeof("bengal-qrd-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
-               sizeof("bengal-scubaidp-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_IDP, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
-               sizeof("qcs405-wsa-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_WSA, my_data, PLATFORM);
-    else if (!strncmp(snd_card_name, "qcs405-tdm-snd-card",
-               sizeof("qcs405-tdm-snd-card")))
-        platform_info_init(PLATFORM_INFO_XML_PATH_TDM, my_data, PLATFORM);
-    else if (my_data->is_internal_codec)
-        platform_info_init(PLATFORM_INFO_XML_PATH_INTCODEC, my_data, PLATFORM);
+    if (my_data->is_i2s_ext_modem && !is_auto_snd_card(snd_card_name)) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_I2S_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "sdm660-snd-card-skush",
+               sizeof("sdm660-snd-card-skush"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SKUSH_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "sdm670-skuw-snd-card",
+               sizeof("sdm670-skuw-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SKUW_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "sm6150-qrd-snd-card",
+               sizeof("sm6150-qrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "sm6150-wcd9375qrd-snd-card",
+               sizeof("sm6150-wcd9375qrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "lahaina-qrd-snd-card",
+               sizeof("lahaina-qrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
+               sizeof("kona-qrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "sm8150-tavil-qrd-snd-card",
+               sizeof("sm8150-tavil-qrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "lito-qrd-snd-card",
+               sizeof("lito-qrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "lito-lagoonqrd-snd-card",
+               sizeof("lito-lagoonqrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_LAGOON_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "atoll-qrd-snd-card",
+               sizeof("atoll-qrd-snd-card"))){
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "bengal-qrd-snd-card",
+               sizeof("bengal-qrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
+               sizeof("qcs405-wsa-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_WSA_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "qcs405-tdm-snd-card",
+               sizeof("qcs405-tdm-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_TDM_NAME),
+            my_data, PLATFORM);
+    } else if (my_data->is_internal_codec) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_INTCODEC_NAME),
+            my_data, PLATFORM);
+    }
     else {
         // Try to load pixel or default
         audio_extn_utils_get_platform_info(snd_card_name, platform_info_file);
@@ -3380,9 +3386,8 @@ void *platform_init(struct audio_device *adev)
     if (platform_is_i2s_ext_modem(snd_card_name, my_data) &&
         !is_auto_snd_card(snd_card_name)) {
         ALOGD("%s: Call MIXER_XML_PATH_I2S", __func__);
-
         adev->audio_route = audio_route_init(adev->snd_card,
-                                             MIXER_XML_PATH_I2S);
+            get_xml_file_path(MIXER_XML_PATH_I2S_NAME));
     } else {
         /* Get the codec internal name from the sound card name
          * and form the mixer paths file name dynamically. This
@@ -3419,7 +3424,7 @@ void *platform_init(struct audio_device *adev)
 
         ALOGD("%s: Loading mixer file: %s", __func__, mixer_xml_file);
         if (audio_extn_read_xml(adev, adev->snd_card, mixer_xml_file,
-                                MIXER_XML_PATH_AUXPCM) == -ENOSYS) {
+            get_xml_file_path(MIXER_XML_PATH_AUXPCM_NAME)) == -ENOSYS) {
             adev->audio_route = audio_route_init(adev->snd_card, mixer_xml_file);
         }
     }

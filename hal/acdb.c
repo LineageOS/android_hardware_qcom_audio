@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -102,7 +102,8 @@ int acdb_init_v2(struct mixer *mixer)
 
     int result = -1;
     char *cvd_version = NULL;
-    char platform_info_file[MIXER_PATH_MAX_LENGTH] = PLATFORM_INFO_XML_PATH;
+    char vendor_config_path[VENDOR_CONFIG_PATH_MAX_LENGTH];
+    char platform_info_file[VENDOR_CONFIG_FILE_MAX_LENGTH];
     const char *snd_card_name = NULL;
     struct acdb_platform_data *my_data = NULL;
 
@@ -118,6 +119,10 @@ int acdb_init_v2(struct mixer *mixer)
     }
 
     list_init(&my_data->acdb_meta_key_list);
+    audio_get_vendor_config_path(vendor_config_path, sizeof(vendor_config_path));
+    /* Get path for platorm_info_xml_path_name in vendor */
+    snprintf(platform_info_file, sizeof(platform_info_file),
+            "%s/%s", vendor_config_path, PLATFORM_INFO_XML_PATH_NAME);
     get_platform_file_for_device(mixer, platform_info_file);
     /* Extract META KEY LIST INFO */
     platform_info_init(platform_info_file, my_data, ACDB_EXTN);
