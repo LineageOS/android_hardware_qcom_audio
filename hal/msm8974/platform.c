@@ -189,6 +189,25 @@
 
 #define GET_IN_DEVICE_INDEX(SND_DEVICE) ((SND_DEVICE) - (SND_DEVICE_IN_BEGIN))
 
+#define is_usb_in_snd_dev(x) \
+    (((x) == SND_DEVICE_IN_USB_HEADSET_MIC) ||                           \
+    ((x) == SND_DEVICE_IN_USB_HEADSET_MIC_AEC) ||                        \
+    ((x) == SND_DEVICE_IN_VOICE_USB_HEADSET_MIC) ||                      \
+    ((x) == SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC) ||                \
+    ((x) == SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC) ||                \
+    ((x) == SND_DEVICE_IN_USB_HEADSET_MULTI_CHANNEL_MIC) ||              \
+    ((x) == SND_DEVICE_IN_USB_HEADSET_MULTI_CHANNEL_MIC_AEC) ||          \
+    ((x) == SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MULTI_CHANNEL_MIC) ||  \
+    ((x) == SND_DEVICE_IN_VOICE_RECOG_USB_HEADSET_MULTI_CHANNEL_MIC))
+
+#define is_usb_out_snd_dev(x) \
+    (((x) == SND_DEVICE_OUT_USB_HEADSET) ||         \
+    ((x) == SND_DEVICE_OUT_USB_HEADPHONES) ||       \
+    ((x) == SND_DEVICE_OUT_VOICE_USB_HEADPHONES) || \
+    ((x) == SND_DEVICE_OUT_VOICE_USB_HEADSET) ||    \
+    ((x) == SND_DEVICE_OUT_VOICE_TTY_FULL_USB) ||   \
+    ((x) == SND_DEVICE_OUT_VOICE_TTY_VCO_USB))
+
 #ifdef DYNAMIC_LOG_ENABLED
 extern void log_utils_init(void);
 extern void log_utils_deinit(void);
@@ -1594,23 +1613,7 @@ static struct name_to_index audio_source_index[AUDIO_SOURCE_CNT] = {
 
 static bool is_usb_snd_dev(snd_device_t snd_device)
 {
-    if (snd_device < SND_DEVICE_IN_BEGIN) {
-        if (snd_device == SND_DEVICE_OUT_USB_HEADSET ||\
-            snd_device == SND_DEVICE_OUT_USB_HEADPHONES ||\
-            snd_device == SND_DEVICE_OUT_VOICE_USB_HEADPHONES ||\
-            snd_device == SND_DEVICE_OUT_VOICE_USB_HEADSET ||\
-            snd_device == SND_DEVICE_OUT_VOICE_TTY_FULL_USB ||\
-            snd_device == SND_DEVICE_OUT_VOICE_TTY_VCO_USB)
-            return true;
-    } else {
-        if (snd_device == SND_DEVICE_IN_USB_HEADSET_MIC ||\
-            snd_device == SND_DEVICE_IN_USB_HEADSET_MIC_AEC ||\
-            snd_device == SND_DEVICE_IN_VOICE_USB_HEADSET_MIC ||\
-            snd_device == SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC ||\
-            snd_device == SND_DEVICE_IN_VOICE_RECOG_USB_HEADSET_MIC)
-            return true;
-    }
-    return false;
+    return is_usb_in_snd_dev(snd_device) || is_usb_out_snd_dev(snd_device);
 }
 
 bool is_operator_tmus()
@@ -9986,7 +9989,7 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
     } else if (my_data->is_internal_codec &&
                my_data->is_default_be_config &&
-               !audio_is_usb_in_device(snd_device)) {
+               !is_usb_in_snd_dev(snd_device)) {
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
         if (in && in->bit_width == 24)
@@ -10018,7 +10021,7 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
             }
         }
         if ((sample_rate % INPUT_SAMPLING_RATE_11025 == 0) &&
-            (!audio_is_usb_in_device(snd_device))) {
+            (!is_usb_in_snd_dev(snd_device))) {
             ALOGV("%s:txbecf: afe: set sample rate to default Sample Rate(48k)",__func__);
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
