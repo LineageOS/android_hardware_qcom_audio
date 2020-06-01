@@ -42,6 +42,7 @@
 
 #include <log/log.h>
 #include <utils/Trace.h>
+#include <cutils/properties.h>
 
 #include <chrono>
 #include <thread>
@@ -2361,6 +2362,7 @@ int StreamInPrimary::GetMmapPosition(struct audio_mmap_position *position)
 
 int StreamInPrimary::Standby() {
     int ret = 0;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     if (qal_stream_handle_) {
         if (!is_st_session) {
@@ -2368,6 +2370,9 @@ int StreamInPrimary::Standby() {
         } else {
             ret = qal_stream_set_param(qal_stream_handle_,
                 QAL_PARAM_ID_STOP_BUFFERING, nullptr);
+            if (adevice->num_va_sessions_ > 0) {
+                adevice->num_va_sessions_--;
+            }
         }
     }
 
@@ -2760,6 +2765,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     qalBuffer.buffer = (void*)buffer;
     qalBuffer.size = bytes;
     qalBuffer.offset = 0;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     ALOGD("%s: Bytes:(%zu)", __func__, bytes);
     if (!qal_stream_handle_) {
@@ -2768,7 +2774,10 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
 
     if (is_st_session) {
         ATRACE_BEGIN("hal: lab read");
-        stream_started_ = true;
+        if (!stream_started_) {
+            adevice->num_va_sessions_++;
+            stream_started_ = true;
+        }
         while (retry_count--) {
             size = qal_stream_read(qal_stream_handle_, &qalBuffer);
             if (size < 0) {
@@ -2803,6 +2812,16 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     }
 
     local_bytes_read = qal_stream_read(qal_stream_handle_, &qalBuffer);
+
+    // mute pcm data if sva client is reading lab data
+    if (adevice->num_va_sessions_ > 0 &&
+        source_ != AUDIO_SOURCE_VOICE_RECOGNITION &&
+        property_get_bool("persist.vendor.audio.va_concurrency_mute_enabled",
+        false)) {
+        memset(qalBuffer.buffer, 0, qalBuffer.size);
+        local_bytes_read = qalBuffer.size;
+    }
+
     total_bytes_read_ += local_bytes_read;
 
 exit:

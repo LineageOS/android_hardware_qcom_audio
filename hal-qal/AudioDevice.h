@@ -93,6 +93,7 @@ public:
     int                       usb_dev_num_;
     int   dp_controller;
     int   dp_stream;
+    int num_va_sessions_ = 0;
     qal_speaker_rotation_type current_rotation;
 protected:
     AudioDevice(){
