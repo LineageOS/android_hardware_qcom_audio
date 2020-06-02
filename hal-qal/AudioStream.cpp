@@ -28,7 +28,7 @@
  */
 
 #define LOG_TAG "ahal_AudioStream"
-#define ATRACE_TAG (ATRACE_TAG_AUDIO|ATRACE_TAG_HAL)
+#define ATRACE_TAG (ATRACE_TAG_AUDIO | ATRACE_TAG_HAL)
 /*#define LOG_NDEBUG 0*/
 /*#define VERY_VERY_VERBOSE_LOGGING*/
 #ifdef VERY_VERY_VERBOSE_LOGGING
@@ -41,6 +41,7 @@
 #include "AudioStream.h"
 
 #include <log/log.h>
+#include <utils/Trace.h>
 
 #include <chrono>
 #include <thread>
@@ -2703,6 +2704,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     }
 
     if (is_st_session) {
+        ATRACE_BEGIN("hal: lab read");
         stream_started_ = true;
         while (retry_count--) {
             size = qal_stream_read(qal_stream_handle_, &qalBuffer);
@@ -2711,6 +2713,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
                 local_bytes_read = qalBuffer.size;
                 total_bytes_read_ += local_bytes_read;
                 ALOGE("%s: error, failed to read data from QAL", __func__);
+                ATRACE_END();
                 goto exit;
             } else if (size == 0) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -2720,6 +2723,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
         }
         local_bytes_read = size;
         total_bytes_read_ += local_bytes_read;
+        ATRACE_END();
         goto exit;
     }
 
