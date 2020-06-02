@@ -5002,6 +5002,30 @@ static void in_update_sink_metadata(struct audio_stream_in *stream,
     pthread_mutex_unlock(&in->lock);
 }
 
+static int check_and_set_gapless_mode(struct audio_device *adev)
+{
+    bool gapless_enabled = false;
+    const char *mixer_ctl_name = "Compress Gapless Playback";
+    struct mixer_ctl *ctl;
+
+    ALOGV("%s:", __func__);
+    gapless_enabled = property_get_bool("vendor.audio.offload.gapless.enabled", false);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                               __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    if (mixer_ctl_set_value(ctl, 0, gapless_enabled) < 0) {
+        ALOGE("%s: Could not set gapless mode %d",
+                       __func__, gapless_enabled);
+        return -EINVAL;
+    }
+    return 0;
+}
+
 static int adev_open_output_stream(struct audio_hw_device *dev,
                                    audio_io_handle_t handle,
                                    audio_devices_t devices,
@@ -5170,6 +5194,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->non_blocking = 1;
 
         out->send_new_metadata = 1;
+
+        check_and_set_gapless_mode(adev);
+
         create_offload_callback_thread(out);
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
