@@ -80,7 +80,7 @@
         <param key="hifi_filter" value="false"/>
         <param key="native_audio_mode" value="multiple_mix_dsp"/>
         <param key="hfp_pcm_dev_id" value="39"/>
-        <param key="input_mic_max_count" value="4"/>
+        <param key="input_mic_max_count" value="3"/>
     </config_params>
     <acdb_ids>
         <device name="SND_DEVICE_OUT_SPEAKER" acdb_id="15"/>
@@ -223,6 +223,7 @@
         <device name="SND_DEVICE_IN_HANDSET_TMIC_AEC" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_HANDSET_TMIC_NS" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_HANDSET_TMIC_AEC_NS" interface="TX_CDC_DMA_TX_3"/>
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_TMIC" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_VOICE_REC_TMIC" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_MIC" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_STEREO_MIC" interface="TX_CDC_DMA_TX_3"/>
