@@ -1291,6 +1291,31 @@ int disable_audio_route(struct audio_device *adev,
         snd_device = usecase->in_snd_device;
     else
         snd_device = usecase->out_snd_device;
+
+    /* disable island and power mode on supported device for voice call */
+    if (usecase->type == VOICE_CALL) {
+        if (usecase->in_snd_device != SND_DEVICE_NONE) {
+            if (platform_get_island_cfg_on_device(adev->platform, usecase->in_snd_device) &&
+                platform_get_power_mode_on_device(adev->platform, usecase->in_snd_device)) {
+                platform_set_island_cfg_on_device(adev, usecase->in_snd_device, false);
+                platform_set_power_mode_on_device(adev, usecase->in_snd_device, false);
+                platform_reset_island_power_status(adev->platform, usecase->in_snd_device);
+                ALOGD("%s: disable island cfg and power mode in voice tx path",
+                      __func__);
+            }
+        }
+        if (usecase->out_snd_device != SND_DEVICE_NONE) {
+            if (platform_get_island_cfg_on_device(adev->platform, usecase->out_snd_device) &&
+                platform_get_power_mode_on_device(adev->platform, usecase->out_snd_device)) {
+                platform_set_island_cfg_on_device(adev, usecase->out_snd_device, false);
+                platform_set_power_mode_on_device(adev, usecase->out_snd_device, false);
+                platform_reset_island_power_status(adev->platform, usecase->out_snd_device);
+                ALOGD("%s: disable island cfg and power mode in voice rx path",
+                       __func__);
+            }
+        }
+    }
+
     // we shouldn't truncate mixer_path
     ALOGW_IF(strlcpy(mixer_path, use_case_table[usecase->id], sizeof(mixer_path))
             >= sizeof(mixer_path), "%s: truncation on mixer path", __func__);
@@ -1385,6 +1410,14 @@ int enable_snd_device(struct audio_device *adev,
     } else {
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
 
+        /* enable island and power mode on supported device */
+        if (platform_get_island_cfg_on_device(adev->platform, snd_device) &&
+            platform_get_power_mode_on_device(adev->platform, snd_device)) {
+            platform_set_island_cfg_on_device(adev, snd_device, true);
+            platform_set_power_mode_on_device(adev, snd_device, true);
+            ALOGD("%s: enable island cfg and power mode on: %s",
+                   __func__, device_name);
+        }
 
         if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
             (audio_extn_a2dp_start_playback() < 0)) {
@@ -1707,6 +1740,20 @@ static void check_usecases_codec_backend(struct audio_device *adev,
          force_routing = true;
          force_restart_session = true;
     }
+
+    /*
+     * Island cfg and power mode config needs to set before AFE port start.
+     * Set force routing in case of voice device was enable before.
+     */
+    if (uc_info->type == VOICE_CALL &&
+        voice_extn_is_voice_power_mode_supported() &&
+        platform_check_and_update_island_power_status(adev->platform,
+                                             uc_info,
+                                             snd_device)) {
+        force_routing = true;
+        ALOGD("%s:becf: force routing %d for power mode supported device",
+               __func__, force_routing);
+    }
     ALOGD("%s:becf: force routing %d", __func__, force_routing);
 
     /* Disable all the usecases on the shared backend other than the
@@ -1851,6 +1898,22 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
      */
     if (uc_info->type == PCM_CAPTURE)
         backend_check_cond = is_codec_backend_in_device_type(&uc_info->device_list);
+
+    /*
+     * Island cfg and power mode config needs to set before AFE port start.
+     * Set force routing in case of voice device was enable before.
+     */
+
+    if (uc_info->type == VOICE_CALL &&
+        voice_extn_is_voice_power_mode_supported() &&
+        platform_check_and_update_island_power_status(adev->platform,
+                                             uc_info,
+                                             snd_device)) {
+        force_routing = true;
+        ALOGD("%s:becf: force routing %d for power mode supported device",
+               __func__, force_routing);
+    }
+
     /*
      * This function is to make sure that all the active capture usecases
      * are always routed to the same input sound device.
