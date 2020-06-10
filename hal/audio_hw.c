@@ -79,6 +79,10 @@
 #include "sound/compress_params.h"
 #include "sound/asound.h"
 
+#ifdef AUDIO_FEATURE_ENABLE_TFA98XX_FEEDBACK
+#include "audio_extn_tfa98xx_feedback.h"
+#endif
+
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
 #define LOG_MASK HAL_MOD_FILE_AUDIO_HW
@@ -1322,6 +1326,9 @@ int enable_snd_device(struct audio_device *adev,
         }
         audio_extn_dev_arbi_acquire(snd_device);
         audio_route_apply_and_update_path(adev->audio_route, device_name);
+#ifdef AUDIO_FEATURE_ENABLE_TFA98XX_FEEDBACK
+        audio_extn_tfa98xx_start_feedback(adev, snd_device);
+#endif
 
         if (SND_DEVICE_OUT_HEADPHONES == snd_device &&
             !adev->native_playback_enabled &&
@@ -1387,6 +1394,9 @@ int disable_snd_device(struct audio_device *adev,
                                              snd_device,
                                              &num_devices,
                                              new_snd_devices) == 0) {
+#ifdef AUDIO_FEATURE_ENABLE_TFA98XX_FEEDBACK
+          audio_extn_tfa98xx_stop_feedback(adev, snd_device);
+#endif
             for (i = 0; i < num_devices; i++) {
                 disable_snd_device(adev, new_snd_devices[i]);
             }
