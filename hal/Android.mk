@@ -347,6 +347,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_AMPLIFIER)),true)
     LOCAL_SHARED_LIBRARIES += libhardware
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_TFA98XX_FEEDBACK)),true)
+    LOCAL_CFLAGS += -DENABLE_TFA98XX_FEEDBACK
+    LOCAL_SRC_FILES += audio_extn/tfa98xx_feedback.c
+endif
+
 LOCAL_CFLAGS += -D_GNU_SOURCE
 LOCAL_CFLAGS += -Wall -Werror
 
