@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "bf164c21_e2850663",
+        "filename": "hal/audio_extn/tfa98xx_feedback.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 131,
+      "author": {
+        "id": 24438
+      },
+      "writtenOn": "2020-06-11T22:53:20Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "99a3cdfa_b4dd5a8e",
+      "revId": "01a175ad46eb4ba207fabaddac27df749ed9d1ec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "e513ac3f_182fb253",
         "filename": "hal/audio_extn/tfa98xx_feedback.c",
         "patchSetId": 4
@@ -33,6 +51,24 @@
       "revId": "01a175ad46eb4ba207fabaddac27df749ed9d1ec",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a56bc3fc_d840338c",
+        "filename": "hal/audio_extn/tfa98xx_feedback.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 136,
+      "author": {
+        "id": 24438
+      },
+      "writtenOn": "2020-06-11T22:53:20Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "e513ac3f_182fb253",
+      "revId": "01a175ad46eb4ba207fabaddac27df749ed9d1ec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     },
     {
       "key": {
@@ -53,6 +89,24 @@
     },
     {
       "key": {
+        "uuid": "03787679_7ae9abe6",
+        "filename": "hal/audio_extn/tfa98xx_feedback.h",
+        "patchSetId": 4
+      },
+      "lineNbr": 25,
+      "author": {
+        "id": 24438
+      },
+      "writtenOn": "2020-06-11T22:53:20Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "0b2ed258_db622b95",
+      "revId": "01a175ad46eb4ba207fabaddac27df749ed9d1ec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "9a99f4a6_6428f166",
         "filename": "hal/audio_hw.c",
         "patchSetId": 4
@@ -67,6 +121,24 @@
       "revId": "01a175ad46eb4ba207fabaddac27df749ed9d1ec",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "7ba2e5f0_ccd67c12",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1398,
+      "author": {
+        "id": 24438
+      },
+      "writtenOn": "2020-06-11T22:53:20Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "9a99f4a6_6428f166",
+      "revId": "01a175ad46eb4ba207fabaddac27df749ed9d1ec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
