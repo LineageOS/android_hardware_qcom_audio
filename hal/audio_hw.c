@@ -5353,7 +5353,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            (out->config.rate);
     }
 
-    if (is_a2dp_out_device_type(&out->device_list))
+    if (!out->standby && is_a2dp_out_device_type(&out->device_list))
         latency += audio_extn_a2dp_get_encoder_latency();
 
     ALOGV("%s: Latency %d", __func__, latency);
