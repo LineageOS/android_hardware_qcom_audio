@@ -254,7 +254,7 @@ int AudioVoice::VoiceOutSetParameters(const char *kvpairs) {
         qal_voice_rx_device_id_ = qal_rx_device;
         qal_voice_tx_device_id_ = qal_tx_device;
 
-        if (!IsCallActive(voice_.session)) {
+        if (!IsAnyCallActive()) {
             if (mode_ == AUDIO_MODE_IN_CALL) {
                 voice_.in_call = true;
                 ret = UpdateCalls(voice_.session);
@@ -290,7 +290,7 @@ int AudioVoice::UpdateCallState(uint32_t vsid, int call_state) {
 
     if (session) {
         session->state.new_ = call_state;
-        is_call_active = IsCallActive(voice_.session);
+        is_call_active = IsCallActive(session);
         ALOGD("%s is_call_active:%d in_call:%d, mode:%d",
               __func__, is_call_active, voice_.in_call, mode_);
         if (is_call_active ||
@@ -374,6 +374,18 @@ int AudioVoice::StopCall() {
 bool AudioVoice::IsCallActive(AudioVoice::voice_session_t *pSession) {
 
     return (pSession->state.current_ != CALL_INACTIVE) ? true : false;
+}
+
+bool AudioVoice::IsAnyCallActive()
+{
+    int i;
+
+    for (i = 0; i < max_voice_sessions_; i++) {
+        if (IsCallActive(&voice_.session[i]))
+            return true;
+    }
+
+    return false;
 }
 
 int AudioVoice::VoiceStart(voice_session_t *session) {
