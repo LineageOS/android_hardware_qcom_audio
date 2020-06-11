@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "99a3cdfa_b4dd5a8e",
+        "filename": "hal/audio_extn/tfa98xx_feedback.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 131,
+      "author": {
+        "id": 3075
+      },
+      "writtenOn": "2020-06-11T22:37:08Z",
+      "side": 1,
+      "message": "Remove indent from the rest of this function by testing for not speaker and returning early like you do in the start function above.",
+      "revId": "01a175ad46eb4ba207fabaddac27df749ed9d1ec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "e513ac3f_182fb253",
+        "filename": "hal/audio_extn/tfa98xx_feedback.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 136,
+      "author": {
+        "id": 3075
+      },
+      "writtenOn": "2020-06-11T22:37:08Z",
+      "side": 1,
+      "message": "would be more correct to move this a line up into the if() block.",
+      "revId": "01a175ad46eb4ba207fabaddac27df749ed9d1ec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "0b2ed258_db622b95",
+        "filename": "hal/audio_extn/tfa98xx_feedback.h",
+        "patchSetId": 4
+      },
+      "lineNbr": 25,
+      "author": {
+        "id": 3075
+      },
+      "writtenOn": "2020-06-11T22:37:08Z",
+      "side": 1,
+      "message": "one more char of indent needed here.",
+      "revId": "01a175ad46eb4ba207fabaddac27df749ed9d1ec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9a99f4a6_6428f166",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1398,
+      "author": {
+        "id": 3075
+      },
+      "writtenOn": "2020-06-11T22:37:08Z",
+      "side": 1,
+      "message": "Looks like this should be indented a little further.",
+      "revId": "01a175ad46eb4ba207fabaddac27df749ed9d1ec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
