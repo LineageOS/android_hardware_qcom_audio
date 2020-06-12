@@ -9832,6 +9832,17 @@ static int adev_open(const hw_module_t *module, const char *name,
             adev->adm_request_focus_v2_1 = (adm_request_focus_v2_1_t)
                                     dlsym(adev->adm_lib, "adm_request_focus_v2_1");
         }
+#ifdef ENABLE_TFA98XX_FEEDBACK
+        if (access("/mnt/vendor/persist/audio/tfa9894_chk.txt", F_OK)) {
+          property_set("vendor.audio.chk.cal.spk", "2");
+          ALOGI("%s: spk cal file access fail: %s", __func__,
+                "/mnt/vendor/persist/audio/tfa9894_chk.txt");
+        } else {
+          property_set("vendor.audio.chk.cal.spk", "1");
+          ALOGI("%s: spk cal file access OK: %s", __func__,
+                "/mnt/vendor/persist/audio/tfa9894_chk.txt");
+        }
+#endif
     }
 
     adev->enable_voicerx = false;
