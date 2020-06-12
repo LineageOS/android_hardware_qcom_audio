@@ -9790,6 +9790,18 @@ static int adev_open(const hw_module_t *module, const char *name,
         }
     }
 
+#ifdef ENABLE_TFA98XX_FEEDBACK
+    if (access("/mnt/vendor/persist/audio/tfa9894_chk.txt", F_OK)) {
+      property_set("vendor.audio.chk.cal.spk", "2");
+      ALOGI("%s: spk cal file access fail: %s", __func__,
+            "/mnt/vendor/persist/audio/tfa9894_chk.txt");
+    } else {
+      property_set("vendor.audio.chk.cal.spk", "1");
+      ALOGI("%s: spk cal file access OK: %s", __func__,
+            "/mnt/vendor/persist/audio/tfa9894_chk.txt");
+    }
+#endif
+
     adev->enable_voicerx = false;
     adev->bt_wb_speech_enabled = false;
     adev->swb_speech_mode = SPEECH_MODE_INVALID;
