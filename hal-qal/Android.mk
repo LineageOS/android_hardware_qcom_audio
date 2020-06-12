@@ -30,9 +30,7 @@ LOCAL_SHARED_LIBRARIES := \
     libdl \
     libaudioutils \
     libexpat \
-    libhwbinder \
     libhidlbase \
-    libhidltransport \
     libprocessgroup \
     libutils \
     libqal \
