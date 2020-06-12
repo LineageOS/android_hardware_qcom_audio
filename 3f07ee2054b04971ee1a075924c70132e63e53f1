@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fac97c84_c11e296a",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 4491,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-06-12T07:09:43Z",
+      "side": 1,
+      "message": "Remove.",
+      "range": {
+        "startLine": 4491,
+        "startChar": 0,
+        "endLine": 4491,
+        "endChar": 4
+      },
+      "revId": "3f07ee2054b04971ee1a075924c70132e63e53f1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "74bfe3bf_5cd7daae",
+        "filename": "hal/audio_hw.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 6324,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-06-12T07:09:43Z",
+      "side": 1,
+      "message": "Remove too.",
+      "range": {
+        "startLine": 6324,
+        "startChar": 0,
+        "endLine": 6324,
+        "endChar": 8
+      },
+      "revId": "3f07ee2054b04971ee1a075924c70132e63e53f1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
