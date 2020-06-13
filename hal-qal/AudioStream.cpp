@@ -1897,6 +1897,9 @@ int StreamOutPrimary::Open() {
     } else
         outBufSize = StreamOutPrimary::GetBufferSize();
 
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_LOW_LATENCY)
+        outBufCount = LOW_LATENCY_PLAYBACK_PERIOD_COUNT;
+
     if (halInputFormat != halOutputFormat) {
         convertBufSize = outBufSize;
         convertBuffer = realloc(convertBuffer, convertBufSize);
