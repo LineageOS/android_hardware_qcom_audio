@@ -176,6 +176,10 @@
 #define AUDIO_PARAMETER_KEY_DP_CHANNEL_MASK "dp_channel_mask"
 #define AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP "spkr_device_chmap"
 
+/* Xiaomi game sound extensions */
+#define AUDIO_PARAMETER_KEY_GAME_SND_SWITCH "audio_game_sound_effect_switch"
+#define AUDIO_PARAMETER_KEY_GAME_VOL_SWITCH "audio_game_sound_volume_gap_switch"
+
 #define EVENT_EXTERNAL_SPK_1 "qc_ext_spk_1"
 #define EVENT_EXTERNAL_SPK_2 "qc_ext_spk_2"
 #define EVENT_EXTERNAL_MIC   "qc_ext_mic"
@@ -356,6 +360,10 @@ struct platform_data {
     bool use_sprk_default_sample_rate;
     struct listnode custom_mtmx_params_list;
     struct listnode custom_mtmx_in_params_list;
+    /* Game sound */
+    bool game_snd_switch;
+    bool game_vol_switch;
+    int should_decrease_vol;
 };
 
 struct  spkr_device_chmap {
@@ -7409,6 +7417,57 @@ static void platform_set_fluence_params(void *platform, struct str_parms *parms,
     }
 }
 
+void update_device_for_game() {
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int j;
+}
+
+static void platform_set_game_params(void *platform, struct str_parms *parms, char *value, int len)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int err = 0;
+    const char *status;
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_GAME_SND_SWITCH, value, len);
+
+    if (err >= 0) {
+      if (strncmp(value, "on", sizeof("on"))) {
+        status = "false";
+        my_data->game_snd_switch = false;
+      } else {
+        status = "true";
+        my_data->game_snd_switch = true;
+      }
+      property_set("vendor.audio.game.sound.effect", status);
+      str_parms_del(parms, AUDIO_PARAMETER_KEY_GAME_SND_SWITCH);
+    }
+
+    err = str_parms_get_str(parms, "audio_game_package_name", value, len);
+    if (err >= 0) {
+      if (!my_data->game_snd_switch) {
+        ALOGD("keep audio volume");
+        my_data->should_decrease_vol = 2;
+      }
+      if (!strncmp(value, "com.tencent.tmgp.sgame", sizeof"com.tencent.tmgp.pubgmhd")) {
+        ALOGD("decrease audio volume");
+        my_data->should_decrease_vol = 1;
+      }
+      if (!strncmp(value, "com.tencent.tmgp.pubgmhd", sizeof"com.tencent.tmgp.pubgmhd")
+        || !(strncmp(value, "com.tencent.tmgp.pubgmhd", sizeof("com.tencent.tmgp.pubgmhd")))) {
+        ALOGD("increase audio volume");
+        my_data->should_decrease_vol = 0;
+      }
+      if (strncmp(value, "com.tencent.tmgp.pubgmhd", sizeof"com.tencent.tmgp.pubgmhd")
+        || (strncmp(value, "com.tencent.tmgp.pubgmhd", sizeof("com.tencent.tmgp.pubgmhd"))
+        (strncmp(value, "com.tencent.tmgp.sgame", sizeof"com.tencent.tmgp.sgame")))) {
+        update_device_for_game();
+        ALOGD(__func__);
+      }
+      }
+      str_parms_del(params, "audio_game_package_name");
+    }
+}
+
 int platform_set_parameters(void *platform, struct str_parms *parms)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -7564,6 +7623,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         ALOGV("%s: max_mic_count %d", __func__, my_data->max_mic_count);
     }
 
+    platform_set_game_params(platform, parms, value, len);
     platform_set_fluence_params(platform, parms, value, len);
 
     /* handle audio calibration parameters */
@@ -7906,6 +7966,16 @@ void platform_get_parameters(void *platform,
             }
         }
         str_parms_add_int(reply, AUDIO_PARAMETER_IS_HW_DECODER_SESSION_ALLOWED, isallowed);
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_GAME_SND_SWITCH, value, sizeof(value));
+    if (ret >= 0) {
+      str_parms_add_str(reply, AUDIO_PARAMETER_KEY_GAME_SND_SWITCH, my_data->game_snd_switch?"true":"false");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_GAME_VOL_SWITCH, value, sizeof(value));
+    if (ret >= 0) {
+      str_parms_add_str(reply, AUDIO_PARAMETER_KEY_GAME_VOL_SWITCH, my_data->game_vol_switch?"true":"false");
     }
 
     kv_pairs = str_parms_to_str(reply);
