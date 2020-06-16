@@ -828,6 +828,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
             param_device_connection.device_config.dp_config.controller = controller;
             param_device_connection.device_config.dp_config.stream = stream;
+            dp_stream = stream;
             ALOGI("%s: plugin device cont %d stream %d", __func__, controller, stream);
         }
 
