@@ -189,6 +189,25 @@
 
 #define GET_IN_DEVICE_INDEX(SND_DEVICE) ((SND_DEVICE) - (SND_DEVICE_IN_BEGIN))
 
+#define is_usb_in_snd_dev(x) \
+    (((x) == SND_DEVICE_IN_USB_HEADSET_MIC) ||                           \
+    ((x) == SND_DEVICE_IN_USB_HEADSET_MIC_AEC) ||                        \
+    ((x) == SND_DEVICE_IN_VOICE_USB_HEADSET_MIC) ||                      \
+    ((x) == SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC) ||                \
+    ((x) == SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC) ||                \
+    ((x) == SND_DEVICE_IN_USB_HEADSET_MULTI_CHANNEL_MIC) ||              \
+    ((x) == SND_DEVICE_IN_USB_HEADSET_MULTI_CHANNEL_MIC_AEC) ||          \
+    ((x) == SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MULTI_CHANNEL_MIC) ||  \
+    ((x) == SND_DEVICE_IN_VOICE_RECOG_USB_HEADSET_MULTI_CHANNEL_MIC))
+
+#define is_usb_out_snd_dev(x) \
+    (((x) == SND_DEVICE_OUT_USB_HEADSET) ||         \
+    ((x) == SND_DEVICE_OUT_USB_HEADPHONES) ||       \
+    ((x) == SND_DEVICE_OUT_VOICE_USB_HEADPHONES) || \
+    ((x) == SND_DEVICE_OUT_VOICE_USB_HEADSET) ||    \
+    ((x) == SND_DEVICE_OUT_VOICE_TTY_FULL_USB) ||   \
+    ((x) == SND_DEVICE_OUT_VOICE_TTY_VCO_USB))
+
 #ifdef DYNAMIC_LOG_ENABLED
 extern void log_utils_init(void);
 extern void log_utils_deinit(void);
@@ -367,6 +386,8 @@ struct platform_data {
     bool is_multiple_sample_rate_combo_supported;
     struct listnode custom_mtmx_params_list;
     struct listnode custom_mtmx_in_params_list;
+    struct power_mode_cfg power_mode_cfg[SND_DEVICE_MAX];
+    struct island_cfg island_cfg[SND_DEVICE_MAX];
 };
 
 struct  spkr_device_chmap {
@@ -1594,23 +1615,7 @@ static struct name_to_index audio_source_index[AUDIO_SOURCE_CNT] = {
 
 static bool is_usb_snd_dev(snd_device_t snd_device)
 {
-    if (snd_device < SND_DEVICE_IN_BEGIN) {
-        if (snd_device == SND_DEVICE_OUT_USB_HEADSET ||\
-            snd_device == SND_DEVICE_OUT_USB_HEADPHONES ||\
-            snd_device == SND_DEVICE_OUT_VOICE_USB_HEADPHONES ||\
-            snd_device == SND_DEVICE_OUT_VOICE_USB_HEADSET ||\
-            snd_device == SND_DEVICE_OUT_VOICE_TTY_FULL_USB ||\
-            snd_device == SND_DEVICE_OUT_VOICE_TTY_VCO_USB)
-            return true;
-    } else {
-        if (snd_device == SND_DEVICE_IN_USB_HEADSET_MIC ||\
-            snd_device == SND_DEVICE_IN_USB_HEADSET_MIC_AEC ||\
-            snd_device == SND_DEVICE_IN_VOICE_USB_HEADSET_MIC ||\
-            snd_device == SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MIC ||\
-            snd_device == SND_DEVICE_IN_VOICE_RECOG_USB_HEADSET_MIC)
-            return true;
-    }
-    return false;
+    return is_usb_in_snd_dev(snd_device) || is_usb_out_snd_dev(snd_device);
 }
 
 bool is_operator_tmus()
@@ -1757,6 +1762,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("lahaina-mtp-snd-card")) ||
          !strncmp(snd_card_name, "lahaina-qrd-snd-card",
                    sizeof("lahaina-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-cdp-snd-card",
+                   sizeof("lahaina-cdp-snd-card")) ||
          !strncmp(snd_card_name, "kona-mtp-snd-card",
                    sizeof("kona-mtp-snd-card")) ||
          !strncmp(snd_card_name, "kona-qrd-snd-card",
@@ -2221,6 +2228,11 @@ static void set_platform_defaults(struct platform_data * my_data)
         operator_specific_device_table[dev] = NULL;
         external_specific_device_table[dev] = NULL;
         snd_device_delay_ms[dev] = 0;
+        /* Init island cfg and power mode */
+        my_data->island_cfg[dev].mixer_ctl = NULL;
+        my_data->power_mode_cfg[dev].mixer_ctl = NULL;
+        my_data->island_cfg[dev].enable = false;
+        my_data->power_mode_cfg[dev].enable = false;
     }
     for (dev = 0; dev < SND_DEVICE_MAX; dev++) {
         backend_bit_width_table[dev] = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
@@ -9023,6 +9035,154 @@ static int platform_get_voice_call_backend(struct audio_device* adev)
    return backend_idx;
 }
 
+bool platform_get_power_mode_on_device(void *platform, snd_device_t snd_device) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    ALOGD("%s:power mode status on snd_device = (%s %d)", __func__,
+           platform_get_snd_device_name(snd_device),
+           my_data->power_mode_cfg[snd_device].enable);
+    return my_data->power_mode_cfg[snd_device].enable;
+
+}
+
+bool platform_get_island_cfg_on_device(void *platform, snd_device_t snd_device) {
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    ALOGD("%s:island cfg status on snd_device = (%s %d)", __func__,
+           platform_get_snd_device_name(snd_device),
+           my_data->island_cfg[snd_device].enable);
+    return my_data->island_cfg[snd_device].enable;
+}
+
+int platform_set_power_mode_on_device(struct audio_device* adev,
+                                      snd_device_t snd_device,
+                                      bool enable)
+{
+    int ret = 0;
+    struct  mixer_ctl *ctl;
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer,
+                                my_data->power_mode_cfg[snd_device].mixer_ctl);
+
+    if (ctl) {
+        ALOGD("%s:set power mode to %s",
+               __func__, (enable == true) ? "true" : "false");
+        mixer_ctl_set_value(ctl, 0, (int)enable);
+    } else {
+        ALOGE("%s:Could not get ctl for power mode mixer", __func__);
+        ret = -EINVAL;
+        goto error;
+    }
+    return ret;
+
+error:
+    my_data->power_mode_cfg[snd_device].enable = false;
+    my_data->power_mode_cfg[snd_device].mixer_ctl = NULL;
+    return ret;
+}
+
+int platform_set_island_cfg_on_device(struct audio_device* adev,
+                                      snd_device_t snd_device,
+                                      bool enable)
+{
+    int ret = 0;
+    struct  mixer_ctl *ctl;
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
+
+    ctl = mixer_get_ctl_by_name(adev->mixer,
+                                my_data->island_cfg[snd_device].mixer_ctl);
+
+    if (ctl) {
+        ALOGD("%s:set island cfg to %s",
+               __func__, (enable == true) ? "true" : "false");
+        mixer_ctl_set_value(ctl, 0, (int)enable);
+    } else {
+        ALOGE("%s:Could not get ctl for island cfg mixer", __func__);
+        return -EINVAL;
+        goto error;
+    }
+    return ret;
+
+error:
+    my_data->island_cfg[snd_device].enable = false;
+    my_data->island_cfg[snd_device].mixer_ctl = NULL;
+    return ret;
+}
+
+char * platform_update_power_mode_mixer_ctrl(snd_device_t snd_device)
+{
+    char mixer_ctl[MIXER_PATH_MAX_LENGTH];
+    char *power_mode_mixer_ctrl = NULL;
+    char * be_itf = hw_interface_table[snd_device];
+
+    if (be_itf != NULL) {
+        snprintf(mixer_ctl, sizeof(mixer_ctl),
+                 "%s Power Mode", be_itf);
+        power_mode_mixer_ctrl = strdup(mixer_ctl);
+        ALOGD("%s: power mode mixer ctrl %s\n",
+              __func__, power_mode_mixer_ctrl);
+    }
+
+    return power_mode_mixer_ctrl;
+}
+
+char * platform_update_island_cfg_mixer_ctrl(snd_device_t snd_device)
+{
+    char mixer_ctl[MIXER_PATH_MAX_LENGTH];
+    char *island_cfg_mixer_ctrl = NULL;
+    char * be_itf = hw_interface_table[snd_device];
+
+    if (be_itf != NULL) {
+        snprintf(mixer_ctl, sizeof(mixer_ctl),
+                 "%s Island Config", be_itf);
+        island_cfg_mixer_ctrl = strdup(mixer_ctl);
+        ALOGD("%s: island cfg mixer ctrl %s\n",
+              __func__, island_cfg_mixer_ctrl);
+    }
+
+    return island_cfg_mixer_ctrl;
+}
+
+bool platform_check_and_update_island_power_status(void *platform,
+                                          struct audio_usecase* usecase,
+                                          snd_device_t snd_device)
+{
+    bool ret = false;
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_EARPIECE) ||
+        compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_WIRED_HEADSET) ||
+        compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_WIRED_HEADPHONE)) {
+        if (snd_device >= SND_DEVICE_MIN && snd_device < SND_DEVICE_MAX) {
+            /* update island and power mode in current device */
+            my_data->island_cfg[snd_device].mixer_ctl =
+                            platform_update_island_cfg_mixer_ctrl(snd_device);
+            my_data->power_mode_cfg[snd_device].mixer_ctl =
+                            platform_update_power_mode_mixer_ctrl(snd_device);
+            if (my_data->island_cfg[snd_device].mixer_ctl != NULL &&
+                my_data->power_mode_cfg[snd_device].mixer_ctl != NULL) {
+                /* enable island and power mode in current device */
+                my_data->island_cfg[snd_device].enable = true;
+                my_data->power_mode_cfg[snd_device].enable = true;
+                ret = true;
+            }
+        }
+    }
+
+    return ret;
+}
+
+void platform_reset_island_power_status(void *platform, snd_device_t snd_device)
+{
+     struct platform_data *my_data = (struct platform_data *)platform;
+
+     my_data->island_cfg[snd_device].mixer_ctl = NULL;
+     my_data->power_mode_cfg[snd_device].mixer_ctl = NULL;
+     my_data->island_cfg[snd_device].enable = false;
+     my_data->power_mode_cfg[snd_device].enable = false;
+}
+
 /*
  * configures afe with bit width and Sample Rate
  */
@@ -9986,7 +10146,7 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
     } else if (my_data->is_internal_codec &&
                my_data->is_default_be_config &&
-               !audio_is_usb_in_device(snd_device)) {
+               !is_usb_in_snd_dev(snd_device)) {
         sample_rate =  CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         channels = CODEC_BACKEND_DEFAULT_TX_CHANNELS;
         if (in && in->bit_width == 24)
@@ -10018,7 +10178,7 @@ static bool platform_check_capture_codec_backend_cfg(struct audio_device* adev,
             }
         }
         if ((sample_rate % INPUT_SAMPLING_RATE_11025 == 0) &&
-            (!audio_is_usb_in_device(snd_device))) {
+            (!is_usb_in_snd_dev(snd_device))) {
             ALOGV("%s:txbecf: afe: set sample rate to default Sample Rate(48k)",__func__);
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
         }
