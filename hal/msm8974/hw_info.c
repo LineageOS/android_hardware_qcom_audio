@@ -820,6 +820,29 @@ static void update_hardware_info_msm8953(struct hardware_info *hw_info, const ch
     }
 }
 
+static void update_hardware_info_msm8952(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "msm8952-snd-card")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-snd-card-mtp")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-tomtom-snd-card")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-tasha-snd-card")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-tashalite-snd-card")) {
+       strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    }  else if (!strcmp(snd_card_name, "msm8952-skum-snd-card")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-sku1-snd-card")) {
+        strlcpy(hw_info->name, "msm8937", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-sku2-snd-card")) {
+        strlcpy(hw_info->name, "msm8937", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-sku3-tasha-snd-card")) {
+       strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    }
+}
+
 void *hw_info_init(const char *snd_card_name)
 {
     struct hardware_info *hw_info;
@@ -898,6 +921,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "msm8953")) {
         ALOGV("MSM8953 - variant soundcard");
         update_hardware_info_msm8953(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "msm8952")) {
+        ALOGV("MSM8952 - variant soundcard");
+        update_hardware_info_msm8952(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
