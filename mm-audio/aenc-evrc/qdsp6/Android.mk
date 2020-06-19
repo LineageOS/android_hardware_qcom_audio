@@ -54,7 +54,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
 endif
 
-ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_SANITIZE := integer_overflow
 endif
 include $(BUILD_SHARED_LIBRARY)
@@ -79,7 +79,7 @@ LOCAL_SHARED_LIBRARIES  += libOmxEvrcEnc
 LOCAL_VENDOR_MODULE     := true
 LOCAL_SRC_FILES         := test/omx_evrc_enc_test.c
 
-ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_SANITIZE := integer_overflow
 endif
 include $(BUILD_EXECUTABLE)
