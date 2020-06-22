@@ -106,6 +106,7 @@ public:
     int SetVoiceVolume(float volume);
     audio_devices_t GetMatchingTxDevice(audio_devices_t halRxDeviceId);
     bool IsCallActive(voice_session_t *pSession);
+    bool IsAnyCallActive();
     int StopCall();
     AudioVoice();
     ~AudioVoice();
