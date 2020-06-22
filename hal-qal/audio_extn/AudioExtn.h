@@ -42,7 +42,7 @@ typedef bool (*batt_prop_is_charging_t)();
 class AudioExtn
 {
 public:
-    static int audio_extn_parse_compress_metadata(struct audio_config *config_, qal_param_payload *param_payload, str_parms *parms, uint32_t *sr, uint16_t *ch);
+    static int audio_extn_parse_compress_metadata(struct audio_config *config_, qal_snd_dec_t *qal_snd_dec, str_parms *parms, uint32_t *sr, uint16_t *ch);
     static int get_controller_stream_from_params(struct str_parms *parms, int *controller, int *stream);
     static void battery_listener_feature_init(bool is_feature_enabled);
     static void battery_properties_listener_init(battery_status_change_fn_t fn);
