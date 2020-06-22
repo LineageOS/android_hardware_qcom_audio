@@ -3156,6 +3156,11 @@ bool audio_extn_utils_is_vendor_enhanced_fwk()
     if (is_vendor_enhanced_fwk != -EINVAL)
         return (bool)is_vendor_enhanced_fwk;
 
+    if (property_get_bool("vendor.audio.no.fwk.enhance", false)) {
+        is_vendor_enhanced_fwk = 0;
+        return is_vendor_enhanced_fwk;
+    }
+
     vndk_fwk_init();
 
     if (mVndkFwk.isVendorEnhancedFwk != NULL) {
@@ -3174,6 +3179,11 @@ int audio_extn_utils_get_vendor_enhanced_info()
     static int vendor_enhanced_info = -EINVAL;
     if (vendor_enhanced_info != -EINVAL)
         return vendor_enhanced_info;
+
+    if (property_get_bool("vendor.audio.no.fwk.enhance", false)) {
+        vendor_enhanced_info = 0;
+        return vendor_enhanced_info;
+    }
 
     vndk_fwk_init();
 
