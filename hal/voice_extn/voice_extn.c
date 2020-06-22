@@ -88,6 +88,7 @@ static bool voice_extn_compress_voip_enabled = false;
 static bool voice_extn_dynamic_ecns_feature_enabled = false;
 static bool voice_extn_incall_music_enabled = false;
 static bool voice_extn_multi_session_enabled = false;
+static bool voice_extn_power_mode_enabled = false;
 
 int voice_extn_is_call_state_active(struct audio_device *adev, bool *is_call_active);
 
@@ -456,6 +457,18 @@ bool voice_extn_is_multi_session_supported()
     return voice_extn_multi_session_enabled;
 }
 
+void voice_power_mode_feature_init(bool is_feature_enabled)
+{
+    voice_extn_power_mode_enabled = is_feature_enabled;
+    ALOGV("%s:: ---- Feature POWER MODE is %s ----", __func__,
+                                is_feature_enabled ? "ENABLED" : "NOT ENABLED");
+}
+
+bool voice_extn_is_voice_power_mode_supported()
+{
+    return voice_extn_power_mode_enabled;
+}
+
 void voice_extn_feature_init()
 {
     // Register feature function here
@@ -471,6 +484,9 @@ void voice_extn_feature_init()
                           false));
     multi_voice_session_feature_init(
        property_get_bool("vendor.audio.feature.multi_voice_session.enable",
+                          false));
+    voice_power_mode_feature_init(
+       property_get_bool("vendor.audio.feature.power_mode.enable",
                           false));
 }
 

@@ -3510,7 +3510,7 @@
     </path>
 
     <path name="speaker-tmic">
-        <path name="three-tmic" />
+        <path name="three-mic" />
     </path>
 
     <path name="voice-speaker-tmic">
