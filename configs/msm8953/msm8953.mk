@@ -248,6 +248,7 @@ vendor.audio.feature.hdmi_edid.enable=true  \
 endor.audio.feature.spkr_prot.enable=true  \
 vendor.audio.feature.dsm_feedback.enable=false \
 vendor.audio.feature.ssrec.enable=true  \
+vendor.audio.feature.compr_voip.enable=true \
 vendor.audio.feature.kpi_optimize.enable=true \
 vendor.audio.feature.usb_offload.enable=false  \
 vendor.audio.feature.usb_offload_burst_mode.enable=false \
