@@ -63,6 +63,16 @@ struct voice {
     bool in_call;
 };
 
+struct power_mode_cfg {
+   bool enable;
+   char *mixer_ctl;
+};
+
+struct island_cfg {
+   bool enable;
+   char *mixer_ctl;
+};
+
 enum {
     INCALL_REC_NONE = -1,
     INCALL_REC_UPLINK,
