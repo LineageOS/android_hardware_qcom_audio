@@ -330,8 +330,13 @@ LOCAL_MODULE := libcirrusspkrprot
 LOCAL_MODULE_OWNER := third_party
 LOCAL_VENDOR_MODULE := true
 
+ifeq ($(strip $(AUDIO_FEATURE_SONY_CIRRUS)),true)
+LOCAL_SRC_FILES := \
+        cirrus_sony.c
+else
 LOCAL_SRC_FILES:= \
         cirrus_playback.c
+endif
 
 LOCAL_CFLAGS += \
     -Wall \
@@ -339,8 +344,12 @@ LOCAL_CFLAGS += \
     -Wno-unused-function \
     -Wno-unused-variable \
 
+ifeq ($(strip $(AUDIO_FEATURE_SONY_CIRRUS)),true)
+LOCAL_CFLAGS += -DTA_DEBUG -DDEBUG_SHOW_VALUES -DDEBUG_RUN_ONLY_READ_TA
+else
 LOCAL_CFLAGS += -DENABLE_CIRRUS_DETECTION
 LOCAL_CFLAGS += -DCIRRUS_FACTORY_CALIBRATION
+endif
 
 LOCAL_SHARED_LIBRARIES := \
     libaudioutils \
