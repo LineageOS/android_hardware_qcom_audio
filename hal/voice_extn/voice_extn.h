@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, 2016-2020, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -86,6 +86,8 @@ void compr_voip_feature_init(bool is_feature_enabled);
 bool voice_extn_is_compress_voip_supported();
 void multi_voice_session_feature_init(bool is_feature_enabled);
 bool voice_extn_is_multi_session_supported();
+void voice_power_mode_feature_init(bool is_feature_enabled);
+bool voice_extn_is_voice_power_mode_supported();
 
 
 #endif //VOICE_EXTN_H
