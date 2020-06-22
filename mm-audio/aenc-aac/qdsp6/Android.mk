@@ -44,6 +44,7 @@ LOCAL_STATIC_LIBRARIES += libprofile_rt
 endif
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
@@ -54,6 +55,9 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
 endif
 
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 # ---------------------------------------------------------------------------------
@@ -77,6 +81,9 @@ LOCAL_SHARED_LIBRARIES  += libOmxAacEnc
 LOCAL_VENDOR_MODULE     := true
 LOCAL_SRC_FILES         := test/omx_aac_enc_test.c
 
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_EXECUTABLE)
 
 endif

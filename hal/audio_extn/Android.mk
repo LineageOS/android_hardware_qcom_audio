@@ -40,6 +40,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-effects)
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -50,6 +51,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #--------------------------------------------
@@ -63,7 +67,7 @@ LOCAL_VENDOR_MODULE := true
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 qcs605 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 qcs605 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -99,6 +103,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-effects)
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -109,6 +114,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -122,7 +130,7 @@ LOCAL_VENDOR_MODULE := true
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -160,6 +168,7 @@ LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/common/inc/
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -170,6 +179,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 endif
 #--------------------------------------------
@@ -184,7 +196,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
 endif
@@ -219,6 +231,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-effects)
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -229,6 +242,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #--------------------------------------------
@@ -236,7 +252,7 @@ include $(BUILD_SHARED_LIBRARY)
 #--------------------------------------------
 include $(CLEAR_VARS)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
 endif
@@ -279,11 +295,15 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-effects)
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 #====================================================================================================
 # --- enable 3rd Party Spkr-prot lib
@@ -291,7 +311,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
 endif
@@ -334,11 +354,15 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-effects)
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -352,7 +376,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -387,6 +411,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -397,6 +422,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -412,7 +440,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -447,6 +475,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -458,6 +487,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -471,7 +503,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -510,6 +542,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -521,6 +554,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -534,7 +570,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -572,6 +608,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -581,8 +618,16 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_ADDITIONAL_DEPENDENCIES += $(BOARD_VENDOR_KERNEL_MODULES)
 endif
 
+# Kernel specific feature
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GKI)), true)
+    LOCAL_CFLAGS += -DAUDIO_GKI_ENABLED
+endif
+
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -596,7 +641,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -641,6 +686,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -652,6 +698,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -665,7 +714,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito bengal atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -700,6 +749,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -711,6 +761,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 #include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -724,7 +777,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona sdm660 msm8937 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina sdm660 msm8937 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM = msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -759,6 +812,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -769,6 +823,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 #-------------------------------------------
 #            Build AUDIOZOOM
@@ -781,7 +838,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona sdm660 msm8937 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina sdm660 msm8937 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM = msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -816,6 +873,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -826,6 +884,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
@@ -841,7 +902,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := vendor/qcom/opensource/audio-hal/primary-hal/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lito atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina lito atoll sdm660 msm8937 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -873,6 +934,7 @@ LOCAL_C_INCLUDES := \
     $(call include-path-for, audio-route) \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -884,4 +946,7 @@ endif
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)

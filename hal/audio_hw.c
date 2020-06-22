@@ -3478,7 +3478,12 @@ static int stop_output_stream(struct stream_out *out)
         (audio_extn_passthru_is_passthrough_stream(out))) {
         ALOGV("Disable passthrough , reset mixer to pcm");
         /* NO_PASSTHROUGH */
+#ifdef AUDIO_GKI_ENABLED
+        /* out->compr_config.codec->reserved[0] is for compr_passthr */
+        out->compr_config.codec->reserved[0] = 0;
+#else
         out->compr_config.codec->compr_passthr = 0;
+#endif
         audio_extn_passthru_on_stop(out);
         audio_extn_dolby_set_dap_bypass(adev, DAP_STATE_ON);
     }
@@ -5433,6 +5438,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     const size_t frame_size = audio_stream_out_frame_size(stream);
     const size_t frames = (frame_size != 0) ? bytes / frame_size : bytes;
     struct audio_usecase *usecase = NULL;
+    uint32_t compr_passthr = 0;
 
     ATRACE_BEGIN("out_write");
     lock_output_stream(out);
@@ -5500,8 +5506,15 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 }
             }
 
+#ifdef AUDIO_GKI_ENABLED
+            /* out->compr_config.codec->reserved[0] is for compr_passthr */
+            compr_passthr = out->compr_config.codec->reserved[0];
+#else
+            compr_passthr = out->compr_config.codec->compr_passthr;
+#endif
+
             if ((channels < (int)audio_channel_count_from_out_mask(out->channel_mask)) &&
-                (out->compr_config.codec->compr_passthr == PASSTHROUGH) &&
+                (compr_passthr == PASSTHROUGH) &&
                 (out->is_iec61937_info_available == true)) {
                     ALOGE("%s: ERROR: Unsupported channel config in passthrough mode", __func__);
                     ret = -EINVAL;
@@ -7561,7 +7574,12 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
         if (out->flags & AUDIO_OUTPUT_FLAG_FAST) {
             ALOGD("%s: Setting latency mode to true", __func__);
+#ifdef AUDIO_GKI_ENABLED
+            /* out->compr_config.codec->reserved[1] is for flags */
+            out->compr_config.codec->reserved[1] |= audio_extn_utils_get_perf_mode_flag();
+#else
             out->compr_config.codec->flags |= audio_extn_utils_get_perf_mode_flag();
+#endif
         }
 
         if (out->usecase == USECASE_INVALID) {
@@ -7613,8 +7631,14 @@ int adev_open_output_stream(struct audio_hw_device *dev,
             out->bit_width = AUDIO_OUTPUT_BIT_WIDTH;
 
         if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP)
+#ifdef AUDIO_GKI_ENABLED
+            /* out->compr_config.codec->reserved[1] is for flags */
+            out->compr_config.codec->reserved[1] |= COMPRESSED_TIMESTAMP_FLAG;
+        ALOGVV("%s : out->compr_config.codec->flags -> (%#x) ", __func__, out->compr_config.codec->reserved[1]);
+#else
             out->compr_config.codec->flags |= COMPRESSED_TIMESTAMP_FLAG;
         ALOGVV("%s : out->compr_config.codec->flags -> (%#x) ", __func__, out->compr_config.codec->flags);
+#endif
 
         /*TODO: Do we need to change it for passthrough */
         out->compr_config.codec->format = SND_AUDIOSTREAMFORMAT_RAW;
@@ -7751,7 +7775,12 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         }
         if (config->format == AUDIO_FORMAT_DSD) {
             out->flags |= AUDIO_OUTPUT_FLAG_COMPRESS_PASSTHROUGH;
+#ifdef AUDIO_GKI_ENABLED
+            /* out->compr_config.codec->reserved[0] is for compr_passthr */
+            out->compr_config.codec->reserved[0] = PASSTHROUGH_DSD;
+#else
             out->compr_config.codec->compr_passthr = PASSTHROUGH_DSD;
+#endif
         }
 
         create_offload_callback_thread(out);

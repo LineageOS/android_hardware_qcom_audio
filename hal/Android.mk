@@ -9,7 +9,7 @@ LOCAL_ARM_MODE := arm
 
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter msm8974 msm8226 msm8084 msm8610 apq8084 msm8994 msm8992 msm8996 msm8998 apq8098_latv sdm845 sdm710 qcs605 sdmshrike msmnile kona sdm660 msm8937 $(MSMSTEPPE) $(TRINKET) lito atoll bengal,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter msm8974 msm8226 msm8084 msm8610 apq8084 msm8994 msm8992 msm8996 msm8998 apq8098_latv sdm845 sdm710 qcs605 sdmshrike msmnile kona lahaina sdm660 msm8937 $(MSMSTEPPE) $(TRINKET) lito atoll bengal,$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM = msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
@@ -71,7 +71,7 @@ ifneq ($(filter msmnile sdmshrike,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS += -DINCALL_MUSIC_ENABLED
   LOCAL_CFLAGS += -DINCALL_STEREO_CAPTURE_ENABLED
 endif
-ifneq ($(filter kona,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS := -DPLATFORM_KONA
   LOCAL_CFLAGS += -DMAX_TARGET_SPECIFIC_CHANNEL_CNT="4"
   LOCAL_CFLAGS += -DINCALL_STEREO_CAPTURE_ENABLED
@@ -161,6 +161,7 @@ LOCAL_C_INCLUDES += \
     $(LOCAL_PATH)/voice_extn
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
@@ -239,6 +240,7 @@ endif
 # Hardware specific feature
 ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
         LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+        LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
         LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
         LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 endif
@@ -324,6 +326,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
     LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
 endif
 
+# Kernel specific feature
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GKI)), true)
+    LOCAL_CFLAGS += -DAUDIO_GKI_ENABLED
+endif
+
 # Legacy feature
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_KEEP_ALIVE_ARM_FFV)), true)
     LOCAL_CFLAGS += -DRUN_KEEP_ALIVE_IN_ARM_FFV
@@ -371,6 +378,9 @@ LOCAL_MODULE_OWNER := qti
 
 LOCAL_VENDOR_MODULE := true
 
+ifneq ($(filter kona lahaina,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
 include $(BUILD_SHARED_LIBRARY)
 
 LOCAL_CFLAGS += -Wno-unused-variable

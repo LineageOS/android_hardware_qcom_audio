@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -63,9 +63,15 @@ uint64_t timestamp;
 };
 #define compress_config_set_timstamp_flag(config) (-ENOSYS)
 #else
+#ifdef AUDIO_GKI_ENABLED
+/* (config).codec->reserved[1] is for flags */
+#define compress_config_set_timstamp_flag(config) \
+            (config)->codec->reserved[1] |= COMPRESSED_TIMESTAMP_FLAG
+#else
 #define compress_config_set_timstamp_flag(config) \
             (config)->codec->flags |= COMPRESSED_TIMESTAMP_FLAG
-#endif
+#endif /* AUDIO_GKI_ENABLED */
+#endif /* COMPRESSED_TIMESTAMP_FLAG */
 
 #define COMPRESS_RECORD_NUM_FRAGMENTS 8
 
@@ -281,6 +287,7 @@ int cin_configure_input_stream(struct stream_in *in, struct audio_config *in_con
     struct audio_config config = {.format = 0};
     int ret = 0, buffer_size = 0, meta_size = sizeof(struct snd_codec_metadata);
     cin_private_data_t *cin_data = NULL;
+    uint32_t compr_passthr = 0, flags = 0;
 
     if (!COMPRESSED_TIMESTAMP_FLAG &&
         (in->flags & (AUDIO_INPUT_FLAG_TIMESTAMP | AUDIO_INPUT_FLAG_PASSTHROUGH))) {
@@ -326,17 +333,26 @@ int cin_configure_input_stream(struct stream_in *in, struct audio_config *in_con
     cin_data->compr_config.codec->format = hal_format_to_alsa(in->format);
 
     if (cin_data->compr_config.codec->id == SND_AUDIOCODEC_PCM)
-        cin_data->compr_config.codec->compr_passthr = LEGACY_PCM;
+        compr_passthr = LEGACY_PCM;
     else if (cin_data->compr_config.codec->id == SND_AUDIOCODEC_IEC61937)
-        cin_data->compr_config.codec->compr_passthr = PASSTHROUGH_IEC61937;
+        compr_passthr = PASSTHROUGH_IEC61937;
     else
-        cin_data->compr_config.codec->compr_passthr = PASSTHROUGH_GEN;
+        compr_passthr = PASSTHROUGH_GEN;
 
     if (in->flags & AUDIO_INPUT_FLAG_FAST) {
         ALOGD("%s: Setting latency mode to true", __func__);
-        cin_data->compr_config.codec->flags |= audio_extn_utils_get_perf_mode_flag();
+        flags |= audio_extn_utils_get_perf_mode_flag();
     }
 
+#ifdef AUDIO_GKI_ENABLED
+    /* out->compr_config.codec->reserved[0] is for compr_passthr */
+    cin_data->compr_config.codec->reserved[0] = compr_passthr;
+    /* out->compr_config.codec->reserved[1] is for flags */
+    cin_data->compr_config.codec->reserved[1] = flags;
+#else
+    cin_data->compr_config.codec->compr_passthr =  compr_passthr;
+    cin_data->compr_config.codec->flags = flags;
+#endif
     if ((in->flags & AUDIO_INPUT_FLAG_TIMESTAMP) ||
         (in->flags & AUDIO_INPUT_FLAG_PASSTHROUGH)) {
         compress_config_set_timstamp_flag(&cin_data->compr_config);

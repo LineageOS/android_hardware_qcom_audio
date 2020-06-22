@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.    -->
+<!-- Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.    -->
 <!--                                                                        -->
 <!-- Redistribution and use in source and binary forms, with or without     -->
 <!-- modification, are permitted provided that the following conditions are -->
@@ -726,6 +726,10 @@
 
     <path name="voice-rec-dmic-ef-fluence">
         <path name="dmic-endfire" />
+    </path>
+
+    <path name="hearing-aid-mic">
+        <path name="voice-speaker-mic"/>
     </path>
 
     <path name="handset-stereo-dmic-ef-liquid">
