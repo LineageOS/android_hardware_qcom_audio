@@ -1173,10 +1173,12 @@ qal_stream_type_t StreamInPrimary::GetQalStreamType(
         case AUDIO_INPUT_FLAG_MMAP_NOIRQ:
             qalStreamType = QAL_STREAM_ULTRA_LOW_LATENCY;
             break;
+        case AUDIO_INPUT_FLAG_NONE:
+            qalStreamType = QAL_STREAM_DEEP_BUFFER;
+            break;
         default:
             /*
             unsupported from QAL
-            AUDIO_INPUT_FLAG_NONE        = 0x0,
             AUDIO_INPUT_FLAG_HW_HOTWORD = 0x2,
             AUDIO_INPUT_FLAG_SYNC        = 0x8,
             AUDIO_INPUT_FLAG_HW_AV_SYNC = 0x40,
@@ -2733,6 +2735,11 @@ uint32_t StreamInPrimary::GetBufferSize() {
                     config_.format);
     } else if (streamAttributes_.type == QAL_STREAM_ULTRA_LOW_LATENCY) {
         return ULL_PERIOD_SIZE * ULL_PERIOD_MULTIPLIER *
+            audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+    } else if (streamAttributes_.type == QAL_STREAM_DEEP_BUFFER) {
+        return (config_.sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC/ 1000) *
             audio_bytes_per_frame(
                     audio_channel_count_from_out_mask(config_.channel_mask),
                     config_.format);
