@@ -467,6 +467,7 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
     switch (astream_out->GetUseCase()) {
     case USECASE_AUDIO_PLAYBACK_OFFLOAD:
         //TODO: get dsp latency for compress usecase
+        latency = COMPRESS_OFFLOAD_PLAYBACK_LATENCY;
         break;
     case USECASE_AUDIO_PLAYBACK_ULL:
     case USECASE_AUDIO_PLAYBACK_MMAP:
@@ -486,6 +487,9 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
     case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
         latency = LOW_LATENCY_OUTPUT_PERIOD_DURATION;
         latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
+        break;
+    case USECASE_AUDIO_PLAYBACK_VOIP:
+        latency += (VOIP_PERIOD_COUNT_DEFAULT * DEFAULT_VOIP_BUF_DURATION_MS * DEFAULT_VOIP_BIT_DEPTH_BYTE)/2;
         break;
     default:
         latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
