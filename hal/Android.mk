@@ -365,6 +365,13 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_AMPLIFIER)),true)
     LOCAL_SHARED_LIBRARIES += libhardware
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_CON_THREAD)),true)
+    LOCAL_CFLAGS += -DCON_THREAD
+    LOCAL_SRC_FILES += audio_extn/audio_con_thread.c
+endif
+
+LOCAL_SRC_FILES += audio_extn/audio_con_thread.cpp
+
 LOCAL_CFLAGS += -D_GNU_SOURCE
 LOCAL_CFLAGS += -Wall -Werror
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)

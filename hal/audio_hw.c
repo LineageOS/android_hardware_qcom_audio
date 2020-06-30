@@ -87,6 +87,8 @@
 
 #include "audio_amplifier.h"
 
+#include "audio_con_thread.h"
+
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
 #define LOG_MASK HAL_MOD_FILE_AUDIO_HW
@@ -10787,6 +10789,9 @@ static int adev_open(const hw_module_t *module, const char *name,
     audio_extn_sound_trigger_init(adev); /* dependent on snd_mon_init() */
     audio_extn_sound_trigger_update_battery_status(adev->is_charging);
     audio_extn_audiozoom_init();
+
+    audio_con_thread();
+
     pthread_mutex_unlock(&adev->lock);
     /* Allocate memory for Device config params */
     adev->device_cfg_params = (struct audio_device_config_param*)
