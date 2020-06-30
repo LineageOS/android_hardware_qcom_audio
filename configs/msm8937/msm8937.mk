@@ -48,7 +48,7 @@ AUDIO_FEATURE_ENABLED_FLUENCE := true
 AUDIO_FEATURE_ENABLED_HDMI_EDID := true
 AUDIO_FEATURE_ENABLED_EXT_HDMI := true
 AUDIO_FEATURE_ENABLED_HFP := true
-AUDIO_FEATURE_ENABLED_INCALL_MUSIC := false
+AUDIO_FEATURE_ENABLED_INCALL_MUSIC := true
 AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
 AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
 AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := true
@@ -303,6 +303,15 @@ PRODUCT_PACKAGES += \
 
 # enable audio hidl hal 5.0 for sdk rev 29 and above
 ifeq ($(shell expr $(PLATFORM_SDK_VERSION) \>= 29), 1)
+PRODUCT_PACKAGES += \
+            android.hardware.audio@5.0 \
+            android.hardware.audio.common@5.0 \
+            android.hardware.audio.common@5.0-util \
+            android.hardware.audio@5.0-impl \
+            android.hardware.audio.effect@5.0 \
+            android.hardware.audio.effect@5.0-impl
+
+# enable audio hidl hal 6.0
 PRODUCT_PACKAGES += \
             android.hardware.audio@5.0 \
             android.hardware.audio.common@5.0 \
