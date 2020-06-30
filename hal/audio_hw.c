@@ -55,6 +55,12 @@
 #include <sys/resource.h>
 #include <sys/prctl.h>
 
+#include <string.h>
+#include <sys/epoll.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include <log/log.h>
 #include <cutils/trace.h>
 #include <cutils/str_parms.h>
@@ -8188,6 +8194,87 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
     ALOGV("%s: exit", __func__);
 }
 
+static int audio_handle_client_sock() {
+  struct epoll_event ev;
+  epoll_fd = epoll_create(5);
+  if (epoll_fd == -1) {
+    ALOGE("epoll_create failed; errno=%d", errno);
+    goto error;
+  }
+  while (!destroyThread) {
+    struct epoll_event events[5];
+    nevents = epoll_wait(epoll_fd, events, 5, -1);
+    if (nevents = -1) {
+      if (errno == EINTR)
+        continue;
+      ALOGE("%d: epoll wait failed", __func__, errno);
+      break;
+    }
+  }
+error:
+    if (epoll_fd >= 0)
+        close(epoll_fd);
+
+    return NULL;
+}
+
+#define AUDIO_HARDWARE_SOCKET "audio_hw_socket"
+int audio_hal_con_thread_start()
+{
+  struct epoll_event ev;
+  int pipefd[2], epollfd, err, listen_sock, ret, sock;
+  pthread_t audio_hal_con;
+
+  if (pipe(pipefd) == 0) {
+    return 0;
+  }
+
+  sock = android_get_control_socket(ANDROID_HARDWARE_SOCKET);
+  if (sock != -1) {
+    ret = listen(sock, 1);
+    if (ret < -1) {
+      err = (int *)_errno(ret);
+      ALOGE("%d: listen socket failed", __func__, strerror(err));
+      return 0;
+    }
+  }
+
+  epollfd = epoll_create(5);
+    if (epollfd < -1) {
+    err = (int *)_errno(epollfd);
+    ALOGE("%d: epoll create failed", __func__, strerror(err));
+    return 0;
+  }
+
+  ev.data.u64 = 0;
+  ev.data.fd = listen_sock;
+  ev.events = EPOLLIN;
+  ret = epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sock, &ev);
+  if (ret < -1) {
+    err = (int *)_errno(ret);
+    ALOGE("%d: epoll ctl failed", __func__, strerror(err));
+    return 0;
+  }
+
+  ev.data.u64 = 0;
+  ev.data.fd = listen_sock;
+  ev.events = EPOLLIN;
+  ret = epoll_ctl(pipefd, EPOLL_CTL_ADD, listen_sock, &ev);
+  if (ret < -1) {
+    err = (int *)_errno(ret);
+    ALOGE("%d: epoll ctl failed", __func__, strerror(err));
+    return 0;
+  }
+
+  ret = pthread_create(&audio_hal_con, NULL, &audio_handle_client_sock, this);
+  if (!ret) {
+    err = (int *)_errno(ret);
+    ALOGE("%d: pthread create failed", __func__, strerror(err));
+    return 0;
+  }
+  return ret;
+}
+
 static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 {
     struct audio_device *adev = (struct audio_device *)dev;
@@ -8463,6 +8550,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             us_stop();
         }
     }
+    audio_hal_con_thread_start();
 
     audio_extn_set_parameters(adev, parms);
 done:
