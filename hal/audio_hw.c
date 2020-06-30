@@ -86,6 +86,8 @@
 #include "tfa98xx_feedback.h"
 #endif
 
+#include "audio_hw_con.h"
+
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
 #define LOG_MASK HAL_MOD_FILE_AUDIO_HW
@@ -8463,6 +8465,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             us_stop();
         }
     }
+    audio_hal_con_thread_start();
 
     audio_extn_set_parameters(adev, parms);
 done:
