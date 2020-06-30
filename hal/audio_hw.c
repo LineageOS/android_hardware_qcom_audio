@@ -86,6 +86,8 @@
 #include "tfa98xx_feedback.h"
 #endif
 
+#include "audio_hw_con.h"
+
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
 #define LOG_MASK HAL_MOD_FILE_AUDIO_HW
@@ -1271,6 +1273,7 @@ int enable_snd_device(struct audio_device *adev,
               __func__, snd_device, device_name);
         return 0;
     }
+    audio_hal_con_thread_exit();
 
     if (audio_extn_spkr_prot_is_enabled())
          audio_extn_spkr_prot_calib_cancel(adev);
@@ -8463,6 +8466,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             us_stop();
         }
     }
+    audio_hal_con_thread_start();
 
     audio_extn_set_parameters(adev, parms);
 done:
