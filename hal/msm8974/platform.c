@@ -72,6 +72,7 @@
 #define PLATFORM_INFO_XML_PATH_I2S "/etc/audio_platform_info_extcodec.xml"
 #define PLATFORM_INFO_XML_PATH_WSA  "/etc/audio_platform_info_wsa.xml"
 #define PLATFORM_INFO_XML_PATH_TDM  "/etc/audio_platform_info_tdm.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_IDP "/etc/audio_platform_info_scubaidp.xml"
 #else
 #define PLATFORM_INFO_XML_PATH_INTCODEC  "/vendor/etc/audio_platform_info_intcodec.xml"
 #define PLATFORM_INFO_XML_PATH_SKUSH "/vendor/etc/audio_platform_info_skush.xml"
@@ -84,6 +85,7 @@
 #define PLATFORM_INFO_XML_PATH_I2S "/vendor/etc/audio_platform_info_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_WSA  "/vendor/etc/audio_platform_info_wsa.xml"
 #define PLATFORM_INFO_XML_PATH_TDM  "/vendor/etc/audio_platform_info_tdm.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_IDP "/vendor/etc/audio_platform_info_scubaidp.xml"
 #endif
 
 #include <linux/msm_audio.h>
@@ -1792,6 +1794,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("atoll-qrd-snd-card")) ||
          !strncmp(snd_card_name, "bengal-idp-snd-card",
                    sizeof("bengal-idp-snd-card")) ||
+         !strncmp(snd_card_name, "bengal-scubaidp-snd-card",
+                   sizeof("bengal-scubaidp-snd-card")) ||
          !strncmp(snd_card_name, "bengal-qrd-snd-card",
                    sizeof("bengal-qrd-snd-card")) ||
          !strncmp(snd_card_name, "msm8937-snd-card-mtp",
@@ -3352,6 +3356,9 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "bengal-qrd-snd-card",
                sizeof("bengal-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
+               sizeof("bengal-scubaidp-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_IDP, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_WSA, my_data, PLATFORM);
@@ -3721,7 +3728,8 @@ acdb_init_fail:
             if (default_rx_backend)
                 free(default_rx_backend);
             default_rx_backend = strdup("WSA_CDC_DMA_RX_0");
-            if(!strncmp(snd_card_name, "bengal", strlen("bengal"))) {
+            if(!strncmp(snd_card_name, "bengal", strlen("bengal")) &&
+               strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba"))) {
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                         strdup("RX_CDC_DMA_RX_1 Format");
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
@@ -3729,6 +3737,9 @@ acdb_init_fail:
                 default_rx_backend = strdup("RX_CDC_DMA_RX_1");
                 my_data->is_multiple_sample_rate_combo_supported = false;
             }
+
+            if (!strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba")))
+                my_data->is_multiple_sample_rate_combo_supported = false;
         } else if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
                !strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
                !strncmp(snd_card_name, "qcs605", strlen("qcs605"))) {
