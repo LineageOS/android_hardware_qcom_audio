@@ -9203,6 +9203,8 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
     struct audio_device_config_param *adev_device_cfg_ptr = adev->device_cfg_params;
     int controller = -1;
     int stream = -1;
+    const char *id_string = NULL;
+    int cfg_value = -1;
 
     if (usecase != NULL && usecase->stream.out &&
             usecase->type == PCM_PLAYBACK) {
@@ -9254,13 +9256,24 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         } else {
             ret = mixer_ctl_set_enum_by_string(ctl, "S16_LE");
         }
-        if ( ret < 0) {
+        if (ret < 0) {
             ALOGE("%s:becf: afe: fail for %s mixer set to %d bit for %x format", __func__,
                   my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl, bit_width, format);
         } else {
-            my_data->current_backend_cfg[backend_idx].bit_width = bit_width;
             ALOGD("%s:becf: afe: %s mixer set to %d bit for %x format", __func__,
                   my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl, bit_width, format);
+            for (int idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
+                if (my_data->current_backend_cfg[idx].bitwidth_mixer_ctl) {
+                    ctl = mixer_get_ctl_by_name(adev->mixer,
+                                 my_data->current_backend_cfg[idx].bitwidth_mixer_ctl);
+                    id_string = platform_get_mixer_control(ctl);
+                    if (id_string) {
+                        cfg_value = audio_extn_utils_get_bit_width_from_string(id_string);
+                        if (cfg_value > 0)
+                            my_data->current_backend_cfg[idx].bit_width = cfg_value;
+                    }
+                }
+            }
         }
         /* set the ret as 0 and not pass back to upper layer */
         ret = 0;
@@ -9268,90 +9281,106 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
 
     if ((my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl) &&
         (passthrough_enabled || (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate))) {
-            char *rate_str = NULL;
-            struct  mixer_ctl *ctl = NULL;
+        char *rate_str = NULL;
+        struct  mixer_ctl *ctl = NULL;
 
-            if (backend_idx == USB_AUDIO_RX_BACKEND ||
-                    backend_idx == USB_AUDIO_TX_BACKEND) {
-                switch (sample_rate) {
-                case 32000:
-                        rate_str = "KHZ_32";
-                        break;
-                case 8000:
-                        rate_str = "KHZ_8";
-                        break;
-                case 11025:
-                        rate_str = "KHZ_11P025";
-                        break;
-                case 16000:
-                        rate_str = "KHZ_16";
-                        break;
-                case 22050:
-                        rate_str = "KHZ_22P05";
-                        break;
-                }
+        if (backend_idx == USB_AUDIO_RX_BACKEND ||
+                backend_idx == USB_AUDIO_TX_BACKEND) {
+            switch (sample_rate) {
+            case 32000:
+                    rate_str = "KHZ_32";
+                    break;
+            case 8000:
+                    rate_str = "KHZ_8";
+                    break;
+            case 11025:
+                    rate_str = "KHZ_11P025";
+                    break;
+            case 16000:
+                    rate_str = "KHZ_16";
+                    break;
+            case 22050:
+                    rate_str = "KHZ_22P05";
+                    break;
             }
+        }
 
-            if (rate_str == NULL) {
-                switch (sample_rate) {
-                case 32000:
-                    if (passthrough_enabled || (backend_idx == SPDIF_TX_BACKEND) ||
-                        (backend_idx == HDMI_TX_BACKEND) ||
-                        (backend_idx == HDMI_ARC_TX_BACKEND) ||
-                        (backend_idx == DISP_PORT_RX_BACKEND)) {
-                        rate_str = "KHZ_32";
-                        break;
-                    }
-                case 48000:
-                    rate_str = "KHZ_48";
-                    break;
-                case 44100:
-                    rate_str = "KHZ_44P1";
-                    break;
-                case 64000:
-                case 96000:
-                    rate_str = "KHZ_96";
-                    break;
-                case 88200:
-                    rate_str = "KHZ_88P2";
-                    break;
-                case 176400:
-                    rate_str = "KHZ_176P4";
-                    break;
-                case 192000:
-                    rate_str = "KHZ_192";
-                    break;
-                case 352800:
-                    rate_str = "KHZ_352P8";
-                    break;
-                case 384000:
-                    rate_str = "KHZ_384";
-                    break;
-                case 144000:
-                    if (passthrough_enabled) {
-                        rate_str = "KHZ_144";
-                        break;
-                    }
-                default:
-                    rate_str = "KHZ_48";
+        if (rate_str == NULL) {
+            switch (sample_rate) {
+            case 32000:
+                if (passthrough_enabled || (backend_idx == SPDIF_TX_BACKEND) ||
+                    (backend_idx == HDMI_TX_BACKEND) ||
+                    (backend_idx == HDMI_ARC_TX_BACKEND) ||
+                    (backend_idx == DISP_PORT_RX_BACKEND)) {
+                    rate_str = "KHZ_32";
                     break;
                 }
+            case 48000:
+                rate_str = "KHZ_48";
+                break;
+            case 44100:
+                rate_str = "KHZ_44P1";
+                break;
+            case 64000:
+            case 96000:
+                rate_str = "KHZ_96";
+                break;
+            case 88200:
+                rate_str = "KHZ_88P2";
+                break;
+            case 176400:
+                rate_str = "KHZ_176P4";
+                break;
+            case 192000:
+                rate_str = "KHZ_192";
+                break;
+            case 352800:
+                rate_str = "KHZ_352P8";
+                break;
+            case 384000:
+                rate_str = "KHZ_384";
+                break;
+            case 144000:
+                if (passthrough_enabled) {
+                    rate_str = "KHZ_144";
+                    break;
+                }
+            default:
+                rate_str = "KHZ_48";
+                break;
             }
+        }
 
-            ctl = mixer_get_ctl_by_name(adev->mixer,
-                my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl);
-            if(!ctl) {
-                ALOGE("%s:becf: afe: Could not get ctl for mixer command - %s",
-                      __func__,
-                      my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl);
-                return -EINVAL;
-            }
+        ctl = mixer_get_ctl_by_name(adev->mixer,
+            my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl);
+        if(!ctl) {
+            ALOGE("%s:becf: afe: Could not get ctl for mixer command - %s",
+                  __func__,
+                  my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl);
+            return -EINVAL;
+        }
 
+        ret = mixer_ctl_set_enum_by_string(ctl, rate_str);
+        if (ret < 0) {
+            ALOGE("%s:becf: afe: fail for %s mixer set to %s", __func__,
+                  my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl, rate_str);
+        } else {
             ALOGD("%s:becf: afe: %s set to %s", __func__,
                   my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl, rate_str);
-            mixer_ctl_set_enum_by_string(ctl, rate_str);
-            my_data->current_backend_cfg[backend_idx].sample_rate = sample_rate;
-            ret = 0;
+            for (int idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
+                if (my_data->current_backend_cfg[idx].samplerate_mixer_ctl) {
+                    ctl = mixer_get_ctl_by_name(adev->mixer,
+                                 my_data->current_backend_cfg[idx].samplerate_mixer_ctl);
+                    id_string = platform_get_mixer_control(ctl);
+                    if (id_string) {
+                        cfg_value = audio_extn_utils_get_sample_rate_from_string(id_string);
+                        if (cfg_value > 0)
+                            my_data->current_backend_cfg[idx].sample_rate = cfg_value;
+                    }
+                }
+            }
+        }
+        ret = 0;
     }
     if ((my_data->current_backend_cfg[backend_idx].channels_mixer_ctl) &&
         (channels != my_data->current_backend_cfg[backend_idx].channels)) {
@@ -9386,8 +9415,27 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
                    my_data->current_backend_cfg[backend_idx].channels_mixer_ctl);
             return -EINVAL;
         }
-        mixer_ctl_set_enum_by_string(ctl, channel_cnt_str);
-        my_data->current_backend_cfg[backend_idx].channels = channels;
+        ret = mixer_ctl_set_enum_by_string(ctl, channel_cnt_str);
+        if (ret < 0) {
+            ALOGE("%s:becf: afe: fail for %s mixer set to %s", __func__,
+                  my_data->current_backend_cfg[backend_idx].channels_mixer_ctl, channel_cnt_str);
+        } else {
+            ALOGD("%s:becf: afe: %s set to %s", __func__,
+                  my_data->current_backend_cfg[backend_idx].channels_mixer_ctl, channel_cnt_str);
+            for (int idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
+                if (my_data->current_backend_cfg[idx].channels_mixer_ctl) {
+                    ctl = mixer_get_ctl_by_name(adev->mixer,
+                                 my_data->current_backend_cfg[idx].channels_mixer_ctl);
+                    id_string = platform_get_mixer_control(ctl);
+                    if (id_string) {
+                        cfg_value = audio_extn_utils_get_channels_from_string(id_string);
+                        if (cfg_value > 0)
+                            my_data->current_backend_cfg[idx].channels = cfg_value;
+                    }
+                }
+            }
+        }
+        ret = 0;
 
         if ((backend_idx == HDMI_RX_BACKEND) ||
                 (backend_idx == DISP_PORT_RX_BACKEND) ||
@@ -9395,11 +9443,6 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             platform_set_edid_channels_configuration_v2(adev->platform, channels,
                                                      backend_idx, snd_device,
                                                      controller, stream);
-
-        ALOGD("%s:becf: afe: %s set to %s ", __func__,
-               my_data->current_backend_cfg[backend_idx].channels_mixer_ctl,
-               channel_cnt_str);
-        ret = 0;
     }
 
     bool set_ext_disp_format = false, set_mi2s_tx_data_format = false;
