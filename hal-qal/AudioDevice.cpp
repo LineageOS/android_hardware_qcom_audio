@@ -1013,7 +1013,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_DEVICE, QAL_DEVICE_OUT_USB_DEVICE));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_REMOTE_SUBMIX, QAL_DEVICE_OUT_REMOTE_SUBMIX));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_TELEPHONY_TX, QAL_DEVICE_NONE));
-    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_LINE, QAL_DEVICE_OUT_LINE));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_LINE, QAL_DEVICE_OUT_WIRED_HEADPHONE));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_HDMI_ARC, QAL_DEVICE_OUT_HDMI_ARC));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_SPDIF, QAL_DEVICE_OUT_SPDIF));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_FM, QAL_DEVICE_OUT_FM));
