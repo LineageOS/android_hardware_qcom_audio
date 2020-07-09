@@ -156,6 +156,7 @@ AUDIO_DLKM += audio_swr.ko
 AUDIO_DLKM += audio_wcd_core.ko
 AUDIO_DLKM += audio_swr_ctrl.ko
 AUDIO_DLKM += audio_wsa881x.ko
+AUDIO_DLKM += audio_wsa883x.ko
 AUDIO_DLKM += audio_platform.ko
 AUDIO_DLKM += audio_hdmi.ko
 AUDIO_DLKM += audio_stub.ko
@@ -194,6 +195,7 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_cdp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_lagoonqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_lagoonqrd.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/sound_trigger_mixer_paths_lagoonmtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_lagoonmtp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_lagoonmtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_lagoonmtp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
@@ -296,6 +298,11 @@ ro.vendor.audio.sdk.ssr=false
 #enable dsp gapless mode by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.gapless.enabled=true
+
+#timeout crash duration set to 20sec before system is ready.
+#timeout duration updates to default timeout of 5sec once the system is ready.
+PRODUCT_PRODUCT_PROPERTIES += \
+vendor.audio.hal.boot.timeout.ms=20000
 
 #enable pbe effects
 PRODUCT_PROPERTY_OVERRIDES += \

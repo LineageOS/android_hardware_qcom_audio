@@ -1633,6 +1633,15 @@ case 8
   new_uc->dev d11 (a1), d2 (a2)  B1, B2
   resolution: compared to case 1, for this case, d1 and d11 are related
   then need to do the same as case 2 to siwtch to new uc
+
+case 9
+  uc->dev d1 (a1), d2(a2)        B1  B2
+  new_uc->dev d1 (a1), d22 (a2)  B1, B2
+  resolution: disable enable uc-dev on d2 since backends match
+  we cannot enable two streams on two different devices if they
+  share the same backend. This is special case for combo use case
+  with a2dp and sco devices which uses same backend.
+  e.g. speaker-a2dp and speaker-btsco
 */
 static snd_device_t derive_playback_snd_device(void * platform,
                                                struct audio_usecase *uc,
@@ -1679,6 +1688,9 @@ static snd_device_t derive_playback_snd_device(void * platform,
         if (platform_check_backends_match(d3[0], d3[1])) {
             return d2; // case 5
         } else {
+            if ((list_length(&a1) > 1) && (list_length(&a2) > 1) &&
+                 platform_check_backends_match(d1, d2))
+                return d2; //case 9
             if (list_length(&a1) > 1)
                 return d1; //case 7
             // check if d1 is related to any of d3's
@@ -1735,7 +1747,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
      * with new AFE encoder format based on a2dp state
      */
     if ((SND_DEVICE_OUT_BT_A2DP == snd_device ||
-         SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device) &&
+         SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device ||
+         SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP == snd_device) &&
          audio_extn_a2dp_is_force_device_switch()) {
          force_routing = true;
          force_restart_session = true;
@@ -5353,7 +5366,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            (out->config.rate);
     }
 
-    if (is_a2dp_out_device_type(&out->device_list))
+    if (!out->standby && is_a2dp_out_device_type(&out->device_list))
         latency += audio_extn_a2dp_get_encoder_latency();
 
     ALOGV("%s: Latency %d", __func__, latency);

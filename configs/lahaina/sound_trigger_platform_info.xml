@@ -55,6 +55,7 @@
         <param platform_lpi_enable="true" />
         <param enable_debug_dumps="false" />
         <param support_non_lpi_without_ec="false" />
+        <param concurrent_capture="true" />
     </common_config>
     <acdb_ids>
         <param DEVICE_HANDSET_MIC_APE="100" />

@@ -72,6 +72,7 @@
 #define PLATFORM_INFO_XML_PATH_I2S "/etc/audio_platform_info_extcodec.xml"
 #define PLATFORM_INFO_XML_PATH_WSA  "/etc/audio_platform_info_wsa.xml"
 #define PLATFORM_INFO_XML_PATH_TDM  "/etc/audio_platform_info_tdm.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_IDP "/etc/audio_platform_info_scubaidp.xml"
 #else
 #define PLATFORM_INFO_XML_PATH_INTCODEC  "/vendor/etc/audio_platform_info_intcodec.xml"
 #define PLATFORM_INFO_XML_PATH_SKUSH "/vendor/etc/audio_platform_info_skush.xml"
@@ -84,6 +85,7 @@
 #define PLATFORM_INFO_XML_PATH_I2S "/vendor/etc/audio_platform_info_i2s.xml"
 #define PLATFORM_INFO_XML_PATH_WSA  "/vendor/etc/audio_platform_info_wsa.xml"
 #define PLATFORM_INFO_XML_PATH_TDM  "/vendor/etc/audio_platform_info_tdm.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_IDP "/vendor/etc/audio_platform_info_scubaidp.xml"
 #endif
 
 #include <linux/msm_audio.h>
@@ -1792,6 +1794,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("atoll-qrd-snd-card")) ||
          !strncmp(snd_card_name, "bengal-idp-snd-card",
                    sizeof("bengal-idp-snd-card")) ||
+         !strncmp(snd_card_name, "bengal-scubaidp-snd-card",
+                   sizeof("bengal-scubaidp-snd-card")) ||
          !strncmp(snd_card_name, "bengal-qrd-snd-card",
                    sizeof("bengal-qrd-snd-card")) ||
          !strncmp(snd_card_name, "msm8937-snd-card-mtp",
@@ -2304,6 +2308,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_IN_BT_A2DP] = strdup("bt-a2dp-cap");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP] = strdup("speaker-and-bt-a2dp");
     backend_tag_table[SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP] = strdup("speaker-safe-and-bt-a2dp");
+    backend_tag_table[SND_DEVICE_OUT_SPEAKER_SAFE_AND_HEADPHONES] = strdup("speaker-safe-and-headphones");
+    backend_tag_table[SND_DEVICE_OUT_SPEAKER_SAFE_AND_LINE] = strdup("speaker-safe-and-line");
     backend_tag_table[SND_DEVICE_OUT_USB_HEADSET_SPEC] = strdup("usb-headset");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_HEADPHONES] = strdup("speaker-and-headphones");
     backend_tag_table[SND_DEVICE_OUT_VOICE_SPEAKER_AND_VOICE_ANC_HEADSET] = strdup("speaker-and-headphones");
@@ -3350,6 +3356,9 @@ void *platform_init(struct audio_device *adev)
     else if (!strncmp(snd_card_name, "bengal-qrd-snd-card",
                sizeof("bengal-qrd-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_QRD, my_data, PLATFORM);
+    else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
+               sizeof("bengal-scubaidp-snd-card")))
+        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_IDP, my_data, PLATFORM);
     else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card")))
         platform_info_init(PLATFORM_INFO_XML_PATH_WSA, my_data, PLATFORM);
@@ -3719,7 +3728,8 @@ acdb_init_fail:
             if (default_rx_backend)
                 free(default_rx_backend);
             default_rx_backend = strdup("WSA_CDC_DMA_RX_0");
-            if(!strncmp(snd_card_name, "bengal", strlen("bengal"))) {
+            if(!strncmp(snd_card_name, "bengal", strlen("bengal")) &&
+               strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba"))) {
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                         strdup("RX_CDC_DMA_RX_1 Format");
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
@@ -3727,6 +3737,9 @@ acdb_init_fail:
                 default_rx_backend = strdup("RX_CDC_DMA_RX_1");
                 my_data->is_multiple_sample_rate_combo_supported = false;
             }
+
+            if (!strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba")))
+                my_data->is_multiple_sample_rate_combo_supported = false;
         } else if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
                !strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
                !strncmp(snd_card_name, "qcs605", strlen("qcs605"))) {
@@ -6912,9 +6925,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
                 goto exit;
             }
         }
-        if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_EARPIECE) ||
-            compare_device_type(out_devices, AUDIO_DEVICE_OUT_WIRED_HEADPHONE) ||
-            compare_device_type(out_devices, AUDIO_DEVICE_OUT_LINE)) {
+        if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_EARPIECE)) {
             if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_EARPIECE) &&
                 audio_extn_should_use_handset_anc(channel_count)) {
                 if ((my_data->fluence_type != FLUENCE_NONE) &&
@@ -6928,20 +6939,11 @@ snd_device_t platform_get_input_snd_device(void *platform,
             } else if (my_data->fluence_type == FLUENCE_NONE ||
                 (my_data->fluence_in_voice_call == false &&
                  my_data->fluence_in_hfp_call == false)) {
-                 if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_LINE) &&
-                     audio_extn_hfp_is_active(adev)) {
-                     snd_device = my_data->fluence_sb_enabled ?
-                                      SND_DEVICE_IN_VOICE_SPEAKER_MIC_SB
-                                      : (my_data->fluence_nn_enabled ?
-                                            SND_DEVICE_IN_VOICE_SPEAKER_MIC_NN
-                                            : SND_DEVICE_IN_VOICE_SPEAKER_MIC);
-                 } else {
-                     snd_device = my_data->fluence_sb_enabled ?
-                                     SND_DEVICE_IN_HANDSET_MIC_SB
-                                     : (my_data->fluence_nn_enabled ?
-                                            SND_DEVICE_IN_HANDSET_MIC_NN
-                                            : SND_DEVICE_IN_HANDSET_MIC);
-                 }
+                 snd_device = my_data->fluence_sb_enabled ?
+                                 SND_DEVICE_IN_HANDSET_MIC_SB
+                                 : (my_data->fluence_nn_enabled ?
+                                        SND_DEVICE_IN_HANDSET_MIC_NN
+                                        : SND_DEVICE_IN_HANDSET_MIC);
                  if (audio_extn_hfp_is_active(adev))
                      platform_set_echo_reference(adev, true, out_devices);
             } else {
