@@ -753,12 +753,14 @@ void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev __u
     audio_event_info_t event;
     int ret;
     char value[32], paramstr[MAX_STR_LENGTH_FFV_PARAMS];
-    char *kv_pairs = str_parms_to_str(query);
+    char *kv_pairs = NULL;
 
-    if (query == NULL || reply == NULL || kv_pairs == NULL) {
+    if (query == NULL || reply == NULL) {
         ALOGD("%s: query is null or reply is null",__func__);
         return;
     }
+
+    kv_pairs = str_parms_to_str(query);
     ALOGD("%s input string<%s>", __func__, kv_pairs);
 
     ret = str_parms_get_str(query, "SVA_EXEC_MODE_STATUS", value,
