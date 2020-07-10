@@ -6026,8 +6026,10 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             if (out->last_fifo_valid) {
                 // compute drain to see if there is an underrun.
                 const int64_t current_ns = systemTime(SYSTEM_TIME_MONOTONIC); // sys call
-                const int64_t frames_by_time =
-                        (current_ns - out->last_fifo_time_ns) * out->config.rate / NANOS_PER_SECOND;
+                int64_t time_diff_ns = current_ns - out->last_fifo_time_ns;
+                int64_t frames_by_time =
+                        ((time_diff_ns > 0) && (time_diff_ns < (INT64_MAX / out->config.rate))) ?
+                                         (time_diff_ns * out->config.rate / NANOS_PER_SECOND) : 0;
                 const int64_t underrun = frames_by_time - out->last_fifo_frames_remaining;
 
                 if (underrun > 0) {
