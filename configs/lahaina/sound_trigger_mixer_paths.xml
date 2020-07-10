@@ -94,6 +94,10 @@
     <ctl name="SWR_MIC1 SWR_DMIC_MIXER Switch" value="0" />
     <ctl name="SWR_MIC2 SWR_DMIC_MIXER Switch" value="0" />
     <ctl name="SWR_MIC3 SWR_DMIC_MIXER Switch" value="0" />
+    <ctl name="SWR_MIC0 LP PortMap" value="ZERO" />
+    <ctl name="SWR_MIC1 LP PortMap" value="ZERO" />
+    <ctl name="SWR_MIC2 LP PortMap" value="ZERO" />
+    <ctl name="SWR_MIC3 LP PortMap" value="ZERO" />
 
     <path name="listen-voice-wakeup-1">
         <ctl name="LSM1 Mixer VA_CDC_DMA_TX_0" value="1" />
@@ -243,7 +247,7 @@
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA DEC0 MUX" value="SWR_MIC" />
         <ctl name="VA SMIC MUX0" value="SWR_MIC11" />
-        <ctl name="SWR_MIC3 HIFI PortMap" value="SWRM_TX3_CH4" />
+        <ctl name="SWR_MIC3 LP PortMap" value="SWRM_TX3_CH4" />
         <ctl name="VA_DEC0 Volume" value="99" />
         <ctl name="SWR_MIC3 SWR_DMIC_MIXER Switch" value="1" />
     </path>
@@ -260,8 +264,8 @@
         <ctl name="VA DEC1 MUX" value="SWR_MIC" />
         <ctl name="VA SMIC MUX0" value="SWR_MIC11" />
         <ctl name="VA SMIC MUX1" value="SWR_MIC8" />
-        <ctl name="SWR_MIC3 HIFI PortMap" value="SWRM_TX3_CH4" />
-        <ctl name="SWR_MIC0 HIFI PortMap" value="SWRM_TX3_CH1" />
+        <ctl name="SWR_MIC3 LP PortMap" value="SWRM_TX3_CH4" />
+        <ctl name="SWR_MIC0 LP PortMap" value="SWRM_TX3_CH1" />
         <ctl name="VA_DEC0 Volume" value="99" />
         <ctl name="VA_DEC1 Volume" value="99" />
         <ctl name="SWR_MIC3 SWR_DMIC_MIXER Switch" value="1" />
@@ -279,9 +283,9 @@
         <ctl name="VA SMIC MUX0" value="SWR_MIC11" />
         <ctl name="VA SMIC MUX1" value="SWR_MIC8" />
         <ctl name="VA SMIC MUX2" value="SWR_MIC9" />
-        <ctl name="SWR_MIC3 HIFI PortMap" value="SWRM_TX3_CH4" />
-        <ctl name="SWR_MIC0 HIFI PortMap" value="SWRM_TX3_CH1" />
-        <ctl name="SWR_MIC1 HIFI PortMap" value="SWRM_TX3_CH2" />
+        <ctl name="SWR_MIC3 LP PortMap" value="SWRM_TX3_CH4" />
+        <ctl name="SWR_MIC0 LP PortMap" value="SWRM_TX3_CH1" />
+        <ctl name="SWR_MIC1 LP PortMap" value="SWRM_TX3_CH2" />
         <ctl name="VA_DEC0 Volume" value="99" />
         <ctl name="VA_DEC1 Volume" value="99" />
         <ctl name="VA_DEC2 Volume" value="99" />
@@ -304,10 +308,10 @@
         <ctl name="VA SMIC MUX1" value="SWR_MIC8" />
         <ctl name="VA SMIC MUX2" value="SWR_MIC9" />
         <ctl name="VA SMIC MUX3" value="SWR_MIC10" />
-        <ctl name="SWR_MIC3 HIFI PortMap" value="SWRM_TX3_CH4" />
-        <ctl name="SWR_MIC0 HIFI PortMap" value="SWRM_TX3_CH1" />
-        <ctl name="SWR_MIC1 HIFI PortMap" value="SWRM_TX3_CH2" />
-        <ctl name="SWR_MIC2 HIFI PortMap" value="SWRM_TX3_CH3" />
+        <ctl name="SWR_MIC3 LP PortMap" value="SWRM_TX3_CH4" />
+        <ctl name="SWR_MIC0 LP PortMap" value="SWRM_TX3_CH1" />
+        <ctl name="SWR_MIC1 LP PortMap" value="SWRM_TX3_CH2" />
+        <ctl name="SWR_MIC2 LP PortMap" value="SWRM_TX3_CH3" />
         <ctl name="VA_DEC0 Volume" value="99" />
         <ctl name="VA_DEC1 Volume" value="99" />
         <ctl name="VA_DEC2 Volume" value="99" />
@@ -322,12 +326,12 @@
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA DEC0 MUX" value="SWR_MIC" />
         <ctl name="VA SMIC MUX0" value="SWR_MIC1" />
-        <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP2" />
         <ctl name="VA_DEC0 MODE" value="ADC_LOW_PWR" />
         <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
         <ctl name="ADC2_BCS Disable" value="1" />
+        <ctl name="ADC2_MIXER Switch" value="1" />
     </path>
 
     <path name="echo-reference">
