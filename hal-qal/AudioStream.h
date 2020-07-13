@@ -404,12 +404,6 @@ protected:
     int usecase_;
     struct qal_volume_data *volume_; /* used to cache volume */
     std::map <audio_devices_t, qal_device_id_t> mAndroidDeviceMap;
-private:
-    int mNoOfOutDevices;
-    struct qal_device* mQalOutDevice;
-    qal_device_id_t* mQalOutDeviceIds;
-    audio_devices_t mAndroidOutDevices;
-    bool mInitialized;
 };
 
 class StreamOutPrimary : public StreamPrimary {
@@ -460,6 +454,7 @@ public:
     audio_output_flags_t flags_;
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
     int GetMmapPosition(struct audio_mmap_position *position);
+    bool isDeviceAvailable(qal_device_id_t deviceId);
 protected:
     struct timespec writeAt;
     int get_compressed_buffer_size();

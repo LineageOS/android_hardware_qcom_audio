@@ -501,10 +501,12 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
     size_t size = 0;
     int32_t ret;
 
-    ret = qal_get_param(QAL_PARAM_ID_BT_A2DP_ENCODER_LATENCY,
-                        (void **)&param_bt_a2dp, &size, nullptr);
-    if (!ret && param_bt_a2dp)
-        latency += param_bt_a2dp->latency;
+    if (astream_out->isDeviceAvailable(QAL_DEVICE_OUT_BLUETOOTH_A2DP)) {
+        ret = qal_get_param(QAL_PARAM_ID_BT_A2DP_ENCODER_LATENCY,
+                            (void **)&param_bt_a2dp, &size, nullptr);
+        if (!ret && param_bt_a2dp)
+            latency += param_bt_a2dp->latency;
+    }
 
     ALOGV("%s: Latency %d", __func__, latency);
     return latency;
@@ -1303,6 +1305,16 @@ int StreamOutPrimary::GetMmapPosition(struct audio_mmap_position *position)
     return 0;
 }
 
+bool StreamOutPrimary::isDeviceAvailable(qal_device_id_t deviceId)
+{
+    for (int i = 0; i < mNoOfOutDevices; i++) {
+        if (mQalOutDevice[i].id == deviceId)
+            return true;
+    }
+
+    return false;
+}
+
 int StreamOutPrimary::CreateMmapBuffer(int32_t min_size_frames,
         struct audio_mmap_buffer_info *info)
 {
@@ -1647,13 +1659,15 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
 
     // Adjustment accounts for A2dp encoder latency with non offload usecases
     // Note: Encoder latency is returned in ms, while platform_render_latency in us.
-    ret = qal_get_param(QAL_PARAM_ID_BT_A2DP_ENCODER_LATENCY,
-                        (void **)&param_bt_a2dp, &size, nullptr);
-    if (!ret && param_bt_a2dp) {
-        bt_extra_frames = param_bt_a2dp->latency *
-            (streamAttributes_.out_media_config.sample_rate) / 1000;
-        if (signed_frames >= bt_extra_frames)
-            signed_frames -= bt_extra_frames;
+    if (isDeviceAvailable(QAL_DEVICE_OUT_BLUETOOTH_A2DP)) {
+        ret = qal_get_param(QAL_PARAM_ID_BT_A2DP_ENCODER_LATENCY,
+                            (void **)&param_bt_a2dp, &size, nullptr);
+        if (!ret && param_bt_a2dp) {
+            bt_extra_frames = param_bt_a2dp->latency *
+                (streamAttributes_.out_media_config.sample_rate) / 1000;
+            if (signed_frames >= bt_extra_frames)
+                signed_frames -= bt_extra_frames;
+        }
     }
 
     if (signed_frames <= 0) {
