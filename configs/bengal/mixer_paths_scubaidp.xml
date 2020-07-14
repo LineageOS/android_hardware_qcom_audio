@@ -381,6 +381,7 @@
 
     <!-- Headphone class-H mode -->
     <ctl name="RX HPH Mode" value="CLS_AB" />
+    <ctl name="RX_HPH_PWR_MODE" value="LOHIFI" />
 
     <!-- IIR/voice anc -->
     <ctl name="IIR0 Band1" id ="0" value="268435456" />
@@ -2622,13 +2623,9 @@
     </path>
 
     <path name="hph-highquality-mode">
-        <ctl name="RX_HPH_PWR_MODE" value="LOHIFI" />
-        <ctl name="RX HPH Mode" value="CLS_H_LOHIFI" />
     </path>
 
     <path name="hph-lowpower-mode">
-        <ctl name="RX_HPH_PWR_MODE" value="ULP" />
-        <ctl name="RX HPH Mode" value="CLS_H_ULP" />
     </path>
 
     <path name="hph-class-ab-mode">
