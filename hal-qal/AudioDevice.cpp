@@ -52,9 +52,12 @@
 #include <cutils/str_parms.h>
 
 #include "QalApi.h"
+#include "QalDefs.h"
 #include "audio_extn.h"
 #include "audio_hidl.h"
 #include "battery_listener.h"
+
+card_status_t AudioDevice::sndCardState = CARD_STATUS_ONLINE;
 
 AudioDevice::~AudioDevice() {
     audio_extn_gef_deinit(adev_);
@@ -176,6 +179,23 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume) {
 
 }
 
+static int adev_qal_global_callback(uint32_t event_id, uint32_t *event_data,
+                                     void *cookie) {
+    ALOGD("%s: event_id (%d), event_data (%d), cookie (%p)",
+          __func__, event_id, *event_data, cookie);
+    switch (event_id) {
+    case QAL_SND_CARD_STATE :
+        AudioDevice::sndCardState = (card_status_t)*event_data;
+        ALOGD("%s: sound card status changed %d sndCardState %d", __func__,
+              *event_data, AudioDevice::sndCardState);
+        break;
+    default :
+       ALOGE("%s: Invalid event id:%d", __func__, event_id);
+       return -EINVAL;
+    }
+    return 0;
+}
+
 static int adev_open_output_stream(struct audio_hw_device *dev,
                             audio_io_handle_t handle,
                             audio_devices_t devices,
@@ -194,6 +214,16 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     if (!adevice) {
         ALOGE("%s: invalid adevice object", __func__);
         goto exit;
+    }
+
+    /* This check is added for oflload streams, so that
+     * flinger will fallback to DB stream during SSR.
+     */
+    if (AudioDevice::sndCardState == CARD_STATUS_OFFLINE &&
+        (flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD ||
+        flags & AUDIO_OUTPUT_FLAG_DIRECT)) {
+        ALOGE("%s: sound card offline", __func__);
+        return -ENODEV;
     }
     astream = adevice->OutGetStream(handle);
 
@@ -449,6 +479,11 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     if (ret) {
         ALOGE("%s:(%d) qal_init failed ret=(%d)", __func__, __LINE__, ret);
         return -EINVAL;
+    }
+
+    ret = qal_register_global_callback(&adev_qal_global_callback, this);
+    if (ret) {
+        ALOGE("%s:(%d) qal register callback failed ret=(%d)", __func__, __LINE__, ret);
     }
 
     adev_->device_.get()->common.tag = HARDWARE_DEVICE_TAG;
