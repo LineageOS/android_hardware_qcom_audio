@@ -1076,7 +1076,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET, QAL_DEVICE_IN_ANLG_DOCK_HEADSET);
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET, QAL_DEVICE_IN_DGTL_DOCK_HEADSET);
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_USB_ACCESSORY, QAL_DEVICE_IN_USB_ACCESSORY));
-    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_USB_DEVICE, QAL_DEVICE_IN_USB_DEVICE));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_USB_DEVICE, QAL_DEVICE_IN_USB_HEADSET));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_FM_TUNER, QAL_DEVICE_IN_FM_TUNER));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_TV_TUNER, QAL_DEVICE_IN_TV_TUNER);
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_LINE, QAL_DEVICE_IN_LINE));
