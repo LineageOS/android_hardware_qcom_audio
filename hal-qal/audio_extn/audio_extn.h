@@ -58,9 +58,13 @@ void* audio_extn_sound_trigger_check_and_get_session(
 #else
 void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev);
 void audio_extn_gef_deinit(std::shared_ptr<AudioDevice> adev);
-
+int audio_extn_get_qal_info(void *hal_data,
+                                const audio_devices_t hal_device_id,
+                                qal_device_id_t *qal_device_id,
+                                audio_output_flags_t hal_stream_flag,
+                                qal_stream_type_t *qal_stream_type);
 void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
-    audio_channel_mask_t channel_mask, int sample_rate);
+                    audio_channel_mask_t channel_mask, int sample_rate);
 extern "C" int audio_extn_gef_send_audio_cal(void* data, int length);
 extern "C" int audio_extn_gef_get_audio_cal(void* data, int *length);
 extern "C" int audio_extn_gef_store_audio_cal(void* data, int length);

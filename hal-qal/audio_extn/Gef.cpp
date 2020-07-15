@@ -58,7 +58,12 @@
 #define GEF_LIBRARY "/vendor/lib/libqtigef.so"
 #endif
 
-typedef void* (*gef_init_t)(void*);
+typedef int (*gef_get_qal_info)(void* adev,
+                                    const audio_devices_t hal_device_id,
+                                    qal_device_id_t *qal_device_id,
+                                    audio_output_flags_t hal_stream_flag,
+                                    qal_stream_type_t *qal_stream_type);
+typedef void* (*gef_init_t)(void*, gef_get_qal_info);
 typedef void (*gef_deinit_t)(void*);
 typedef void (*gef_device_config_cb_t)(void*, audio_devices_t,
     audio_channel_mask_t, int);
@@ -87,6 +92,7 @@ typedef enum {
 void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev)
 {
     const char* error = NULL;
+    gef_get_qal_info fp = audio_extn_get_qal_info;
 
     memset(&gef_hal_handle, 0, sizeof(gef_data));
 
@@ -136,7 +142,7 @@ void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev)
             goto ERROR_RETURN;
         }
 
-        gef_hal_handle.gef_ptr = gef_hal_handle.init((void *)(adev.get()));
+        gef_hal_handle.gef_ptr = gef_hal_handle.init((void *)(adev.get()), fp);
     }
 
 ERROR_RETURN:
@@ -239,4 +245,22 @@ void audio_extn_gef_deinit(std::shared_ptr<AudioDevice> adev __unused)
     ALOGV("%s: Exit", __func__);
 }
 
+int audio_extn_get_qal_info(void *hal_data,
+                                const audio_devices_t hal_device_id,
+                                 qal_device_id_t *qal_device_id,
+                                 audio_output_flags_t hal_stream_flag,
+                                 qal_stream_type_t *qal_stream_type)
+{
+    int device_count = 0;
+    AudioDevice *adev = nullptr;
+
+    if (hal_data) {
+        adev = (AudioDevice *)hal_data;
+        device_count = adev->GetQalDeviceIds(hal_device_id, qal_device_id);
+        *qal_stream_type = StreamOutPrimary::GetQalStreamType(hal_stream_flag);
+        return device_count;
+    }
+
+    return -EINVAL;
+}
 #endif
