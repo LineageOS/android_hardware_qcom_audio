@@ -1826,6 +1826,10 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("bengal-scubaidp-snd-card")) ||
          !strncmp(snd_card_name, "bengal-qrd-snd-card",
                    sizeof("bengal-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "holi-mtp-snd-card",
+                   sizeof("holi-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "holi-qrd-snd-card",
+                   sizeof("holi-qrd-snd-card")) ||
          !strncmp(snd_card_name, "msm8937-snd-card-mtp",
                    sizeof("msm8937-snd-card-mtp")) ||
          !strncmp(snd_card_name, "msm8953-snd-card-mtp",
@@ -3395,6 +3399,10 @@ void *platform_init(struct audio_device *adev)
                sizeof("bengal-qrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
             my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "holi-qrd-snd-card",
+               sizeof("holi-qrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_WSA_NAME),
@@ -3739,6 +3747,7 @@ acdb_init_fail:
             !strncmp(snd_card_name, "lito", strlen("lito")) ||
             !strncmp(snd_card_name, "atoll", strlen("atoll")) ||
             !strncmp(snd_card_name, "trinket", strlen("trinket"))||
+            !strncmp(snd_card_name, "holi", strlen("holi"))||
             !strncmp(snd_card_name, "bengal", strlen("bengal"))) {
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 Format");
@@ -3767,8 +3776,9 @@ acdb_init_fail:
             if (default_rx_backend)
                 free(default_rx_backend);
             default_rx_backend = strdup("WSA_CDC_DMA_RX_0");
-            if(!strncmp(snd_card_name, "bengal", strlen("bengal")) &&
-               strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba"))) {
+            if((!strncmp(snd_card_name, "bengal", strlen("bengal")) &&
+               strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba"))) ||
+               !strncmp(snd_card_name, "holi", strlen("holi"))) {
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                         strdup("RX_CDC_DMA_RX_1 Format");
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =

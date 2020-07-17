@@ -568,6 +568,22 @@ static void update_hardware_info_kona(
     }
 }
 
+static void update_hardware_info_holi(
+          struct hardware_info *hw_info,
+          const char *snd_card_name)
+{
+    if (!strncmp(snd_card_name, "holi-mtp-snd-card",
+                 sizeof("holi-mtp-snd-card"))) {
+        strlcpy(hw_info->name, "holi", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "holi-qrd-snd-card",
+                 sizeof("holi-qrd-snd-card"))) {
+        strlcpy(hw_info->name, "holi", sizeof(hw_info->name));
+    } else {
+        ALOGW("%s: Not a holi device", __func__);
+    }
+    hw_info->is_stereo_spkr = false;
+}
+
 static void update_hardware_info_lahaina(
           struct hardware_info *hw_info,
           const char *snd_card_name)
@@ -916,6 +932,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "lahaina")) {
         ALOGV("LAHAINA - variant soundcard");
         update_hardware_info_lahaina(hw_info, snd_card_name);
+    } else if(strstr(snd_card_name, "holi")) {
+        ALOGV("HOLI - variant soundcard");
+        update_hardware_info_holi(hw_info, snd_card_name);
     } else if(strstr(snd_card_name, "sdm439")) {
         ALOGV("SDM439 - variant soundcard");
         update_hardware_info_sdm439(hw_info, snd_card_name);
