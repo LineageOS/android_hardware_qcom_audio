@@ -57,6 +57,10 @@
 #include "edid.h"
 #include "sound/compress_params.h"
 
+#ifdef AUDIO_GKI_ENABLED
+#include "sound/audio_compressed_formats.h"
+#endif
+
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
 #define LOG_MASK HAL_MOD_FILE_AUDIO_EXTN
@@ -3038,55 +3042,81 @@ void audio_extn_init(struct audio_device *adev)
 }
 
 #ifdef AUDIO_GKI_ENABLED
-int get_wma_dec_info(struct stream_out *out, struct str_parms *parms) {
+static int get_wma_dec_info(struct stream_out *out, struct str_parms *parms) {
     int ret = 0;
     char value[32];
 
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
+    struct snd_generic_dec_wma *wma_dec = NULL;
+
+    /* reserved[0] will contain the WMA decoder type */
+    if (out->format == AUDIO_FORMAT_WMA) {
+        out->compr_config.codec->options.generic.reserved[0] = AUDIO_COMP_FORMAT_WMA;
+    } else if (out->format == AUDIO_FORMAT_WMA_PRO) {
+        out->compr_config.codec->options.generic.reserved[0] = AUDIO_COMP_FORMAT_WMA_PRO;
+    } else {
+        ALOGE("%s: unknown WMA format 0x%x\n", __func__, out->format);
+        return -EINVAL;
+    }
+
+    /* reserved[1] onwards will contain the WMA decoder format info */
+    wma_dec = (struct snd_generic_dec_wma *)
+                &(out->compr_config.codec->options.generic.reserved[1]);
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE,
+                                value, sizeof(value));
     if (ret >= 0) {
-        out->compr_config.codec->options.wma_dec.avg_bit_rate = atoi(value);
+        wma_dec->avg_bit_rate = atoi(value);
         out->is_compr_metadata_avail = true;
     }
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN, value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN,
+                                value, sizeof(value));
     if (ret >= 0) {
-        out->compr_config.codec->options.wma_dec.super_block_align = atoi(value);
+        wma_dec->super_block_align = atoi(value);
         out->is_compr_metadata_avail = true;
     }
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE, value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE,
+                                value, sizeof(value));
     if (ret >= 0) {
-        out->compr_config.codec->options.wma_dec.bits_per_sample = atoi(value);
+        wma_dec->bits_per_sample = atoi(value);
         out->is_compr_metadata_avail = true;
     }
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK, value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK,
+                                value, sizeof(value));
     if (ret >= 0) {
-        out->compr_config.codec->options.wma_dec.channelmask = atoi(value);
+        wma_dec->channelmask = atoi(value);
         out->is_compr_metadata_avail = true;
     }
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION, value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION,
+                                value, sizeof(value));
     if (ret >= 0) {
-        out->compr_config.codec->options.wma_dec.encodeopt = atoi(value);
+        wma_dec->encodeopt = atoi(value);
         out->is_compr_metadata_avail = true;
     }
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1, value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1,
+                                value, sizeof(value));
     if (ret >= 0) {
-        out->compr_config.codec->options.wma_dec.encodeopt1 = atoi(value);
+        wma_dec->encodeopt1 = atoi(value);
         out->is_compr_metadata_avail = true;
     }
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2, value, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2,
+                                value, sizeof(value));
     if (ret >= 0) {
-        out->compr_config.codec->options.wma_dec.encodeopt2 = atoi(value);
+        wma_dec->encodeopt2 = atoi(value);
         out->is_compr_metadata_avail = true;
     }
-    ALOGV("WMA params: fmt %x, bit rate %x, balgn %x, sr %d, chmsk %x"
-            " encop %x, op1 %x, op2 %x",
+
+    ALOGV("WMA params: fmt 0x%x, id 0x%x, WMA type 0x%x, bit rate 0x%x,"
+            " balgn 0x%x, sr %d, chmsk 0x%x"
+            " encop 0x%x, op1 0x%x, op2 0x%x \n",
             out->compr_config.codec->format,
-            out->compr_config.codec->options.wma_dec.avg_bit_rate,
-            out->compr_config.codec->options.wma_dec.super_block_align,
-            out->compr_config.codec->options.wma_dec.bits_per_sample,
-            out->compr_config.codec->options.wma_dec.channelmask,
-            out->compr_config.codec->options.wma_dec.encodeopt,
-            out->compr_config.codec->options.wma_dec.encodeopt1,
-            out->compr_config.codec->options.wma_dec.encodeopt2);
+            out->compr_config.codec->id,
+            out->compr_config.codec->options.generic.reserved[0],
+            wma_dec->avg_bit_rate,
+            wma_dec->super_block_align,
+            wma_dec->bits_per_sample,
+            wma_dec->channelmask,
+            wma_dec->encodeopt,
+            wma_dec->encodeopt1,
+            wma_dec->encodeopt2);
 
     return ret;
 }
@@ -3145,6 +3175,315 @@ int get_wma_info(struct stream_out *out, struct str_parms *parms) {
 }
 #endif
 
+#ifdef AUDIO_GKI_ENABLED
+static int get_flac_dec_info(struct stream_out *out, struct str_parms *parms) {
+    int ret = 0;
+    char value[32];
+    struct snd_generic_dec_flac *flac_dec = NULL;
+
+    /* reserved[0] will contain the FLAC decoder type */
+    out->compr_config.codec->options.generic.reserved[0] =
+                                                AUDIO_COMP_FORMAT_FLAC;
+    /* reserved[1] onwards will contain the FLAC decoder format info */
+    flac_dec = (struct snd_generic_dec_flac *)
+                &(out->compr_config.codec->options.generic.reserved[1]);
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        flac_dec->min_blk_size = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        flac_dec->max_blk_size = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        flac_dec->min_frame_size = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        flac_dec->max_frame_size = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+
+    ALOGV("FLAC metadata: fmt 0x%x, id 0x%x, FLAC type 0x%x min_blk_size %d,"
+                "  max_blk_size %d min_frame_size %d max_frame_size %d \n",
+          out->compr_config.codec->format,
+          out->compr_config.codec->id,
+          out->compr_config.codec->options.generic.reserved[0],
+          flac_dec->min_blk_size,
+          flac_dec->max_blk_size,
+          flac_dec->min_frame_size,
+          flac_dec->max_frame_size);
+
+    return ret;
+}
+
+static int get_alac_dec_info(struct stream_out *out, struct str_parms *parms) {
+    int ret = 0;
+    char value[32];
+    struct snd_generic_dec_alac *alac_dec = NULL;
+
+    /* reserved[0] will contain the ALAC decoder type */
+    out->compr_config.codec->options.generic.reserved[0] =
+                                                AUDIO_COMP_FORMAT_ALAC;
+    /* reserved[1] onwards will contain the ALAC decoder format info */
+    alac_dec = (struct snd_generic_dec_alac *)
+                &(out->compr_config.codec->options.generic.reserved[1]);
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_FRAME_LENGTH,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->frame_length = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_COMPATIBLE_VERSION,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->compatible_version = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_BIT_DEPTH,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->bit_depth = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_PB,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->pb = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_MB,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->mb = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_KB,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->kb = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_NUM_CHANNELS,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->num_channels = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_MAX_RUN,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->max_run = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_MAX_FRAME_BYTES,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->max_frame_bytes = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_AVG_BIT_RATE,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->avg_bit_rate = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_SAMPLING_RATE,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->sample_rate = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_CHANNEL_LAYOUT_TAG,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        alac_dec->channel_layout_tag = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+
+    ALOGV("ALAC CSD values: fmt 0x%x, id 0x%x, ALAC type 0x%x, frameLength %d"
+            "bitDepth %d numChannels %d"
+            " maxFrameBytes %d, avgBitRate %d, sampleRate %d \n",
+            out->compr_config.codec->format,
+            out->compr_config.codec->id,
+            out->compr_config.codec->options.generic.reserved[0],
+            alac_dec->frame_length,
+            alac_dec->bit_depth,
+            alac_dec->num_channels,
+            alac_dec->max_frame_bytes,
+            alac_dec->avg_bit_rate,
+            alac_dec->sample_rate);
+
+    return ret;
+}
+
+static int get_ape_dec_info(struct stream_out *out, struct str_parms *parms) {
+    int ret = 0;
+    char value[32];
+    struct snd_generic_dec_ape *ape_dec = NULL;
+
+    /* reserved[0] will contain the APE decoder type */
+    out->compr_config.codec->options.generic.reserved[0] =
+                                                        AUDIO_COMP_FORMAT_APE;
+
+    /* reserved[1] onwards will contain the APE decoder format info */
+    ape_dec = (struct snd_generic_dec_ape *)
+                &(out->compr_config.codec->options.generic.reserved[1]);
+
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_COMPATIBLE_VERSION,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        ape_dec->compatible_version = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_COMPRESSION_LEVEL,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        ape_dec->compression_level = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_FORMAT_FLAGS,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        ape_dec->format_flags = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_BLOCKS_PER_FRAME,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        ape_dec->blocks_per_frame = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_FINAL_FRAME_BLOCKS,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        ape_dec->final_frame_blocks = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_TOTAL_FRAMES, value,
+                                sizeof(value));
+    if (ret >= 0) {
+        ape_dec->total_frames = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_BITS_PER_SAMPLE,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        ape_dec->bits_per_sample = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_NUM_CHANNELS,
+                                 value, sizeof(value));
+    if (ret >= 0) {
+        ape_dec->num_channels = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_SAMPLE_RATE,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        ape_dec->sample_rate = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_SEEK_TABLE_PRESENT,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        ape_dec->seek_table_present = atoi(value);
+        out->is_compr_metadata_avail = true;
+    }
+
+    ALOGV("APE CSD values: fmt 0x%x, id 0x%x, APE type 0x%x"
+            " compatibleVersion %d compressionLevel %d"
+            " formatFlags %d blocksPerFrame %d finalFrameBlocks %d"
+            " totalFrames %d bitsPerSample %d numChannels %d"
+            " sampleRate %d seekTablePresent %d",
+            out->compr_config.codec->format,
+            out->compr_config.codec->id,
+            out->compr_config.codec->options.generic.reserved[0],
+            ape_dec->compatible_version,
+            ape_dec->compression_level,
+            ape_dec->format_flags,
+            ape_dec->blocks_per_frame,
+            ape_dec->final_frame_blocks,
+            ape_dec->total_frames,
+            ape_dec->bits_per_sample,
+            ape_dec->num_channels,
+            ape_dec->sample_rate,
+            ape_dec->seek_table_present);
+
+    return ret;
+}
+
+static int get_vorbis_dec_info(struct stream_out *out,
+                                struct str_parms *parms) {
+    int ret = 0;
+    char value[32];
+    struct snd_generic_dec_vorbis *vorbis_dec = NULL;
+
+    /* reserved[0] will contain the Vorbis decoder type */
+    out->compr_config.codec->options.generic.reserved[0] =
+                                                AUDIO_COMP_FORMAT_VORBIS;
+    /* reserved[1] onwards will contain the Vorbis decoder format info */
+    vorbis_dec = (struct snd_generic_dec_vorbis *)
+                    &(out->compr_config.codec->options.generic.reserved[1]);
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_VORBIS_BITSTREAM_FMT,
+                                value, sizeof(value));
+    if (ret >= 0) {
+        // transcoded bitstream mode
+        vorbis_dec->bit_stream_fmt = (atoi(value) > 0) ? 1 : 0;
+        out->is_compr_metadata_avail = true;
+    }
+
+    ALOGV("Vorbis values: fmt 0x%x, id 0x%x, Vorbis type 0x%x"
+            " bitStreamFmt %d\n",
+          out->compr_config.codec->format,
+          out->compr_config.codec->id,
+          out->compr_config.codec->options.generic.reserved[0],
+          vorbis_dec->bit_stream_fmt);
+
+     return ret;
+}
+
+int audio_extn_parse_compress_metadata(struct stream_out *out,
+                                       struct str_parms *parms)
+{
+    int ret = 0;
+    char value[32];
+
+    if (!if_compress_meta_data_feature_enabled())
+        return ret;
+
+    if (out->format == AUDIO_FORMAT_FLAC) {
+        ret = get_flac_dec_info(out, parms);
+    } else if (out->format == AUDIO_FORMAT_ALAC) {
+        ret = get_alac_dec_info(out, parms);
+    } else if (out->format == AUDIO_FORMAT_APE) {
+        ret = get_ape_dec_info(out, parms);
+    } else if (out->format == AUDIO_FORMAT_VORBIS) {
+        ret = get_vorbis_dec_info(out, parms);
+    } else if (out->format == AUDIO_FORMAT_WMA ||
+                out->format == AUDIO_FORMAT_WMA_PRO) {
+        ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_FORMAT_TAG,
+                                value, sizeof(value));
+        if (ret >= 0) {
+            out->compr_config.codec->format = atoi(value);
+            out->is_compr_metadata_avail = true;
+        }
+
+        ret = get_wma_dec_info(out, parms);
+    }
+
+    return ret;
+}
+
+#else
 int audio_extn_parse_compress_metadata(struct stream_out *out,
                                        struct str_parms *parms)
 {
@@ -3337,15 +3676,12 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
             out->compr_config.codec->format = atoi(value);
             out->is_compr_metadata_avail = true;
         }
-#ifdef AUDIO_GKI_ENABLED
-	ret = get_wma_dec_info(out, parms);
-#else
-	ret = get_wma_info(out, parms);
-#endif
+        ret = get_wma_info(out, parms);
     }
 
     return ret;
 }
+#endif
 
 #ifdef AUXPCM_BT_ENABLED
 int32_t audio_extn_read_xml(struct audio_device *adev, uint32_t mixer_card,

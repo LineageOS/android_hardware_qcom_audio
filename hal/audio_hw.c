@@ -78,6 +78,11 @@
 #include "ip_hdlr_intf.h"
 
 #include "sound/compress_params.h"
+
+#ifdef AUDIO_GKI_ENABLED
+#include "sound/audio_compressed_formats.h"
+#endif
+
 #include "sound/asound.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
@@ -7672,6 +7677,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     bool force_haptic_path =
             property_get_bool("vendor.audio.test_haptic", false);
     bool is_voip_rx = flags & AUDIO_OUTPUT_FLAG_VOIP_RX;
+#ifdef AUDIO_GKI_ENABLED
+    __s32 *generic_dec;
+#endif
 
     if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
@@ -8097,8 +8105,16 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP) {
             out->compr_config.fragment_size += sizeof(struct snd_codec_metadata);
         }
-        if (config->offload_info.format == AUDIO_FORMAT_FLAC)
+        if (config->offload_info.format == AUDIO_FORMAT_FLAC) {
+#ifdef AUDIO_GKI_ENABLED
+            generic_dec =
+                &(out->compr_config.codec->options.generic.reserved[1]);
+            ((struct snd_generic_dec_flac *)generic_dec)->sample_size =
+                                                AUDIO_OUTPUT_BIT_WIDTH;
+#else
             out->compr_config.codec->options.flac_dec.sample_size = AUDIO_OUTPUT_BIT_WIDTH;
+#endif
+        }
 
         if (config->offload_info.format == AUDIO_FORMAT_APTX) {
             audio_extn_send_aptx_dec_bt_addr_to_dsp(out);
