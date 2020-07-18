@@ -1424,10 +1424,13 @@ int enable_snd_device(struct audio_device *adev,
                    __func__, device_name);
         }
 
-        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
-            (audio_extn_a2dp_start_playback() < 0)) {
-            ALOGE(" fail to configure A2dp Source control path ");
-            goto err;
+        if (SND_DEVICE_OUT_BT_A2DP == snd_device) {
+            if (audio_extn_a2dp_start_playback() < 0) {
+                ALOGE(" fail to configure A2dp Source control path ");
+                goto err;
+            } else {
+                adev->a2dp_started = true;
+            }
         }
 
         if ((SND_DEVICE_IN_BT_A2DP == snd_device) &&
@@ -1534,9 +1537,10 @@ int disable_snd_device(struct audio_device *adev,
             audio_route_reset_and_update_path(adev->audio_route, device_name);
         }
 
-        if (snd_device == SND_DEVICE_OUT_BT_A2DP)
+        if (snd_device == SND_DEVICE_OUT_BT_A2DP) {
             audio_extn_a2dp_stop_playback();
-        else if (snd_device == SND_DEVICE_IN_BT_A2DP)
+            adev->a2dp_started = false;
+        } else if (snd_device == SND_DEVICE_IN_BT_A2DP)
             audio_extn_a2dp_stop_capture();
         else if ((snd_device == SND_DEVICE_OUT_HDMI) ||
                 (snd_device == SND_DEVICE_OUT_DISPLAY_PORT))
@@ -3927,7 +3931,26 @@ int start_output_stream(struct stream_out *out)
             assign_devices(&out->device_list, &dev);
         }
     } else {
-         select_devices(adev, out->usecase);
+        select_devices(adev, out->usecase);
+        if (is_a2dp_out_device_type(&out->device_list) &&
+             !adev->a2dp_started) {
+            if (is_speaker_active || is_speaker_safe_active) {
+                struct listnode dev;
+                list_init(&dev);
+                assign_devices(&dev, &out->device_list);
+                if (compare_device_type(&dev, AUDIO_DEVICE_OUT_SPEAKER_SAFE))
+                    reassign_device_list(&out->device_list,
+                                    AUDIO_DEVICE_OUT_SPEAKER_SAFE, "");
+                else
+                    reassign_device_list(&out->device_list,
+                                    AUDIO_DEVICE_OUT_SPEAKER, "");
+                select_devices(adev, out->usecase);
+                assign_devices(&out->device_list, &dev);
+            } else {
+                ret = -EINVAL;
+                goto error_open;
+            }
+        }
     }
 
     if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
@@ -10502,6 +10525,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->enable_hfp = false;
     adev->use_old_pspd_mix_ctrl = false;
     adev->adm_routing_changed = false;
+    adev->a2dp_started = false;
 
     audio_extn_perf_lock_init();
 
