@@ -1307,6 +1307,8 @@ int disable_audio_route(struct audio_device *adev,
                 platform_set_island_cfg_on_device(adev, usecase->in_snd_device, false);
                 platform_set_power_mode_on_device(adev, usecase->in_snd_device, false);
                 platform_reset_island_power_status(adev->platform, usecase->in_snd_device);
+                if (voice_is_lte_call_active(adev))
+                    platform_set_tx_lpi_mode(adev->platform, false);
                 ALOGD("%s: disable island cfg and power mode in voice tx path",
                       __func__);
             }
@@ -1422,6 +1424,10 @@ int enable_snd_device(struct audio_device *adev,
             platform_get_power_mode_on_device(adev->platform, snd_device)) {
             platform_set_island_cfg_on_device(adev, snd_device, true);
             platform_set_power_mode_on_device(adev, snd_device, true);
+            if (voice_is_lte_call_active(adev) &&
+                (snd_device >= SND_DEVICE_IN_BEGIN &&
+                 snd_device < SND_DEVICE_IN_END))
+               platform_set_tx_lpi_mode(adev->platform, true);
             ALOGD("%s: enable island cfg and power mode on: %s",
                    __func__, device_name);
         }

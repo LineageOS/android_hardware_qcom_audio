@@ -323,6 +323,7 @@ struct platform_data {
     bool is_vbat_speaker;
     bool is_bcl_speaker;
     bool gsm_mode_enabled;
+    bool lpi_enabled;
     bool is_slimbus_interface;
     bool is_internal_codec;
     bool is_default_be_config;
@@ -2042,6 +2043,24 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
     }
 }
 
+void platform_set_tx_lpi_mode(void *platform, bool enable)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+
+    if (!enable && my_data->lpi_enabled) {
+        my_data->lpi_enabled = false;
+        ALOGV("%s: disabling TX LPI mode", __func__);
+        audio_route_reset_and_update_path(adev->audio_route, "tx-lpi-enable");
+    }
+
+    if (enable) {
+        my_data->lpi_enabled = true;
+        ALOGD("%s: enabling TX LPI mode", __func__);
+        audio_route_apply_and_update_path(adev->audio_route, "tx-lpi-enable");
+    }
+}
+
 static struct csd_data *open_csd_client(bool i2s_ext_modem)
 {
     struct csd_data *csd = calloc(1, sizeof(struct csd_data));
@@ -3191,6 +3210,7 @@ void *platform_init(struct audio_device *adev)
     my_data->use_sprk_default_sample_rate = true;
     my_data->fluence_in_voice_comm = false;
     my_data->ec_car_state = false;
+    my_data->lpi_enabled = false;
     my_data->is_multiple_sample_rate_combo_supported = true;
     platform_reset_edid_info(my_data);
 
