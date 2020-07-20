@@ -257,71 +257,63 @@ audio_devices_t AudioVoice::GetMatchingTxDevice(audio_devices_t halRxDeviceId) {
     return halTxDeviceId;
 }
 
-int AudioVoice::VoiceOutSetParameters(const char *kvpairs) {
-    char value[32];
-    int ret = 0, rx_device = 0, tx_device = 0, err;
+int AudioVoice::RouteStream(audio_devices_t rx_device) {
+    int ret = 0, tx_device = 0;
     pal_device_id_t pal_rx_device = (pal_device_id_t) NULL;
     pal_device_id_t pal_tx_device = (pal_device_id_t) NULL;
     pal_device_id_t* pal_device_ids = NULL;
     uint16_t device_count = 0;
-    struct str_parms *parms = (str_parms *)NULL;
 
     ALOGD("%s Enter", __func__);
-    parms = str_parms_create_str(kvpairs);
 
-    if (!parms) {
-       return -EINVAL;
+    if ((device_count = popcount(rx_device)) == 0) {
+        ALOGE("%s invalid routing device %d", __func__, rx_device);
+        return 0;
     }
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
-    str_parms_destroy(parms);
-    if (err >= 0) {
-        rx_device = atoi(value);
-        if ((device_count = popcount(rx_device)) == 0) {
-            ALOGE("%s invalid routing device %d", __func__, rx_device);
-            return 0;
-        }
 
-        tx_device = GetMatchingTxDevice(rx_device);
-        if (device_count < popcount(tx_device)) {
-            device_count = popcount(tx_device);
-        }
+    tx_device = GetMatchingTxDevice(rx_device);
+    if (device_count < popcount(tx_device)) {
+        device_count = popcount(tx_device);
+    }
 
-        pal_device_ids = (pal_device_id_t *)calloc(1, device_count * sizeof(pal_device_id_t));
-        if (!pal_device_ids) {
-            ALOGE("%s fail to allocate memory for pal device array", __func__);
-            return -ENOMEM;
-        }
+    pal_device_ids = (pal_device_id_t *)calloc(1, device_count * sizeof(pal_device_id_t));
+    if (!pal_device_ids) {
+        ALOGE("%s fail to allocate memory for pal device array", __func__);
+        return -ENOMEM;
+    }
 
-        ALOGD("%s Routing is %d", __func__, rx_device);
-        if (stream_out_primary_) {
-            stream_out_primary_->getPalDeviceIds(rx_device, pal_device_ids);
-            pal_rx_device = pal_device_ids[0];
-            memset(pal_device_ids, 0, device_count * sizeof(pal_device_id_t));
-            stream_out_primary_->getPalDeviceIds(tx_device, pal_device_ids);
-            pal_tx_device = pal_device_ids[0];
-        }
-        bool same_dev = pal_voice_rx_device_id_ == pal_rx_device;
-        pal_voice_rx_device_id_ = pal_rx_device;
-        pal_voice_tx_device_id_ = pal_tx_device;
+    ALOGD("%s Routing is %d", __func__, rx_device);
 
-        if (!IsAnyCallActive()) {
-            if (mode_ == AUDIO_MODE_IN_CALL || mode_ == AUDIO_MODE_CALL_SCREEN) {
-                voice_.in_call = true;
-                ret = UpdateCalls(voice_.session);
-            }
-        } else {
-            //do device switch here
-            if (!same_dev) {
-                for (int i = 0; i < max_voice_sessions_; i++) {
-                    ret = VoiceSetDevice(&voice_.session[i]);
-                    if (ret)
-                        ALOGE("%s Device switch failed for session[%d]", __func__, i);
-                }
+    if (stream_out_primary_) {
+        stream_out_primary_->getPalDeviceIds(rx_device, pal_device_ids);
+        pal_rx_device = pal_device_ids[0];
+        memset(pal_device_ids, 0, device_count * sizeof(pal_device_id_t));
+        stream_out_primary_->getPalDeviceIds(tx_device, pal_device_ids);
+        pal_tx_device = pal_device_ids[0];
+    }
+
+    bool same_dev = pal_voice_rx_device_id_ == pal_rx_device;
+    pal_voice_rx_device_id_ = pal_rx_device;
+    pal_voice_tx_device_id_ = pal_tx_device;
+
+    if (!IsAnyCallActive()) {
+        if (mode_ == AUDIO_MODE_IN_CALL || mode_ == AUDIO_MODE_CALL_SCREEN) {
+            voice_.in_call = true;
+            ret = UpdateCalls(voice_.session);
+        }
+    } else {
+        //do device switch here
+        if (!same_dev) {
+            for (int i = 0; i < max_voice_sessions_; i++) {
+                ret = VoiceSetDevice(&voice_.session[i]);
+                if (ret)
+                    ALOGE("%s Device switch failed for session[%d]", __func__, i);
             }
         }
-
-        free(pal_device_ids);
     }
+
+    free(pal_device_ids);
+
     return ret;
 }
 

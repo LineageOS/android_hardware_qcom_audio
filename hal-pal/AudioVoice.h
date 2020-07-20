@@ -63,12 +63,10 @@
 
 class AudioVoice {
 public:
-
     struct call_state_t {
             int current_;
             int new_;
     };
-
     struct voice_session_t {
             call_state_t state;
             uint32_t vsid;
@@ -77,7 +75,6 @@ public:
             bool volume_boost;
             bool slow_talk;
     };
-
     struct voice_t {
             voice_session_t session[MAX_VOICE_SESSIONS];
             bool mic_mute;
@@ -85,14 +82,11 @@ public:
             float volume;
             bool in_call;
     };
-
     voice_t voice_;
     audio_mode_t mode_;
-
     std::shared_ptr<StreamOutPrimary> stream_out_primary_;
-
     int VoiceSetParameters(const char *kvpairs);
-    int VoiceOutSetParameters(const char *kvpairs);
+    int RouteStream(audio_devices_t);
     bool is_valid_call_state(int call_state);
     bool is_valid_vsid(uint32_t vsid);
     int max_voice_sessions_;
@@ -112,7 +106,5 @@ public:
     ~AudioVoice();
     pal_device_id_t pal_voice_tx_device_id_;
     pal_device_id_t pal_voice_rx_device_id_;
-
-
 };
 #endif  // ANDROID_HARDWARE_AHAL_VOICE_H_

@@ -33,8 +33,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <vector>
-
 #include <cutils/properties.h>
 #include <hardware/audio.h>
 #include <system/audio.h>
@@ -378,7 +376,7 @@ public:
     StreamPrimary(audio_io_handle_t handle,
         audio_devices_t devices,
         struct audio_config *config);
-    ~StreamPrimary();
+    virtual ~StreamPrimary();
     uint32_t        GetSampleRate();
     uint32_t        GetBufferSize();
     audio_format_t  GetFormat();
@@ -398,6 +396,7 @@ public:
                                  int *device_num);
     int GetLookupTableIndex(const struct string_to_enum *table,
                                         const int table_size, int value);
+    virtual int RouteStream(audio_devices_t new_devices) = 0;
 protected:
     struct pal_stream_attributes streamAttributes_;
     pal_stream_handle_t*      pal_stream_handle_;
@@ -437,7 +436,6 @@ public:
     int SetVolume(float left, float right);
     uint64_t GetFramesWritten(struct timespec *timestamp);
     int SetParameters(struct str_parms *parms);
-    int VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, const char *kvpairs);
     int Pause();
     int Resume();
     int Drain(audio_drain_type_t type);
@@ -461,6 +459,7 @@ public:
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
     int GetMmapPosition(struct audio_mmap_position *position);
     bool isDeviceAvailable(pal_device_id_t deviceId);
+    int RouteStream(audio_devices_t new_devices);
 protected:
     struct timespec writeAt;
     int get_compressed_buffer_size();
@@ -523,6 +522,7 @@ public:
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
     int GetMmapPosition(struct audio_mmap_position *position);
     bool isDeviceAvailable(pal_device_id_t deviceId);
+    int RouteStream(audio_devices_t new_devices);
 protected:
     int FillHalFnPtrs();
     std::shared_ptr<audio_stream_in>    stream_;

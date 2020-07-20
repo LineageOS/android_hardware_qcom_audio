@@ -51,8 +51,12 @@
 #include <log/log.h>
 #include <cutils/str_parms.h>
 
+#include <vector>
+#include <map>
+
 #include "PalApi.h"
 #include "PalDefs.h"
+
 #include "audio_extn.h"
 #include "audio_hidl.h"
 #include "battery_listener.h"
@@ -110,13 +114,181 @@ void AudioDevice::CloseStreamOut(std::shared_ptr<StreamOutPrimary> stream) {
     out_list_mutex.lock();
     auto iter =
         std::find(stream_out_list_.begin(), stream_out_list_.end(), stream);
-
     if (iter == stream_out_list_.end()) {
         ALOGE("%s: invalid output stream", __func__);
     } else {
         stream_out_list_.erase(iter);
     }
     out_list_mutex.unlock();
+}
+
+int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
+                                  const std::vector<struct audio_port_config>& sources,
+                                  const std::vector<struct audio_port_config>& sinks) {
+    int ret = 0;
+    bool new_patch = false;
+    AudioPatch *patch = NULL;
+    std::shared_ptr<StreamPrimary> stream = nullptr;
+    AudioPatch::PatchType patch_type = AudioPatch::PATCH_NONE;
+    audio_io_handle_t io_handle = AUDIO_IO_HANDLE_NONE;
+    audio_source_t input_source = AUDIO_SOURCE_DEFAULT;
+    audio_devices_t device_types = AUDIO_DEVICE_NONE;
+
+    ALOGD("%s: enter: num sources %zu, num_sinks %zu", __func__, sources.size(), sinks.size());
+
+    if (!handle || sources.empty() || sources.size() > AUDIO_PATCH_PORTS_MAX ||
+        sinks.empty() || sinks.size() > AUDIO_PATCH_PORTS_MAX) {
+        ALOGE("%s: Invalid patch arguments", __func__);
+        return -EINVAL;
+    }
+
+    if (sources.size() > 1) {
+        ALOGE("%s: Multiple sources are not supported", __func__);
+        return -EINVAL;
+    }
+
+    ALOGD("%s: source role %d, source type %d", __func__, sources[0].role, sources[0].type);
+
+    // Populate source/sink information and fetch stream info
+    switch (sources[0].type) {
+        case AUDIO_PORT_TYPE_DEVICE: // Patch for audio capture or loopback
+            device_types = sources[0].ext.device.type;
+            if (sinks[0].type == AUDIO_PORT_TYPE_MIX) {
+                io_handle = sinks[0].ext.mix.handle;
+                input_source = sinks[0].ext.mix.usecase.source;
+                patch_type = AudioPatch::PATCH_CAPTURE;
+                ALOGD("%s: Capture patch from device %x to mix %d",
+                      __func__, sources[0].ext.device.type, sinks[0].ext.mix.handle);
+            } else {
+                /*Device to device patch is not implemented.
+                  This space will need changes if audio HAL
+                  handles device to device patches in the future.*/
+                patch_type = AudioPatch::PATCH_DEVICE_LOOPBACK;
+                ALOGE("%s Device to device patches not supported", __func__);
+                return -ENOSYS;
+            }
+            break;
+        case AUDIO_PORT_TYPE_MIX: // Patch for audio playback
+            io_handle = sources[0].ext.mix.handle;
+            for (const auto &sink : sinks)
+                device_types |= sink.ext.device.type;
+            patch_type = AudioPatch::PATCH_PLAYBACK;
+            ALOGD("%s: Playback patch from mix handle %d to device %x", __func__,
+                    io_handle, device_types);
+            break;
+        case AUDIO_PORT_TYPE_SESSION:
+        case AUDIO_PORT_TYPE_NONE:
+            ALOGE("%s: Unsupported source type %d", __func__, sources[0].type);
+            return -EINVAL;
+    }
+
+    if (patch_type == AudioPatch::PATCH_PLAYBACK)
+        stream = OutGetStream(io_handle);
+    else
+        stream = InGetStream(io_handle);
+
+    if(!stream){
+        ALOGE("%s: Failed to fetch stream with io handle %d", __func__, io_handle);
+        return -EINVAL;
+    }
+
+    // empty patch...generate new handle
+    if (*handle == AUDIO_PATCH_HANDLE_NONE) {
+        patch = new AudioPatch(patch_type, sources, sinks);
+        *handle = patch->handle;
+        new_patch = true;
+    } else {
+        std::lock_guard<std::mutex> lock(patch_map_mutex);
+        auto it = patch_map_.find(*handle);
+        if (it == patch_map_.end()) {
+            ALOGE("%s: Unable to fetch patch with handle %d", __func__, *handle);
+            return -EINVAL;
+        }
+        patch = &(*it->second);
+        patch->type = patch_type;
+        patch->sources = sources;
+        patch->sinks = sinks;
+    }
+
+    ret = stream->RouteStream(device_types);
+    if (voice_ && patch_type == AudioPatch::PATCH_PLAYBACK)
+        ret |= voice_->RouteStream(device_types);
+
+    if (ret) {
+        if (new_patch)
+            delete patch;
+        ALOGE("%s: Stream routing failed for io_handle %d", __func__, io_handle);
+    } else if (new_patch) {
+        // new patch...add to patch map
+        std::lock_guard<std::mutex> lock(patch_map_mutex);
+        patch_map_[patch->handle] = patch;
+        ALOGD("%s: Added a new patch with handle %d", __func__, patch->handle);
+    }
+
+    return ret;
+}
+
+int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
+    int ret = 0;
+    AudioPatch *patch = NULL;
+    std::shared_ptr<StreamPrimary> stream = nullptr;
+    audio_io_handle_t io_handle = AUDIO_IO_HANDLE_NONE;
+    AudioPatch::PatchType patch_type = AudioPatch::PATCH_NONE;
+
+    ALOGD("%s: Release patch with handle %d", __func__, handle);
+
+    if (handle == AUDIO_PATCH_HANDLE_NONE) {
+        ALOGE("%s: Invalid patch handle %d", __func__, handle);
+        return -EINVAL;
+    }
+
+    // grab the io_handle from the patch
+    patch_map_mutex.lock();
+    auto patch_it = patch_map_.find(handle);
+    if (patch_it == patch_map_.end() || !patch_it->second) {
+        ALOGE("%s: Patch info not found with handle %d", __func__, handle);
+        return -EINVAL;
+    }
+    patch = &(*patch_it->second);
+    patch_type = patch->type;
+    switch (patch->sources[0].type) {
+        case AUDIO_PORT_TYPE_MIX:
+            io_handle = patch->sources[0].ext.mix.handle;
+            break;
+        case AUDIO_PORT_TYPE_DEVICE:
+            if (patch->type == AudioPatch::PATCH_CAPTURE)
+                io_handle = patch->sinks[0].ext.mix.handle;
+            break;
+        case AUDIO_PORT_TYPE_SESSION:
+        case AUDIO_PORT_TYPE_NONE:
+            ALOGD("%s: Invalid port type: %d", __func__, patch->sources[0].type);
+            return -EINVAL;
+    }
+    patch_map_mutex.unlock();
+
+    if (patch_type == AudioPatch::PATCH_PLAYBACK)
+        stream = OutGetStream(io_handle);
+    else
+        stream = InGetStream(io_handle);
+
+    if (!stream){
+        ALOGE("%s: Failed to fetch stream with io handle %d", __func__, io_handle);
+        return -EINVAL;
+    }
+
+    ret = stream->RouteStream(AUDIO_DEVICE_NONE);
+    if (patch_type == AudioPatch::PATCH_PLAYBACK)
+        ret |= voice_->RouteStream(AUDIO_DEVICE_NONE);
+
+    if (ret)
+        ALOGE("%s: Stream routing failed for io_handle %d", __func__, io_handle);
+
+    std::lock_guard lock(patch_map_mutex);
+    patch_map_.erase(handle);
+    delete patch;
+
+    ALOGD("%s: Successfully released patch %d", __func__, handle);
+    return ret;
 }
 
 std::shared_ptr<StreamInPrimary> AudioDevice::CreateStreamIn(
@@ -167,7 +339,6 @@ void adev_on_battery_status_changed(bool charging)
 }
 
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume) {
-
     std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
         ALOGE("%s: invalid adevice object", __func__);
@@ -175,8 +346,6 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume) {
     }
 
     return adevice->SetVoiceVolume(volume);
-
-
 }
 
 static int adev_pal_global_callback(uint32_t event_id, uint32_t *event_data,
@@ -225,20 +394,16 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         ALOGE("%s: sound card offline", __func__);
         return -ENODEV;
     }
+
     astream = adevice->OutGetStream(handle);
-
-    if (astream == nullptr) {
-        adevice->CreateStreamOut(handle, devices, flags, config,
-                                 stream_out, address);
-    }
-
+    if (astream == nullptr)
+        astream = adevice->CreateStreamOut(handle, devices, flags, config, stream_out, address);
 exit:
     return ret;
 }
 
 void adev_close_output_stream(struct audio_hw_device *dev,
                               struct audio_stream_out *stream) {
-
     std::shared_ptr<StreamOutPrimary> astream_out;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
@@ -253,6 +418,7 @@ void adev_close_output_stream(struct audio_hw_device *dev,
     }
 
     ALOGD("%s: enter:stream_handle(%p)", __func__, astream_out.get());
+
     adevice->CloseStreamOut(astream_out);
 }
 
@@ -267,13 +433,13 @@ void adev_close_input_stream(struct audio_hw_device *dev,
     }
 
     astream_in = adevice->InGetStream((audio_stream_t*)stream);
-
     if (!astream_in) {
         ALOGE("%s: invalid astream_in object", __func__);
         return;
     }
 
     ALOGD("%s: enter:stream_handle(%p)", __func__, astream_in.get());
+
     adevice->CloseStreamIn(astream_in);
 }
 
@@ -329,10 +495,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
     astream = adevice->InGetStream(handle);
     if (astream == nullptr) {
-        adevice->CreateStreamIn(handle, devices, flags, config, address,
+        astream = adevice->CreateStreamIn(handle, devices, flags, config, address,
                                 stream_in, source);
     }
-    //Need keep track of the list of streams that are allocated
+
   exit:
       return ret;
 }
@@ -419,11 +585,13 @@ static size_t adev_get_input_buffer_size(
 }
 
 int adev_release_audio_patch(struct audio_hw_device *dev,
-                           audio_patch_handle_t handle) {
-    std::ignore = dev;
-    std::ignore = handle;
-
-    return 0;
+                             audio_patch_handle_t handle) {
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
+    if (!adevice){
+        ALOGE("%s: GetInstance() failed", __func__);
+        return -EINVAL;
+    }
+    return adevice->ReleaseAudioPatch(handle);
 }
 
 int adev_create_audio_patch(struct audio_hw_device *dev,
@@ -432,14 +600,22 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
                             unsigned int num_sinks,
                             const struct audio_port_config *sinks,
                             audio_patch_handle_t *handle) {
-    std::ignore = dev;
-    std::ignore = num_sources;
-    std::ignore = sources;
-    std::ignore = num_sinks;
-    std::ignore = sinks;
-    std::ignore = handle;
 
-    return 0;
+    if (!handle){
+        ALOGE("%s: Invalid handle", __func__);
+        return -EINVAL;
+    }
+
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
+    if (!adevice){
+        ALOGE("%s: GetInstance() failed", __func__);
+        return -EINVAL;
+    }
+
+    std::vector<struct audio_port_config> source_vec(sources, sources + num_sources);
+    std::vector<struct audio_port_config> sink_vec(sinks, sinks + num_sinks);
+
+    return adevice->CreateAudioPatch(handle, source_vec, sink_vec);
 }
 
 int adev_get_audio_port(struct audio_hw_device *dev,
@@ -473,7 +649,7 @@ static int adev_get_microphones(const struct audio_hw_device *dev __unused,
 int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     int ret = 0;
     /* default audio HAL major version */
-    uint32_t maj_version = 2;
+    uint32_t maj_version = 3;
 
     ret = pal_init();
     if (ret) {
@@ -980,7 +1156,6 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     str_parms_destroy(parms);
 
     ALOGD("%s: exit: %s", __func__, kvpairs);
-
     return ret;
 }
 
@@ -1226,3 +1401,19 @@ struct audio_module HAL_MODULE_INFO_SYM = {
         .methods = &hal_module_methods,
     },
 };
+
+audio_patch_handle_t AudioPatch::generate_patch_handle_l(){
+    static audio_patch_handle_t handles = AUDIO_PATCH_HANDLE_NONE;
+    if (++handles < 0)
+        handles = AUDIO_PATCH_HANDLE_NONE + 1;
+    return handles;
+}
+
+AudioPatch::AudioPatch(PatchType patch_type,
+                       const std::vector<struct audio_port_config>& sources,
+                       const std::vector<struct audio_port_config>& sinks):
+                       type(patch_type), sources(sources), sinks(sinks){
+        static std::mutex patch_lock;
+        std::lock_guard<std::mutex> lock(patch_lock);
+        handle = AudioPatch::generate_patch_handle_l();
+}

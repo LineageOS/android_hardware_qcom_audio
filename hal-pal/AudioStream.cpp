@@ -617,12 +617,6 @@ static int astream_out_set_parameters(struct audio_stream *stream,
     ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, astream_out->GetUseCase(), use_case_table[astream_out->GetUseCase()], kvpairs);
 
-    ret = astream_out->VoiceSetParameters(adevice, kvpairs);
-    if (ret) {
-        ALOGE("Voice Stream SetParameters Error (%x)", ret);
-        goto exit;
-    }
-
     parms = str_parms_create_str(kvpairs);
     if (!parms) {
        ret = -EINVAL;
@@ -1529,13 +1523,85 @@ int StreamOutPrimary::Standby() {
         return ret;
 }
 
-int StreamOutPrimary::SetParameters(struct str_parms *parms) {
-    char value[64];
-    int ret = 0, val = 0, noPalDevices = 0;
+int StreamOutPrimary::RouteStream(audio_devices_t new_devices) {
+    int ret = 0, noPalDevices = 0;
     pal_device_id_t * deviceId;
     struct pal_device* deviceIdConfigs;
-    int err =  -EINVAL;
-    int controller = -1, stream = -1;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+
+    ALOGD("StreamOutPrimary::%s: enter ", __func__);
+
+    if (!mInitialized){
+        ALOGE("%s: Not initialized, returning error", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ALOGD("%s: mAndroidOutDevices %d, mNoOfOutDevices %d, new_devices %d", __func__,
+            mAndroidOutDevices, mNoOfOutDevices, new_devices);
+
+    /* If its the same device as what was already routed to, dont bother */
+    if ((mAndroidOutDevices != new_devices) && (new_devices != 0)) {
+        //re-allocate mPalOutDevice and mPalOutDeviceIds
+        if (popcount(new_devices) != mNoOfOutDevices) {
+            deviceId = (pal_device_id_t*) realloc(mPalOutDeviceIds,
+                    popcount(new_devices)* sizeof(pal_device_id_t));
+            deviceIdConfigs = (struct pal_device*) realloc(mPalOutDevice,
+                    popcount(new_devices) * sizeof(struct pal_device));
+            if (!deviceId || !deviceIdConfigs) {
+                ALOGE("%s: Failed to allocate PalOutDeviceIds!", __func__);
+                ret = -ENOMEM;
+                goto done;
+            }
+            mPalOutDeviceIds = deviceId;
+            mPalOutDevice = deviceIdConfigs;
+        }
+
+        noPalDevices = getPalDeviceIds(new_devices, mPalOutDeviceIds);
+        ALOGD("%s: noPalDevices: %d , popcount(new_devices): %d", __func__,
+                noPalDevices, popcount(new_devices));
+
+        if (noPalDevices != popcount(new_devices)) {
+            ALOGE("%s: Device count mismatch...exiting", __func__);
+            ret = -EINVAL;
+            goto done;
+        }
+
+        mNoOfOutDevices = noPalDevices;
+        for (int i = 0; i < mNoOfOutDevices; i++) {
+            mPalOutDevice[i].id = mPalOutDeviceIds[i];
+            mPalOutDevice[i].config.sample_rate = mPalOutDevice[0].config.sample_rate;
+            mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+            mPalOutDevice[i].config.ch_info = {0, {0}};
+            mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; 
+            if ((mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_DEVICE) ||
+               (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_HEADSET)) {
+                mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
+                mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
+            }
+        }
+
+        mAndroidOutDevices = new_devices;
+
+        if (pal_stream_handle_) {
+            ret = pal_stream_set_device(pal_stream_handle_, mNoOfOutDevices, mPalOutDevice);
+            if (!ret)
+                audio_extn_gef_notify_device_config(mAndroidOutDevices,
+                        config_.channel_mask, config_.sample_rate);
+            else
+                ALOGE("%s: failed to set device. Error %d", __func__ ,ret);
+        }
+    }
+
+done:
+    ALOGD("StreamOutPrimary::%s: exit %d", __func__, ret);
+    return ret;
+}
+
+int StreamOutPrimary::SetParameters(struct str_parms *parms) {
+    char value[64];
+    int ret =  -EINVAL, controller = -1, stream = -1;
+
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     ALOGD("%s: enter ", __func__);
@@ -1543,78 +1609,20 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     if (!mInitialized)
         goto error;
 
-#if 0
-    if (!pal_stream_handle_) {
-        ALOGD("%s: No stream handle, going to call open", __func__);
-        ret = Open();
-        if (ret) {
-            ALOGE("%s: failed to open stream.", __func__);
-            return -EINVAL;
-        }
-    }
-#endif
-
-    err = AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
-    if ( err >= 0) {
+    ret = AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
+    if (ret >= 0) {
         adevice->dp_controller = controller;
         adevice->dp_stream = stream;
         ALOGE("%s: plugin device cont %d stream %d",__func__, controller, stream);
     }
 
-
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
-    if (err >= 0) {
-        val = atoi(value);
-        ALOGV("%s: Found routing for output stream with value %x", __func__, val);
-        ALOGD("%s: mAndroidOutDevicese %d, mNoOfOutDevices %d", __func__, mAndroidOutDevices, mNoOfOutDevices);
-        /* If its the same device as what was already routed to, dont bother */
-        if ((mAndroidOutDevices != val) && (val != 0)) {
-            //re-allocate mPalOutDevice and mPalOutDeviceIds
-            if (popcount(val) != mNoOfOutDevices) {
-                deviceId = (pal_device_id_t*) realloc(mPalOutDeviceIds, popcount(val)* sizeof(pal_device_id_t));
-                deviceIdConfigs = (struct pal_device*) realloc(mPalOutDevice, popcount(val) * sizeof(struct pal_device));
-                if (!deviceId || !deviceIdConfigs) {
-                    ret = -ENOMEM;
-                    goto error;
-                }
-                mPalOutDeviceIds = deviceId;
-                mPalOutDevice = deviceIdConfigs;
-            }
-            noPalDevices = getPalDeviceIds(val, mPalOutDeviceIds);
-
-            if (noPalDevices != popcount(val)) {
-                ret = -EINVAL;
-                goto error;
-            }
-            ALOGD("%s: noPalDevices %d", __func__, noPalDevices);
-            mNoOfOutDevices = noPalDevices;
-            for (int i = 0; i < mNoOfOutDevices; i++) {
-                mPalOutDevice[i].id = mPalOutDeviceIds[i];
-                mPalOutDevice[i].config.sample_rate = mPalOutDevice[0].config.sample_rate;
-                mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-                mPalOutDevice[i].config.ch_info = {0, {0}}; //is there a reason to have two different ch_info for device/stream?
-                mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
-                if ((mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_DEVICE) ||
-                   (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_HEADSET)) {
-                    mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
-                    mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
-                }
-            }
-            mAndroidOutDevices = val;
-            ret = pal_stream_set_device(pal_stream_handle_, mNoOfOutDevices, mPalOutDevice);
-            if (!ret) {
-                audio_extn_gef_notify_device_config(mAndroidOutDevices, config_.channel_mask, config_.sample_rate);
-            } else {
-                ALOGE("%s: failed to set device. Error %d", __func__ ,ret);
-            }
-        }
-    }
     //TBD: check if its offload and check call the following
     ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &palSndDec, parms, &msample_rate, &mchannels);
     if (ret) {
         ALOGE("parse_compress_metadata Error (%x)", ret);
         goto error;
     }
+
     ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
     if (ret >= 0 ) {
         gaplessMeta.encoderDelay = atoi(value);
@@ -1625,19 +1633,8 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     }
     ALOGD("%s new encoder delay %u and padding %u", __func__,
            gaplessMeta.encoderDelay, gaplessMeta.encoderPadding);
-
 error:
     ALOGE("%s: exit %d", __func__, ret);
-    return ret;
-}
-
-int StreamOutPrimary::VoiceSetParameters(std::shared_ptr<AudioDevice> adevice, const char *kvpairs) {
-    int ret = 0;
-
-    ALOGD("%s Enter", __func__);
-    if (adevice->voice_)
-        ret = adevice->voice_->VoiceOutSetParameters(kvpairs);
-
     return ret;
 }
 
@@ -2680,91 +2677,94 @@ int StreamInPrimary::SetGain(float gain) {
     return ret;
 }
 
-int StreamInPrimary::SetParameters(const char* kvpairs) {
-
-    struct str_parms *parms = (str_parms *)NULL;
-    char value[64];
-    int ret = 0, val = 0, noPalDevices = 0;
-    pal_device_id_t * deviceId;
-    struct pal_device* deviceIdConfigs;
-    int err =  -EINVAL;
+int StreamInPrimary::RouteStream(audio_devices_t new_devices) {
+    int ret = 0, noPalDevices = 0;
+    pal_device_id_t *deviceId;
+    struct pal_device *deviceIdConfigs;
     struct pal_channel_info ch_info = {0, {0}};
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
+    ALOGD("StreamInPrimary::%s: enter ", __func__);
+
+    if (!mInitialized){
+        ALOGE("%s: Not initialized, returning error", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    ALOGD("%s: mAndroidInDevices %d, mNoOfInDevices %d, new_devices %d", __func__,
+            mAndroidInDevices, mNoOfInDevices, new_devices);
+
+    // TBD: Hard code number of channels to 2 for now.
+    // channels = audio_channel_count_from_out_mask(config_.channel_mask);
+    // need to convert channel mask to pal channel mask
+    ch_info.channels = 2;
+    ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
+    if (ch_info.channels > 1 )
+        ch_info.ch_map[1] = PAL_CHMAP_CHANNEL_FR;
+
+    /* If its the same device as what was already routed to, dont bother */
+    if ((mAndroidInDevices != new_devices) && (new_devices != 0) &&
+            audio_is_input_device(new_devices)) {
+        //re-allocate mPalOutDevice and mPalOutDeviceIds
+        if (popcount(new_devices & ~AUDIO_DEVICE_BIT_IN) != mNoOfInDevices) {
+            deviceId = (pal_device_id_t*) realloc(mPalInDeviceIds,
+                    popcount(new_devices & ~AUDIO_DEVICE_BIT_IN) * sizeof(pal_device_id_t));
+            deviceIdConfigs = (struct pal_device*) realloc(mPalInDevice,
+                    popcount(new_devices & ~AUDIO_DEVICE_BIT_IN) * sizeof(struct pal_device));
+            if (!deviceId || !deviceIdConfigs) {
+                ret = -ENOMEM;
+                goto done;
+            }
+            mPalInDeviceIds = deviceId;
+            mPalInDevice = deviceIdConfigs;
+        }
+
+        noPalDevices = getPalDeviceIds(new_devices, mPalInDeviceIds);
+        ALOGD("%s: noPalDevices: %d , popcount(new_devices): %d", __func__,
+                noPalDevices, popcount(new_devices));
+        if (noPalDevices != popcount(new_devices & ~AUDIO_DEVICE_BIT_IN)) {
+            ALOGE("%s: Device count mismatch...exiting", __func__);
+            ret = -EINVAL;
+            goto done;
+        }
+
+        mNoOfInDevices = noPalDevices;
+        for (int i = 0; i < mNoOfInDevices; i++) {
+            mPalInDevice[i].id = mPalInDeviceIds[i];
+            mPalInDevice[i].config.sample_rate = mPalInDevice[0].config.sample_rate;
+            mPalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+            mPalInDevice[i].config.ch_info = ch_info;
+            mPalInDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+            if ((mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_DEVICE) ||
+               (mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_HEADSET)) {
+                mPalInDevice[i].address.card_id = adevice->usb_card_id_;
+                mPalInDevice[i].address.device_num = adevice->usb_dev_num_;
+            }
+        }
+
+        mAndroidInDevices = new_devices;
+        if (pal_stream_handle_)
+            ret = pal_stream_set_device(pal_stream_handle_, mNoOfInDevices, mPalInDevice);
+    }
+
+done:
+   ALOGD("StreamInPrimary::%s: exit %d", __func__, ret);
+   return ret;
+}
+
+int StreamInPrimary::SetParameters(const char* kvpairs) {
+    struct str_parms *parms = (str_parms *)NULL;
+    int ret = -EINVAL;
+
     ALOGD("%s: enter: kvpairs=%s", __func__, kvpairs);
+    if(!mInitialized)
+        goto exit;
+
     parms = str_parms_create_str(kvpairs);
     if (!parms)
         goto exit;
 
-    if (!mInitialized)
-        goto exit;
-
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_STREAM_ROUTING, value, sizeof(value));
-    if (err >= 0) {
-
-        val = atoi(value);
-        ALOGV("%s: Found routing for input stream with value %x", __func__, val);
-        // TBD: Hard code number of channels to 2 for now.
-        //channels = audio_channel_count_from_out_mask(config_.channel_mask);
-        // need to convert channel mask to pal channel mask
-        ch_info.channels = 2;
-        ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
-        if (ch_info.channels > 1 )
-            ch_info.ch_map[1] = PAL_CHMAP_CHANNEL_FR;
-
-        /* If its the same device as what was already routed to, dont bother */
-        if ((mAndroidInDevices != val) && (val != 0) && audio_is_input_device(val)) {
-            //re-allocate mPalOutDevice and mPalOutDeviceIds
-            if (popcount(val & ~AUDIO_DEVICE_BIT_IN) != mNoOfInDevices) {
-                deviceId = (pal_device_id_t*) realloc(mPalInDeviceIds, popcount(val & ~AUDIO_DEVICE_BIT_IN) * sizeof(pal_device_id_t));
-                deviceIdConfigs = (struct pal_device*) realloc(mPalInDevice, popcount(val & ~AUDIO_DEVICE_BIT_IN) * sizeof(struct pal_device));
-                if (!deviceId || !deviceIdConfigs) {
-                    ret = -ENOMEM;
-                    goto exit;
-                }
-                mPalInDeviceIds = deviceId;
-                mPalInDevice = deviceIdConfigs;
-            }
-
-            noPalDevices = getPalDeviceIds(val, mPalInDeviceIds);
-
-
-            if (noPalDevices != popcount(val & ~AUDIO_DEVICE_BIT_IN)) {
-                ret = -EINVAL;
-                goto exit;
-            }
-
-            mNoOfInDevices = noPalDevices;
-            for (int i = 0; i < mNoOfInDevices; i++) {
-                mPalInDevice[i].id = mPalInDeviceIds[i];
-                mPalInDevice[i].config.sample_rate = mPalInDevice[0].config.sample_rate;
-                mPalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-                mPalInDevice[i].config.ch_info = ch_info; //is there a reason to have two different ch_info for device/stream?
-                mPalInDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
-                if ((mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_DEVICE) ||
-                   (mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_HEADSET)) {
-                    mPalInDevice[i].address.card_id = adevice->usb_card_id_;
-                    mPalInDevice[i].address.device_num = adevice->usb_dev_num_;
-                }
-            }
-            mAndroidInDevices = val;
-            ret = pal_stream_set_device(pal_stream_handle_, mNoOfInDevices, mPalInDevice);
-        }
-    }
-
-#if 0
-   //TBD: check if its offload and check call the following
-
-   ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &qparam_payload, parms);
-   if (ret) {
-          ALOGE("parse_compress_metadata Error (%x)", ret);
-          goto exit;
-       }
-   ret = pal_stream_set_param(pal_stream_handle_, 0, &qparam_payload);
-   if (ret) {
-      ALOGE("Pal Set Param Error (%x)", ret);
-   }
-#endif
 exit:
    ALOGE("%s: exit %d", __func__, ret);
    return ret;
