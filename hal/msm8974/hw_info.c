@@ -598,6 +598,15 @@ static void update_hardware_info_lahaina(
     } else if (!strncmp(snd_card_name, "lahaina-cdp-snd-card",
                  sizeof("lahaina-cdp-snd-card"))) {
         strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-shimaidp-snd-card",
+                 sizeof("lahaina-shimaidp-snd-card"))) {
+        strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-shimaidps-snd-card",
+                 sizeof("lahaina-shimaidps-snd-card"))) {
+        strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-shimaqrd-snd-card",
+                 sizeof("lahaina-shimaqrd-snd-card"))) {
+        strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
     } else {
         ALOGW("%s: Not a lahaina device", __func__);
     }
@@ -929,7 +938,7 @@ void *hw_info_init(const char *snd_card_name)
                || strstr(snd_card_name, "atoll") || strstr(snd_card_name, "bengal")) {
         ALOGV("KONA - variant soundcard");
         update_hardware_info_kona(hw_info, snd_card_name);
-    } else if(strstr(snd_card_name, "lahaina")) {
+    } else if(strstr(snd_card_name, "lahaina") || strstr(snd_card_name, "shima")) {
         ALOGV("LAHAINA - variant soundcard");
         update_hardware_info_lahaina(hw_info, snd_card_name);
     } else if(strstr(snd_card_name, "holi")) {

@@ -71,6 +71,8 @@
 #define PLATFORM_INFO_XML_PATH_I2S_NAME "audio_platform_info_extcodec.xml"
 #define PLATFORM_INFO_XML_PATH_WSA_NAME  "audio_platform_info_wsa.xml"
 #define PLATFORM_INFO_XML_PATH_TDM_NAME  "audio_platform_info_tdm.xml"
+#define PLATFORM_INFO_XML_PATH_SHIMA_IDP "audio_platform_info_shimaidp.xml"
+#define PLATFORM_INFO_XML_PATH_SHIMA_QRD "audio_platform_info_shimaqrd.xml"
 
 #include <linux/msm_audio.h>
 #if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || \
@@ -1797,6 +1799,12 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("lahaina-cdp-snd-card")) ||
          !strncmp(snd_card_name, "kona-mtp-snd-card",
                    sizeof("kona-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-shimaidp-snd-card",
+                   sizeof("lahaina-shimaidp-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-shimaidps-snd-card",
+                   sizeof("lahaina-shimaidps-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-shimaqrd-snd-card",
+                   sizeof("lahaina-shimaqrd-snd-card")) ||
          !strncmp(snd_card_name, "kona-qrd-snd-card",
                    sizeof("kona-qrd-snd-card")) ||
          !strncmp(snd_card_name, "lito-mtp-snd-card",
@@ -3412,6 +3420,16 @@ void *platform_init(struct audio_device *adev)
                sizeof("qcs405-tdm-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_TDM_NAME),
             my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "lahaina-shimaidp-snd-card",
+               sizeof("lahaina-shimaidp-snd-card")) ||
+               !strncmp(snd_card_name, "lahaina-shimaidps-snd-card",
+               sizeof("lahaina-shimaidps-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SHIMA_IDP),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "lahaina-shimaqrd-snd-card",
+               sizeof("lahaina-shimaqrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SHIMA_QRD),
+            my_data, PLATFORM);
     } else if (my_data->is_internal_codec) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_INTCODEC_NAME),
             my_data, PLATFORM);
@@ -3744,6 +3762,7 @@ acdb_init_fail:
         //TODO:: make generic interfaceface to check Slimbus/I2S/CDC_DMA
         if (!strncmp(snd_card_name, "sm6150", strlen("sm6150")) ||
             !strncmp(snd_card_name, "kona", strlen("kona")) ||
+            !strncmp(snd_card_name, "shima", strlen("shima")) ||
             !strncmp(snd_card_name, "lahaina", strlen("lahaina")) ||
             !strncmp(snd_card_name, "lito", strlen("lito")) ||
             !strncmp(snd_card_name, "atoll", strlen("atoll")) ||
