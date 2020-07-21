@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -28,11 +28,9 @@
 #define CVD_VERSION_MIXER_CTL "CVD Version"
 #define ACDB_METAINFO_KEY_MODULE_NAME_LEN 100
 
-#ifdef LINUX_ENABLED
-#define PLATFORM_INFO_XML_PATH "/etc/audio_platform_info.xml"
-#else
-#define PLATFORM_INFO_XML_PATH "/vendor/etc/audio_platform_info.xml"
-#endif
+
+#define PLATFORM_INFO_XML_PATH_NAME "audio_platform_info.xml"
+
 
 enum {
         ACDB_LOADER_INIT_V1 = 1,

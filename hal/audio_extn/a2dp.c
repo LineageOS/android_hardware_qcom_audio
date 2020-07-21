@@ -2524,6 +2524,7 @@ int a2dp_start_playback()
         if (ret != 0 ) {
            ALOGE("BT controller start failed");
            a2dp.a2dp_source_started = false;
+           ret = -ETIMEDOUT;
         } else {
            if (configure_a2dp_encoder_format() == true) {
                 a2dp.a2dp_source_started = true;
