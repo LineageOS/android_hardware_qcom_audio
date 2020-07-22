@@ -283,6 +283,11 @@ vendor.audio.offload.passthrough=false
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.ssr=false
 
+#timeout crash duration set to 20sec before system is ready.
+#timeout duration updates to default timeout of 5sec once the system is ready.
+PRODUCT_PRODUCT_PROPERTIES += \
+vendor.audio.hal.boot.timeout.ms=20000
+
 #enable dsp gapless mode by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.gapless.enabled=true

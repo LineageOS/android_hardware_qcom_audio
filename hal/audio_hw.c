@@ -78,6 +78,11 @@
 #include "ip_hdlr_intf.h"
 
 #include "sound/compress_params.h"
+
+#ifdef AUDIO_GKI_ENABLED
+#include "sound/audio_compressed_formats.h"
+#endif
+
 #include "sound/asound.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
@@ -1419,10 +1424,13 @@ int enable_snd_device(struct audio_device *adev,
                    __func__, device_name);
         }
 
-        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
-            (audio_extn_a2dp_start_playback() < 0)) {
-            ALOGE(" fail to configure A2dp Source control path ");
-            goto err;
+        if (SND_DEVICE_OUT_BT_A2DP == snd_device) {
+            if (audio_extn_a2dp_start_playback() < 0) {
+                ALOGE(" fail to configure A2dp Source control path ");
+                goto err;
+            } else {
+                adev->a2dp_started = true;
+            }
         }
 
         if ((SND_DEVICE_IN_BT_A2DP == snd_device) &&
@@ -1529,9 +1537,10 @@ int disable_snd_device(struct audio_device *adev,
             audio_route_reset_and_update_path(adev->audio_route, device_name);
         }
 
-        if (snd_device == SND_DEVICE_OUT_BT_A2DP)
+        if (snd_device == SND_DEVICE_OUT_BT_A2DP) {
             audio_extn_a2dp_stop_playback();
-        else if (snd_device == SND_DEVICE_IN_BT_A2DP)
+            adev->a2dp_started = false;
+        } else if (snd_device == SND_DEVICE_IN_BT_A2DP)
             audio_extn_a2dp_stop_capture();
         else if ((snd_device == SND_DEVICE_OUT_HDMI) ||
                 (snd_device == SND_DEVICE_OUT_DISPLAY_PORT))
@@ -1633,6 +1642,15 @@ case 8
   new_uc->dev d11 (a1), d2 (a2)  B1, B2
   resolution: compared to case 1, for this case, d1 and d11 are related
   then need to do the same as case 2 to siwtch to new uc
+
+case 9
+  uc->dev d1 (a1), d2(a2)        B1  B2
+  new_uc->dev d1 (a1), d22 (a2)  B1, B2
+  resolution: disable enable uc-dev on d2 since backends match
+  we cannot enable two streams on two different devices if they
+  share the same backend. This is special case for combo use case
+  with a2dp and sco devices which uses same backend.
+  e.g. speaker-a2dp and speaker-btsco
 */
 static snd_device_t derive_playback_snd_device(void * platform,
                                                struct audio_usecase *uc,
@@ -1679,6 +1697,9 @@ static snd_device_t derive_playback_snd_device(void * platform,
         if (platform_check_backends_match(d3[0], d3[1])) {
             return d2; // case 5
         } else {
+            if ((list_length(&a1) > 1) && (list_length(&a2) > 1) &&
+                 platform_check_backends_match(d1, d2))
+                return d2; //case 9
             if (list_length(&a1) > 1)
                 return d1; //case 7
             // check if d1 is related to any of d3's
@@ -1735,7 +1756,8 @@ static void check_usecases_codec_backend(struct audio_device *adev,
      * with new AFE encoder format based on a2dp state
      */
     if ((SND_DEVICE_OUT_BT_A2DP == snd_device ||
-         SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device) &&
+         SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP == snd_device ||
+         SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP == snd_device) &&
          audio_extn_a2dp_is_force_device_switch()) {
          force_routing = true;
          force_restart_session = true;
@@ -3909,7 +3931,26 @@ int start_output_stream(struct stream_out *out)
             assign_devices(&out->device_list, &dev);
         }
     } else {
-         select_devices(adev, out->usecase);
+        select_devices(adev, out->usecase);
+        if (is_a2dp_out_device_type(&out->device_list) &&
+             !adev->a2dp_started) {
+            if (is_speaker_active || is_speaker_safe_active) {
+                struct listnode dev;
+                list_init(&dev);
+                assign_devices(&dev, &out->device_list);
+                if (compare_device_type(&dev, AUDIO_DEVICE_OUT_SPEAKER_SAFE))
+                    reassign_device_list(&out->device_list,
+                                    AUDIO_DEVICE_OUT_SPEAKER_SAFE, "");
+                else
+                    reassign_device_list(&out->device_list,
+                                    AUDIO_DEVICE_OUT_SPEAKER, "");
+                select_devices(adev, out->usecase);
+                assign_devices(&out->device_list, &dev);
+            } else {
+                ret = -EINVAL;
+                goto error_open;
+            }
+        }
     }
 
     if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
@@ -5353,7 +5394,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            (out->config.rate);
     }
 
-    if (is_a2dp_out_device_type(&out->device_list))
+    if (!out->standby && is_a2dp_out_device_type(&out->device_list))
         latency += audio_extn_a2dp_get_encoder_latency();
 
     ALOGV("%s: Latency %d", __func__, latency);
@@ -6013,8 +6054,10 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             if (out->last_fifo_valid) {
                 // compute drain to see if there is an underrun.
                 const int64_t current_ns = systemTime(SYSTEM_TIME_MONOTONIC); // sys call
-                const int64_t frames_by_time =
-                        (current_ns - out->last_fifo_time_ns) * out->config.rate / NANOS_PER_SECOND;
+                int64_t time_diff_ns = current_ns - out->last_fifo_time_ns;
+                int64_t frames_by_time =
+                        ((time_diff_ns > 0) && (time_diff_ns < (INT64_MAX / out->config.rate))) ?
+                                         (time_diff_ns * out->config.rate / NANOS_PER_SECOND) : 0;
                 const int64_t underrun = frames_by_time - out->last_fifo_frames_remaining;
 
                 if (underrun > 0) {
@@ -7657,6 +7700,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     bool force_haptic_path =
             property_get_bool("vendor.audio.test_haptic", false);
     bool is_voip_rx = flags & AUDIO_OUTPUT_FLAG_VOIP_RX;
+#ifdef AUDIO_GKI_ENABLED
+    __s32 *generic_dec;
+#endif
 
     if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
@@ -8082,8 +8128,16 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP) {
             out->compr_config.fragment_size += sizeof(struct snd_codec_metadata);
         }
-        if (config->offload_info.format == AUDIO_FORMAT_FLAC)
+        if (config->offload_info.format == AUDIO_FORMAT_FLAC) {
+#ifdef AUDIO_GKI_ENABLED
+            generic_dec =
+                &(out->compr_config.codec->options.generic.reserved[1]);
+            ((struct snd_generic_dec_flac *)generic_dec)->sample_size =
+                                                AUDIO_OUTPUT_BIT_WIDTH;
+#else
             out->compr_config.codec->options.flac_dec.sample_size = AUDIO_OUTPUT_BIT_WIDTH;
+#endif
+        }
 
         if (config->offload_info.format == AUDIO_FORMAT_APTX) {
             audio_extn_send_aptx_dec_bt_addr_to_dsp(out);
@@ -10471,6 +10525,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->enable_hfp = false;
     adev->use_old_pspd_mix_ctrl = false;
     adev->adm_routing_changed = false;
+    adev->a2dp_started = false;
 
     audio_extn_perf_lock_init();
 

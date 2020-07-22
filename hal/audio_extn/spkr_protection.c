@@ -461,7 +461,6 @@ static bool is_speaker_in_use(unsigned long *sec)
     }
     if (handle.spkr_in_use) {
         *sec = 0;
-        handle.trigger_cal = false;
         return true;
     } else {
         clock_gettime(CLOCK_BOOTTIME, &temp);
@@ -791,6 +790,11 @@ static void set_boost_and_limiter(struct audio_device *adev,
     bool spkr2_is_mono_speaker = false;
     unsigned int r0_index = 0;
 
+    /*Do nothing for SPV4.*/
+    if(sp_prop_version == SP_V4) {
+        handle.sp_version = SP_V4;
+        return;
+    }
     handle.sp_version = SP_V2;
 
     /*
@@ -828,8 +832,6 @@ static void set_boost_and_limiter(struct audio_device *adev,
     if (sp_prop_version < SP_V3 || afe_api_version < AFE_API_VERSION_SUPPORT_SPV3)
         handle.sp_version = SP_V2;
 
-    if(sp_prop_version == SP_V4)
-        handle.sp_version = SP_V4;
 }
 
 static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
@@ -1178,10 +1180,10 @@ static void* spkr_calibration_thread()
         afe_api_version = atoi(afe_version_value);
 
     spv4_enable = property_get_bool("persist.vendor.audio.spv4.enable", false);
-    if (spv3_enable)
-        sp_prop_version = SP_V3;
-    else if (spv4_enable)
+    if (spv4_enable)
         sp_prop_version = SP_V4;
+    else if (spv3_enable)
+        sp_prop_version = SP_V3;
 
     if(spv4_enable)
         handle.sp_version = SP_V4;
