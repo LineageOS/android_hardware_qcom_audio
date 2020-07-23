@@ -5821,12 +5821,14 @@ int64_t platform_capture_latency(struct audio_device *adev __unused,
 }
 
 /* Delay in Us, only to be used for PCM formats */
-int64_t platform_render_latency(struct audio_device *adev __unused,
-                                audio_usecase_t usecase)
+int64_t platform_render_latency(struct stream_out *out)
 {
     int64_t delay = 0LL;
 
-    switch (usecase) {
+    if (!out)
+        return delay;
+
+    switch (out->usecase) {
         case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
             delay = DEEP_BUFFER_PLATFORM_DELAY;
             break;

@@ -4418,10 +4418,8 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out, struct ti
     /* This adjustment accounts for buffering after app processor.
      * It is based on estimated DSP latency per use case, rather than exact.
      */
-    pthread_mutex_lock(&adev->lock);
-    dsp_frames = platform_render_latency(out->dev, out->usecase) *
+    dsp_frames = platform_render_latency(out) *
         out->sample_rate / 1000000LL;
-    pthread_mutex_unlock(&adev->lock);
 
     pthread_mutex_lock(&out->position_query_lock);
     written_frames = out->written /
@@ -5386,9 +5384,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
                          1000) / (out->config.rate);
         else
             period_ms = 0;
-        pthread_mutex_lock(&adev->lock);
-        latency = period_ms + platform_render_latency(out->dev, out->usecase)/1000;
-        pthread_mutex_unlock(&adev->lock);
+        latency = period_ms + platform_render_latency(out) / 1000;
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
            (out->config.rate);
@@ -6324,10 +6320,8 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
 
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
-                pthread_mutex_lock(&adev->lock);
-                frames_temp = platform_render_latency(out->dev, out->usecase) *
+                frames_temp = platform_render_latency(out) *
                               out->sample_rate / 1000000LL;
-                pthread_mutex_unlock(&adev->lock);
                 if (signed_frames >= frames_temp)
                     signed_frames -= frames_temp;
 
@@ -7225,10 +7219,8 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
         unsigned int avail;
         if (pcm_get_htimestamp(in->pcm, &avail, &timestamp) == 0) {
             *frames = in->frames_read + avail;
-            pthread_mutex_lock(&adev->lock);
             *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec
-                    - platform_capture_latency(in->dev, in->usecase) * 1000LL;
-            pthread_mutex_unlock(&adev->lock);
+                    - platform_capture_latency(in) * 1000LL;
             ret = 0;
         }
     }
