@@ -461,7 +461,6 @@ static bool is_speaker_in_use(unsigned long *sec)
     }
     if (handle.spkr_in_use) {
         *sec = 0;
-        handle.trigger_cal = false;
         return true;
     } else {
         clock_gettime(CLOCK_BOOTTIME, &temp);

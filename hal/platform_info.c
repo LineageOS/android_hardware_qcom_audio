@@ -39,6 +39,7 @@
 #include <audio_hw.h>
 #include "acdb.h"
 #include "platform_api.h"
+#include "audio_extn.h"
 #include <platform.h>
 #include <math.h>
 
@@ -49,6 +50,8 @@
 #endif
 
 #define BUF_SIZE                    1024
+char vendor_config_path[VENDOR_CONFIG_PATH_MAX_LENGTH];
+char platform_info_xml_path_file[VENDOR_CONFIG_FILE_MAX_LENGTH];
 
 typedef enum {
     ROOT,
@@ -82,6 +85,15 @@ typedef enum {
 } section_t;
 
 typedef void (* section_process_fn)(const XML_Char **attr);
+
+const char* get_platform_xml_path()
+{
+    audio_get_vendor_config_path(vendor_config_path, sizeof(vendor_config_path));
+    /* Get path for platorm_info_xml_path_name in vendor */
+    snprintf(platform_info_xml_path_file, sizeof(platform_info_xml_path_file),
+            "%s/%s", vendor_config_path, PLATFORM_INFO_XML_PATH_NAME);
+    return platform_info_xml_path_file;
+}
 
 static void process_acdb_id(const XML_Char **attr);
 static void process_audio_effect(const XML_Char **attr, effect_type_t effect_type);
@@ -456,7 +468,7 @@ static void process_operator_specific(const XML_Char **attr)
     snd_device = platform_get_snd_device_index((char *)attr[1]);
     if (snd_device < 0) {
         ALOGE("%s: Device %s in %s not found, no ACDB ID set!",
-              __func__, (char *)attr[3], PLATFORM_INFO_XML_PATH);
+              __func__, (char *)attr[3], get_platform_xml_path());
         goto done;
     }
 
@@ -493,7 +505,7 @@ static void process_external_dev(const XML_Char **attr)
     snd_device = platform_get_snd_device_index((char *)attr[1]);
     if (snd_device < 0) {
         ALOGE("%s: Device %s in %s not found, no ACDB ID set!",
-              __func__, (char *)attr[3], PLATFORM_INFO_XML_PATH);
+              __func__, (char *)attr[3], get_platform_xml_path());
         goto done;
     }
 
@@ -719,7 +731,7 @@ static void process_snd_device_delay(const XML_Char **attr)
     snd_device = platform_get_snd_device_index((char *)attr[1]);
     if (snd_device < 0) {
         ALOGE("%s: Device %s in %s not found, no ACDB ID set!",
-              __func__, (char *)attr[3], PLATFORM_INFO_XML_PATH);
+              __func__, (char *)attr[3], get_platform_xml_path());
         goto done;
     }
 
@@ -816,7 +828,10 @@ done:
 static void process_microphone_characteristic(const XML_Char **attr) {
     struct audio_microphone_characteristic_t microphone;
     uint32_t curIdx = 0;
+    char platform_info_xml_path[VENDOR_CONFIG_FILE_MAX_LENGTH];
 
+    strlcpy(platform_info_xml_path, get_platform_xml_path(),
+        sizeof(platform_info_xml_path));
     if (strcmp(attr[curIdx++], "valid_mask")) {
         ALOGE("%s: valid_mask not found", __func__);
         goto done;
@@ -840,7 +855,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
     if (!find_enum_by_string(device_in_types, (char*)attr[curIdx++],
             ARRAY_SIZE(device_in_types), &microphone.device)) {
         ALOGE("%s: type %s in %s not found!",
-              __func__, attr[--curIdx], PLATFORM_INFO_XML_PATH);
+              __func__, attr[--curIdx], platform_info_xml_path);
         goto done;
     }
 
@@ -869,7 +884,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
     if (!find_enum_by_string(mic_locations, (char*)attr[curIdx++],
             AUDIO_MICROPHONE_LOCATION_CNT, &microphone.location)) {
         ALOGE("%s: location %s in %s not found!",
-              __func__, attr[--curIdx], PLATFORM_INFO_XML_PATH);
+              __func__, attr[--curIdx], platform_info_xml_path);
         goto done;
     }
 
@@ -892,7 +907,7 @@ static void process_microphone_characteristic(const XML_Char **attr) {
     if (!find_enum_by_string(mic_directionalities, (char*)attr[curIdx++],
                 AUDIO_MICROPHONE_DIRECTIONALITY_CNT, &microphone.directionality)) {
         ALOGE("%s: directionality %s in %s not found!",
-              __func__, attr[--curIdx], PLATFORM_INFO_XML_PATH);
+              __func__, attr[--curIdx], platform_info_xml_path);
         goto done;
     }
 
@@ -1059,7 +1074,10 @@ static void process_mic_info(const XML_Char **attr)
 {
     uint32_t curIdx = 0;
     struct mic_info microphone;
+    char platform_info_xml_path[VENDOR_CONFIG_FILE_MAX_LENGTH];
 
+    strlcpy(platform_info_xml_path, get_platform_xml_path(),
+        sizeof(platform_info_xml_path));
     memset(&microphone.channel_mapping, AUDIO_MICROPHONE_CHANNEL_MAPPING_UNUSED,
                sizeof(microphone.channel_mapping));
 
@@ -1082,7 +1100,7 @@ static void process_mic_info(const XML_Char **attr)
                 AUDIO_MICROPHONE_CHANNEL_MAPPING_CNT,
                 &microphone.channel_mapping[idx++])) {
             ALOGE("%s: channel_mapping %s in %s not found!",
-                      __func__, attr[--curIdx], PLATFORM_INFO_XML_PATH);
+                      __func__, attr[--curIdx], platform_info_xml_path);
             goto on_error;
         }
         token = strtok_r(NULL, " ", &context);
@@ -1581,10 +1599,13 @@ int platform_info_init(const char *filename, void *platform, caller_t caller_typ
     int             bytes_read;
     void            *buf;
     char            platform_info_file_name[MIXER_PATH_MAX_LENGTH]= {0};
+    char platform_info_xml_path[VENDOR_CONFIG_FILE_MAX_LENGTH];
 
+    strlcpy(platform_info_xml_path, get_platform_xml_path(),
+        sizeof(platform_info_xml_path));
     pthread_mutex_lock(&parser_lock);
     if (filename == NULL)
-        strlcpy(platform_info_file_name, PLATFORM_INFO_XML_PATH,
+        strlcpy(platform_info_file_name, platform_info_xml_path,
                 MIXER_PATH_MAX_LENGTH);
     else
         strlcpy(platform_info_file_name, filename, MIXER_PATH_MAX_LENGTH);
