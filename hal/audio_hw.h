@@ -247,6 +247,8 @@ enum {
 
     /*Audio FM Tuner usecase*/
     USECASE_AUDIO_FM_TUNER_EXT,
+    /*voip usecase with low latency path*/
+    USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY,
     AUDIO_USECASE_MAX
 };
 
