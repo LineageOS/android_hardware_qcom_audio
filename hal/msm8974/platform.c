@@ -3433,8 +3433,7 @@ void *platform_init(struct audio_device *adev)
     } else if (my_data->is_internal_codec) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_INTCODEC_NAME),
             my_data, PLATFORM);
-    }
-    else {
+    } else {
         // Try to load pixel or default
         audio_extn_utils_get_platform_info(snd_card_name, platform_info_file);
         platform_info_init(platform_info_file, my_data, PLATFORM);

@@ -103,6 +103,9 @@ PRODUCT_PACKAGES += $(AUDIO_HARDWARE)
 PRODUCT_PACKAGES += $(AUDIO_WRAPPER)
 PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
 PRODUCT_PACKAGES += ftm_test_config_lahaina-qrd-snd-card
+PRODUCT_PACKAGES += ftm_test_config_lahaina-shimaidp-snd-card
+PRODUCT_PACKAGES += ftm_test_config_lahaina-shimaidps-snd-card
+PRODUCT_PACKAGES += ftm_test_config_lahaina-shimaqrd-snd-card
 PRODUCT_PACKAGES += audioadsprpcd
 PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
 

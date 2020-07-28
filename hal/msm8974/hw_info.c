@@ -607,6 +607,7 @@ static void update_hardware_info_lahaina(
     } else if (!strncmp(snd_card_name, "lahaina-shimaqrd-snd-card",
                  sizeof("lahaina-shimaqrd-snd-card"))) {
         strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else {
         ALOGW("%s: Not a lahaina device", __func__);
     }
