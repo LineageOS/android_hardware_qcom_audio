@@ -353,8 +353,8 @@ static void check_and_set_gain_dep_cal()
                     }
                 } else {
                     if (dumping_enabled) {
-                        ALOGW("%s: volume changed but gain dep cal level is still the same",
-                              __func__);
+                        ALOGW("%s: volume changed but gain dep cal level is still the same: (old/new) Volume (%f/%f) (old/new) level (%d)",
+                              __func__,current_vol, new_vol, current_gain_dep_cal_level);
                     } else {
                         ALOGV("%s: volume changed but gain dep cal level is still the same",
                               __func__);
