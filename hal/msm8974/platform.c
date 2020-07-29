@@ -3775,20 +3775,21 @@ acdb_init_fail:
                         strdup("RX_CDC_DMA_RX_1 SampleRate");
                 default_rx_backend = strdup("RX_CDC_DMA_RX_1");
                 my_data->is_multiple_sample_rate_combo_supported = false;
-            }
-
-            if (!strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba")))
+            } else if (!strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba"))) {
+                my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+                        strdup("RX_CDC_DMA_RX_0 Format");
+                my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+                        strdup("RX_CDC_DMA_RX_0 SampleRate");
+                default_rx_backend = strdup("RX_CDC_DMA_RX_0");
                 my_data->is_multiple_sample_rate_combo_supported = false;
+            }
         } else if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
                !strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
                !strncmp(snd_card_name, "qcs605", strlen("qcs605"))) {
-
-
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("INT4_MI2S_RX Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
                 strdup("INT4_MI2S_RX SampleRate");
-
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
                 strdup("INT3_MI2S_TX Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
@@ -3797,7 +3798,6 @@ acdb_init_fail:
                 strdup("INT0_MI2S_RX Format");
             my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
                 strdup("INT0_MI2S_RX SampleRate");
-
             if (default_rx_backend)
                 free(default_rx_backend);
             default_rx_backend = strdup("INT4_MI2S_RX");
