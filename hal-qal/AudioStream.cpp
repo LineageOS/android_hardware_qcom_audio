@@ -54,6 +54,8 @@
 #include <audio_utils/format.h>
 
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
+#define FLAC_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
+
 #define MAX_READ_RETRY_COUNT 25
 
 void StreamOutPrimary::GetStreamHandle(audio_stream_out** stream) {
@@ -1688,8 +1690,17 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
 
 int StreamOutPrimary::get_compressed_buffer_size()
 {
+    int fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
     ALOGD("%s:%d config_ %x", __func__, __LINE__, config_.format);
-    return COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    if(config_.format ==  AUDIO_FORMAT_FLAC ) {
+        fragment_size = FLAC_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+        ALOGD("%s:%d aud_fmt_id: 0x%x  FLAC buffer size:%d", __func__, __LINE__,
+            streamAttributes_.out_media_config.aud_fmt_id,
+            fragment_size);
+    } else {
+        fragment_size =  COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    }
+    return fragment_size;
 }
 
 int StreamOutPrimary::get_pcm_buffer_size()
@@ -1964,11 +1975,11 @@ int StreamOutPrimary::GetFrames(uint64_t *frames) {
     }
     timestamp = (uint64_t)tstamp.session_time.value_msw;
     timestamp = timestamp  << 32 | tstamp.session_time.value_lsw;
-    ALOGD("%s: session msw %u", __func__, tstamp.session_time.value_msw);
-    ALOGD("%s: session lsw %u", __func__, tstamp.session_time.value_lsw);
-    ALOGD("%s: session timespec %lld", __func__, ((long long) timestamp));
+    ALOGI("%s: session msw %u", __func__, tstamp.session_time.value_msw);
+    ALOGI("%s: session lsw %u", __func__, tstamp.session_time.value_lsw);
+    ALOGI("%s: session timespec %lld", __func__, ((long long) timestamp));
     timestamp *= (streamAttributes_.out_media_config.sample_rate);
-    ALOGD("%s: timestamp %lld", __func__, ((long long) timestamp));
+    ALOGI("%s: timestamp %lld", __func__, ((long long) timestamp));
     *frames = timestamp/1000000;
 exit:
     return ret;
