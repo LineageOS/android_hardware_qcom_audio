@@ -1363,6 +1363,27 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
 
     if(ctl)
         mixer_ctl_set_array(ctl, app_type_cfg, len);
+
+    /* send app type cfg for haptics */
+    if (usecase->id == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "Audio Stream %d App Type Cfg", adev->haptic_pcm_device_id );
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s", __func__,
+                  mixer_ctl_name);
+            rc = -EINVAL;
+            goto exit_send_app_type_cfg;
+        }
+        acdb_dev_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_HAPTICS);
+        snd_device_be_idx = platform_get_snd_device_backend_index(SND_DEVICE_OUT_HAPTICS);
+        /* haptics acdb id */
+        app_type_cfg[1] = acdb_dev_id;
+        /* haptics be index */
+        app_type_cfg[3] = snd_device_be_idx;
+        mixer_ctl_set_array(ctl, app_type_cfg, len);
+    }
+
     rc = 0;
 exit_send_app_type_cfg:
     return rc;
