@@ -803,10 +803,13 @@ int enable_snd_device(struct audio_device *adev,
 
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
 
-        if (is_a2dp_device(snd_device) &&
-            (audio_extn_a2dp_start_playback() < 0)) {
-               ALOGE("%s: failed to configure A2DP control path", __func__);
-               goto on_error;
+        if (is_a2dp_device(snd_device)) {
+            if (audio_extn_a2dp_start_playback() < 0) {
+                ALOGE("%s: failed to configure A2DP control path", __func__);
+                goto on_error;
+            } else {
+                adev->a2dp_started = true;
+            }
         }
 
         audio_route_apply_and_update_path(adev->audio_route, device_name);
@@ -839,9 +842,10 @@ int disable_snd_device(struct audio_device *adev,
     if (adev->snd_dev_ref_cnt[snd_device] == 0) {
         audio_extn_dsm_feedback_enable(adev, snd_device, false);
 
-        if (is_a2dp_device(snd_device))
+        if (is_a2dp_device(snd_device)) {
             audio_extn_a2dp_stop_playback();
-
+            adev->a2dp_started = false;
+        }
         if ((snd_device == SND_DEVICE_OUT_SPEAKER ||
             snd_device == SND_DEVICE_OUT_SPEAKER_SAFE ||
             snd_device == SND_DEVICE_OUT_SPEAKER_REVERSE ||
@@ -2463,16 +2467,13 @@ int start_output_stream(struct stream_out *out)
     }
 
     if (out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) {
-        if (!audio_extn_a2dp_is_ready()) {
-            if (out->devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
-                a2dp_combo = true;
-            } else {
-                if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
-                    ALOGE("%s: A2DP profile is not ready, return error", __func__);
-                    ret = -EAGAIN;
-                    goto error_config;
-                }
-            }
+        if (out->devices & (AUDIO_DEVICE_OUT_SPEAKER | AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
+            a2dp_combo = true;
+        } else if (!audio_extn_a2dp_is_ready() &&
+                !(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
+            ALOGE("%s: A2DP profile is not ready, return error", __func__);
+            ret = -EAGAIN;
+            goto error_config;
         }
     }
     out->pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
@@ -2505,11 +2506,14 @@ int start_output_stream(struct stream_out *out)
     audio_streaming_hint_start();
     audio_extn_perf_lock_acquire();
 
+    if (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) ||
+            audio_extn_a2dp_is_ready()) {
+        select_devices(adev, out->usecase);
+    }
+
     if ((out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) &&
-        (!audio_extn_a2dp_is_ready())) {
-        if (!a2dp_combo) {
-            check_a2dp_restore_l(adev, out, false);
-        } else {
+            (!audio_extn_a2dp_is_ready() || !adev->a2dp_started)) {
+        if (a2dp_combo) {
             audio_devices_t dev = out->devices;
             if (dev & AUDIO_DEVICE_OUT_SPEAKER_SAFE)
                 out->devices = AUDIO_DEVICE_OUT_SPEAKER_SAFE;
@@ -2517,9 +2521,13 @@ int start_output_stream(struct stream_out *out)
                 out->devices = AUDIO_DEVICE_OUT_SPEAKER;
             select_devices(adev, out->usecase);
             out->devices = dev;
+        } else if (!audio_extn_a2dp_is_ready()) {
+            check_a2dp_restore_l(adev, out, false);
+        } else {
+            ALOGE("%s: A2DP is not started, return error", __func__);
+            ret = -EINVAL;
+            goto error_open;
         }
-    } else {
-         select_devices(adev, out->usecase);
     }
 
     audio_extn_extspk_update(adev->extspk);
@@ -6606,6 +6614,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->primary_output = NULL;
     adev->bluetooth_nrec = true;
     adev->acdb_settings = TTY_MODE_OFF;
+    adev->a2dp_started = false;
     /* adev->cur_hdmi_channels = 0;  by calloc() */
     adev->snd_dev_ref_cnt = calloc(SND_DEVICE_MAX, sizeof(int));
     voice_init(adev);
