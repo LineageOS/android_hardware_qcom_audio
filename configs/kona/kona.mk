@@ -363,7 +363,7 @@ vendor.audio.use.sw.alac.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.ape.decoder=true
 
-#enable hw aac encoder by default
+#disable hw aac encoder by default in AR
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=false
 
