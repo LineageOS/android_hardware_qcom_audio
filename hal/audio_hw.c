@@ -5863,19 +5863,21 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ret = voice_extn_compress_voip_start_output_stream(out);
         else
             ret = start_output_stream(out);
-        pthread_mutex_unlock(&adev->lock);
         /* ToDo: If use case is compress offload should return 0 */
         if (ret != 0) {
             out->standby = true;
+            pthread_mutex_unlock(&adev->lock);
             goto exit;
         }
         out->started = 1;
         out->last_fifo_valid = false; // we're coming out of standby, last_fifo isn't valid.
-        if (last_known_cal_step != -1) {
+
+        if ((last_known_cal_step != -1) && (adev->platform != NULL)) {
             ALOGD("%s: retry previous failed cal level set", __func__);
-            audio_hw_send_gain_dep_calibration(last_known_cal_step);
+            platform_send_gain_dep_cal(adev->platform, last_known_cal_step);
             last_known_cal_step = -1;
         }
+        pthread_mutex_unlock(&adev->lock);
 
         if ((out->is_iec61937_info_available == true) &&
             (audio_extn_passthru_is_passthrough_stream(out))&&
