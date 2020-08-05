@@ -74,7 +74,7 @@
         <props>
             <playback>1</playback>
             <capture>0</capture>
-            <hostless>1</hostless>
+            <session_mode>1</session_mode>
         </props>
     </pcm-device>
 
@@ -87,7 +87,7 @@
         <props>
             <playback>0</playback>
             <capture>1</capture>
-            <hostless>1</hostless>
+            <session_mode>1</session_mode>
         </props>
     </pcm-device>
 
@@ -100,7 +100,7 @@
         <props>
             <playback>1</playback>
             <capture>0</capture>
-            <hostless>0</hostless>
+            <session_mode>0</session_mode>
         </props>
     </compress-device>
 
@@ -113,7 +113,7 @@
         <props>
             <playback>1</playback>
             <capture>0</capture>
-            <hostless>1</hostless>
+            <session_mode>1</session_mode>
         </props>
     </pcm-device>
 
@@ -126,7 +126,7 @@
         <props>
             <playback>1</playback>
             <capture>0</capture>
-            <hostless>1</hostless>
+            <session_mode>1</session_mode>
         </props>
     </pcm-device>
     <pcm-device>
@@ -138,7 +138,7 @@
         <props>
             <playback>0</playback>
             <capture>1</capture>
-            <hostless>1</hostless>
+            <session_mode>1</session_mode>
         </props>
     </pcm-device>
 
@@ -151,7 +151,7 @@
         <props>
             <playback>0</playback>
             <capture>1</capture>
-            <hostless>1</hostless>
+            <session_mode>1</session_mode>
         </props>
     </pcm-device>
 
@@ -188,6 +188,32 @@
         <props>
             <playback>0</playback>
             <capture>1</capture>
+        </props>
+    </pcm-device>
+
+    <pcm-device>
+        <id>113</id>
+        <name>PCM113</name>
+        <pcm_plugin>
+            <so-name>libagm_pcm_plugin.so</so-name>
+        </pcm_plugin>
+        <props>
+            <playback>0</playback>
+            <capture>1</capture>
+            <session_mode>2</session_mode>
+        </props>
+    </pcm-device>
+
+    <pcm-device>
+        <id>114</id>
+        <name>PCM114</name>
+        <pcm_plugin>
+            <so-name>libagm_pcm_plugin.so</so-name>
+        </pcm_plugin>
+        <props>
+            <playback>1</playback>
+            <capture>0</capture>
+            <session_mode>2</session_mode>
         </props>
     </pcm-device>
 

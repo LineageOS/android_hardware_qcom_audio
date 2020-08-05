@@ -1232,7 +1232,7 @@ qal_stream_type_t StreamOutPrimary::GetQalStreamType(
     } else if (halStreamFlags == (AUDIO_OUTPUT_FLAG_DIRECT|
                                       AUDIO_OUTPUT_FLAG_VOIP_RX)) {
         // voice rx
-        qalStreamType = QAL_STREAM_VOICE_CALL_RX;
+        qalStreamType = QAL_STREAM_VOIP_RX;
     } else if (halStreamFlags == AUDIO_OUTPUT_FLAG_VOIP_RX) {
         qalStreamType = QAL_STREAM_VOIP_RX;
     } else if (halStreamFlags == AUDIO_OUTPUT_FLAG_INCALL_MUSIC) {
@@ -2659,6 +2659,16 @@ int StreamInPrimary::Open() {
 
     streamAttributes_.type = StreamInPrimary::GetQalStreamType(flags_,
             config_.sample_rate);
+    if (source_ == AUDIO_SOURCE_VOICE_UPLINK) {
+        streamAttributes_.type = QAL_STREAM_VOICE_CALL_RECORD;
+        streamAttributes_.info.voice_rec_info.record_direction = INCALL_RECORD_VOICE_UPLINK;
+    } else if (source_ == AUDIO_SOURCE_VOICE_DOWNLINK) {
+        streamAttributes_.type = QAL_STREAM_VOICE_CALL_RECORD;
+        streamAttributes_.info.voice_rec_info.record_direction = INCALL_RECORD_VOICE_DOWNLINK;
+    } else if (source_ == AUDIO_SOURCE_VOICE_CALL) {
+        streamAttributes_.type = QAL_STREAM_VOICE_CALL_RECORD;
+        streamAttributes_.info.voice_rec_info.record_direction = INCALL_RECORD_VOICE_UPLINK_DOWNLINK;
+    }
     streamAttributes_.flags = (qal_stream_flags_t)0;
     streamAttributes_.direction = QAL_AUDIO_INPUT;
     streamAttributes_.in_media_config.sample_rate = config_.sample_rate;
