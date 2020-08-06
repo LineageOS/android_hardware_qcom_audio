@@ -728,7 +728,7 @@ static inline int io_streams_map_insert(struct audio_device *adev,
     if (stream_info != NULL)
         free(stream_info);
     pthread_mutex_unlock(&adev->lock);
-    ALOGD("%s: Added stream in io_streams_map with handle %d", __func__, handle);
+    ALOGV("%s: Added stream in io_streams_map with handle %d", __func__, handle);
     return 0;
 }
 
@@ -740,7 +740,7 @@ static inline void io_streams_map_remove(struct audio_device *adev,
             hashmapRemove(adev->io_streams_map, (void *) (intptr_t) handle);
     if (s_info == NULL)
         goto done;
-    ALOGD("%s: Removed stream with handle %d", __func__, handle);
+    ALOGV("%s: Removed stream with handle %d", __func__, handle);
     patch_map_remove_l(adev, s_info->patch_handle);
     free(s_info);
 done:
@@ -994,15 +994,15 @@ static void check_and_set_asrc_mode(struct audio_device *adev,
                         if((new_backend_idx == HEADPHONE_BACKEND) &&
                                ((usecase_backend_idx == HEADPHONE_44_1_BACKEND) ||
                                (usecase_backend_idx == DSD_NATIVE_BACKEND))) {
-                            ALOGD("%s:DSD or native stream detected enabling asrcmode in hardware",
+                            ALOGV("%s:DSD or native stream detected enabling asrcmode in hardware",
                                   __func__);
                             enable_asrc_mode(adev);
                             break;
                         } else if(((new_backend_idx == HEADPHONE_44_1_BACKEND) ||
                                   (new_backend_idx == DSD_NATIVE_BACKEND)) &&
                                   (usecase_backend_idx == HEADPHONE_BACKEND)) {
-                            ALOGD("%s:48K stream detected, disabling and enabling it with asrcmode in hardware",
-                                  __func__);
+                            ALOGV("%s: 48K stream detected, disabling and enabling it \
+                                   with asrcmode in hardware", __func__);
                             disable_audio_route(adev, uc);
                             disable_snd_device(adev, uc->out_snd_device);
                             // Apply true-high-quality-mode if DSD or > 44.1KHz or >=24-bit
@@ -3067,7 +3067,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                             &voip_out->app_type_cfg.gain[0]);
     }
 
-    ALOGD("%s: done",__func__);
+    ALOGV("%s: done",__func__);
 
     return status;
 }
@@ -3312,7 +3312,7 @@ int start_input_stream(struct stream_in *in)
 done_open:
     audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
-    ALOGD("%s: exit", __func__);
+    ALOGV("%s: exit", __func__);
     enable_gcov();
     return ret;
 
@@ -4151,7 +4151,7 @@ int start_output_stream(struct stream_out *out)
     }
     audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
-    ALOGD("%s: exit", __func__);
+    ALOGV("%s: exit", __func__);
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_ULL ||
         out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
@@ -4582,7 +4582,7 @@ static int out_standby(struct audio_stream *stream)
         pthread_mutex_unlock(&adev->lock);
     }
     pthread_mutex_unlock(&out->lock);
-    ALOGD("%s: exit", __func__);
+    ALOGV("%s: exit", __func__);
     return 0;
 }
 
@@ -4676,7 +4676,7 @@ int out_standby_l(struct audio_stream *stream)
         stop_output_stream(out);
         ATRACE_END();
     }
-    ALOGD("%s: exit", __func__);
+    ALOGV("%s: exit", __func__);
     return 0;
 }
 
@@ -6926,7 +6926,7 @@ int route_input_stream(struct stream_in *in,
     pthread_mutex_unlock(&adev->lock);
     pthread_mutex_unlock(&in->lock);
 
-    ALOGD("%s: exit: status(%d)", __func__, ret);
+    ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
 
@@ -8992,7 +8992,7 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
         vr_audio_enabled = adev->vr_audio_mode_enabled;
         pthread_mutex_unlock(&adev->lock);
 
-        ALOGI("getting vr mode to %d", vr_audio_enabled);
+        ALOGV("getting vr mode to %d", vr_audio_enabled);
 
         if (vr_audio_enabled) {
             str_parms_add_str(reply, AUDIO_PARAMETER_KEY_VR_AUDIO_MODE,
@@ -9018,7 +9018,7 @@ exit:
     str_parms_destroy(query);
     str_parms_destroy(reply);
 
-    ALOGD("%s: exit: returns - %s", __func__, str);
+    ALOGV("%s: exit: returns - %s", __func__, str);
     return str;
 }
 
@@ -9900,7 +9900,7 @@ int update_patch(unsigned int num_sources,
                  struct audio_patch_info *p_info,
                  patch_type_t patch_type, bool new_patch)
 {
-    ALOGD("%s: enter", __func__);
+    ALOGV("%s: enter", __func__);
 
     if (p_info == NULL) {
         ALOGE("%s: Invalid patch pointer", __func__);

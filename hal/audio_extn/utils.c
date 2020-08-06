@@ -767,7 +767,8 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
         else if (-ENOSYS == bw)
             bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        ALOGI("%s Allowing 24 and above bits playback on speaker ONLY at default sampling rate", __func__);
+        ALOGV("%s Allowing 24 and above bits playback on speaker \
+                  ONLY at default sampling rate", __func__);
     }
 
     property_get("vendor.audio.playback.mch.downsample",value,"");
@@ -887,7 +888,7 @@ static void audio_extn_btsco_get_sample_rate(int snd_device, int *sample_rate)
         *sample_rate = 16000;
         break;
     default:
-        ALOGD("%s:Not a BT SCO device, need not update sampling rate\n", __func__);
+        ALOGV("%s:Not a BT SCO device, need not update sampling rate\n", __func__);
         break;
     }
 }

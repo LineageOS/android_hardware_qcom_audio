@@ -2179,10 +2179,8 @@ int fbsp_get_parameters(struct str_parms *query,
     int err = 0;
     char value[MAX_STR_SIZE] = {0};
 
-    if (!handle.spkr_prot_enable) {
-        ALOGD("%s: Speaker protection disabled", __func__);
+    if (!handle.spkr_prot_enable)
         return -EINVAL;
-    }
 
     err = str_parms_get_str(query, AUDIO_PARAMETER_KEY_FBSP_GET_SPKR_CAL, value,
                                                           sizeof(value));

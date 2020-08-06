@@ -4038,7 +4038,7 @@ void fm_feature_init(bool is_feature_enabled)
 void audio_extn_fm_get_parameters(struct str_parms *query, struct str_parms *reply)
 {
     if(audio_extn_fm_power_opt_enabled) {
-       ALOGD("%s: Enter", __func__);
+       ALOGV("%s: Enter", __func__);
        fm_get_parameters(query, reply);
     }
 }
@@ -4047,7 +4047,7 @@ void audio_extn_fm_set_parameters(struct audio_device *adev,
                                   struct str_parms *parms)
 {
     if(audio_extn_fm_power_opt_enabled) {
-       ALOGD("%s: Enter", __func__);
+       ALOGV("%s: Enter", __func__);
        fm_set_parameters(adev, parms);
     }
 }
@@ -5626,7 +5626,7 @@ void audio_extn_enable_hifi_filter(struct audio_device *adev, bool value)
         return;
     } else {
         mixer_ctl_set_value(ctl, 0, value);
-        ALOGD("%s: mixer_value set %d", __func__, value);
+        ALOGV("%s: mixer_value set %d", __func__, value);
     }
     return;
 }
