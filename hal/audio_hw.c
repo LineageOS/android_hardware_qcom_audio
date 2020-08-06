@@ -7881,6 +7881,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                 out->config.rate = out->sample_rate;
                 uint32_t channel_count =
                         audio_channel_count_from_out_mask(out->channel_mask);
+                out->config.channels = channel_count;
+
                 uint32_t buffer_size = get_stream_buffer_size(DEFAULT_VOIP_BUF_DURATION_MS,
                                                               out->sample_rate, out->format,
                                                               channel_count, false);
