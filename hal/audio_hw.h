@@ -739,6 +739,7 @@ struct audio_device {
     struct listnode audio_patch_record_list;
     Hashmap *patch_map;
     Hashmap *io_streams_map;
+    bool a2dp_started;
     bool ha_proxy_enable;
 };
 

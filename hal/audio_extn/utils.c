@@ -54,13 +54,8 @@
 #include "audio_parsers.h"
 #endif
 
-#ifdef LINUX_ENABLED
-#define AUDIO_OUTPUT_POLICY_VENDOR_CONFIG_FILE "/etc/audio_output_policy.conf"
-#define AUDIO_IO_POLICY_VENDOR_CONFIG_FILE "/etc/audio_io_policy.conf"
-#else
-#define AUDIO_OUTPUT_POLICY_VENDOR_CONFIG_FILE "/vendor/etc/audio_output_policy.conf"
-#define AUDIO_IO_POLICY_VENDOR_CONFIG_FILE "/vendor/etc/audio_io_policy.conf"
-#endif
+#define AUDIO_IO_POLICY_VENDOR_CONFIG_FILE_NAME "audio_io_policy.conf"
+#define AUDIO_OUTPUT_POLICY_VENDOR_CONFIG_FILE_NAME "audio_output_policy.conf"
 
 #define OUTPUTS_TAG "outputs"
 #define INPUTS_TAG "inputs"
@@ -517,6 +512,25 @@ static void send_app_type_cfg(void *platform, struct mixer *mixer,
     }
 }
 
+/* Function to retrieve audio vendor configs path */
+void audio_get_vendor_config_path (char* config_file_path, int path_size)
+{
+    char vendor_sku[PROPERTY_VALUE_MAX] = {'\0'};
+    if (property_get("ro.boot.product.vendor.sku", vendor_sku, "") <= 0) {
+#ifdef LINUX_ENABLED
+        /* Audio configs are stored in /etc */
+        snprintf(config_file_path, path_size, "%s", "/etc");
+#else
+        /* Audio configs are stored in /vendor/etc */
+        snprintf(config_file_path, path_size, "%s", "/vendor/etc");
+#endif
+    } else {
+        /* Audio configs are stored in /vendor/etc/audio/sku_${vendor_sku} */
+        snprintf(config_file_path, path_size,
+            "%s%s", "/vendor/etc/audio/sku_", vendor_sku);
+    }
+}
+
 void audio_extn_utils_update_streams_cfg_lists(void *platform,
                                     struct mixer *mixer,
                                     struct listnode *streams_output_cfg_list,
@@ -524,6 +538,9 @@ void audio_extn_utils_update_streams_cfg_lists(void *platform,
 {
     cnode *root;
     char *data = NULL;
+    char vendor_config_path[VENDOR_CONFIG_PATH_MAX_LENGTH];
+    char audio_io_policy_file[VENDOR_CONFIG_FILE_MAX_LENGTH];
+    char audio_output_policy_file[VENDOR_CONFIG_FILE_MAX_LENGTH];
 
     ALOGV("%s", __func__);
     list_init(streams_output_cfg_list);
@@ -535,11 +552,29 @@ void audio_extn_utils_update_streams_cfg_lists(void *platform,
         return;
     }
 
-    data = (char *)load_file(AUDIO_IO_POLICY_VENDOR_CONFIG_FILE, NULL);
+    /* Get path for audio configuration files in vendor */
+    audio_get_vendor_config_path(vendor_config_path,
+        sizeof(vendor_config_path));
+
+    /* Get path for audio_io_policy_file in vendor */
+    snprintf(audio_io_policy_file, sizeof(audio_io_policy_file),
+        "%s/%s", vendor_config_path, AUDIO_IO_POLICY_VENDOR_CONFIG_FILE_NAME);
+
+    /* Load audio_io_policy_file from vendor */
+    data = (char *)load_file(audio_io_policy_file, NULL);
+
     if (data == NULL) {
         ALOGD("%s: failed to open io config file(%s), trying older config file",
-              __func__, AUDIO_IO_POLICY_VENDOR_CONFIG_FILE);
-        data = (char *)load_file(AUDIO_OUTPUT_POLICY_VENDOR_CONFIG_FILE, NULL);
+              __func__, audio_io_policy_file);
+
+        /* Get path for audio_output_policy_file in vendor */
+        snprintf(audio_output_policy_file, sizeof(audio_output_policy_file),
+            "%s/%s", vendor_config_path,
+                AUDIO_OUTPUT_POLICY_VENDOR_CONFIG_FILE_NAME);
+
+        /* Load audio_output_policy_file from vendor */
+        data = (char *)load_file(audio_output_policy_file, NULL);
+
         if (data == NULL) {
             send_app_type_cfg(platform, mixer,
                               streams_output_cfg_list,
@@ -1682,6 +1717,64 @@ size_t audio_extn_utils_convert_format_24_8_to_8_24(void *buf, size_t bytes)
     return bytes;
 }
 
+#ifdef AUDIO_GKI_ENABLED
+int get_snd_codec_id(audio_format_t format)
+{
+    int id = 0;
+
+    switch (format & AUDIO_FORMAT_MAIN_MASK) {
+    case AUDIO_FORMAT_MP3:
+        id = SND_AUDIOCODEC_MP3;
+        break;
+    case AUDIO_FORMAT_AAC:
+        id = SND_AUDIOCODEC_AAC;
+        break;
+    case AUDIO_FORMAT_AAC_ADTS:
+        id = SND_AUDIOCODEC_AAC;
+        break;
+    case AUDIO_FORMAT_AAC_LATM:
+        id = SND_AUDIOCODEC_AAC;
+        break;
+    case AUDIO_FORMAT_PCM:
+        id = SND_AUDIOCODEC_PCM;
+        break;
+    case AUDIO_FORMAT_FLAC:
+    case AUDIO_FORMAT_ALAC:
+    case AUDIO_FORMAT_APE:
+    case AUDIO_FORMAT_VORBIS:
+    case AUDIO_FORMAT_WMA:
+    case AUDIO_FORMAT_WMA_PRO:
+    case AUDIO_FORMAT_DSD:
+    case AUDIO_FORMAT_APTX:
+        id = SND_AUDIOCODEC_BESPOKE;
+        break;
+    case AUDIO_FORMAT_MP2:
+        id = SND_AUDIOCODEC_MP2;
+        break;
+    case AUDIO_FORMAT_AC3:
+        id = SND_AUDIOCODEC_AC3;
+        break;
+    case AUDIO_FORMAT_E_AC3:
+    case AUDIO_FORMAT_E_AC3_JOC:
+        id = SND_AUDIOCODEC_EAC3;
+        break;
+    case AUDIO_FORMAT_DTS:
+    case AUDIO_FORMAT_DTS_HD:
+        id = SND_AUDIOCODEC_DTS;
+        break;
+    case AUDIO_FORMAT_DOLBY_TRUEHD:
+        id = SND_AUDIOCODEC_TRUEHD;
+        break;
+    case AUDIO_FORMAT_IEC61937:
+        id = SND_AUDIOCODEC_IEC61937;
+        break;
+    default:
+        ALOGE("%s: Unsupported audio format :%x", __func__, format);
+    }
+
+    return id;
+}
+#else
 int get_snd_codec_id(audio_format_t format)
 {
     int id = 0;
@@ -1752,6 +1845,7 @@ int get_snd_codec_id(audio_format_t format)
 
     return id;
 }
+#endif
 
 void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
                                              struct audio_usecase *usecase)
