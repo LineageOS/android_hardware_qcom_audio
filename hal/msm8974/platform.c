@@ -150,7 +150,9 @@
 #define AUDIO_PARAMETER_KEY_AUD_CALDATA   "cal_data"
 #define AUDIO_PARAMETER_KEY_AUD_CALRESULT "cal_result"
 
+#ifndef AUDIO_PARAMETER_KEY_MONO_SPEAKER
 #define AUDIO_PARAMETER_KEY_MONO_SPEAKER "mono_speaker"
+#endif
 
 #define AUDIO_PARAMETER_KEY_FLUENCE_TYPE        "fluence_type"
 #define AUDIO_PARAMETER_KEY_FLUENCE_VOICE_CALL  "fluence_voice"
