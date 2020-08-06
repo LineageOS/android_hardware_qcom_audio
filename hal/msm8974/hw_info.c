@@ -764,7 +764,11 @@ void *hw_info_init(const char *snd_card_name)
 
     hw_info->snd_devices = NULL;
     hw_info->num_snd_devices = 0;
+#ifdef MONO_SPEAKER
+    hw_info->is_stereo_spkr = false;
+#else
     hw_info->is_stereo_spkr = true;
+#endif
     hw_info->is_wsa_combo_suppported = false;
     strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     strlcpy(hw_info->type, "", sizeof(hw_info->type));
