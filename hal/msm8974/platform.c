@@ -78,7 +78,8 @@
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
-    defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL)
+    defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL) || \
+    defined (PLATFORM_HOLI)
 
 #include <sound/devdep_params.h>
 #endif
@@ -1611,8 +1612,6 @@ static int msm_be_id_array_len  =
     sizeof(msm_device_to_be_id) / sizeof(msm_device_to_be_id[0]);
 #endif
 
-static int snd_device_delay_ms[SND_DEVICE_MAX] = {0};
-
 #define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
@@ -1826,6 +1825,10 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("bengal-scubaidp-snd-card")) ||
          !strncmp(snd_card_name, "bengal-qrd-snd-card",
                    sizeof("bengal-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "holi-mtp-snd-card",
+                   sizeof("holi-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "holi-qrd-snd-card",
+                   sizeof("holi-qrd-snd-card")) ||
          !strncmp(snd_card_name, "msm8937-snd-card-mtp",
                    sizeof("msm8937-snd-card-mtp")) ||
          !strncmp(snd_card_name, "msm8953-snd-card-mtp",
@@ -2259,7 +2262,6 @@ static void set_platform_defaults(struct platform_data * my_data)
         hw_interface_table[dev] = NULL;
         operator_specific_device_table[dev] = NULL;
         external_specific_device_table[dev] = NULL;
-        snd_device_delay_ms[dev] = 0;
         /* Init island cfg and power mode */
         my_data->island_cfg[dev].mixer_ctl = NULL;
         my_data->power_mode_cfg[dev].mixer_ctl = NULL;
@@ -3395,6 +3397,10 @@ void *platform_init(struct audio_device *adev)
                sizeof("bengal-qrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
             my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "holi-qrd-snd-card",
+               sizeof("holi-qrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",
                sizeof("qcs405-wsa-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_WSA_NAME),
@@ -3739,6 +3745,7 @@ acdb_init_fail:
             !strncmp(snd_card_name, "lito", strlen("lito")) ||
             !strncmp(snd_card_name, "atoll", strlen("atoll")) ||
             !strncmp(snd_card_name, "trinket", strlen("trinket"))||
+            !strncmp(snd_card_name, "holi", strlen("holi"))||
             !strncmp(snd_card_name, "bengal", strlen("bengal"))) {
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("WSA_CDC_DMA_RX_0 Format");
@@ -3767,28 +3774,30 @@ acdb_init_fail:
             if (default_rx_backend)
                 free(default_rx_backend);
             default_rx_backend = strdup("WSA_CDC_DMA_RX_0");
-            if(!strncmp(snd_card_name, "bengal", strlen("bengal")) &&
-               strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba"))) {
+            if((!strncmp(snd_card_name, "bengal", strlen("bengal")) &&
+               strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba"))) ||
+               !strncmp(snd_card_name, "holi", strlen("holi"))) {
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                         strdup("RX_CDC_DMA_RX_1 Format");
                 my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
                         strdup("RX_CDC_DMA_RX_1 SampleRate");
                 default_rx_backend = strdup("RX_CDC_DMA_RX_1");
                 my_data->is_multiple_sample_rate_combo_supported = false;
-            }
-
-            if (!strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba")))
+            } else if (!strncmp(snd_card_name, "bengal-scuba", strlen("bengal-scuba"))) {
+                my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
+                        strdup("RX_CDC_DMA_RX_0 Format");
+                my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
+                        strdup("RX_CDC_DMA_RX_0 SampleRate");
+                default_rx_backend = strdup("RX_CDC_DMA_RX_0");
                 my_data->is_multiple_sample_rate_combo_supported = false;
+            }
         } else if (!strncmp(snd_card_name, "sdm660", strlen("sdm660")) ||
                !strncmp(snd_card_name, "sdm670", strlen("sdm670")) ||
                !strncmp(snd_card_name, "qcs605", strlen("qcs605"))) {
-
-
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].bitwidth_mixer_ctl =
                 strdup("INT4_MI2S_RX Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_BACKEND].samplerate_mixer_ctl =
                 strdup("INT4_MI2S_RX SampleRate");
-
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].bitwidth_mixer_ctl =
                 strdup("INT3_MI2S_TX Format");
             my_data->current_backend_cfg[DEFAULT_CODEC_TX_BACKEND].samplerate_mixer_ctl =
@@ -3797,7 +3806,6 @@ acdb_init_fail:
                 strdup("INT0_MI2S_RX Format");
             my_data->current_backend_cfg[HEADPHONE_BACKEND].samplerate_mixer_ctl =
                 strdup("INT0_MI2S_RX SampleRate");
-
             if (default_rx_backend)
                 free(default_rx_backend);
             default_rx_backend = strdup("INT4_MI2S_RX");
@@ -8874,26 +8882,6 @@ done:
     return NULL;
 }
 
-void platform_set_snd_device_delay(snd_device_t snd_device, int delay_ms)
-{
-    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
-        ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
-        return;
-    }
-
-    snd_device_delay_ms[snd_device] = delay_ms;
-}
-
-/* return delay in Us */
-int64_t platform_get_snd_device_delay(snd_device_t snd_device)
-{
-    if ((snd_device < SND_DEVICE_MIN) || (snd_device >= SND_DEVICE_MAX)) {
-        ALOGE("%s: Invalid snd_device = %d", __func__, snd_device);
-        return 0;
-    }
-    return 1000LL * (int64_t)snd_device_delay_ms[snd_device];
-}
-
 void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms)
 {
     if ((audio_source < AUDIO_SOURCE_DEFAULT) ||
@@ -8917,14 +8905,14 @@ int64_t platform_get_audio_source_delay(audio_source_t audio_source)
     return 1000LL * audio_source_delay_ms[audio_source];
 }
 
-/* Delay in Us */
 /* Delay in Us, only to be used for PCM formats */
-int64_t platform_render_latency(struct audio_device *adev, audio_usecase_t usecase)
+int64_t platform_render_latency(struct stream_out *out)
 {
     int64_t delay = 0LL;
-    struct audio_usecase *uc_info;
 
-    switch (usecase) {
+    if (!out)
+        return delay;
+    switch (out->usecase) {
         case USECASE_AUDIO_PLAYBACK_DEEP_BUFFER:
         case USECASE_AUDIO_PLAYBACK_MEDIA:
         case USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE:
@@ -8952,32 +8940,20 @@ int64_t platform_render_latency(struct audio_device *adev, audio_usecase_t useca
             break;
     }
 
-    uc_info = get_usecase_from_list(adev, usecase);
-
-    if (uc_info != NULL) {
-        if (uc_info->type == PCM_PLAYBACK)
-            delay += platform_get_snd_device_delay(uc_info->out_snd_device);
-        else
-            ALOGE("%s: Invalid uc_info->type %d", __func__, uc_info->type);
-    }
-
+    /* out->device could be used to add delay time if it's necessary */
     return delay;
 }
 
-int64_t platform_capture_latency(struct audio_device *adev, audio_usecase_t usecase)
+int64_t platform_capture_latency(struct stream_in *in)
 {
     int64_t delay = 0LL;
-    struct audio_usecase *uc_info;
 
-    uc_info = get_usecase_from_list(adev, usecase);
+    if (!in)
+        return delay;
 
-    if (uc_info != NULL) {
-        if (uc_info->type == PCM_CAPTURE)
-            delay += platform_get_snd_device_delay(uc_info->in_snd_device);
-        else
-            ALOGE("%s: Invalid uc_info->type %d", __func__, uc_info->type);
-    }
+    delay = platform_get_audio_source_delay(in->source);
 
+    /* in->device could be used to add delay time if it's necessary */
     return delay;
 }
 
@@ -9342,6 +9318,8 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
     struct audio_device_config_param *adev_device_cfg_ptr = adev->device_cfg_params;
     int controller = -1;
     int stream = -1;
+    const char *id_string = NULL;
+    int cfg_value = -1;
 
     if (usecase != NULL && usecase->stream.out &&
             usecase->type == PCM_PLAYBACK) {
@@ -9393,13 +9371,24 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
         } else {
             ret = mixer_ctl_set_enum_by_string(ctl, "S16_LE");
         }
-        if ( ret < 0) {
+        if (ret < 0) {
             ALOGE("%s:becf: afe: fail for %s mixer set to %d bit for %x format", __func__,
                   my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl, bit_width, format);
         } else {
-            my_data->current_backend_cfg[backend_idx].bit_width = bit_width;
             ALOGD("%s:becf: afe: %s mixer set to %d bit for %x format", __func__,
                   my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl, bit_width, format);
+            for (int idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
+                if (my_data->current_backend_cfg[idx].bitwidth_mixer_ctl) {
+                    ctl = mixer_get_ctl_by_name(adev->mixer,
+                                 my_data->current_backend_cfg[idx].bitwidth_mixer_ctl);
+                    id_string = platform_get_mixer_control(ctl);
+                    if (id_string) {
+                        cfg_value = audio_extn_utils_get_bit_width_from_string(id_string);
+                        if (cfg_value > 0)
+                            my_data->current_backend_cfg[idx].bit_width = cfg_value;
+                    }
+                }
+            }
         }
         /* set the ret as 0 and not pass back to upper layer */
         ret = 0;
@@ -9407,90 +9396,106 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
 
     if ((my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl) &&
         (passthrough_enabled || (sample_rate != my_data->current_backend_cfg[backend_idx].sample_rate))) {
-            char *rate_str = NULL;
-            struct  mixer_ctl *ctl = NULL;
+        char *rate_str = NULL;
+        struct  mixer_ctl *ctl = NULL;
 
-            if (backend_idx == USB_AUDIO_RX_BACKEND ||
-                    backend_idx == USB_AUDIO_TX_BACKEND) {
-                switch (sample_rate) {
-                case 32000:
-                        rate_str = "KHZ_32";
-                        break;
-                case 8000:
-                        rate_str = "KHZ_8";
-                        break;
-                case 11025:
-                        rate_str = "KHZ_11P025";
-                        break;
-                case 16000:
-                        rate_str = "KHZ_16";
-                        break;
-                case 22050:
-                        rate_str = "KHZ_22P05";
-                        break;
-                }
+        if (backend_idx == USB_AUDIO_RX_BACKEND ||
+                backend_idx == USB_AUDIO_TX_BACKEND) {
+            switch (sample_rate) {
+            case 32000:
+                    rate_str = "KHZ_32";
+                    break;
+            case 8000:
+                    rate_str = "KHZ_8";
+                    break;
+            case 11025:
+                    rate_str = "KHZ_11P025";
+                    break;
+            case 16000:
+                    rate_str = "KHZ_16";
+                    break;
+            case 22050:
+                    rate_str = "KHZ_22P05";
+                    break;
             }
+        }
 
-            if (rate_str == NULL) {
-                switch (sample_rate) {
-                case 32000:
-                    if (passthrough_enabled || (backend_idx == SPDIF_TX_BACKEND) ||
-                        (backend_idx == HDMI_TX_BACKEND) ||
-                        (backend_idx == HDMI_ARC_TX_BACKEND) ||
-                        (backend_idx == DISP_PORT_RX_BACKEND)) {
-                        rate_str = "KHZ_32";
-                        break;
-                    }
-                case 48000:
-                    rate_str = "KHZ_48";
-                    break;
-                case 44100:
-                    rate_str = "KHZ_44P1";
-                    break;
-                case 64000:
-                case 96000:
-                    rate_str = "KHZ_96";
-                    break;
-                case 88200:
-                    rate_str = "KHZ_88P2";
-                    break;
-                case 176400:
-                    rate_str = "KHZ_176P4";
-                    break;
-                case 192000:
-                    rate_str = "KHZ_192";
-                    break;
-                case 352800:
-                    rate_str = "KHZ_352P8";
-                    break;
-                case 384000:
-                    rate_str = "KHZ_384";
-                    break;
-                case 144000:
-                    if (passthrough_enabled) {
-                        rate_str = "KHZ_144";
-                        break;
-                    }
-                default:
-                    rate_str = "KHZ_48";
+        if (rate_str == NULL) {
+            switch (sample_rate) {
+            case 32000:
+                if (passthrough_enabled || (backend_idx == SPDIF_TX_BACKEND) ||
+                    (backend_idx == HDMI_TX_BACKEND) ||
+                    (backend_idx == HDMI_ARC_TX_BACKEND) ||
+                    (backend_idx == DISP_PORT_RX_BACKEND)) {
+                    rate_str = "KHZ_32";
                     break;
                 }
+            case 48000:
+                rate_str = "KHZ_48";
+                break;
+            case 44100:
+                rate_str = "KHZ_44P1";
+                break;
+            case 64000:
+            case 96000:
+                rate_str = "KHZ_96";
+                break;
+            case 88200:
+                rate_str = "KHZ_88P2";
+                break;
+            case 176400:
+                rate_str = "KHZ_176P4";
+                break;
+            case 192000:
+                rate_str = "KHZ_192";
+                break;
+            case 352800:
+                rate_str = "KHZ_352P8";
+                break;
+            case 384000:
+                rate_str = "KHZ_384";
+                break;
+            case 144000:
+                if (passthrough_enabled) {
+                    rate_str = "KHZ_144";
+                    break;
+                }
+            default:
+                rate_str = "KHZ_48";
+                break;
             }
+        }
 
-            ctl = mixer_get_ctl_by_name(adev->mixer,
-                my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl);
-            if(!ctl) {
-                ALOGE("%s:becf: afe: Could not get ctl for mixer command - %s",
-                      __func__,
-                      my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl);
-                return -EINVAL;
-            }
+        ctl = mixer_get_ctl_by_name(adev->mixer,
+            my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl);
+        if(!ctl) {
+            ALOGE("%s:becf: afe: Could not get ctl for mixer command - %s",
+                  __func__,
+                  my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl);
+            return -EINVAL;
+        }
 
+        ret = mixer_ctl_set_enum_by_string(ctl, rate_str);
+        if (ret < 0) {
+            ALOGE("%s:becf: afe: fail for %s mixer set to %s", __func__,
+                  my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl, rate_str);
+        } else {
             ALOGD("%s:becf: afe: %s set to %s", __func__,
                   my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl, rate_str);
-            mixer_ctl_set_enum_by_string(ctl, rate_str);
-            my_data->current_backend_cfg[backend_idx].sample_rate = sample_rate;
-            ret = 0;
+            for (int idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
+                if (my_data->current_backend_cfg[idx].samplerate_mixer_ctl) {
+                    ctl = mixer_get_ctl_by_name(adev->mixer,
+                                 my_data->current_backend_cfg[idx].samplerate_mixer_ctl);
+                    id_string = platform_get_mixer_control(ctl);
+                    if (id_string) {
+                        cfg_value = audio_extn_utils_get_sample_rate_from_string(id_string);
+                        if (cfg_value > 0)
+                            my_data->current_backend_cfg[idx].sample_rate = cfg_value;
+                    }
+                }
+            }
+        }
+        ret = 0;
     }
     if ((my_data->current_backend_cfg[backend_idx].channels_mixer_ctl) &&
         (channels != my_data->current_backend_cfg[backend_idx].channels)) {
@@ -9525,8 +9530,27 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
                    my_data->current_backend_cfg[backend_idx].channels_mixer_ctl);
             return -EINVAL;
         }
-        mixer_ctl_set_enum_by_string(ctl, channel_cnt_str);
-        my_data->current_backend_cfg[backend_idx].channels = channels;
+        ret = mixer_ctl_set_enum_by_string(ctl, channel_cnt_str);
+        if (ret < 0) {
+            ALOGE("%s:becf: afe: fail for %s mixer set to %s", __func__,
+                  my_data->current_backend_cfg[backend_idx].channels_mixer_ctl, channel_cnt_str);
+        } else {
+            ALOGD("%s:becf: afe: %s set to %s", __func__,
+                  my_data->current_backend_cfg[backend_idx].channels_mixer_ctl, channel_cnt_str);
+            for (int idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
+                if (my_data->current_backend_cfg[idx].channels_mixer_ctl) {
+                    ctl = mixer_get_ctl_by_name(adev->mixer,
+                                 my_data->current_backend_cfg[idx].channels_mixer_ctl);
+                    id_string = platform_get_mixer_control(ctl);
+                    if (id_string) {
+                        cfg_value = audio_extn_utils_get_channels_from_string(id_string);
+                        if (cfg_value > 0)
+                            my_data->current_backend_cfg[idx].channels = cfg_value;
+                    }
+                }
+            }
+        }
+        ret = 0;
 
         if ((backend_idx == HDMI_RX_BACKEND) ||
                 (backend_idx == DISP_PORT_RX_BACKEND) ||
@@ -9534,11 +9558,6 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             platform_set_edid_channels_configuration_v2(adev->platform, channels,
                                                      backend_idx, snd_device,
                                                      controller, stream);
-
-        ALOGD("%s:becf: afe: %s set to %s ", __func__,
-               my_data->current_backend_cfg[backend_idx].channels_mixer_ctl,
-               channel_cnt_str);
-        ret = 0;
     }
 
     bool set_ext_disp_format = false, set_mi2s_tx_data_format = false;
@@ -12199,7 +12218,8 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
     defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
-    defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL)
+    defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL) || \
+    defined (PLATFORM_HOLI)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {

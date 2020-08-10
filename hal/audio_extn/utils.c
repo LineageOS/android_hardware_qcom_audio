@@ -2618,29 +2618,19 @@ int audio_extn_utils_pcm_get_dsp_presentation_pos(struct stream_out *out __unuse
 #define PLATFORM_INFO_XML_PATH          "audio_platform_info.xml"
 #define PLATFORM_INFO_XML_BASE_STRING   "audio_platform_info"
 
-#ifdef LINUX_ENABLED
-static const char *kConfigLocationList[] =
-        {"/etc"};
-#else
-static const char *kConfigLocationList[] =
-        {"/vendor/etc"};
-#endif
-static const int kConfigLocationListSize =
-        (sizeof(kConfigLocationList) / sizeof(kConfigLocationList[0]));
-
 bool audio_extn_utils_resolve_config_file(char file_name[MIXER_PATH_MAX_LENGTH])
 {
     char full_config_path[MIXER_PATH_MAX_LENGTH];
-    for (int i = 0; i < kConfigLocationListSize; i++) {
-        snprintf(full_config_path,
-                 MIXER_PATH_MAX_LENGTH,
-                 "%s/%s",
-                 kConfigLocationList[i],
-                 file_name);
-        if (F_OK == access(full_config_path, 0)) {
-            strlcpy(file_name, full_config_path, MIXER_PATH_MAX_LENGTH);
-            return true;
-        }
+    char vendor_config_path[VENDOR_CONFIG_PATH_MAX_LENGTH];
+
+    /* Get path for audio configuration files in vendor */
+    audio_get_vendor_config_path(vendor_config_path,
+        sizeof(vendor_config_path));
+    snprintf(full_config_path, sizeof(full_config_path),
+        "%s/%s", vendor_config_path, file_name);
+    if (F_OK == access(full_config_path, 0)) {
+        strlcpy(file_name, full_config_path, MIXER_PATH_MAX_LENGTH);
+        return true;
     }
     return false;
 }

@@ -881,7 +881,9 @@ static int spkr_calibrate(int t0_spk_1, int t0_spk_2)
                 t0_spk_2 = SAFE_SPKR_TEMP_Q6;
             }
         }
+#ifdef MSM_SPKR_PROT_SPV3
         protCfg.sp_version = handle.sp_version;
+#endif
         protCfg.t0[SP_V2_SPKR_1] = t0_spk_1;
         protCfg.t0[SP_V2_SPKR_2] = t0_spk_2;
         if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
@@ -1069,7 +1071,9 @@ exit:
             pcm_close(handle.pcm_tx);
         handle.pcm_tx = NULL;
         if (!v_validation) {
+#ifdef MSM_SPKR_PROT_SPV3
             protCfg.sp_version = handle.sp_version;
+#endif
             if (!status.status) {
                 protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
                 protCfg.r0[SP_V2_SPKR_1] = status.r0[SP_V2_SPKR_1];
@@ -1193,7 +1197,9 @@ static void* spkr_calibration_thread()
     if (acdb_fd > 0) {
         /*Set processing mode with t0/r0*/
         protCfg.mode = MSM_SPKR_PROT_NOT_CALIBRATED;
+#ifdef MSM_SPKR_PROT_SPV3
         protCfg.sp_version = handle.sp_version;
+#endif
         if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
             ALOGE("%s: spkr_prot_thread enable prot failed", __func__);
             handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
@@ -1238,7 +1244,9 @@ static void* spkr_calibration_thread()
             if (spkr_calibrated) {
                 ALOGD("%s: Spkr calibrated", __func__);
                 protCfg.mode = MSM_SPKR_PROT_CALIBRATED;
+#ifdef MSM_SPKR_PROT_SPV3
                 protCfg.sp_version = handle.sp_version;
+#endif
                 if (set_spkr_prot_cal(acdb_fd, &protCfg)) {
                     ALOGE("%s: enable prot failed", __func__);
                     handle.spkr_prot_mode = MSM_SPKR_PROT_DISABLED;
