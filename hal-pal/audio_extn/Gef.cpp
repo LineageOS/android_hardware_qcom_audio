@@ -256,7 +256,7 @@ int audio_extn_get_pal_info(void *hal_data,
 
     if (hal_data) {
         adev = (AudioDevice *)hal_data;
-        device_count = adev->GetPalDeviceIds(hal_device_id, pal_device_id);
+        device_count = adev->GetPalDeviceIds({hal_device_id}, pal_device_id);
         *pal_stream_type = StreamOutPrimary::GetPalStreamType(hal_stream_flag);
         return device_count;
     }

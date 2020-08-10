@@ -30,6 +30,7 @@
 #ifndef AUDIOEXTN_H
 #define AUDIOEXTN_H
 #include <cutils/str_parms.h>
+#include <set>
 #include "PalDefs.h"
 #include "audio_defs.h"
 #include <log/log.h>
@@ -38,6 +39,7 @@
 typedef void (*batt_listener_init_t)(battery_status_change_fn_t);
 typedef void (*batt_listener_deinit_t)();
 typedef bool (*batt_prop_is_charging_t)();
+typedef bool (*audio_device_cmp_fn_t)(audio_devices_t);
 
 class AudioDevice;
 //HFP
@@ -67,7 +69,12 @@ public:
     static void audio_extn_hfp_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parms);
     static int audio_extn_hfp_set_mic_mute2(std::shared_ptr<AudioDevice> adev, bool state);
 
-private:
+    /* start device utils */
+    static bool audio_devices_cmp(const std::set<audio_devices_t>&, audio_device_cmp_fn_t);
+    static bool audio_devices_cmp(const std::set<audio_devices_t>&, audio_devices_t);
+    static audio_devices_t get_device_types(const std::set<audio_devices_t>&);
+    static bool audio_devices_empty(const std::set<audio_devices_t>&);
+    /* end device utils */
 };
 
 #endif /* AUDIOEXTN_H */

@@ -86,7 +86,7 @@ public:
     audio_mode_t mode_;
     std::shared_ptr<StreamOutPrimary> stream_out_primary_;
     int VoiceSetParameters(const char *kvpairs);
-    int RouteStream(audio_devices_t);
+    int RouteStream(const std::set<audio_devices_t>&);
     bool is_valid_call_state(int call_state);
     bool is_valid_vsid(uint32_t vsid);
     int max_voice_sessions_;
@@ -98,7 +98,8 @@ public:
     int UpdateCalls(voice_session_t *pSession);
     int SetMicMute(bool mute);
     int SetVoiceVolume(float volume);
-    audio_devices_t GetMatchingTxDevice(audio_devices_t halRxDeviceId);
+    int GetMatchingTxDevices(const std::set<audio_devices_t>& rx_devs,
+                             std::set<audio_devices_t>& tx_devs);
     bool IsCallActive(voice_session_t *pSession);
     bool IsAnyCallActive();
     int StopCall();

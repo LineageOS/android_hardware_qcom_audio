@@ -432,3 +432,30 @@ int AudioExtn::audio_extn_hfp_set_mic_mute2(std::shared_ptr<AudioDevice> adev, b
 }
 // END: HFP ========================================================================
 
+// START: DEVICE UTILS =============================================================
+bool AudioExtn::audio_devices_cmp(const std::set<audio_devices_t>& devs, audio_device_cmp_fn_t fn){
+    for(auto dev : devs)
+        if(!fn(dev))
+            return false;
+    return true;
+}
+
+bool AudioExtn::audio_devices_cmp(const std::set<audio_devices_t>& devs, audio_devices_t dev){
+    for(auto d : devs)
+        if(d != dev)
+            return false;
+    return true;
+}
+
+audio_devices_t AudioExtn::get_device_types(const std::set<audio_devices_t>& devs){
+    audio_devices_t device = AUDIO_DEVICE_NONE;
+    for(auto d : devs)
+        device |= d;
+    return device;
+}
+
+bool AudioExtn::audio_devices_empty(const std::set<audio_devices_t>& devs){
+    return devs.empty()
+           || (devs.size() == 1 && *devs.begin() == AUDIO_DEVICE_NONE);
+}
+// END: DEVICE UTILS ===============================================================

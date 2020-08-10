@@ -87,7 +87,7 @@ std::shared_ptr<AudioDevice> AudioDevice::GetInstance(audio_hw_device_t* device)
 
 std::shared_ptr<StreamOutPrimary> AudioDevice::CreateStreamOut(
                         audio_io_handle_t handle,
-                        audio_devices_t devices,
+                        const std::set<audio_devices_t>& devices,
                         audio_output_flags_t flags,
                         struct audio_config *config,
                         audio_stream_out **stream_out,
@@ -132,7 +132,7 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
     AudioPatch::PatchType patch_type = AudioPatch::PATCH_NONE;
     audio_io_handle_t io_handle = AUDIO_IO_HANDLE_NONE;
     audio_source_t input_source = AUDIO_SOURCE_DEFAULT;
-    audio_devices_t device_types = AUDIO_DEVICE_NONE;
+    std::set<audio_devices_t> device_types;
 
     ALOGD("%s: enter: num sources %zu, num_sinks %zu", __func__, sources.size(), sinks.size());
 
@@ -152,7 +152,7 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
     // Populate source/sink information and fetch stream info
     switch (sources[0].type) {
         case AUDIO_PORT_TYPE_DEVICE: // Patch for audio capture or loopback
-            device_types = sources[0].ext.device.type;
+            device_types.insert(sources[0].ext.device.type);
             if (sinks[0].type == AUDIO_PORT_TYPE_MIX) {
                 io_handle = sinks[0].ext.mix.handle;
                 input_source = sinks[0].ext.mix.usecase.source;
@@ -171,10 +171,10 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
         case AUDIO_PORT_TYPE_MIX: // Patch for audio playback
             io_handle = sources[0].ext.mix.handle;
             for (const auto &sink : sinks)
-                device_types |= sink.ext.device.type;
+               device_types.insert(sink.ext.device.type);
             patch_type = AudioPatch::PATCH_PLAYBACK;
             ALOGD("%s: Playback patch from mix handle %d to device %x", __func__,
-                    io_handle, device_types);
+                  io_handle, AudioExtn::get_device_types(device_types));
             break;
         case AUDIO_PORT_TYPE_SESSION:
         case AUDIO_PORT_TYPE_NONE:
@@ -276,9 +276,9 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
         return -EINVAL;
     }
 
-    ret = stream->RouteStream(AUDIO_DEVICE_NONE);
+    ret = stream->RouteStream({AUDIO_DEVICE_NONE});
     if (patch_type == AudioPatch::PATCH_PLAYBACK)
-        ret |= voice_->RouteStream(AUDIO_DEVICE_NONE);
+        ret |= voice_->RouteStream({AUDIO_DEVICE_NONE});
 
     if (ret)
         ALOGE("%s: Stream routing failed for io_handle %d", __func__, io_handle);
@@ -293,7 +293,7 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
 
 std::shared_ptr<StreamInPrimary> AudioDevice::CreateStreamIn(
                                         audio_io_handle_t handle,
-                                        audio_devices_t devices,
+                                        const std::set<audio_devices_t>& devices,
                                         audio_input_flags_t flags,
                                         struct audio_config *config,
                                         const char *address,
@@ -397,7 +397,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     astream = adevice->OutGetStream(handle);
     if (astream == nullptr)
-        astream = adevice->CreateStreamOut(handle, devices, flags, config, stream_out, address);
+        astream = adevice->CreateStreamOut(handle, {devices}, flags, config, stream_out, address);
 exit:
     return ret;
 }
@@ -494,10 +494,9 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     }
 
     astream = adevice->InGetStream(handle);
-    if (astream == nullptr) {
-        astream = adevice->CreateStreamIn(handle, devices, flags, config, address,
-                                stream_in, source);
-    }
+    if (astream == nullptr)
+        astream = adevice->CreateStreamIn(handle, {devices}, flags, config,
+                address, stream_in, source);
 
   exit:
       return ret;
@@ -880,11 +879,9 @@ int AudioDevice::add_input_headset_if_usb_out_headset(int *device_count,
 }
 
 int AudioDevice::SetParameters(const char *kvpairs) {
-    int ret = 0;
-    int val = 0;
+    int ret = 0, val = 0;
     struct str_parms *parms;
     char value[32];
-    int device_count = 0;
     int pal_device_count = 0;
     pal_device_id_t* pal_device_ids = NULL;
 
@@ -939,7 +936,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 ALOGI("%s: plugin device num=%d", __func__,
                     param_device_connection.device_config.usb_addr.device_num);
             }
-        } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        } else if (val == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             int controller = -1, stream = -1;
             AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
             param_device_connection.device_config.dp_config.controller = controller;
@@ -949,11 +946,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             ALOGI("%s: plugin device cont %d stream %d", __func__, controller, stream);
         }
 
-        device_count = popcount(device);
-        if (device_count) {
-
-            pal_device_ids = (pal_device_id_t *) calloc(device_count, sizeof(pal_device_id_t));
-            pal_device_count = GetPalDeviceIds(device, pal_device_ids);
+        if (device) {
+            pal_device_ids = (pal_device_id_t *) calloc(1, sizeof(pal_device_id_t));
+            pal_device_count = GetPalDeviceIds({device}, pal_device_ids);
             ret = add_input_headset_if_usb_out_headset(&pal_device_count, &pal_device_ids);
             if (ret) {
                 free(pal_device_ids);
@@ -1040,7 +1035,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 (audio_is_usb_in_device(device)) && (usb_input_dev_enabled == true)) {
                    usb_input_dev_enabled = false;
             }
-        } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        } else if (val == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             int controller = -1, stream = -1;
             AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
             param_device_connection.device_config.dp_config.controller = controller;
@@ -1049,11 +1044,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             ALOGI("%s: plugin device cont %d stream %d", __func__, controller, stream);
         }
 
-        device_count = popcount(device);
-        if (device_count) {
-
-            pal_device_ids = (pal_device_id_t *) calloc(device_count, sizeof(pal_device_id_t));
-            pal_device_count = GetPalDeviceIds(device, pal_device_ids);
+        if (device) {
+            pal_device_ids = (pal_device_id_t *) calloc(1, sizeof(pal_device_id_t));
+            pal_device_count = GetPalDeviceIds({device}, pal_device_ids);
             for (int i = 0; i < pal_device_count; i++) {
                 param_device_connection.connection_state = false;
                 param_device_connection.id = pal_device_ids[i];
@@ -1280,56 +1273,46 @@ void AudioDevice::FillAndroidDeviceMap() {
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_DEFAULT, PAL_DEVICE_IN_DEFAULT));
 }
 
-int AudioDevice::GetPalDeviceIds(const audio_devices_t hal_device_id,
+int AudioDevice::GetPalDeviceIds(const std::set<audio_devices_t>& hal_device_ids,
                                  pal_device_id_t* pal_device_id) {
-    int device_count_allocated = popcount(hal_device_id & ~AUDIO_DEVICE_BIT_IN);
-    int device_count_used = 0;
-
-    std::map<audio_devices_t, pal_device_id_t>::iterator it = android_device_map_.begin();
-
+    int device_count = 0;
     if (!pal_device_id) {
         ALOGE("%s: invalid pal device id", __func__);
         goto error;
     }
+
     // pal device ids is supposed to have to space for the new ids
-    ALOGD("%s: haldeviceIds: %x, devices allocated %d, pal device ids %d",
-          __func__, hal_device_id, device_count_allocated, device_count_used);
+    ALOGD("%s: haldeviceIds: %zu", __func__, hal_device_ids.size());
 
-    while(it != android_device_map_.end() &&
-          (device_count_used != device_count_allocated)) {
-        ALOGV("%s: hal_device_id %x it->first %x, it->second %d",
-              __func__, hal_device_id, it->first, it->second);
-
+    for(auto hal_device_id : hal_device_ids) {
         // skip AUDIO_DEVICE_NONE as device count not 0
-        if (it->first == AUDIO_DEVICE_NONE) {
-            it = std::next(it, 1);
-            continue;
-        }
-
-        if (((hal_device_id & it->first) == it->first) &&
-            ((hal_device_id & AUDIO_DEVICE_BIT_IN) == (it->first & AUDIO_DEVICE_BIT_IN))) {
-            ALOGD("%s: haldeviceId: %x and PAL Device ID %d",
-                  __func__, it->first, it->second);
-            if ( (it->second == PAL_DEVICE_OUT_AUX_DIGITAL) ||
-                 (it->second == PAL_DEVICE_OUT_HDMI) ) {
-               ALOGE("%s: dp_controller: %d dp_stream: %d", __func__, dp_controller, dp_stream);
-               if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
-                  pal_device_id[device_count_used] = PAL_DEVICE_OUT_AUX_DIGITAL_1;
-               } else {
-                  pal_device_id[device_count_used] = it->second;
-               }
-            } else {
-               pal_device_id[device_count_used] = it->second;
+        if (hal_device_id != AUDIO_DEVICE_NONE) {
+            auto it = android_device_map_.find(hal_device_id);
+            if (it != android_device_map_.end() &&
+               audio_is_input_device(it->first) == audio_is_input_device(hal_device_id)) {
+                ALOGD("%s: Found haldeviceId: %x and PAL Device ID %d", __func__,
+                        it->first, it->second);
+                if (it->second == PAL_DEVICE_OUT_AUX_DIGITAL ||
+                        it->second == PAL_DEVICE_OUT_HDMI) {
+                   ALOGE("%s: dp_controller: %d dp_stream: %d", __func__,
+                           dp_controller, dp_stream);
+                   if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
+                      pal_device_id[device_count] = PAL_DEVICE_OUT_AUX_DIGITAL_1;
+                   } else {
+                      pal_device_id[device_count] = it->second;
+                   }
+                } else {
+                   pal_device_id[device_count] = it->second;
+                }
             }
-            device_count_used = (device_count_used + 1);
         }
-        it = std::next(it, 1);
+        ++device_count;
     }
-    ALOGD("%s: haldeviceIds: %x, devices allocated %d, pal device ids before returning %d",
-          __func__, hal_device_id, device_count_allocated, device_count_used);
 
 error:
-    return device_count_used;
+    ALOGD("%s: devices allocated %zu, pal device ids before returning %d",
+          __func__, hal_device_ids.size(), device_count);
+    return device_count;
 }
 
 void AudioDevice::SetChargingMode(bool is_charging) {

@@ -224,41 +224,41 @@ bool AudioVoice::is_valid_call_state(int call_state)
         return true;
 }
 
-audio_devices_t AudioVoice::GetMatchingTxDevice(audio_devices_t halRxDeviceId) {
-    audio_devices_t halTxDeviceId = AUDIO_DEVICE_NONE;
+int AudioVoice::GetMatchingTxDevices(const std::set<audio_devices_t>& rx_devices,
+                                     std::set<audio_devices_t>& tx_devices){
+    for(auto rx_dev : rx_devices)
+        switch(rx_dev) {
+            case AUDIO_DEVICE_OUT_EARPIECE:
+                tx_devices.insert(AUDIO_DEVICE_IN_BUILTIN_MIC);
+                break;
+            case AUDIO_DEVICE_OUT_SPEAKER:
+                tx_devices.insert(AUDIO_DEVICE_IN_BACK_MIC);
+                break;
+            case AUDIO_DEVICE_OUT_WIRED_HEADSET:
+                tx_devices.insert(AUDIO_DEVICE_IN_WIRED_HEADSET);
+                break;
+            case AUDIO_DEVICE_OUT_WIRED_HEADPHONE:
+                tx_devices.insert(AUDIO_DEVICE_IN_BUILTIN_MIC);
+                break;
+            case AUDIO_DEVICE_OUT_USB_HEADSET:
+                tx_devices.insert(AUDIO_DEVICE_IN_USB_HEADSET);
+                break;
+            case AUDIO_DEVICE_OUT_BLUETOOTH_SCO:
+            case AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
+                tx_devices.insert(AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET);
+                break;
+            default:
+                tx_devices.insert(AUDIO_DEVICE_NONE);
+                ALOGE("%s: unsupported Device Id of %d", __func__, rx_dev);
+                break;
+        }
 
-    switch(halRxDeviceId) {
-        case AUDIO_DEVICE_OUT_EARPIECE:
-            halTxDeviceId = AUDIO_DEVICE_IN_BUILTIN_MIC;
-            break;
-        case AUDIO_DEVICE_OUT_SPEAKER:
-            halTxDeviceId = AUDIO_DEVICE_IN_BACK_MIC ;
-            break;
-        case AUDIO_DEVICE_OUT_WIRED_HEADSET:
-            halTxDeviceId = AUDIO_DEVICE_IN_WIRED_HEADSET;
-            break;
-        case AUDIO_DEVICE_OUT_WIRED_HEADPHONE:
-        case AUDIO_DEVICE_OUT_LINE:
-            halTxDeviceId = AUDIO_DEVICE_IN_BUILTIN_MIC;
-            break;
-        case AUDIO_DEVICE_OUT_USB_HEADSET:
-            halTxDeviceId = AUDIO_DEVICE_IN_USB_HEADSET;
-            break;
-        case AUDIO_DEVICE_OUT_BLUETOOTH_SCO:
-        case AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
-            halTxDeviceId = AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
-            break;
-        default:
-            halTxDeviceId = AUDIO_DEVICE_NONE;
-            ALOGE("%s: unsupported Device Id of %d", __func__, halRxDeviceId);
-            break;
-    }
-
-    return halTxDeviceId;
+    return tx_devices.size();
 }
 
-int AudioVoice::RouteStream(audio_devices_t rx_device) {
-    int ret = 0, tx_device = 0;
+int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
+    int ret = 0;
+    std::set<audio_devices_t> tx_devices;
     pal_device_id_t pal_rx_device = (pal_device_id_t) NULL;
     pal_device_id_t pal_tx_device = (pal_device_id_t) NULL;
     pal_device_id_t* pal_device_ids = NULL;
@@ -266,15 +266,13 @@ int AudioVoice::RouteStream(audio_devices_t rx_device) {
 
     ALOGD("%s Enter", __func__);
 
-    if ((device_count = popcount(rx_device)) == 0) {
-        ALOGE("%s invalid routing device %d", __func__, rx_device);
+    if (AudioExtn::audio_devices_empty(rx_devices)){
+        ALOGE("%s invalid routing device %d", __func__, AudioExtn::get_device_types(rx_devices));
         return 0;
     }
 
-    tx_device = GetMatchingTxDevice(rx_device);
-    if (device_count < popcount(tx_device)) {
-        device_count = popcount(tx_device);
-    }
+    GetMatchingTxDevices(rx_devices, tx_devices);
+    device_count = tx_devices.size() > rx_devices.size() ? tx_devices.size() : rx_devices.size();
 
     pal_device_ids = (pal_device_id_t *)calloc(1, device_count * sizeof(pal_device_id_t));
     if (!pal_device_ids) {
@@ -282,13 +280,13 @@ int AudioVoice::RouteStream(audio_devices_t rx_device) {
         return -ENOMEM;
     }
 
-    ALOGD("%s Routing is %d", __func__, rx_device);
+    ALOGD("%s Routing is %d", __func__, AudioExtn::get_device_types(rx_devices));
 
     if (stream_out_primary_) {
-        stream_out_primary_->getPalDeviceIds(rx_device, pal_device_ids);
+        stream_out_primary_->getPalDeviceIds(rx_devices, pal_device_ids);
         pal_rx_device = pal_device_ids[0];
         memset(pal_device_ids, 0, device_count * sizeof(pal_device_id_t));
-        stream_out_primary_->getPalDeviceIds(tx_device, pal_device_ids);
+        stream_out_primary_->getPalDeviceIds(tx_devices, pal_device_ids);
         pal_tx_device = pal_device_ids[0];
     }
 

@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <mutex>
 #include <vector>
+#include <set>
 
 #include <cutils/properties.h>
 #include <hardware/audio.h>
@@ -75,7 +76,7 @@ public:
     int Init(hw_device_t **device, const hw_module_t *module);
     std::shared_ptr<StreamOutPrimary> CreateStreamOut(
             audio_io_handle_t handle,
-            audio_devices_t devices,
+            const std::set<audio_devices_t> &devices,
             audio_output_flags_t flags,
             struct audio_config *config,
             audio_stream_out **stream_out,
@@ -91,7 +92,7 @@ public:
     std::shared_ptr<StreamOutPrimary> OutGetStream(audio_stream_t* audio_stream);
     std::shared_ptr<StreamInPrimary> CreateStreamIn(
             audio_io_handle_t handle,
-            audio_devices_t devices,
+            const std::set<audio_devices_t> &devices,
             audio_input_flags_t flags,
             struct audio_config *config,
             const char *address,
@@ -111,7 +112,7 @@ public:
     void SetChargingMode(bool is_charging);
     void FillAndroidDeviceMap();
     int GetPalDeviceIds(
-            const audio_devices_t hal_device_id,
+            const std::set<audio_devices_t>& hal_device_id,
             pal_device_id_t* pal_device_id);
     int                       usb_card_id_;
     int                       usb_dev_num_;
