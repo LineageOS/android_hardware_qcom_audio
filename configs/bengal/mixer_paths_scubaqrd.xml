@@ -2679,6 +2679,10 @@
 
     <path name="voice-headset">
         <path name="headphones" />
+        <ctl name="RX_COMP1 Switch" value="0" />
+        <ctl name="RX_COMP2 Switch" value="0" />
+        <ctl name="HPHL Volume" value="20" />
+        <ctl name="HPHR Volume" value="20" />
     </path>
 
     <path name="voice-line">
