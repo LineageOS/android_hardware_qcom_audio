@@ -116,7 +116,7 @@ protected:
     visualizer_hal_stop_output fnp_visualizer_stop_output_ = nullptr;
     std::map<audio_devices_t, qal_device_id_t> android_device_map_;
     bool usb_input_dev_enabled = false;
-    int add_input_headset_if_usb_out_headset(int *device_count,  qal_device_id_t* qal_device_ids);
+    int add_input_headset_if_usb_out_headset(int *device_count,  qal_device_id_t** qal_device_ids);
 };
 
 #endif //ANDROID_HARDWARE_AHAL_ADEVICE_H_
