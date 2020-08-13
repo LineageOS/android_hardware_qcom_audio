@@ -1158,7 +1158,11 @@ qal_stream_type_t StreamInPrimary::GetQalStreamType(
             (halStreamFlags & AUDIO_INPUT_FLAG_TIMESTAMP) == 0 &&
             (halStreamFlags & AUDIO_INPUT_FLAG_COMPRESS) == 0 &&
             (halStreamFlags & AUDIO_INPUT_FLAG_FAST) != 0) {
-        qalStreamType = QAL_STREAM_ULTRA_LOW_LATENCY;
+        if (isDeviceAvailable(QAL_DEVICE_IN_PROXY))
+            qalStreamType = QAL_STREAM_PROXY;
+        else
+            qalStreamType = QAL_STREAM_ULTRA_LOW_LATENCY;
+
         return qalStreamType;
     }
     switch (halStreamFlags) {
@@ -2314,6 +2318,16 @@ StreamOutPrimary::~StreamOutPrimary() {
         free(convertBuffer);
 }
 
+bool StreamInPrimary::isDeviceAvailable(qal_device_id_t deviceId)
+{
+    for (int i = 0; i < mNoOfInDevices; i++) {
+        if (mQalInDevice[i].id == deviceId)
+            return true;
+    }
+
+    return false;
+}
+
 int StreamInPrimary::Stop() {
     int ret = -ENOSYS;
 
@@ -2648,13 +2662,53 @@ int StreamInPrimary::Open() {
         goto set_buff_size;
     }
 
-    channels = audio_channel_count_from_out_mask(config_.channel_mask);
+    channels = audio_channel_count_from_in_mask(config_.channel_mask);
     if (channels == 0) {
        ALOGE("invalid channel count");
        return -EINVAL;
     }
     //need to convert channel mask to qal channel mask
-    if (channels == 3) {
+    if (channels == 8) {
+      ch_info.channels = 8;
+      ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+      ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+      ch_info.ch_map[2] = QAL_CHMAP_CHANNEL_C;
+      ch_info.ch_map[3] = QAL_CHMAP_CHANNEL_LFE;
+      ch_info.ch_map[4] = QAL_CHMAP_CHANNEL_LB;
+      ch_info.ch_map[5] = QAL_CHMAP_CHANNEL_RB;
+      ch_info.ch_map[6] = QAL_CHMAP_CHANNEL_LS;
+      ch_info.ch_map[6] = QAL_CHMAP_CHANNEL_RS;
+    } else if (channels == 7) {
+      ch_info.channels = 7;
+      ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+      ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+      ch_info.ch_map[2] = QAL_CHMAP_CHANNEL_C;
+      ch_info.ch_map[3] = QAL_CHMAP_CHANNEL_LFE;
+      ch_info.ch_map[4] = QAL_CHMAP_CHANNEL_LB;
+      ch_info.ch_map[5] = QAL_CHMAP_CHANNEL_RB;
+      ch_info.ch_map[6] = QAL_CHMAP_CHANNEL_LS;
+    } else if (channels == 6) {
+      ch_info.channels = 6;
+      ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+      ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+      ch_info.ch_map[2] = QAL_CHMAP_CHANNEL_C;
+      ch_info.ch_map[3] = QAL_CHMAP_CHANNEL_LFE;
+      ch_info.ch_map[4] = QAL_CHMAP_CHANNEL_LB;
+      ch_info.ch_map[5] = QAL_CHMAP_CHANNEL_RB;
+    } else if (channels == 5) {
+      ch_info.channels = 5;
+      ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+      ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+      ch_info.ch_map[2] = QAL_CHMAP_CHANNEL_C;
+      ch_info.ch_map[3] = QAL_CHMAP_CHANNEL_LFE;
+      ch_info.ch_map[4] = QAL_CHMAP_CHANNEL_RC;
+    } else if (channels == 4) {
+      ch_info.channels = 4;
+      ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+      ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+      ch_info.ch_map[2] = QAL_CHMAP_CHANNEL_C;
+      ch_info.ch_map[3] = QAL_CHMAP_CHANNEL_LFE;
+    } else if (channels == 3) {
       ch_info.channels = 3;
       ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
       ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
@@ -2695,6 +2749,11 @@ int StreamInPrimary::Open() {
                 streamAttributes_.flags = (qal_stream_flags_t)
                     (QAL_STREAM_FLAG_MMAP);
     }
+
+    if (streamAttributes_.type == QAL_STREAM_PROXY &&
+            (isDeviceAvailable(QAL_DEVICE_IN_PROXY)))
+        streamAttributes_.info.opt_stream_info.tx_proxy_type = QAL_STREAM_PROXY_TX_WFD;
+
     ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
 
     ret = qal_stream_open(&streamAttributes_,
@@ -2717,12 +2776,12 @@ int StreamInPrimary::Open() {
 set_buff_size:
     if (usecase_ == USECASE_AUDIO_RECORD_MMAP) {
         inBufSize = MMAP_PERIOD_SIZE * audio_bytes_per_frame(
-                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
         inBufCount = MMAP_PERIOD_COUNT_DEFAULT;
     } else if (usecase_ == USECASE_AUDIO_RECORD_LOW_LATENCY) {
         inBufSize = ULL_PERIOD_SIZE * audio_bytes_per_frame(
-                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
         inBufCount = ULL_PERIOD_COUNT_DEFAULT;
     } else
@@ -2752,17 +2811,22 @@ uint32_t StreamInPrimary::GetBufferSize() {
     } else if (streamAttributes_.type == QAL_STREAM_LOW_LATENCY) {
         return LOW_LATENCY_CAPTURE_PERIOD_SIZE *
             audio_bytes_per_frame(
-                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
     } else if (streamAttributes_.type == QAL_STREAM_ULTRA_LOW_LATENCY) {
         return ULL_PERIOD_SIZE * ULL_PERIOD_MULTIPLIER *
             audio_bytes_per_frame(
-                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
     } else if (streamAttributes_.type == QAL_STREAM_DEEP_BUFFER) {
         return (config_.sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC/ 1000) *
             audio_bytes_per_frame(
-                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    audio_channel_count_from_in_mask(config_.channel_mask),
+                    config_.format);
+    } else if (streamAttributes_.type == QAL_STREAM_PROXY) {
+        return config_.frame_count *
+            audio_bytes_per_frame(
+                    audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
     } else {
         return BUF_SIZE_CAPTURE * NO_OF_BUF;
@@ -2776,7 +2840,8 @@ int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_s
     if (config_.sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
         (halStreamFlags & AUDIO_INPUT_FLAG_TIMESTAMP) == 0 &&
         (halStreamFlags & AUDIO_INPUT_FLAG_COMPRESS) == 0 &&
-        (halStreamFlags & AUDIO_INPUT_FLAG_FAST) != 0)
+        (halStreamFlags & AUDIO_INPUT_FLAG_FAST) != 0 &&
+        (!(isDeviceAvailable(QAL_DEVICE_IN_PROXY))))
         usecase = USECASE_AUDIO_RECORD_LOW_LATENCY;
 
     if ((halStreamFlags & AUDIO_INPUT_FLAG_MMAP_NOIRQ) != 0)
@@ -2950,7 +3015,6 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
 
     source_ = source;
 
-    usecase_ = GetInputUseCase(flags, source);
     mAndroidInDevices = devices;
     mNoOfInDevices = popcount(devices & ~AUDIO_DEVICE_BIT_IN);
     if (!mNoOfInDevices) {
@@ -2988,6 +3052,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
         }
     }
 
+    usecase_ = GetInputUseCase(flags, source);
     if (flags & AUDIO_INPUT_FLAG_MMAP_NOIRQ) {
         stream_.get()->start = astream_in_mmap_noirq_start;
         stream_.get()->stop = astream_in_mmap_noirq_stop;

@@ -504,7 +504,7 @@ public:
     int Stop();
     ssize_t Read(const void *buffer, size_t bytes);
     uint32_t GetBufferSize();
-    static qal_stream_type_t GetQalStreamType(audio_input_flags_t halStreamFlags,
+    qal_stream_type_t GetQalStreamType(audio_input_flags_t halStreamFlags,
             uint32_t sample_rate);
     int GetInputUseCase(audio_input_flags_t halStreamFlags, audio_source_t source);
     int addRemoveAudioEffect(const struct audio_stream *stream, effect_handle_t effect,bool enable);
@@ -514,6 +514,7 @@ public:
     audio_input_flags_t                 flags_;
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
     int GetMmapPosition(struct audio_mmap_position *position);
+    bool isDeviceAvailable(qal_device_id_t deviceId);
 protected:
     int FillHalFnPtrs();
     std::shared_ptr<audio_stream_in>    stream_;
