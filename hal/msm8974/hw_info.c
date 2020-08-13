@@ -598,6 +598,10 @@ static void update_hardware_info_lahaina(
     } else if (!strncmp(snd_card_name, "lahaina-cdp-snd-card",
                  sizeof("lahaina-cdp-snd-card"))) {
         strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-hdk-snd-card",
+                 sizeof("lahaina-hdk-snd-card"))) {
+        strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else if (!strncmp(snd_card_name, "lahaina-shimaidp-snd-card",
                  sizeof("lahaina-shimaidp-snd-card"))) {
         strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
