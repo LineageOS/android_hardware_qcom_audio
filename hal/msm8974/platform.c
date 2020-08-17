@@ -487,6 +487,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
 
     [USECASE_AUDIO_PLAYBACK_VOIP] = {AUDIO_PLAYBACK_VOIP_PCM_DEVICE, AUDIO_PLAYBACK_VOIP_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_VOIP] = {AUDIO_RECORD_VOIP_PCM_DEVICE, AUDIO_RECORD_VOIP_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE, LOWLATENCY_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1] =
                      {PLAYBACK_INTERACTIVE_STRM_DEVICE1, PLAYBACK_INTERACTIVE_STRM_DEVICE1},
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2] =
@@ -1420,6 +1421,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_PHONE)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_REAR_SEAT)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)},
 };
 
 static const struct name_to_index usecase_type_index[USECASE_TYPE_MAX] = {
@@ -2003,6 +2005,8 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
 {
     struct platform_data *my_data = (struct platform_data *)adev->platform;
     char ec_ref_mixer_path[MIXER_PATH_MAX_LENGTH] = "echo-reference";
+    struct audio_usecase *uc = NULL;
+    struct listnode *node;
 
     audio_extn_sound_trigger_update_ec_ref_status(enable);
 
@@ -2014,8 +2018,14 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
 
     if (enable) {
         if (!voice_extn_is_compress_voip_supported()) {
-            if (adev->mode == AUDIO_MODE_IN_COMMUNICATION)
+            if (adev->mode == AUDIO_MODE_IN_COMMUNICATION) {
                 strlcat(ec_ref_mixer_path, "-voip", MIXER_PATH_MAX_LENGTH);
+                list_for_each(node, &adev->usecase_list) {
+                    uc =  node_to_item(node, struct audio_usecase, list);
+                    if (uc->id == USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)
+                        strlcat(ec_ref_mixer_path, "-low-latency", MIXER_PATH_MAX_LENGTH);
+                }
+            }
         }
         strlcpy(my_data->ec_ref_mixer_path, ec_ref_mixer_path,
                     MIXER_PATH_MAX_LENGTH);
@@ -9066,6 +9076,7 @@ bool platform_sound_trigger_usecase_needs_event(audio_usecase_t uc_id)
     case USECASE_INCALL_MUSIC_UPLINK:
     case USECASE_INCALL_MUSIC_UPLINK2:
     case USECASE_AUDIO_RECORD_VOIP:
+    case USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY:
         needs_event = true;
         break;
     default:

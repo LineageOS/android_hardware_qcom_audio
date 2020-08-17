@@ -913,7 +913,8 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
         ALOGV("%s Selected apptype: %d", __func__, usecase->stream.out->app_type_cfg.app_type);
         break;
     case PCM_CAPTURE:
-        if (usecase->id == USECASE_AUDIO_RECORD_VOIP)
+        if (usecase->id == USECASE_AUDIO_RECORD_VOIP
+                              || usecase->id == USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)
             usecase->stream.in->app_type_cfg.app_type = APP_TYPE_VOIP_AUDIO;
         else
             audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
@@ -1200,7 +1201,8 @@ int audio_extn_utils_get_app_sample_rate_for_device(
         }
     } else if (usecase->type == PCM_CAPTURE) {
         if (usecase->stream.in != NULL) {
-            if (usecase->id == USECASE_AUDIO_RECORD_VOIP)
+            if (usecase->id == USECASE_AUDIO_RECORD_VOIP
+                                  || usecase->id == USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)
                 usecase->stream.in->app_type_cfg.sample_rate = usecase->stream.in->sample_rate;
             if (voice_is_in_call_rec_stream(usecase->stream.in)) {
                 audio_extn_btsco_get_sample_rate(usecase->in_snd_device,
