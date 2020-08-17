@@ -3427,11 +3427,16 @@
     <path name="incall_music_uplink bt-a2dp">
         <path name="incall_music_uplink" />
     </path>
+
     <path name="incall_music_uplink afe-proxy">
         <path name="incall_music_uplink" />
     </path>
 
     <path name="incall_music_uplink call-proxy">
+        <path name="incall_music_uplink" />
+    </path>
+
+    <path name="incall_music_uplink hearing-aid">
         <path name="incall_music_uplink" />
     </path>
 
@@ -3508,6 +3513,15 @@
     </path>
 
     <path name="incall_music_uplink2 afe-proxy">
+        <path name="incall_music_uplink2" />
+    </path>
+
+    <path name="incall_music_uplink2 call-proxy">
+        <path name="incall_music_uplink2" />
+    </path>
+
+
+    <path name="incall_music_uplink2 hearing-aid">
         <path name="incall_music_uplink2" />
     </path>
 
