@@ -408,6 +408,7 @@ int audio_extn_check_and_set_multichannel_usecase(struct audio_device *adev,
         snd_device, device_name)                         (0)
 #define hw_info_enable_wsa_combo_usecase_support(hw_info)   (0)
 #define hw_info_is_stereo_spkr(hw_info)   (0)
+#define hw_info_use_mono_spkr_for_qmic(hw_info)    (0)
 
 #else
 void *hw_info_init(const char *snd_card_name);
@@ -416,6 +417,7 @@ void hw_info_append_hw_type(void *hw_info, snd_device_t snd_device,
                              char *device_name);
 void hw_info_enable_wsa_combo_usecase_support(void *hw_info);
 bool hw_info_is_stereo_spkr(void *hw_info);
+bool hw_info_use_mono_spkr_for_qmic(void *hw_info);
 
 #endif
 

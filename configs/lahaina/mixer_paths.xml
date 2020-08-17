@@ -2515,7 +2515,7 @@
         <ctl name="SWR DAC_Port Switch" value="1" />
     </path>
 
-    <path name="speaker-mono">
+    <path name="speaker-mono-2">
         <ctl name="WSA_CDC_DMA_RX_0 Channels" value="One" />
         <ctl name="WSA RX0 MUX" value="AIF1_PB" />
         <ctl name="WSA_RX0 INP0" value="RX0" />
@@ -2525,7 +2525,7 @@
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
     </path>
 
-    <path name="speaker-mono-2">
+    <path name="speaker-mono">
         <ctl name="WSA_CDC_DMA_RX_0 Channels" value="One" />
         <ctl name="WSA RX1 MUX" value="AIF1_PB" />
         <ctl name="WSA_RX1 INP0" value="RX1" />

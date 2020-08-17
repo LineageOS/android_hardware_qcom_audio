@@ -6608,7 +6608,10 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA;
             } else {
                 if (hw_info_is_stereo_spkr(my_data->hw_info)) {
-                    if (my_data->voice_speaker_stereo)
+                    if (my_data->fluence_type & FLUENCE_QUAD_MIC &&
+                        hw_info_use_mono_spkr_for_qmic(my_data->hw_info))
+                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
+                    else if (my_data->voice_speaker_stereo)
                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_STEREO;
                     else if (adev->enable_hfp)
                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_HFP;
