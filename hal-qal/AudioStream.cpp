@@ -872,7 +872,7 @@ static int astream_in_set_microphone_direction(
                         audio_microphone_direction_t dir) {
     std::ignore = stream;
     std::ignore = dir;
-    ALOGD("%s: function not implemented", __func__);
+    ALOGV("%s: function not implemented", __func__);
     //No plans to implement audiozoom
     return -1;
 }
@@ -882,7 +882,7 @@ static int in_set_microphone_field_dimension(
                         float zoom) {
     std::ignore = stream;
     std::ignore = zoom;
-    ALOGD("%s: function not implemented", __func__);
+    ALOGV("%s: function not implemented", __func__);
     //No plans to implement audiozoom
     return -1;
 }
@@ -933,7 +933,8 @@ static int astream_in_get_capture_position(const struct audio_stream_in *stream,
     std::ignore = stream;
     std::ignore = frames;
     std::ignore = time;
-    ALOGD("%s: position not implemented currently supported in qal", __func__);
+    //TODO: get timestamp for input streams
+    ALOGV("%s: position not implemented currently supported in qal", __func__);
     return 0;
 }
 
@@ -948,7 +949,7 @@ static void in_update_sink_metadata(
     std::ignore = stream;
     std::ignore = sink_metadata;
 
-    ALOGD("%s: sink meta data update not  supported in qal", __func__);
+    ALOGV("%s: sink meta data update not  supported in qal", __func__);
 }
 
 static int astream_in_get_active_microphones(
@@ -958,7 +959,7 @@ static int astream_in_get_active_microphones(
     std::ignore = stream;
     std::ignore = mic_array;
     std::ignore = mic_count;
-    ALOGD("%s: get active mics not currently supported in qal", __func__);
+    ALOGV("%s: get active mics not currently supported in qal", __func__);
     return 0;
 }
 
