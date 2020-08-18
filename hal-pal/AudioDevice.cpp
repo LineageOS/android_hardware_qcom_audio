@@ -884,6 +884,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     char value[32];
     int pal_device_count = 0;
     pal_device_id_t* pal_device_ids = NULL;
+    char *test_r = NULL;
+    char *cfg_str = NULL;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
     ret = voice_->VoiceSetParameters(kvpairs);
@@ -1015,6 +1017,81 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     (void*)&param_device_rotation,
                     sizeof(pal_param_device_rotation_t));
             ALOGD("%s: Speakers swapped ", __func__);
+        }
+    }
+
+    /* Speaker Protection: Factory Test Mode */
+    ret = str_parms_get_str(parms, "fbsp_cfg_wait_time", value, sizeof(value));
+    if (ret >= 0) {
+        str_parms_del(parms, "fbsp_cfg_wait_time");
+        cfg_str = strtok_r(value, ";", &test_r);
+        if (cfg_str != NULL) {
+            pal_spkr_prot_payload spPayload;
+            spPayload.operationMode = PAL_SP_MODE_FACTORY_TEST;
+            spPayload.spkrHeatupTime = atoi(cfg_str);
+
+            ret = str_parms_get_str(parms, "fbsp_cfg_ftm_time", value, sizeof(value));
+            if (ret >= 0) {
+                str_parms_del(parms, "fbsp_cfg_ftm_time");
+                cfg_str = strtok_r(value, ";", &test_r);
+                if (cfg_str != NULL) {
+                    spPayload.operationModeRunTime = atoi(cfg_str);
+                    ret = pal_set_param(PAL_PARAM_ID_SP_MODE, (void*)&spPayload,
+                                sizeof(pal_spkr_prot_payload));
+                }
+                else {
+                    ALOGE ("Unable to parse the FTM time");
+                }
+            }
+            else {
+                ALOGE ("Parameter missing for the FTM time");
+            }
+        }
+        else {
+            ALOGE ("Unable to parse the FTM wait time");
+        }
+    }
+
+    /* Speaker Protection: V-validation mode */
+    ret = str_parms_get_str(parms, "fbsp_v_vali_wait_time", value, sizeof(value));
+    if (ret >= 0) {
+        str_parms_del(parms, "fbsp_v_vali_wait_time");
+        cfg_str = strtok_r(value, ";", &test_r);
+        if (cfg_str != NULL) {
+            pal_spkr_prot_payload spPayload;
+            spPayload.operationMode = PAL_SP_MODE_V_VALIDATION;
+            spPayload.spkrHeatupTime = atoi(cfg_str);
+
+            ret = str_parms_get_str(parms, "fbsp_v_vali_vali_time", value, sizeof(value));
+            if (ret >= 0) {
+                str_parms_del(parms, "fbsp_v_vali_vali_time");
+                cfg_str = strtok_r(value, ";", &test_r);
+                if (cfg_str != NULL) {
+                    spPayload.operationModeRunTime = atoi(cfg_str);
+                    ret = pal_set_param(PAL_PARAM_ID_SP_MODE, (void*)&spPayload,
+                                sizeof(pal_spkr_prot_payload));
+                }
+                else {
+                    ALOGE ("Unable to parse the V_Validation time");
+                }
+            }
+            else {
+                ALOGE ("Parameter missing for the V-Validation time");
+            }
+        }
+        else {
+            ALOGE ("Unable to parse the V-Validation wait time");
+        }
+    }
+
+    /* Speaker Protection: Dynamic calibration mode */
+    ret = str_parms_get_str(parms, "trigger_spkr_cal", value, sizeof(value));
+    if (ret >= 0) {
+        if ((strcmp(value, "true") == 0) || (strcmp(value, "yes") == 0)) {
+            pal_spkr_prot_payload spPayload;
+            spPayload.operationMode = PAL_SP_MODE_DYNAMIC_CAL;
+            ret = pal_set_param(PAL_PARAM_ID_SP_MODE, (void*)&spPayload,
+                        sizeof(pal_spkr_prot_payload));
         }
     }
 
@@ -1196,6 +1273,20 @@ char* AudioDevice::GetParameters(const char *keys) {
             str_parms_add_int(reply, AUDIO_PARAMETER_A2DP_RECONFIG_SUPPORTED, val);
             ALOGV("%s: isReconfigA2dpSupported = %d", __func__, val);
         }
+    }
+
+    ret = str_parms_get_str(query, "get_ftm_param", value, sizeof(value));
+    if (ret >=0 ) {
+        char ftm_value[255];
+        ret = pal_get_param(PAL_PARAM_ID_SP_MODE, (void **)&ftm_value, &size, nullptr);
+        if (!ret) {
+            if (size > 0) {
+                str_parms_add_str(reply, "get_ftm_param", ftm_value);
+            }
+            else
+                ALOGE("Error happened for getting FTM param");
+        }
+
     }
 
 exit:
