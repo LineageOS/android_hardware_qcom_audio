@@ -78,6 +78,11 @@
 #include "ip_hdlr_intf.h"
 
 #include "sound/compress_params.h"
+
+#ifdef AUDIO_GKI_ENABLED
+#include "sound/audio_compressed_formats.h"
+#endif
+
 #include "sound/asound.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
@@ -1419,10 +1424,13 @@ int enable_snd_device(struct audio_device *adev,
                    __func__, device_name);
         }
 
-        if ((SND_DEVICE_OUT_BT_A2DP == snd_device) &&
-            (audio_extn_a2dp_start_playback() < 0)) {
-            ALOGE(" fail to configure A2dp Source control path ");
-            goto err;
+        if (SND_DEVICE_OUT_BT_A2DP == snd_device) {
+            if (audio_extn_a2dp_start_playback() < 0) {
+                ALOGE(" fail to configure A2dp Source control path ");
+                goto err;
+            } else {
+                adev->a2dp_started = true;
+            }
         }
 
         if ((SND_DEVICE_IN_BT_A2DP == snd_device) &&
@@ -1529,9 +1537,10 @@ int disable_snd_device(struct audio_device *adev,
             audio_route_reset_and_update_path(adev->audio_route, device_name);
         }
 
-        if (snd_device == SND_DEVICE_OUT_BT_A2DP)
+        if (snd_device == SND_DEVICE_OUT_BT_A2DP) {
             audio_extn_a2dp_stop_playback();
-        else if (snd_device == SND_DEVICE_IN_BT_A2DP)
+            adev->a2dp_started = false;
+        } else if (snd_device == SND_DEVICE_IN_BT_A2DP)
             audio_extn_a2dp_stop_capture();
         else if ((snd_device == SND_DEVICE_OUT_HDMI) ||
                 (snd_device == SND_DEVICE_OUT_DISPLAY_PORT))
@@ -3922,7 +3931,26 @@ int start_output_stream(struct stream_out *out)
             assign_devices(&out->device_list, &dev);
         }
     } else {
-         select_devices(adev, out->usecase);
+        select_devices(adev, out->usecase);
+        if (is_a2dp_out_device_type(&out->device_list) &&
+             !adev->a2dp_started) {
+            if (is_speaker_active || is_speaker_safe_active) {
+                struct listnode dev;
+                list_init(&dev);
+                assign_devices(&dev, &out->device_list);
+                if (compare_device_type(&dev, AUDIO_DEVICE_OUT_SPEAKER_SAFE))
+                    reassign_device_list(&out->device_list,
+                                    AUDIO_DEVICE_OUT_SPEAKER_SAFE, "");
+                else
+                    reassign_device_list(&out->device_list,
+                                    AUDIO_DEVICE_OUT_SPEAKER, "");
+                select_devices(adev, out->usecase);
+                assign_devices(&out->device_list, &dev);
+            } else {
+                ret = -EINVAL;
+                goto error_open;
+            }
+        }
     }
 
     if (out->usecase == USECASE_INCALL_MUSIC_UPLINK ||
@@ -4390,10 +4418,8 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out, struct ti
     /* This adjustment accounts for buffering after app processor.
      * It is based on estimated DSP latency per use case, rather than exact.
      */
-    pthread_mutex_lock(&adev->lock);
-    dsp_frames = platform_render_latency(out->dev, out->usecase) *
+    dsp_frames = platform_render_latency(out) *
         out->sample_rate / 1000000LL;
-    pthread_mutex_unlock(&adev->lock);
 
     pthread_mutex_lock(&out->position_query_lock);
     written_frames = out->written /
@@ -5358,9 +5384,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
                          1000) / (out->config.rate);
         else
             period_ms = 0;
-        pthread_mutex_lock(&adev->lock);
-        latency = period_ms + platform_render_latency(out->dev, out->usecase)/1000;
-        pthread_mutex_unlock(&adev->lock);
+        latency = period_ms + platform_render_latency(out) / 1000;
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
            (out->config.rate);
@@ -5839,19 +5863,21 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ret = voice_extn_compress_voip_start_output_stream(out);
         else
             ret = start_output_stream(out);
-        pthread_mutex_unlock(&adev->lock);
         /* ToDo: If use case is compress offload should return 0 */
         if (ret != 0) {
             out->standby = true;
+            pthread_mutex_unlock(&adev->lock);
             goto exit;
         }
         out->started = 1;
         out->last_fifo_valid = false; // we're coming out of standby, last_fifo isn't valid.
-        if (last_known_cal_step != -1) {
+
+        if ((last_known_cal_step != -1) && (adev->platform != NULL)) {
             ALOGD("%s: retry previous failed cal level set", __func__);
-            audio_hw_send_gain_dep_calibration(last_known_cal_step);
+            platform_send_gain_dep_cal(adev->platform, last_known_cal_step);
             last_known_cal_step = -1;
         }
+        pthread_mutex_unlock(&adev->lock);
 
         if ((out->is_iec61937_info_available == true) &&
             (audio_extn_passthru_is_passthrough_stream(out))&&
@@ -6296,10 +6322,8 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
 
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
-                pthread_mutex_lock(&adev->lock);
-                frames_temp = platform_render_latency(out->dev, out->usecase) *
+                frames_temp = platform_render_latency(out) *
                               out->sample_rate / 1000000LL;
-                pthread_mutex_unlock(&adev->lock);
                 if (signed_frames >= frames_temp)
                     signed_frames -= frames_temp;
 
@@ -7197,10 +7221,8 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
         unsigned int avail;
         if (pcm_get_htimestamp(in->pcm, &avail, &timestamp) == 0) {
             *frames = in->frames_read + avail;
-            pthread_mutex_lock(&adev->lock);
             *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec
-                    - platform_capture_latency(in->dev, in->usecase) * 1000LL;
-            pthread_mutex_unlock(&adev->lock);
+                    - platform_capture_latency(in) * 1000LL;
             ret = 0;
         }
     }
@@ -7672,6 +7694,9 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     bool force_haptic_path =
             property_get_bool("vendor.audio.test_haptic", false);
     bool is_voip_rx = flags & AUDIO_OUTPUT_FLAG_VOIP_RX;
+#ifdef AUDIO_GKI_ENABLED
+    __s32 *generic_dec;
+#endif
 
     if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
@@ -8097,8 +8122,16 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         if (out->flags & AUDIO_OUTPUT_FLAG_TIMESTAMP) {
             out->compr_config.fragment_size += sizeof(struct snd_codec_metadata);
         }
-        if (config->offload_info.format == AUDIO_FORMAT_FLAC)
+        if (config->offload_info.format == AUDIO_FORMAT_FLAC) {
+#ifdef AUDIO_GKI_ENABLED
+            generic_dec =
+                &(out->compr_config.codec->options.generic.reserved[1]);
+            ((struct snd_generic_dec_flac *)generic_dec)->sample_size =
+                                                AUDIO_OUTPUT_BIT_WIDTH;
+#else
             out->compr_config.codec->options.flac_dec.sample_size = AUDIO_OUTPUT_BIT_WIDTH;
+#endif
+        }
 
         if (config->offload_info.format == AUDIO_FORMAT_APTX) {
             audio_extn_send_aptx_dec_bt_addr_to_dsp(out);
@@ -10486,6 +10519,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->enable_hfp = false;
     adev->use_old_pspd_mix_ctrl = false;
     adev->adm_routing_changed = false;
+    adev->a2dp_started = false;
 
     audio_extn_perf_lock_init();
 
