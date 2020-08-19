@@ -559,6 +559,32 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     std::ignore = stream;
     std::ignore = dsp_frames;
     ALOGD("%s: enter", __func__);
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamOutPrimary> astream_out;
+    int ret = 0;
+    uint64_t frames = 0;
+
+    if (adevice) {
+        astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    } else {
+        ALOGE("%s: unable to get audio device", __func__);
+        return -EINVAL;
+    }
+    if (astream_out) {
+        switch (astream_out->GetQalStreamType(astream_out->flags_)) {
+        case QAL_STREAM_COMPRESSED:
+           ret = astream_out->GetFrames(&frames);
+           if (ret != 0) {
+              ALOGE("%s: Get DSP Frames failed %d", __func__, ret);
+              return ret;
+           }
+           *dsp_frames = (uint32_t) frames;
+           break;
+        default:
+           break;
+        }
+    }
+
     //Temporary fix for Compressed offload SSR
     return -EINVAL;
 }
@@ -1362,8 +1388,10 @@ int StreamOutPrimary::Stop() {
             qal_stream_handle_ && stream_started_) {
 
         ret = qal_stream_stop(qal_stream_handle_);
-        if (ret == 0)
+        if (ret == 0) {
             stream_started_ = false;
+            stream_paused_ = false;
+        }
     }
     return ret;
 }
@@ -1390,7 +1418,10 @@ int StreamOutPrimary::Pause() {
     if (ret)
         return -EINVAL;
     else
+    {
+        stream_paused_ = true;
         return ret;
+    }
 }
 
 int StreamOutPrimary::Resume() {
@@ -1401,23 +1432,35 @@ int StreamOutPrimary::Resume() {
     }
     if (ret)
         return -EINVAL;
-    else
+    else {
+        stream_paused_ = false;
         return ret;
+    }
 }
 
 int StreamOutPrimary::Flush() {
     int ret = 0;
     ALOGD("%s: Enter", __func__);
     if (qal_stream_handle_) {
-        ret = qal_stream_flush(qal_stream_handle_);
-        if (!ret)
-            ret = qal_stream_resume(qal_stream_handle_);
+        if(stream_paused_ == true)
+        {
+            ret = qal_stream_flush(qal_stream_handle_);
+            if (!ret) {
+                ret = qal_stream_resume(qal_stream_handle_);
+                if (!ret)
+                    stream_paused_ = false;
+            }
+        } else {
+            ALOGI("%s: called in invalid state (stream not paused)", __func__ );
+        }
+        total_bytes_written_ = 0;
     }
 
     if (ret)
         return -EINVAL;
-    else
+    else {
         return ret;
+    }
 }
 
 int StreamOutPrimary::Drain(audio_drain_type_t type) {
@@ -1458,6 +1501,7 @@ int StreamOutPrimary::Standby() {
     }
 
     stream_started_ = false;
+    stream_paused_ = false;
     if (CheckOffloadEffectsType(streamAttributes_.type)) {
         ret = StopOffloadEffects(handle_, qal_stream_handle_);
     }
@@ -1640,7 +1684,7 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
     uint64_t dsp_frames = 0;
     uint64_t bt_extra_frames = 0;
     qal_param_bta2dp_t *param_bt_a2dp = NULL;
-    size_t size = 0;
+    size_t size = 0, kernel_buffer_size = 0;
     int32_t ret;
 
     /* This adjustment accounts for buffering after app processor
@@ -1657,13 +1701,20 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
         audio_channel_count_from_out_mask(config_.channel_mask),
         config_.format);
 
-    if (written_frames >= dsp_frames)
-        signed_frames = written_frames - dsp_frames;
+    /* not querying actual state of buffering in kernel as it would involve an ioctl call
+     * which then needs protection, this causes delay in TS query for pcm_offload usecase
+     * hence only estimate.
+     */
+    kernel_buffer_size = fragment_size_ * fragments_;
+    kernel_frames = kernel_buffer_size /
+        audio_bytes_per_frame(
+        audio_channel_count_from_out_mask(config_.channel_mask),
+        config_.format);
 
-    // FIXME: subtract kernel buffering
+
     // kernel_frames = (kernel_buffer_size - avail) / (bitwidth * channel count);
-    if (signed_frames >= kernel_frames)
-        signed_frames -= kernel_frames;
+    if (written_frames >= (kernel_frames + dsp_frames))
+        signed_frames = written_frames - (kernel_frames + dsp_frames);
 
     // Adjustment accounts for A2dp encoder latency with non offload usecases
     // Note: Encoder latency is returned in ms, while platform_render_latency in us.
@@ -1675,6 +1726,7 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
                 (streamAttributes_.out_media_config.sample_rate) / 1000;
             if (signed_frames >= bt_extra_frames)
                 signed_frames -= bt_extra_frames;
+
         }
     }
 
@@ -1941,6 +1993,10 @@ int StreamOutPrimary::Open() {
 
     if (usecase_ == USECASE_AUDIO_PLAYBACK_LOW_LATENCY)
         outBufCount = LOW_LATENCY_PLAYBACK_PERIOD_COUNT;
+    else if (usecase_ == USECASE_AUDIO_PLAYBACK_OFFLOAD2)
+         outBufCount = PCM_OFFLOAD_PLAYBACK_PERIOD_COUNT;
+    else if (usecase_ == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)
+         outBufCount = DEEP_BUFFER_PLAYBACK_PERIOD_COUNT;
 
     if (halInputFormat != halOutputFormat) {
         convertBufSize = outBufSize;
@@ -1952,6 +2008,12 @@ int StreamOutPrimary::Open() {
         }
         ALOGD("convert buffer allocated for size %d", convertBufSize);
     }
+
+    fragment_size_ = outBufSize;
+    fragments_ = outBufCount;
+
+    ALOGD("%s:fragment_size_ %d fragments_ %d",__func__, fragment_size_, fragments_);
+
     ret = qal_stream_set_buffer_size(qal_stream_handle_, (size_t*)&inBufSize,
             inBufCount, (size_t*)&outBufSize, outBufCount);
     if (ret) {

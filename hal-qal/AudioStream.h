@@ -61,6 +61,10 @@
 #define DEFAULT_OUTPUT_SAMPLING_RATE    48000
 #define LOW_LATENCY_PLAYBACK_PERIOD_SIZE 240 /** 5ms; frames */
 #define LOW_LATENCY_PLAYBACK_PERIOD_COUNT 2
+
+#define PCM_OFFLOAD_PLAYBACK_PERIOD_COUNT 2 /** Direct PCM */
+#define DEEP_BUFFER_PLAYBACK_PERIOD_COUNT 2 /** Deep Buffer*/
+
 #define ULL_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE / 1000) /** 1ms; frames */
 #define ULL_PERIOD_COUNT_DEFAULT 512
 #define ULL_PERIOD_MULTIPLIER  4
@@ -402,6 +406,7 @@ protected:
     struct audio_config       config_;
     char                      address_[AUDIO_DEVICE_MAX_ADDRESS_LEN];
     bool                      stream_started_ = false;
+    bool                      stream_paused_ = false;
     int usecase_;
     struct qal_volume_data *volume_; /* used to cache volume */
     std::map <audio_devices_t, qal_device_id_t> mAndroidDeviceMap;
@@ -463,6 +468,8 @@ protected:
     audio_format_t halInputFormat = AUDIO_FORMAT_DEFAULT;
     audio_format_t halOutputFormat = AUDIO_FORMAT_DEFAULT;
     uint32_t convertBufSize;
+    uint32_t fragments_ = 0;
+    uint32_t fragment_size_ = 0;
     qal_snd_dec_t qalSndDec;
     uint32_t msample_rate;
     uint16_t mchannels;
