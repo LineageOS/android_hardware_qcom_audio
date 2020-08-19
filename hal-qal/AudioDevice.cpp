@@ -562,6 +562,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
 
     FillAndroidDeviceMap();
     audio_extn_gef_init(adev_);
+    adev_init_ref_count += 1;
 
     return ret;
 }
@@ -1170,6 +1171,11 @@ void AudioDevice::SetChargingMode(bool is_charging) {
     ALOGD("%s: exit", __func__);
 }
 
+hw_device_t* AudioDevice::GetAudioDeviceCommon()
+{
+    return &(adev_->device_.get()->common);
+}
+
 static int adev_open(const hw_module_t *module, const char *name __unused,
                      hw_device_t **device) {
     int32_t ret = 0;
@@ -1181,12 +1187,22 @@ static int adev_open(const hw_module_t *module, const char *name __unused,
         ALOGE("%s: error, GetInstance failed", __func__);
     }
 
+    adevice->adev_init_mutex.lock();
+    if (adevice->adev_init_ref_count != 0) {
+        *device = adevice->GetAudioDeviceCommon();
+        adevice->adev_init_ref_count++;
+        adevice->adev_init_mutex.unlock();
+        ALOGD("%s: returning existing instance of adev, exiting", __func__);
+        return 0;
+    }
+
     ret = adevice->Init(device, module);
 
     if (ret || (*device == NULL)) {
         ALOGE("%s: error, audio device init failed, ret(%d),*device(%p)",
             __func__, ret, *device);
     }
+    adevice->adev_init_mutex.unlock();
 
     ALOGV("%s: exit", __func__);
     return 0;
