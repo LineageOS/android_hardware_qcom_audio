@@ -568,6 +568,22 @@ static void update_hardware_info_kona(
     }
 }
 
+static void update_hardware_info_holi(
+          struct hardware_info *hw_info,
+          const char *snd_card_name)
+{
+    if (!strncmp(snd_card_name, "holi-mtp-snd-card",
+                 sizeof("holi-mtp-snd-card"))) {
+        strlcpy(hw_info->name, "holi", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "holi-qrd-snd-card",
+                 sizeof("holi-qrd-snd-card"))) {
+        strlcpy(hw_info->name, "holi", sizeof(hw_info->name));
+    } else {
+        ALOGW("%s: Not a holi device", __func__);
+    }
+    hw_info->is_stereo_spkr = false;
+}
+
 static void update_hardware_info_lahaina(
           struct hardware_info *hw_info,
           const char *snd_card_name)
@@ -582,6 +598,16 @@ static void update_hardware_info_lahaina(
     } else if (!strncmp(snd_card_name, "lahaina-cdp-snd-card",
                  sizeof("lahaina-cdp-snd-card"))) {
         strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-shimaidp-snd-card",
+                 sizeof("lahaina-shimaidp-snd-card"))) {
+        strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-shimaidps-snd-card",
+                 sizeof("lahaina-shimaidps-snd-card"))) {
+        strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-shimaqrd-snd-card",
+                 sizeof("lahaina-shimaqrd-snd-card"))) {
+        strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else {
         ALOGW("%s: Not a lahaina device", __func__);
     }
@@ -913,9 +939,12 @@ void *hw_info_init(const char *snd_card_name)
                || strstr(snd_card_name, "atoll") || strstr(snd_card_name, "bengal")) {
         ALOGV("KONA - variant soundcard");
         update_hardware_info_kona(hw_info, snd_card_name);
-    } else if(strstr(snd_card_name, "lahaina")) {
+    } else if(strstr(snd_card_name, "lahaina") || strstr(snd_card_name, "shima")) {
         ALOGV("LAHAINA - variant soundcard");
         update_hardware_info_lahaina(hw_info, snd_card_name);
+    } else if(strstr(snd_card_name, "holi")) {
+        ALOGV("HOLI - variant soundcard");
+        update_hardware_info_holi(hw_info, snd_card_name);
     } else if(strstr(snd_card_name, "sdm439")) {
         ALOGV("SDM439 - variant soundcard");
         update_hardware_info_sdm439(hw_info, snd_card_name);

@@ -4418,10 +4418,8 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out, struct ti
     /* This adjustment accounts for buffering after app processor.
      * It is based on estimated DSP latency per use case, rather than exact.
      */
-    pthread_mutex_lock(&adev->lock);
-    dsp_frames = platform_render_latency(out->dev, out->usecase) *
+    dsp_frames = platform_render_latency(out) *
         out->sample_rate / 1000000LL;
-    pthread_mutex_unlock(&adev->lock);
 
     pthread_mutex_lock(&out->position_query_lock);
     written_frames = out->written /
@@ -5386,9 +5384,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
                          1000) / (out->config.rate);
         else
             period_ms = 0;
-        pthread_mutex_lock(&adev->lock);
-        latency = period_ms + platform_render_latency(out->dev, out->usecase)/1000;
-        pthread_mutex_unlock(&adev->lock);
+        latency = period_ms + platform_render_latency(out) / 1000;
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
            (out->config.rate);
@@ -5867,19 +5863,21 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
             ret = voice_extn_compress_voip_start_output_stream(out);
         else
             ret = start_output_stream(out);
-        pthread_mutex_unlock(&adev->lock);
         /* ToDo: If use case is compress offload should return 0 */
         if (ret != 0) {
             out->standby = true;
+            pthread_mutex_unlock(&adev->lock);
             goto exit;
         }
         out->started = 1;
         out->last_fifo_valid = false; // we're coming out of standby, last_fifo isn't valid.
-        if (last_known_cal_step != -1) {
+
+        if ((last_known_cal_step != -1) && (adev->platform != NULL)) {
             ALOGD("%s: retry previous failed cal level set", __func__);
-            audio_hw_send_gain_dep_calibration(last_known_cal_step);
+            platform_send_gain_dep_cal(adev->platform, last_known_cal_step);
             last_known_cal_step = -1;
         }
+        pthread_mutex_unlock(&adev->lock);
 
         if ((out->is_iec61937_info_available == true) &&
             (audio_extn_passthru_is_passthrough_stream(out))&&
@@ -6324,10 +6322,8 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
 
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
-                pthread_mutex_lock(&adev->lock);
-                frames_temp = platform_render_latency(out->dev, out->usecase) *
+                frames_temp = platform_render_latency(out) *
                               out->sample_rate / 1000000LL;
-                pthread_mutex_unlock(&adev->lock);
                 if (signed_frames >= frames_temp)
                     signed_frames -= frames_temp;
 
@@ -7225,10 +7221,8 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
         unsigned int avail;
         if (pcm_get_htimestamp(in->pcm, &avail, &timestamp) == 0) {
             *frames = in->frames_read + avail;
-            pthread_mutex_lock(&adev->lock);
             *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec
-                    - platform_capture_latency(in->dev, in->usecase) * 1000LL;
-            pthread_mutex_unlock(&adev->lock);
+                    - platform_capture_latency(in) * 1000LL;
             ret = 0;
         }
     }
@@ -7887,6 +7881,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                 out->config.rate = out->sample_rate;
                 uint32_t channel_count =
                         audio_channel_count_from_out_mask(out->channel_mask);
+                out->config.channels = channel_count;
+
                 uint32_t buffer_size = get_stream_buffer_size(DEFAULT_VOIP_BUF_DURATION_MS,
                                                               out->sample_rate, out->format,
                                                               channel_count, false);

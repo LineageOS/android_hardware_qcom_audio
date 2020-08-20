@@ -55,7 +55,9 @@
         <param platform_lpi_enable="true" />
         <param enable_debug_dumps="false" />
         <param support_non_lpi_without_ec="false" />
-        <param concurrent_capture="true" />
+        <param concurrent_capture="false" />
+        <param concurrent_voip_call="false" />
+        <param concurrent_voice_call="false" />
     </common_config>
     <acdb_ids>
         <param DEVICE_HANDSET_MIC_APE="100" />
