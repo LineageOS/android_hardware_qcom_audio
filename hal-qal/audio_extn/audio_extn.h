@@ -49,11 +49,10 @@ void* audio_extn_sound_trigger_check_and_get_session(
 #define audio_extn_gef_init(adev) (0)
 #define audio_extn_gef_deinit(adev) (0)
 #define audio_extn_gef_notify_device_config(devices, cmask, sample_rate) (0)
-#define audio_extn_gef_send_audio_cal(data, length,) (0)
+#define audio_extn_gef_send_audio_cal(data, length) (0)
 #define audio_extn_gef_get_audio_cal(data, length) (0)
 #define audio_extn_gef_store_audio_cal(data, length) (0)
 #define audio_extn_gef_retrieve_audio_cal(data, length) (0)
-
 
 #else
 void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev);
