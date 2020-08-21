@@ -2738,23 +2738,21 @@ static size_t get_stream_buffer_size(size_t duration_ms,
                                      int channel_count,
                                      bool is_low_latency)
 {
-    size_t size = 0;
+    // Compute target frames based on time or period size.
+    size_t target_frames = is_low_latency
+             ? configured_low_latency_capture_period_size // record only
+             : (sample_rate * duration_ms) / 1000;
 
-    size = (sample_rate * duration_ms) / 1000;
-    if (is_low_latency)
-        size = configured_low_latency_capture_period_size;
+    // Round up to a multiple of 16 frames in case sizing for the MixerThread.
+    if (!is_low_latency) { // low latency flag set for record only
+        target_frames = (target_frames + 0xf) & ~0xf;
+    }
 
-    size *= channel_count * audio_bytes_per_sample(format);
+    // Buffer size is the target frames multiplied by the frame size in bytes.
+    const size_t frame_size = channel_count * audio_bytes_per_sample(format);
+    const size_t buffer_size = target_frames * frame_size;
 
-    /* make sure the size is multiple of 32 bytes
-     * At 48 kHz mono 16-bit PCM:
-     *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
-     *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
-     */
-    size += 0x1f;
-    size &= ~0x1f;
-
-    return size;
+    return buffer_size;
 }
 
 static uint32_t out_get_sample_rate(const struct audio_stream *stream)
