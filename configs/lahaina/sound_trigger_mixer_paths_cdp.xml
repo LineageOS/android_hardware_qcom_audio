@@ -304,7 +304,7 @@
         <ctl name="VA_DEC2 MODE" value="ADC_LOW_PWR" />
         <ctl name="VA SMIC MUX0" value="SWR_MIC4" />
         <ctl name="VA SMIC MUX1" value="SWR_MIC5" />
-        <ctl name="VA SMIC MUX2" value="SWR_MIC9" />
+        <ctl name="VA SMIC MUX2" value="SWR_MIC8" />
         <ctl name="TX0 MODE" value="ADC_LP" />
         <ctl name="TX1 MODE" value="ADC_LP" />
         <ctl name="TX2 MODE" value="ADC_LP" />
