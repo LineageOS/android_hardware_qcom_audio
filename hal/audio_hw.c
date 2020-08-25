@@ -2959,6 +2959,9 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         if (platform_check_codec_asrc_support(adev->platform))
             check_and_set_asrc_mode(adev, usecase, out_snd_device);
         enable_snd_device(adev, out_snd_device);
+        /* Enable haptics device for haptic usecase */
+        if (usecase->id == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS)
+            enable_snd_device(adev, SND_DEVICE_OUT_HAPTICS);
     }
 
     if (in_snd_device != SND_DEVICE_NONE) {
@@ -3681,6 +3684,8 @@ static int stop_output_stream(struct stream_out *out)
 
     /* 2. Disable the rx device */
     disable_snd_device(adev, uc_info->out_snd_device);
+    if (out->usecase == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS)
+        disable_snd_device(adev, SND_DEVICE_OUT_HAPTICS);
 
     audio_extn_extspk_update(adev->extspk);
 
