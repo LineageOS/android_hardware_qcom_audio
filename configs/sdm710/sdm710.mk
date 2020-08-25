@@ -220,19 +220,6 @@ persist.vendor.audio.fluence.speaker=true\
 persist.vendor.audio.fluence.audiorec=false\
 persist.vendor.audio.fluence.tmic.enabled=false
 
-#
-#snapdragon value add features
-#
-PRODUCT_PROPERTY_OVERRIDES += \
-ro.qc.sdk.audio.ssr=false
-
-##fluencetype can be "fluence" or "fluencepro" or "none"
-PRODUCT_PROPERTY_OVERRIDES += \
-ro.qc.sdk.audio.fluencetype=none\
-persist.audio.fluence.voicecall=true\
-persist.audio.fluence.voicerec=false\
-persist.audio.fluence.speaker=true
-
 # Mutlirec Apptype
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.audio.apptype.multirec.enabled=false \
@@ -342,14 +329,6 @@ vendor.audio.use.sw.ape.decoder=true
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
-
-#audio becoming noisy intent broadcast delay
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.sys.noisy.broadcast.delay=600
-
-#offload pausetime out duration to 3 secs to inline with other outputs
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.sys.offload.pstimeout.secs=3
 
 #Enable HIFI audio support for internal codec
 PRODUCT_PROPERTY_OVERRIDES += \
