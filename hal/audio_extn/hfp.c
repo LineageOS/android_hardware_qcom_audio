@@ -545,7 +545,7 @@ void hfp_set_parameters(struct audio_device *adev, struct str_parms *parms)
     float vol;
     char value[32]={0};
 
-    ALOGD("%s: enter", __func__);
+    ALOGV("%s: enter", __func__);
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
                             sizeof(value));

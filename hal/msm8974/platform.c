@@ -3067,11 +3067,8 @@ static int init_be_dai_name_table(struct audio_device *adev)
     for (i = 0; i < SND_DEVICE_MAX; i++) {
         valid_hw_interface = false;
 
-        if (hw_interface_table[i] == NULL) {
-            ALOGW("%s: sound device %s has no hw interface set\n",
-                  __func__, platform_get_snd_device_name(i));
+        if (hw_interface_table[i] == NULL)
             continue;
-        }
 
         for (j = 0; j < max_be_dai_names; j++) {
             if (strcmp(hw_interface_table[i], be_dai_name_table[j].be_name)
@@ -3080,9 +3077,6 @@ static int init_be_dai_name_table(struct audio_device *adev)
                 break;
             }
         }
-        if (!valid_hw_interface)
-            ALOGD("%s: sound device %s does not have a valid hw interface set (disregard for combo devices) %s\n",
-                   __func__, platform_get_snd_device_name(i), hw_interface_table[i]);
     }
 
     goto done;
@@ -3523,13 +3517,10 @@ void *platform_init(struct audio_device *adev)
 #endif
 
     /* CSRA devices support multiple sample rates via I2S at spkr out */
-    if (!strncmp(snd_card_name, "qcs405-csra", strlen("qcs405-csra"))) {
-        ALOGE("%s: soundcard: %s supports multiple sample rates", __func__, snd_card_name);
+    if (!strncmp(snd_card_name, "qcs405-csra", strlen("qcs405-csra")))
         my_data->use_sprk_default_sample_rate = false;
-    } else {
+    else
         my_data->use_sprk_default_sample_rate = true;
-        ALOGE("%s: soundcard: %s supports only default sample rate", __func__, snd_card_name);
-    }
 
     my_data->voice_feature_set = VOICE_FEATURE_SET_DEFAULT;
     my_data->acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
@@ -4075,7 +4066,7 @@ struct audio_custom_mtmx_params *
             }
         }
     }
-    ALOGI("%s: no matching param with id %d ip_ch %d op_ch %d uc_id %d snd_dev %d",
+    ALOGV("%s: no matching param with id %d ip_ch %d op_ch %d uc_id %d snd_dev %d",
           __func__, info->id, info->ip_channels, info->op_channels,
           info->usecase_id[0], info->snd_device);
     return NULL;
@@ -4467,12 +4458,12 @@ bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_de
                 platform_get_snd_device_name(snd_device2));
 
     if ((snd_device1 < SND_DEVICE_MIN) || (snd_device1 >= SND_DEVICE_OUT_END)) {
-        ALOGE("%s: Invalid snd_device = %s", __func__,
+        ALOGV("%s: Invalid snd_device1 = %s", __func__,
                 platform_get_snd_device_name(snd_device1));
         return false;
     }
     if ((snd_device2 < SND_DEVICE_MIN) || (snd_device2 >= SND_DEVICE_OUT_END)) {
-        ALOGE("%s: Invalid snd_device = %s", __func__,
+        ALOGV("%s: Invalid snd_device2 = %s", __func__,
                 platform_get_snd_device_name(snd_device2));
         return false;
     }
@@ -6154,7 +6145,7 @@ int platform_split_snd_device(void *platform,
     }
 
 
-    ALOGD("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
+    ALOGV("%s: snd_device(%d) num devices(%d) new_snd_devices(%d)", __func__,
         snd_device, *num_devices, *new_snd_devices);
 
     return ret;
@@ -8096,7 +8087,7 @@ static void set_audiocal(void *platform, struct str_parms *parms, char *value, i
           }
         }
         cal.acdb_dev_id = platform_get_snd_device_acdb_id(cal.snd_dev_id);
-        ALOGD("Setting audio calibration for snd_device(%d) acdb_id(%d)",
+        ALOGV("Setting audio calibration for snd_device(%d) acdb_id(%d)",
                 cal.snd_dev_id, cal.acdb_dev_id);
         if(cal.acdb_dev_id == -EINVAL) {
             ALOGE("[%s] Invalid acdb_device id %d for snd device id %d",
@@ -8851,7 +8842,8 @@ void platform_get_parameters(void *platform,
                 for (i = 0; i < sizeof(dsp_only_decoders_mime)/sizeof(dsp_only_decoders_mime[0]); i++) {
                     if (!strncmp(decoder_mime_type, dsp_only_decoders_mime[i],
                     strlen(dsp_only_decoders_mime[i]))) {
-                       ALOGD("Rejecting request for DSP only session from HAL during voice call/SSR state");
+                       ALOGV("Rejecting request for DSP only session from HAL \
+                              during voice call/SSR state");
                        isallowed = 0;
                        break;
                     }
@@ -10105,7 +10097,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
          */
         if (platform_spkr_use_default_sample_rate(adev->platform)) {
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-            ALOGD("%s:becf: afe: playback on codec device not supporting native playback set "
+            ALOGV("%s:becf: afe: playback on codec device not supporting native playback set "
             "default Sample Rate(48k)", __func__);
         }
     }
