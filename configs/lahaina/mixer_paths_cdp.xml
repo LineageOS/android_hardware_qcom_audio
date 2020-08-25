@@ -2943,12 +2943,12 @@
         <ctl name="TX DEC1 MUX" value="SWR_MIC" />
         <ctl name="TX DEC2 MUX" value="SWR_MIC" />
         <ctl name="TX DEC3 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX1" value="SWR_MIC11" />
-        <ctl name="TX SMIC MUX2" value="SWR_MIC8" />
-        <ctl name="TX SMIC MUX3" value="SWR_MIC10" />
-        <ctl name="SWR_MIC3 HIFI PortMap" value="SWRM_TX3_CH4" />
+        <ctl name="TX SMIC MUX1" value="SWR_MIC8" />
+        <ctl name="TX SMIC MUX2" value="SWR_MIC10" />
+        <ctl name="TX SMIC MUX3" value="SWR_MIC11" />
         <ctl name="SWR_MIC0 HIFI PortMap" value="SWRM_TX3_CH1" />
         <ctl name="SWR_MIC2 HIFI PortMap" value="SWRM_TX3_CH3" />
+        <ctl name="SWR_MIC3 HIFI PortMap" value="SWRM_TX3_CH4" />
         <ctl name="SWR_MIC3 SWR_DMIC_MIXER Switch" value="1" />
         <ctl name="SWR_MIC0 SWR_DMIC_MIXER Switch" value="1" />
         <ctl name="SWR_MIC2 SWR_DMIC_MIXER Switch" value="1" />
@@ -2973,14 +2973,14 @@
         <ctl name="TX DEC2 MUX" value="SWR_MIC" />
         <ctl name="TX DEC3 MUX" value="SWR_MIC" />
         <ctl name="TX DEC4 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX1" value="SWR_MIC11" />
-        <ctl name="TX SMIC MUX2" value="SWR_MIC8" />
+        <ctl name="TX SMIC MUX1" value="SWR_MIC8" />
+        <ctl name="TX SMIC MUX2" value="SWR_MIC9" />
         <ctl name="TX SMIC MUX3" value="SWR_MIC10" />
-        <ctl name="TX SMIC MUX4" value="SWR_MIC9" />
-        <ctl name="SWR_MIC3 HIFI PortMap" value="SWRM_TX3_CH4" />
+        <ctl name="TX SMIC MUX4" value="SWR_MIC11" />
         <ctl name="SWR_MIC0 HIFI PortMap" value="SWRM_TX3_CH1" />
-        <ctl name="SWR_MIC2 HIFI PortMap" value="SWRM_TX3_CH3" />
         <ctl name="SWR_MIC1 HIFI PortMap" value="SWRM_TX3_CH2" />
+        <ctl name="SWR_MIC2 HIFI PortMap" value="SWRM_TX3_CH3" />
+        <ctl name="SWR_MIC3 HIFI PortMap" value="SWRM_TX3_CH4" />
         <ctl name="SWR_MIC3 SWR_DMIC_MIXER Switch" value="1" />
         <ctl name="SWR_MIC0 SWR_DMIC_MIXER Switch" value="1" />
         <ctl name="SWR_MIC2 SWR_DMIC_MIXER Switch" value="1" />
