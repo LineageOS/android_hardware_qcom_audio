@@ -3086,9 +3086,9 @@
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="TX DMIC MUX2" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
-        <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX DMIC MUX3" value="DMIC2" />
         <ctl name="TX_AIF1_CAP Mixer DEC4" value="1" />
-        <ctl name="TX DMIC MUX4" value="DMIC2" />
+        <ctl name="TX DMIC MUX4" value="DMIC3" />
     </path>
 
     <path name="speaker-qmic-liquid">
