@@ -64,6 +64,7 @@
 #define PLATFORM_INFO_XML_PATH_SKUSH_NAME  "audio_platform_info_skush.xml"
 #define PLATFORM_INFO_XML_PATH_SKUW_NAME  "audio_platform_info_skuw.xml"
 #define PLATFORM_INFO_XML_PATH_QRD_NAME  "audio_platform_info_qrd.xml"
+#define PLATFORM_INFO_XML_PATH_HDK_NAME  "audio_platform_info_hdk.xml"
 #define PLATFORM_INFO_XML_PATH_LAGOON_QRD_NAME  "audio_platform_info_lagoon_qrd.xml"
 #define PLATFORM_INFO_XML_PATH_NAME "audio_platform_info.xml"
 #define MIXER_XML_PATH_AUXPCM_NAME "mixer_paths_auxpcm.xml"
@@ -1760,6 +1761,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("lahaina-qrd-snd-card")) ||
          !strncmp(snd_card_name, "lahaina-cdp-snd-card",
                    sizeof("lahaina-cdp-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-hdk-snd-card",
+                   sizeof("lahaina-hdk-snd-card")) ||
          !strncmp(snd_card_name, "kona-mtp-snd-card",
                    sizeof("kona-mtp-snd-card")) ||
          !strncmp(snd_card_name, "lahaina-shimaidp-snd-card",
@@ -3345,6 +3348,10 @@ void *platform_init(struct audio_device *adev)
     } else if (!strncmp(snd_card_name, "lahaina-qrd-snd-card",
                sizeof("lahaina-qrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "lahaina-hdk-snd-card",
+               sizeof("lahaina-hdk-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_HDK_NAME),
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
                sizeof("kona-qrd-snd-card"))) {
