@@ -884,7 +884,10 @@ void auto_hal_deinit(void)
         return;
     }
 
-    free(auto_hal);
+    if(auto_hal != NULL) {
+       free(auto_hal);
+       auto_hal = NULL;
+    }
 
     return;
 }
