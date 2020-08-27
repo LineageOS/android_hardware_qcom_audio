@@ -675,25 +675,26 @@ int AudioDevice::SetMode(const audio_mode_t mode) {
 }
 
 int AudioDevice::add_input_headset_if_usb_out_headset(int *device_count,
-                                                      qal_device_id_t* qal_device_ids)
+                                                      qal_device_id_t** qal_device_ids)
 {
     bool is_usb_headset = false;
     int count = *device_count;
     qal_device_id_t* temp = NULL;
 
     for (int i = 0; i < count; i++) {
-         if (qal_device_ids[i] == QAL_DEVICE_OUT_USB_HEADSET) {
+         if (*qal_device_ids[i] == QAL_DEVICE_OUT_USB_HEADSET) {
              is_usb_headset = true;
              break;
          }
     }
 
     if (is_usb_headset) {
-        temp = (qal_device_id_t *) realloc(qal_device_ids, (count + 1));
+        temp = (qal_device_id_t *) realloc(*qal_device_ids,
+            (count + 1) * sizeof(qal_device_id_t));
         if (!temp)
             return -ENOMEM;
-        qal_device_ids = temp;
-        qal_device_ids[count] = QAL_DEVICE_IN_USB_HEADSET;
+        *qal_device_ids = temp;
+        temp[count] = QAL_DEVICE_IN_USB_HEADSET;
         *device_count = count + 1;
         usb_input_dev_enabled = true;
     }
@@ -772,11 +773,10 @@ int AudioDevice::SetParameters(const char *kvpairs) {
 
         device_count = popcount(device);
         if (device_count) {
-            if (qal_device_ids)
-                free(qal_device_ids);
+
             qal_device_ids = (qal_device_id_t *) calloc(device_count, sizeof(qal_device_id_t));
             qal_device_count = GetQalDeviceIds(device, qal_device_ids);
-            ret = add_input_headset_if_usb_out_headset(&qal_device_count, qal_device_ids);
+            ret = add_input_headset_if_usb_out_headset(&qal_device_count, &qal_device_ids);
             if (ret) {
                 free(qal_device_ids);
                 ALOGE("%s: adding input headset failed, error:%d", __func__, ret);
@@ -793,6 +793,10 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                           __func__, qal_device_ids[i]);
                 }
                 ALOGI("%s: qal set param success  for device connection", __func__);
+            }
+            if (qal_device_ids) {
+                free(qal_device_ids);
+                qal_device_ids = NULL;
             }
         }
     }
@@ -869,8 +873,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
 
         device_count = popcount(device);
         if (device_count) {
-            if (qal_device_ids)
-                free(qal_device_ids);
+
             qal_device_ids = (qal_device_id_t *) calloc(device_count, sizeof(qal_device_id_t));
             qal_device_count = GetQalDeviceIds(device, qal_device_ids);
             for (int i = 0; i < qal_device_count; i++) {
@@ -884,11 +887,17 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 }
                 ALOGI("%s: qal set param sucess for device disconnect", __func__);
             }
+            if (qal_device_ids) {
+                free(qal_device_ids);
+                qal_device_ids = NULL;
+            }
         }
     }
 
-    if (qal_device_ids)
+    if (qal_device_ids) {
         free(qal_device_ids);
+        qal_device_ids = NULL;
+    }
 
     ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
     if (ret >= 0) {
