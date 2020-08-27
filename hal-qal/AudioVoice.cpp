@@ -228,6 +228,7 @@ audio_devices_t AudioVoice::GetMatchingTxDevice(audio_devices_t halRxDeviceId) {
             halTxDeviceId = AUDIO_DEVICE_IN_WIRED_HEADSET;
             break;
         case AUDIO_DEVICE_OUT_WIRED_HEADPHONE:
+        case AUDIO_DEVICE_OUT_LINE:
             halTxDeviceId = AUDIO_DEVICE_IN_BUILTIN_MIC;
             break;
         case AUDIO_DEVICE_OUT_USB_HEADSET:
