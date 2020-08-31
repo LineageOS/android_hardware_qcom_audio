@@ -677,7 +677,7 @@ enum {
 #define FM_RX_VOLUME "Quat MI2S FM RX Volume"
 #elif PLATFORM_MSM8994
 #define FM_RX_VOLUME "PRI MI2S LOOPBACK Volume"
-#elif defined (PLATFORM_MSM8996) || defined (PLATFORM_KONA)
+#elif defined (PLATFORM_MSM8996) || defined (PLATFORM_KONA) || defined (PLATFORM_LAHAINA)
 #define FM_RX_VOLUME "Tert MI2S LOOPBACK Volume"
 #elif defined (PLATFORM_MSM8998) || defined (PLATFORM_SDM845) || defined (PLATFORM_MSMFALCON) || defined (PLATFORM_SDM710) || defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || defined (PLATFORM_MSMSTEPPE) || defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || defined (PLATFORM_LITO) || defined (PLATFORM_ATOLL) ||defined (PLATFORM_BENGAL) ||    defined (PLATFORM_HOLI)
 #define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
