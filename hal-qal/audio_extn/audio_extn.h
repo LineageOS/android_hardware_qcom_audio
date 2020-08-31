@@ -45,6 +45,10 @@ void audio_extn_sound_trigger_deinit(std::shared_ptr<AudioDevice> adev);
 void* audio_extn_sound_trigger_check_and_get_session(
     StreamInPrimary *in_stream);
 
+extern "C" int audio_hw_get_gain_level_mapping(struct qal_amp_db_and_gain_table *mapping_tbl,
+                                      int table_size);
+extern "C" bool audio_hw_send_gain_dep_calibration(int level);
+
 #ifndef AUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED
 #define audio_extn_gef_init(adev) (0)
 #define audio_extn_gef_deinit(adev) (0)

@@ -18,6 +18,7 @@ LOCAL_SRC_FILES := \
     AudioVoice.cpp \
     audio_extn/soundtrigger.cpp \
     audio_extn/audio_hidl.cpp \
+    audio_extn/Gain.cpp \
     audio_extn/AudioExtn.cpp \
     ../hal/audio_extn/battery_listener.cpp
 LOCAL_STATIC_LIBRARIES := \
