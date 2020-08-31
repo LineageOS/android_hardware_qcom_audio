@@ -35,7 +35,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "ahal_AudioDevice"
+#define LOG_TAG "AHAL: AudioDevice"
 #define ATRACE_TAG (ATRACE_TAG_AUDIO|ATRACE_TAG_HAL)
 /*#define LOG_NDEBUG 0*/
 /*#define VERY_VERY_VERBOSE_LOGGING*/

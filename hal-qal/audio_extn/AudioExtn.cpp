@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define LOG_TAG "ahal_AudioExtn"
+#define LOG_TAG "AHAL: AudioExtn"
 #include <dlfcn.h>
 #include "AudioExtn.h"
 #define AUDIO_OUTPUT_BIT_WIDTH ((config_->offload_info.bit_width == 32) ? 24:config_->offload_info.bit_width)

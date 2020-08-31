@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define LOG_TAG "ahal_AudioVoice"
+#define LOG_TAG "AHAL: AudioVoice"
 #define ATRACE_TAG (ATRACE_TAG_AUDIO|ATRACE_TAG_HAL)
 #define LOG_NDEBUG 0
 /*#define VERY_VERY_VERBOSE_LOGGING*/
