@@ -2549,7 +2549,7 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
                         goto exit;
                     } else {
                         ALOGV("%s: EC is running. Disabling it", __func__);
-                        status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_EC,false);
+                        status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_ECNS,false);
                         isECEnabled = false;
                         goto exit;
                     }
@@ -2587,7 +2587,7 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
                         goto exit;
                     } else {
                         ALOGV("%s: NS is running. Disabling it", __func__);
-                        status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_NS,false);
+                        status = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_ECNS,false);
                         isNSEnabled = false;
                         goto exit;
                     }
