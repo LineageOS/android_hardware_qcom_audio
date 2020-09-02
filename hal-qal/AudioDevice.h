@@ -96,6 +96,9 @@ public:
     int num_va_sessions_ = 0;
     qal_speaker_rotation_type current_rotation;
     static card_status_t sndCardState;
+    std::mutex adev_init_mutex;
+    uint32_t adev_init_ref_count = 0;
+    hw_device_t *GetAudioDeviceCommon();
 protected:
     AudioDevice(){
     }
