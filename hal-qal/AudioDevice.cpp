@@ -639,7 +639,7 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* strea
     in_list_mutex.lock();
     for (int i = 0; i < stream_in_list_.size(); i++) {
         if (stream_in_list_[i]->stream_.get() == (audio_stream_in*) stream_in) {
-            ALOGI("%s: Found existing stream associated with astream_in", __func__);
+            ALOGV("%s: Found existing stream associated with astream_in", __func__);
             astream_in = stream_in_list_[i];
             break;
         }
