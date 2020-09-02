@@ -1854,13 +1854,15 @@ uint32_t StreamOutPrimary::HaltoAlsaFormat(audio_format_t hal_format) {
 
     switch (hal_format) {
     case AUDIO_FORMAT_PCM_32_BIT:
-    case AUDIO_FORMAT_PCM_8_24_BIT:
     case AUDIO_FORMAT_PCM_FLOAT: {
         if (platform_supports_true_32bit())
             pcm_format = PCM_FORMAT_S32_LE;
         else
             pcm_format = PCM_FORMAT_S24_3LE;
         }
+        break;
+    case AUDIO_FORMAT_PCM_8_24_BIT:
+        pcm_format = PCM_FORMAT_S24_3LE;
         break;
     case AUDIO_FORMAT_PCM_8_BIT:
         pcm_format = PCM_FORMAT_S8;
@@ -2000,13 +2002,18 @@ int StreamOutPrimary::Open() {
          outBufCount = DEEP_BUFFER_PLAYBACK_PERIOD_COUNT;
 
     if (halInputFormat != halOutputFormat) {
-        convertBufSize = outBufSize;
+        convertBufSize =  PCM_OFFLOAD_OUTPUT_PERIOD_DURATION *
+                         config_.sample_rate * audio_bytes_per_frame(
+                         audio_channel_count_from_out_mask(config_.channel_mask),
+                         halOutputFormat);
+        convertBufSize /= 1000;
         convertBuffer = realloc(convertBuffer, convertBufSize);
         if (!convertBuffer) {
             ret = -ENOMEM;
             ALOGE("convert Buffer allocation failed. ret %d", ret);
             goto error_open;
         }
+        outBufSize = convertBufSize;
         ALOGD("convert buffer allocated for size %d", convertBufSize);
     }
 
@@ -2131,8 +2138,12 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
                                frames);
         qalBuffer.buffer = convertBuffer;
         qalBuffer.size = frames * (format_to_bitwidth_table[halOutputFormat]/8);
+        local_bytes_written = qal_stream_write(qal_stream_handle_, &qalBuffer);
+        local_bytes_written = (local_bytes_written * (format_to_bitwidth_table[halInputFormat]/8)) /
+                               (format_to_bitwidth_table[halOutputFormat]/8);
+    } else {
+        local_bytes_written = qal_stream_write(qal_stream_handle_, &qalBuffer);
     }
-    local_bytes_written = qal_stream_write(qal_stream_handle_, &qalBuffer);
     total_bytes_written_ += local_bytes_written;
     clock_gettime(CLOCK_MONOTONIC, &writeAt);
     return local_bytes_written;
