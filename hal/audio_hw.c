@@ -1212,6 +1212,12 @@ static void check_and_route_playback_usecases(struct audio_device *adev,
             usecase = node_to_item(node, struct audio_usecase, list);
             if (switch_device[usecase->id] ) {
                 enable_audio_route(adev, usecase);
+                if (usecase->stream.out && usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
+                    struct stream_out *out = usecase->stream.out;
+                    audio_extn_utils_send_app_type_gain(out->dev,
+                                                        out->app_type_cfg.app_type,
+                                                        &out->app_type_cfg.gain[0]);
+                }
             }
         }
     }
