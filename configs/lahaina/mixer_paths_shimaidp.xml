@@ -189,13 +189,13 @@
     <ctl name="AFE_PCM_RX Audio Mixer MultiMedia5" value="0" />
     <!-- usb headset end -->
     <!-- fm -->
-    <ctl name="SLIMBUS_8 LOOPBACK Volume" value="0" />
-    <ctl name="WSA_CDC_DMA_RX_0 Port Mixer SLIM_8_TX" value="0" />
+    <ctl name="Tert MI2S LOOPBACK Volume" value="0" />
+    <ctl name="WSA_CDC_DMA_RX_0 Port Mixer TERT_MI2S_TX" value="0" />
     <ctl name="WSA_CDC_DMA_RX_0_DL_HL Switch" value="0" />
-    <ctl name="RX_CDC_DMA_RX_0 Port Mixer SLIM_8_TX" value="0" />
+    <ctl name="RX_CDC_DMA_RX_0 Port Mixer TERT_MI2S_TX" value="0" />
     <ctl name="RX_CDC_DMA_RX_0_DL_HL Switch" value="0" />
-    <ctl name="MultiMedia1 Mixer SLIM_8_TX" value="0" />
-    <ctl name="MultiMedia2 Mixer SLIM_8_TX" value="0" />
+    <ctl name="MultiMedia1 Mixer TERT_MI2S_TX" value="0" />
+    <ctl name="MultiMedia2 Mixer TERT_MI2S_TX" value="0" />
     <!-- fm end -->
 
     <!-- Multimode Voice1 -->
@@ -459,13 +459,18 @@
     <ctl name="MultiMedia16 Mixer TX_CDC_DMA_TX_3" value="0" />
     <ctl name="MultiMedia16 Mixer TX_CDC_DMA_TX_4" value="0" />
     <ctl name="MultiMedia16 Mixer SLIM_7_TX" value="0" />
-    <ctl name="MultiMedia16 Mixer SLIM_8_TX" value="0" />
+    <ctl name="MultiMedia16 Mixer TERT_MI2S_TX" value="0" />
     <ctl name="MultiMedia16 Mixer USB_AUDIO_TX" value="0" />
 
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="0"/>
     <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="0"/>
     <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="0" />
     <ctl name="RX_CDC_DMA_RX_6 Channels" value="One" />
+
+    <ctl name="TX0 MODE" value="ADC_LP" />
+    <ctl name="TX1 MODE" value="ADC_LP" />
+    <ctl name="TX2 MODE" value="ADC_LP" />
+    <ctl name="TX3 MODE" value="ADC_LP" />
 
     <!-- These are audio route (FE to BE) specific mixer settings -->
     <path name="gsm-mode">
@@ -1738,7 +1743,7 @@
     </path>
 
     <path name="audio-record capture-fm">
-        <ctl name="MultiMedia1 Mixer SLIM_8_TX" value="1" />
+        <ctl name="MultiMedia1 Mixer TERT_MI2S_TX" value="1" />
     </path>
 
     <path name="audio-record-compress">
@@ -1814,22 +1819,22 @@
     </path>
 
     <path name="low-latency-record capture-fm">
-      <ctl name="MultiMedia8 Mixer SLIM_8_TX" value="1" />
+      <ctl name="MultiMedia8 Mixer TERT_MI2S_TX" value="1" />
     </path>
 
     <path name="fm-virtual-record capture-fm">
-        <ctl name="MultiMedia2 Mixer SLIM_8_TX" value="1" />
+        <ctl name="MultiMedia2 Mixer TERT_MI2S_TX" value="1" />
     </path>
 
     <path name="play-fm">
         <ctl name="Tert MI2S LOOPBACK Volume" value="1" />
-        <ctl name="WSA_CDC_DMA_RX_0 Port Mixer SLIM_8_TX" value="1" />
+        <ctl name="WSA_CDC_DMA_RX_0 Port Mixer TERT_MI2S_TX" value="1" />
         <ctl name="WSA_CDC_DMA_RX_0_DL_HL Switch" value="1" />
     </path>
 
     <path name="play-fm headphones">
         <ctl name="Tert MI2S LOOPBACK Volume" value="1" />
-        <ctl name="RX_CDC_DMA_RX_0 Port Mixer SLIM_8_TX" value="1" />
+        <ctl name="RX_CDC_DMA_RX_0 Port Mixer TERT_MI2S_TX" value="1" />
         <ctl name="RX_CDC_DMA_RX_0_DL_HL Switch" value="1" />
     </path>
 
@@ -2347,7 +2352,7 @@
         <ctl name="ADC2 MUX" value="INP2" />
         <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="MBHC ChMap" value="SWRM_TX2_CH3" />
-        <ctl name="BCS Channel" value="CH2" />
+        <ctl name="BCS Channel" value="CH6" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
     </path>
 
@@ -3361,7 +3366,7 @@
     </path>
 
     <path name="mmap-record capture-fm">
-      <ctl name="MultiMedia16 Mixer SLIM_8_TX" value="1" />
+      <ctl name="MultiMedia16 Mixer TERT_MI2S_TX" value="1" />
     </path>
 
     <path name="mmap-record usb-headset-mic">
