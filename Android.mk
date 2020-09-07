@@ -10,6 +10,7 @@ ifneq ($(filter mpq8092,$(TARGET_BOARD_PLATFORM)),)
 include $(MY_LOCAL_PATH)/hal_mpq/Android.mk
 else
 include $(MY_LOCAL_PATH)/hal-qal/Android.mk
+include $(MY_LOCAL_PATH)/hal-qal/audio_extn/Android.mk
 endif
 include $(MY_LOCAL_PATH)/hal/audio_extn/Android.mk
 include $(MY_LOCAL_PATH)/voice_processing/Android.mk

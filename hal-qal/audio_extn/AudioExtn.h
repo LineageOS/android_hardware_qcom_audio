@@ -39,6 +39,16 @@ typedef void (*batt_listener_init_t)(battery_status_change_fn_t);
 typedef void (*batt_listener_deinit_t)();
 typedef bool (*batt_prop_is_charging_t)();
 
+class AudioDevice;
+//HFP
+typedef int audio_usecase_t;
+typedef void(*hfp_init_t)();
+typedef bool(*hfp_is_active_t)(std::shared_ptr<AudioDevice> adev);
+typedef audio_usecase_t(*hfp_get_usecase_t)();
+typedef int(*hfp_set_mic_mute_t)(bool state);
+typedef void(*hfp_set_parameters_t)(std::shared_ptr<AudioDevice> adev, struct str_parms *parms);
+typedef int(*hfp_set_mic_mute2_t)(std::shared_ptr<AudioDevice> adev, bool state);
+
 class AudioExtn
 {
 public:
@@ -48,6 +58,15 @@ public:
     static void battery_properties_listener_init(battery_status_change_fn_t fn);
     static void battery_properties_listener_deinit();
     static bool battery_properties_is_charging();
+
+    //HFP
+    static int hfp_feature_init(bool is_feature_enabled);
+    static bool audio_extn_hfp_is_active(std::shared_ptr<AudioDevice> adev);
+    audio_usecase_t audio_extn_hfp_get_usecase();
+    static int audio_extn_hfp_set_mic_mute(bool state);
+    static void audio_extn_hfp_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parms);
+    static int audio_extn_hfp_set_mic_mute2(std::shared_ptr<AudioDevice> adev, bool state);
+
 private:
 };
 

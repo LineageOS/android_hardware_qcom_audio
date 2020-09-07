@@ -328,3 +328,107 @@ bool AudioExtn::battery_properties_is_charging()
     return (batt_prop_is_charging)? batt_prop_is_charging(): false;
 }
 // END: BATTERY_LISTENER ================================================================
+
+// START: HFP ======================================================================
+#ifdef __LP64__
+#define HFP_LIB_PATH "/vendor/lib64/libhfp_qal.so"
+#else
+#define HFP_LIB_PATH "/vendor/lib/libhfp_qal.so"
+#endif
+
+static void *hfp_lib_handle = NULL;
+static hfp_init_t hfp_init;
+static hfp_is_active_t hfp_is_active;
+static hfp_get_usecase_t hfp_get_usecase;
+static hfp_set_mic_mute_t hfp_set_mic_mute;
+static hfp_set_parameters_t hfp_set_parameters;
+static hfp_set_mic_mute2_t hfp_set_mic_mute2;
+
+int AudioExtn::hfp_feature_init(bool is_feature_enabled)
+{
+    ALOGD("%s: Called with feature %s", __func__,
+        is_feature_enabled ? "Enabled" : "NOT Enabled");
+    if (is_feature_enabled) {
+        // dlopen lib
+        hfp_lib_handle = dlopen(HFP_LIB_PATH, RTLD_NOW);
+
+        if (!hfp_lib_handle) {
+            ALOGE("%s: dlopen failed", __func__);
+            goto feature_disabled;
+        }
+
+        if (!(hfp_init = (hfp_init_t)dlsym(
+            hfp_lib_handle, "hfp_init")) ||
+            !(hfp_is_active =
+            (hfp_is_active_t)dlsym(
+                hfp_lib_handle, "hfp_is_active")) ||
+            !(hfp_get_usecase =
+            (hfp_get_usecase_t)dlsym(
+                hfp_lib_handle, "hfp_get_usecase")) ||
+            !(hfp_set_mic_mute =
+            (hfp_set_mic_mute_t)dlsym(
+                hfp_lib_handle, "hfp_set_mic_mute")) ||
+            !(hfp_set_mic_mute2 =
+            (hfp_set_mic_mute2_t)dlsym(
+                hfp_lib_handle, "hfp_set_mic_mute2")) ||
+            !(hfp_set_parameters =
+            (hfp_set_parameters_t)dlsym(
+                hfp_lib_handle, "hfp_set_parameters"))) {
+            ALOGE("%s: dlsym failed", __func__);
+            goto feature_disabled;
+        }
+
+        ALOGD("%s:: ---- Feature HFP is Enabled ----", __func__);
+
+        return 0;
+    }
+
+feature_disabled:
+    if (hfp_lib_handle) {
+        dlclose(hfp_lib_handle);
+        hfp_lib_handle = NULL;
+    }
+
+    hfp_init = NULL;
+    hfp_is_active = NULL;
+    hfp_get_usecase = NULL;
+    hfp_set_mic_mute = NULL;
+    hfp_set_mic_mute2 = NULL;
+    hfp_set_parameters = NULL;
+
+    ALOGW(":: %s: ---- Feature HFP is disabled ----", __func__);
+    return -ENOSYS;
+}
+
+bool AudioExtn::audio_extn_hfp_is_active(std::shared_ptr<AudioDevice> adev)
+{
+    return ((hfp_is_active) ?
+        hfp_is_active(adev) : false);
+}
+
+audio_usecase_t AudioExtn::audio_extn_hfp_get_usecase()
+{
+    return ((hfp_get_usecase) ?
+        hfp_get_usecase() : -1);
+}
+
+int AudioExtn::audio_extn_hfp_set_mic_mute(bool state)
+{
+    return ((hfp_set_mic_mute) ?
+        hfp_set_mic_mute(state) : -1);
+}
+
+void AudioExtn::audio_extn_hfp_set_parameters(std::shared_ptr<AudioDevice> adev,
+    struct str_parms *parms)
+{
+    if (hfp_set_parameters)
+        hfp_set_parameters(adev, parms);
+}
+
+int AudioExtn::audio_extn_hfp_set_mic_mute2(std::shared_ptr<AudioDevice> adev, bool state)
+{
+    return ((hfp_set_mic_mute2) ?
+        hfp_set_mic_mute2(adev, state) : -1);
+}
+// END: HFP ========================================================================
+

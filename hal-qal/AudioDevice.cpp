@@ -552,6 +552,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
         }
     }
     audio_extn_sound_trigger_init(adev_);
+    AudioExtn::hfp_feature_init(property_get_bool("vendor.audio.feature.hfp.enable", false));
     /* no feature configurations yet */
     AudioExtn::battery_listener_feature_init(true);
     AudioExtn::battery_properties_listener_init(adev_on_battery_status_changed);
@@ -925,6 +926,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         ret = qal_set_param(QAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
                             sizeof(qal_param_btsco_t));
      }
+
+    AudioExtn::audio_extn_hfp_set_parameters(adev_, parms);
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value, sizeof(value));
     if (ret >= 0) {
