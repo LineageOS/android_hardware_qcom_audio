@@ -25,9 +25,8 @@
 <!--- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE      -->
 <!--- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN    -->
 <!--- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                             -->
-
 <mixer>
-    <!-- These are the initial mixer settings -->
+    <!-- These are sound trigger initial mixer settings -->
     <ctl name="LSM1 Mixer VA_CDC_DMA_TX_0" value="0" />
     <ctl name="LSM2 Mixer VA_CDC_DMA_TX_0" value="0" />
     <ctl name="LSM3 Mixer VA_CDC_DMA_TX_0" value="0" />
@@ -45,7 +44,6 @@
     <ctl name="LSM7 Port" value="None" />
     <ctl name="LSM8 Port" value="None" />
     <ctl name="VA_CDC_DMA_TX_0 Channels" value="One" />
-    <ctl name="VA_CDC_DMA_TX_0 SampleRate" value="KHZ_16" />
     <ctl name="VA_AIF1_CAP Mixer DEC0" value="0" />
     <ctl name="VA_AIF1_CAP Mixer DEC1" value="0" />
     <ctl name="VA_AIF1_CAP Mixer DEC2" value="0" />
@@ -87,8 +85,12 @@
     <ctl name="ADC2 Volume" value="12" />
     <ctl name="VA_DEC0 MODE" value="ADC_DEFAULT" />
     <ctl name="ADC2_BCS Disable" value="0" />
+    <ctl name="ADC1 ChMap" value="ZERO" />
+    <ctl name="ADC2 ChMap" value="ZERO" />
+    <ctl name="ADC3 ChMap" value="ZERO" />
+    <ctl name="ADC4 ChMap" value="ZERO" />
 
-    <path name="listen-voice-wakeup-1">
+   <path name="listen-voice-wakeup-1">
         <ctl name="LSM1 Mixer VA_CDC_DMA_TX_0" value="1" />
     </path>
 
@@ -249,12 +251,9 @@
     </path>
 
     <path name="listen-ape-handset-mic">
-        <ctl name="VA DEC0 MUX" value="SWR_MIC" />
-        <ctl name="VA SMIC MUX0" value="SWR_MIC0" />
-        <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1" />
-        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
-        <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
-        <ctl name="ADC1_MIXER Switch" value="1" />
+        <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+        <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
+        <ctl name="VA DMIC MUX0" value="DMIC1" />
     </path>
 
     <path name="listen-ape-handset-mic-preproc">
@@ -265,17 +264,10 @@
         <ctl name="VA_CDC_DMA_TX_0 Channels" value="Two" />
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="VA DEC0 MUX" value="SWR_MIC" />
-        <ctl name="VA SMIC MUX0" value="SWR_MIC0" />
-        <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1" />
-        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
-        <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
-        <ctl name="ADC1_MIXER Switch" value="1" />
-        <ctl name="VA DEC1 MUX" value="SWR_MIC" />
-        <ctl name="VA SMIC MUX1" value="SWR_MIC4" />
-        <ctl name="ADC2 ChMap" value="SWRM_TX2_CH1" />
-        <ctl name="ADC2_MIXER Switch" value="1" />
-        <ctl name="ADC2 MUX" value="INP3" />
+        <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
+        <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
+        <ctl name="VA DMIC MUX0" value="DMIC1" />
+        <ctl name="VA DMIC MUX1" value="DMIC2" />
     </path>
 
     <path name="listen-ape-handset-tmic">
@@ -310,11 +302,24 @@
     <path name="listen-ape-headset-mic">
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA DEC0 MUX" value="SWR_MIC" />
-        <ctl name="VA SMIC MUX0" value="SWR_MIC4" />
+        <ctl name="VA SMIC MUX0" value="ADC1" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP2" />
         <ctl name="VA_DEC0 MODE" value="ADC_LOW_PWR" />
-        <ctl name="ADC2 ChMap" value="SWRM_TX2_CH1" />
+    </path>
+
+    <path name="echo-reference">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="WSA_CDC_DMA_RX_0"/>
+        <ctl name="EC Reference Channels" value="Two"/>
+        <ctl name="EC Reference Bit Format" value="S16_LE"/>
+        <ctl name="EC Reference SampleRate" value="48000"/>
+    </path>
+
+    <path name="echo-reference headset">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="WSA_CDC_DMA_RX_0"/>
+        <ctl name="EC Reference Channels" value="One"/>
+        <ctl name="EC Reference Bit Format" value="S16_LE"/>
+        <ctl name="EC Reference SampleRate" value="48000"/>
     </path>
 
     <path name="echo-reference a2dp">
@@ -323,5 +328,5 @@
         <ctl name="EC Reference Bit Format" value="S16_LE"/>
         <ctl name="EC Reference SampleRate" value="48000"/>
     </path>
-
 </mixer>
+

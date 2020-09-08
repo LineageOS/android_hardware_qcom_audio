@@ -435,7 +435,7 @@ bool voice_is_in_call_rec_stream(const struct stream_in *in)
     bool in_call_rec = false;
 
     if (!in) {
-       ALOGE("%s: input stream is NULL", __func__);
+       ALOGV("%s: input stream is NULL", __func__);
        return in_call_rec;
     }
 

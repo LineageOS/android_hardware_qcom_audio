@@ -767,7 +767,8 @@ void audio_extn_utils_update_stream_output_app_type_cfg(void *platform,
         else if (-ENOSYS == bw)
             bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-        ALOGI("%s Allowing 24 and above bits playback on speaker ONLY at default sampling rate", __func__);
+        ALOGV("%s Allowing 24 and above bits playback on speaker \
+                  ONLY at default sampling rate", __func__);
     }
 
     property_get("vendor.audio.playback.mch.downsample",value,"");
@@ -887,7 +888,7 @@ static void audio_extn_btsco_get_sample_rate(int snd_device, int *sample_rate)
         *sample_rate = 16000;
         break;
     default:
-        ALOGD("%s:Not a BT SCO device, need not update sampling rate\n", __func__);
+        ALOGV("%s:Not a BT SCO device, need not update sampling rate\n", __func__);
         break;
     }
 }
@@ -913,7 +914,8 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
         ALOGV("%s Selected apptype: %d", __func__, usecase->stream.out->app_type_cfg.app_type);
         break;
     case PCM_CAPTURE:
-        if (usecase->id == USECASE_AUDIO_RECORD_VOIP)
+        if (usecase->id == USECASE_AUDIO_RECORD_VOIP
+                              || usecase->id == USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)
             usecase->stream.in->app_type_cfg.app_type = APP_TYPE_VOIP_AUDIO;
         else
             audio_extn_utils_update_stream_input_app_type_cfg(adev->platform,
@@ -1200,7 +1202,8 @@ int audio_extn_utils_get_app_sample_rate_for_device(
         }
     } else if (usecase->type == PCM_CAPTURE) {
         if (usecase->stream.in != NULL) {
-            if (usecase->id == USECASE_AUDIO_RECORD_VOIP)
+            if (usecase->id == USECASE_AUDIO_RECORD_VOIP
+                                  || usecase->id == USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)
                 usecase->stream.in->app_type_cfg.sample_rate = usecase->stream.in->sample_rate;
             if (voice_is_in_call_rec_stream(usecase->stream.in)) {
                 audio_extn_btsco_get_sample_rate(usecase->in_snd_device,
@@ -1361,6 +1364,27 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
 
     if(ctl)
         mixer_ctl_set_array(ctl, app_type_cfg, len);
+
+    /* send app type cfg for haptics */
+    if (usecase->id == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+             "Audio Stream %d App Type Cfg", adev->haptic_pcm_device_id );
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s: Could not get ctl for mixer cmd - %s", __func__,
+                  mixer_ctl_name);
+            rc = -EINVAL;
+            goto exit_send_app_type_cfg;
+        }
+        acdb_dev_id = platform_get_snd_device_acdb_id(SND_DEVICE_OUT_HAPTICS);
+        snd_device_be_idx = platform_get_snd_device_backend_index(SND_DEVICE_OUT_HAPTICS);
+        /* haptics acdb id */
+        app_type_cfg[1] = acdb_dev_id;
+        /* haptics be index */
+        app_type_cfg[3] = snd_device_be_idx;
+        mixer_ctl_set_array(ctl, app_type_cfg, len);
+    }
+
     rc = 0;
 exit_send_app_type_cfg:
     return rc;

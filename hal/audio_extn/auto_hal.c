@@ -723,7 +723,7 @@ snd_device_t auto_hal_get_input_snd_device(struct audio_device *adev,
                 snd_device = SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP;
             }
             if (adev->enable_hfp)
-                fp_platform_set_echo_reference(adev, false, &out_devices);
+                fp_platform_set_echo_reference(adev, true, &out_devices);
             break;
         case USECASE_AUDIO_HFP_SCO_DOWNLINK:
             snd_device = SND_DEVICE_IN_BT_SCO_MIC;
@@ -884,7 +884,10 @@ void auto_hal_deinit(void)
         return;
     }
 
-    free(auto_hal);
+    if(auto_hal != NULL) {
+       free(auto_hal);
+       auto_hal = NULL;
+    }
 
     return;
 }

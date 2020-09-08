@@ -54,6 +54,7 @@ struct hardware_info {
     snd_device_t  *snd_devices;
     bool is_wsa_combo_suppported;
     bool is_stereo_spkr;
+    bool use_mono_spkr_for_qmic;
 };
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
@@ -591,6 +592,7 @@ static void update_hardware_info_lahaina(
     if (!strncmp(snd_card_name, "lahaina-mtp-snd-card",
                  sizeof("lahaina-mtp-snd-card"))) {
         strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+        hw_info->use_mono_spkr_for_qmic = true;
     } else if (!strncmp(snd_card_name, "lahaina-qrd-snd-card",
                  sizeof("lahaina-qrd-snd-card"))) {
         strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
@@ -598,6 +600,10 @@ static void update_hardware_info_lahaina(
     } else if (!strncmp(snd_card_name, "lahaina-cdp-snd-card",
                  sizeof("lahaina-cdp-snd-card"))) {
         strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-hdk-snd-card",
+                 sizeof("lahaina-hdk-snd-card"))) {
+        strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else if (!strncmp(snd_card_name, "lahaina-shimaidp-snd-card",
                  sizeof("lahaina-shimaidp-snd-card"))) {
         strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
@@ -886,6 +892,7 @@ void *hw_info_init(const char *snd_card_name)
     hw_info->snd_devices = NULL;
     hw_info->num_snd_devices = 0;
     hw_info->is_stereo_spkr = true;
+    hw_info->use_mono_spkr_for_qmic = false;
     hw_info->is_wsa_combo_suppported = false;
     strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     strlcpy(hw_info->type, "", sizeof(hw_info->type));
@@ -1030,4 +1037,11 @@ bool hw_info_is_stereo_spkr(void *hw_info)
     struct hardware_info *my_data = (struct hardware_info*) hw_info;
 
     return my_data->is_stereo_spkr;
+}
+
+bool hw_info_use_mono_spkr_for_qmic(void *hw_info)
+{
+   struct hardware_info *my_data = (struct hardware_info*) hw_info;
+
+   return my_data->use_mono_spkr_for_qmic;
 }

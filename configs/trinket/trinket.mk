@@ -202,7 +202,7 @@ vendor.audio.flac.sw.decoder.24bit=true
 
 #timeout crash duration set to 20sec before system is ready.
 #timeout duration updates to default timeout of 5sec once the system is ready.
-PRODUCT_PRODUCT_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hal.boot.timeout.ms=20000
 
 #split a2dp DSP supported encoder list
@@ -230,14 +230,6 @@ vendor.audio.use.sw.ape.decoder=true
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
-
-#audio becoming noisy intent broadcast delay
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.sys.noisy.broadcast.delay=600
-
-#offload pausetime out duration to 3 secs to inline with other outputs
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.sys.offload.pstimeout.secs=3
 
 #Set AudioFlinger client heap size
 PRODUCT_PROPERTY_OVERRIDES += \
