@@ -4750,7 +4750,7 @@ void audio_extn_a2dp_init(void *adev)
     if (a2dp_init) {
         a2dp_offload_init_config_t a2dp_init_config;
         a2dp_init_config.fp_platform_get_pcm_device_id = platform_get_pcm_device_id;
-        a2dp_init_config.fp_check_a2dp_restore = check_a2dp_restore;
+        a2dp_init_config.fp_check_a2dp_restore_l = check_a2dp_restore_l;
 
         a2dp_init(adev, a2dp_init_config);
     }
