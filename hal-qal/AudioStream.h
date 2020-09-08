@@ -420,7 +420,6 @@ private:
     qal_device_id_t* mQalOutDeviceIds;
     audio_devices_t mAndroidOutDevices;
     bool mInitialized;
-
 public:
     StreamOutPrimary(audio_io_handle_t handle,
                      audio_devices_t devices,
@@ -433,6 +432,7 @@ public:
                      visualizer_hal_stop_output fnp_visualizer_stop_output_);
 
     ~StreamOutPrimary();
+    bool sendGaplessMetadata = true;
     int Standby();
     int SetVolume(float left, float right);
     uint64_t GetFramesWritten(struct timespec *timestamp);
@@ -471,6 +471,7 @@ protected:
     uint32_t fragments_ = 0;
     uint32_t fragment_size_ = 0;
     qal_snd_dec_t qalSndDec;
+    struct qal_compr_gapless_mdata gaplessMeta;
     uint32_t msample_rate;
     uint16_t mchannels;
     std::shared_ptr<audio_stream_out>   stream_;

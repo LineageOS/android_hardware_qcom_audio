@@ -125,10 +125,21 @@ static int32_t qal_callback(qal_stream_handle_t *stream_handle,
         {
             std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
             astream_out->drain_ready_ = true;
+            astream_out->sendGaplessMetadata = false;
             ALOGD("%s: received DRAIN_READY event", __func__);
             (astream_out->drain_condition_).notify_all();
             event = STREAM_CBK_EVENT_DRAIN_READY;
-            }
+        }
+        break;
+    case QAL_STREAM_CBK_EVENT_PARTIAL_DRAIN_READY:
+        {
+            std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
+            astream_out->drain_ready_ = true;
+            astream_out->sendGaplessMetadata = true;
+            ALOGD("%s: received PARTIAL DRAIN_READY event", __func__);
+            (astream_out->drain_condition_).notify_all();
+            event = STREAM_CBK_EVENT_DRAIN_READY;
+        }
         break;
     case QAL_STREAM_CBK_EVENT_ERROR:
         event = STREAM_CBK_EVENT_ERROR;
@@ -1602,7 +1613,19 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &qalSndDec, parms, &msample_rate, &mchannels);
     if (ret) {
         ALOGE("parse_compress_metadata Error (%x)", ret);
+        goto error;
     }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
+    if (ret >= 0 ) {
+        gaplessMeta.encoderDelay = atoi(value);
+    }
+    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
+    if (ret >= 0) {
+        gaplessMeta.encoderPadding = atoi(value);
+    }
+    ALOGD("%s new encoder delay %u and padding %u", __func__,
+           gaplessMeta.encoderDelay, gaplessMeta.encoderPadding);
+
 error:
     ALOGE("%s: exit %d", __func__, ret);
     return ret;
@@ -1961,6 +1984,8 @@ int StreamOutPrimary::Open() {
         ret = -EINVAL;
         goto error_open;
     }
+    //TODO: Remove below code, once qal_stream_open is moved to
+    //adev_open_output_stream
     if (streamAttributes_.type == QAL_STREAM_COMPRESSED) {
         qal_param_payload *param_payload = nullptr;
         param_payload = (qal_param_payload *) calloc (1,
@@ -1977,7 +2002,8 @@ int StreamOutPrimary::Open() {
                                        QAL_PARAM_ID_CODEC_CONFIGURATION,
                                        param_payload);
             if (ret)
-               ALOGE("Qal Set Param Error (%x)", ret);
+                ALOGE("Qal Set Param Error (%x)", ret);
+            free(param_payload);
         }
     }
 
@@ -2130,6 +2156,29 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
             ret = StartOffloadVisualizer(handle_, qal_stream_handle_);
         }
 
+    }
+    if (streamAttributes_.type == QAL_STREAM_COMPRESSED &&
+                                      sendGaplessMetadata) {
+        qal_param_payload *param_payload = nullptr;
+        param_payload = (qal_param_payload *) calloc (1,
+                                              sizeof(qal_param_payload) +
+                                              sizeof(struct qal_compr_gapless_mdata));
+        if (!param_payload) {
+            ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+                   sizeof(qal_param_payload) + sizeof(struct qal_compr_gapless_mdata));
+        } else {
+            ALOGD("%s sending gapless metadata", __func__);
+            param_payload->payload_size = sizeof(struct qal_compr_gapless_mdata);
+            memcpy(param_payload->payload, &gaplessMeta, param_payload->payload_size);
+
+            ret = qal_stream_set_param(qal_stream_handle_,
+                                       QAL_PARAM_ID_GAPLESS_MDATA,
+                                       param_payload);
+            if (ret)
+                ALOGE("QAL set param for gapless failed, error (%x)", ret);
+            free(param_payload);
+        }
+        sendGaplessMetadata = false;
     }
 
     if (halInputFormat != halOutputFormat && convertBuffer != NULL) {
