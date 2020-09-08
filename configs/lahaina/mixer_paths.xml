@@ -116,6 +116,7 @@
     <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia13" value="0" />
     <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia14" value="0" />
     <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia15" value="0" />
+    <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia16" value="0" />
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia16" value="0" />
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia1" value="0" />
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia2" value="0" />
