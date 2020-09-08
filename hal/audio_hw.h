@@ -256,6 +256,8 @@ struct stream_out {
     bool a2dp_compress_mute;
     float volume_l;
     float volume_r;
+    float applied_volume_l;
+    float applied_volume_r;
 
     error_log_t *error_log;
 

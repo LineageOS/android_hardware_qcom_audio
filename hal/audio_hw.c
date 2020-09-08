@@ -72,6 +72,8 @@
 /* treat as unsigned Q1.13 */
 #define APP_TYPE_GAIN_DEFAULT         0x2000
 #define COMPRESS_PLAYBACK_VOLUME_MAX 0x2000
+#define PCM_PLAYBACK_VOLUME_MAX 0x2000
+#define INVALID_OUT_VOLUME -1
 
 /* treat as unsigned Q1.13 */
 #define VOIP_PLAYBACK_VOLUME_MAX 0x2000
@@ -359,7 +361,8 @@ static unsigned int audio_device_ref_count;
 static int last_known_cal_step = -1 ;
 
 static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool restore);
-static int set_compr_volume(struct audio_stream_out *stream, float left, float right);
+static int out_set_compr_volume(struct audio_stream_out *stream, float left, float right);
+static int out_set_pcm_volume(struct audio_stream_out *stream, float left, float right);
 
 static int in_set_microphone_direction(const struct audio_stream_in *stream,
                                            audio_microphone_direction_t dir);
@@ -2602,6 +2605,11 @@ int start_output_stream(struct stream_out *out)
                 goto error_open;
             }
         }
+        if ((out->usecase == USECASE_AUDIO_PLAYBACK_LOW_LATENCY
+                || out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER
+                || out->usecase == USECASE_AUDIO_PLAYBACK_ULL)) {
+           out_set_pcm_volume(&out->stream, out->volume_l, out->volume_r);
+         }
     }
 
     register_out_stream(out);
@@ -2969,6 +2977,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     bool select_new_device = false;
     int status = 0;
     bool bypass_a2dp = false;
+    bool forced_speaker_fallback = false;
 
     ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
           __func__, out->usecase, use_case_table[out->usecase], kvpairs);
@@ -2990,6 +2999,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 out_standby_l(&out->stream.common);
             }
             val = AUDIO_DEVICE_OUT_SPEAKER;
+            forced_speaker_fallback = true;
         }
 
         pthread_mutex_lock(&adev->lock);
@@ -3004,6 +3014,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         if (out->devices == AUDIO_DEVICE_OUT_AUX_DIGITAL &&
                 val == AUDIO_DEVICE_NONE) {
             val = AUDIO_DEVICE_OUT_SPEAKER;
+            forced_speaker_fallback = true;
         }
 
         /*
@@ -3018,6 +3029,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 !audio_extn_a2dp_is_ready() &&
                 !adev->bt_sco_on) {
                 val = AUDIO_DEVICE_OUT_SPEAKER;
+                forced_speaker_fallback = true;
         }
 
         /* To avoid a2dp to sco overlapping / BT device improper state
@@ -3094,6 +3106,42 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
             }
 
             if (!out->standby) {
+                int volume_delay_us = 0;
+                if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+                    pthread_mutex_lock(&out->compr_mute_lock);
+                    if (out->a2dp_compress_mute &&
+                        (!(new_dev & AUDIO_DEVICE_OUT_ALL_A2DP) ||
+                         audio_extn_a2dp_is_ready())) {
+                        out->a2dp_compress_mute = false;
+                    }
+                    float volume_l = out->volume_l;
+                    float volume_r = out->volume_r;
+                    if (out->a2dp_compress_mute || forced_speaker_fallback) {
+                        volume_l = 0.0;
+                        volume_r = 0.0;
+                    }
+                    if (volume_l != out->applied_volume_l || volume_r != out->applied_volume_r)
+                        volume_delay_us = COMPRESS_OFFLOAD_PLAYBACK_LATENCY * 2000;
+
+                    out_set_compr_volume(&out->stream, volume_l, volume_r);
+                    pthread_mutex_unlock(&out->compr_mute_lock);
+                } else if (out->usecase == USECASE_AUDIO_PLAYBACK_LOW_LATENCY ||
+                        out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER ||
+                        out->usecase == USECASE_AUDIO_PLAYBACK_ULL) {
+                    float volume_l = out->volume_l;
+                    float volume_r = out->volume_r;
+                    if (forced_speaker_fallback) {
+                        volume_l = 0.0;
+                        volume_r = 0.0;
+                    }
+                    if (volume_l != out->applied_volume_l || volume_r != out->applied_volume_r)
+                        volume_delay_us = (int)platform_render_latency(out) * 2;
+
+                    out_set_pcm_volume(&out->stream, volume_l, volume_r);
+                }
+                if (volume_delay_us > 0)
+                    usleep(volume_delay_us * 2);
+
                 if (!same_dev) {
                     ALOGV("update routing change");
                     // inform adm before actual routing to prevent glitches.
@@ -3120,14 +3168,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
                 if (!same_dev)
                     platform_set_swap_channels(adev, true);
 
-                if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-                    out->a2dp_compress_mute &&
-                    (!(out->devices & AUDIO_DEVICE_OUT_ALL_A2DP) || audio_extn_a2dp_is_ready())) {
-                    pthread_mutex_lock(&out->compr_mute_lock);
-                    out->a2dp_compress_mute = false;
-                    set_compr_volume(&out->stream, out->volume_l, out->volume_r);
-                    pthread_mutex_unlock(&out->compr_mute_lock);
-                }
+
             }
 
         }
@@ -3286,7 +3327,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
         // return a smaller number
         period_ms = (out->af_period_multiplier * out->config.period_size *
                      1000) / (out->config.rate);
-        hw_delay = platform_render_latency(out->usecase)/1000;
+        hw_delay = platform_render_latency(out)/1000;
         return period_ms + hw_delay;
     }
 
@@ -3299,7 +3340,7 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
     return latency;
 }
 
-static int set_compr_volume(struct audio_stream_out *stream, float left,
+static int out_set_compr_volume(struct audio_stream_out *stream, float left,
                           float right)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -3309,6 +3350,9 @@ static int set_compr_volume(struct audio_stream_out *stream, float left,
     struct mixer_ctl *ctl;
     int pcm_device_id = platform_get_pcm_device_id(out->usecase,
                                                PCM_PLAYBACK);
+
+    if (left == out->applied_volume_l && right == out->applied_volume_r)
+       return 0;
 
     snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
              "Compress Playback %d Volume", pcm_device_id);
@@ -3324,7 +3368,47 @@ static int set_compr_volume(struct audio_stream_out *stream, float left,
     volume[1] = (int)(right * COMPRESS_PLAYBACK_VOLUME_MAX);
     mixer_ctl_set_array(ctl, volume, sizeof(volume) / sizeof(volume[0]));
 
+    out->applied_volume_l = left;
+    out->applied_volume_r = right;
     return 0;
+}
+
+static int out_set_pcm_volume(struct audio_stream_out *stream, float left,
+                              float right)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+
+    if (left == out->applied_volume_l && right == out->applied_volume_r)
+       return 0;
+
+    /* Volume control for pcm playback */
+    if (left != right) {
+        return -EINVAL;
+    } else {
+        char mixer_ctl_name[128];
+        struct audio_device *adev = out->dev;
+        struct mixer_ctl *ctl;
+        int pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
+        snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "Playback %d Volume", pcm_device_id);
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+        if (!ctl) {
+            ALOGE("%s : Could not get ctl for mixer cmd - %s", __func__, mixer_ctl_name);
+            return -EINVAL;
+        }
+
+        int volume = (int) (left * PCM_PLAYBACK_VOLUME_MAX);
+        int ret = mixer_ctl_set_value(ctl, 0, volume);
+        if (ret < 0) {
+            ALOGE("%s: Could not set ctl, error:%d ", __func__, ret);
+            return -EINVAL;
+        }
+
+        ALOGV("%s : Pcm set volume value %d left %f", __func__, volume, left);
+
+        out->applied_volume_l = left;
+        out->applied_volume_r = right;
+        return 0;
+    }
 }
 
 static int out_set_volume(struct audio_stream_out *stream, float left,
@@ -3341,7 +3425,7 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
         pthread_mutex_lock(&out->compr_mute_lock);
         ALOGV("%s: compress mute %d", __func__, out->a2dp_compress_mute);
         if (!out->a2dp_compress_mute)
-            ret = set_compr_volume(stream, left, right);
+            ret = out_set_compr_volume(stream, left, right);
         out->volume_l = left;
         out->volume_r = right;
         pthread_mutex_unlock(&out->compr_mute_lock);
@@ -3770,7 +3854,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                 // This adjustment accounts for buffering after app processor.
                 // It is based on estimated DSP latency per use case, rather than exact.
                 signed_frames -=
-                    (platform_render_latency(out->usecase) * out->sample_rate / 1000000LL);
+                    (platform_render_latency(out) * out->sample_rate / 1000000LL);
 
                 // Adjustment accounts for A2DP encoder latency with non-offload usecases
                 // Note: Encoder latency is returned in ms, while platform_render_latency in us.
@@ -4490,7 +4574,8 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
         unsigned int avail;
         if (pcm_get_htimestamp(in->pcm, &avail, &timestamp) == 0) {
             *frames = in->frames_read + avail;
-            *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec;
+            *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec
+                    - platform_capture_latency(in) * 1000LL;
             ret = 0;
         }
     }
@@ -4917,6 +5002,30 @@ static void in_update_sink_metadata(struct audio_stream_in *stream,
     pthread_mutex_unlock(&in->lock);
 }
 
+static int check_and_set_gapless_mode(struct audio_device *adev)
+{
+    bool gapless_enabled = false;
+    const char *mixer_ctl_name = "Compress Gapless Playback";
+    struct mixer_ctl *ctl;
+
+    ALOGV("%s:", __func__);
+    gapless_enabled = property_get_bool("vendor.audio.offload.gapless.enabled", false);
+
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                               __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    if (mixer_ctl_set_value(ctl, 0, gapless_enabled) < 0) {
+        ALOGE("%s: Could not set gapless mode %d",
+                       __func__, gapless_enabled);
+        return -EINVAL;
+    }
+    return 0;
+}
+
 static int adev_open_output_stream(struct audio_hw_device *dev,
                                    audio_io_handle_t handle,
                                    audio_devices_t devices,
@@ -5085,6 +5194,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             out->non_blocking = 1;
 
         out->send_new_metadata = 1;
+
+        check_and_set_gapless_mode(adev);
+
         create_offload_callback_thread(out);
         ALOGV("%s: offloaded output offload_info version %04x bit rate %d",
                 __func__, config->offload_info.version,
@@ -5292,6 +5404,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             }
         }
 
+        if (out->usecase == USECASE_AUDIO_PLAYBACK_LOW_LATENCY ||
+               out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER ||
+               out->usecase == USECASE_AUDIO_PLAYBACK_ULL) {
+            out->volume_l = 1.0;
+            out->volume_r = 1.0;
+        }
+
         if (config->sample_rate == 0) {
             out->sample_rate = out->config.rate;
         } else {
@@ -5373,6 +5492,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         goto error_open;
     }
     pthread_mutex_unlock(&adev->lock);
+
+    out->applied_volume_l = INVALID_OUT_VOLUME;
+    out->applied_volume_r = INVALID_OUT_VOLUME;
 
     out->stream.common.get_sample_rate = out_get_sample_rate;
     out->stream.common.set_sample_rate = out_set_sample_rate;
@@ -6386,7 +6508,7 @@ static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *ou
             if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
                 (out->a2dp_compress_mute)) {
                 out->a2dp_compress_mute = false;
-                set_compr_volume(&out->stream, out->volume_l, out->volume_r);
+                out_set_compr_volume(&out->stream, out->volume_l, out->volume_r);
             }
             pthread_mutex_unlock(&out->compr_mute_lock);
         }
@@ -6403,7 +6525,7 @@ static int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *ou
                 right_p = out->volume_r;
                 if (out->offload_state == OFFLOAD_STATE_PLAYING)
                     compress_pause(out->compr);
-                set_compr_volume(&out->stream, 0.0f, 0.0f);
+                out_set_compr_volume(&out->stream, 0.0f, 0.0f);
                 out->a2dp_compress_mute = true;
                 select_devices(adev, out->usecase);
                 if (out->offload_state == OFFLOAD_STATE_PLAYING)
