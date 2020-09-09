@@ -3405,6 +3405,10 @@
         <ctl name="SpkrMono WSA_RDAC" value="Switch" />
     </path>
 
+    <path name="speaker-mono">
+        <path name="speaker" />
+    </path>
+
     <path name="speaker-mono-2">
         <path name="speaker-mono" />
     </path>
