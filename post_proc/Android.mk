@@ -59,8 +59,7 @@ endif
 
 LOCAL_HEADER_LIBRARIES := libhardware_headers \
                           libsystem_headers \
-                          libutils_headers \
-                          libar-acdbdata
+                          libutils_headers
 
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
@@ -87,6 +86,8 @@ LOCAL_C_INCLUDES := \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         $(call include-path-for, audio-effects) \
         vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn/
+
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/include/mm-audio/acdbdata
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
