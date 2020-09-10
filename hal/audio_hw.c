@@ -3173,7 +3173,8 @@ int start_input_stream(struct stream_in *in)
     if (get_usecase_from_list(adev, in->usecase) != NULL) {
         ALOGE("%s: use case assigned already in use, stream(%p)usecase(%d: %s)",
             __func__, &in->stream, in->usecase, use_case_table[in->usecase]);
-        return -EINVAL;
+        ret = -EINVAL;
+        goto error_config;
     }
 
     in->pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
@@ -3322,6 +3323,8 @@ error_open:
     stop_input_stream(in);
 
 error_config:
+    if (audio_extn_cin_attached_usecase(in))
+        audio_extn_cin_close_input_stream(in);
     /*
      * sleep 50ms to allow sufficient time for kernel
      * drivers to recover incases like SSR.
