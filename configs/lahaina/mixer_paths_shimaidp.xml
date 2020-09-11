@@ -2613,6 +2613,7 @@
     </path>
 
     <path name="headphones-44.1">
+        <ctl name="RX_CDC_DMA_RX_0 SampleRate" value="KHZ_44P1" />
         <path name="headphones" />
     </path>
 
