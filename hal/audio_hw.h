@@ -244,6 +244,9 @@ enum {
     USECASE_AUDIO_PLAYBACK_PHONE,
     USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER,
     USECASE_AUDIO_PLAYBACK_REAR_SEAT,
+    USECASE_AUDIO_RECORD_BUS,
+    USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER,
+    USECASE_AUDIO_RECORD_BUS_REAR_SEAT,
 
     /*Audio FM Tuner usecase*/
     USECASE_AUDIO_FM_TUNER_EXT,
@@ -330,12 +333,15 @@ typedef enum render_mode {
  */
 #define MAX_CAR_AUDIO_STREAMS    32
 enum {
-    CAR_AUDIO_STREAM_MEDIA            = 0x1,
-    CAR_AUDIO_STREAM_SYS_NOTIFICATION = 0x2,
-    CAR_AUDIO_STREAM_NAV_GUIDANCE     = 0x4,
-    CAR_AUDIO_STREAM_PHONE            = 0x8,
-    CAR_AUDIO_STREAM_FRONT_PASSENGER  = 0x100,
-    CAR_AUDIO_STREAM_REAR_SEAT        = 0x10000,
+    CAR_AUDIO_STREAM_MEDIA              = 0x1,
+    CAR_AUDIO_STREAM_SYS_NOTIFICATION   = 0x2,
+    CAR_AUDIO_STREAM_NAV_GUIDANCE       = 0x4,
+    CAR_AUDIO_STREAM_PHONE              = 0x8,
+    CAR_AUDIO_STREAM_IN_PRIMARY         = 0x10,
+    CAR_AUDIO_STREAM_FRONT_PASSENGER    = 0x100,
+    CAR_AUDIO_STREAM_IN_FRONT_PASSENGER = 0x200,
+    CAR_AUDIO_STREAM_REAR_SEAT          = 0x10000,
+    CAR_AUDIO_STREAM_IN_REAR_SEAT       = 0x20000,
 };
 
 struct stream_app_type_cfg {
@@ -464,7 +470,7 @@ struct stream_out {
     error_log_t *error_log;
     bool pspd_coeff_sent;
 
-    int car_audio_stream;
+    int car_audio_stream; /* handle for car_audio_stream */
 
     union {
         char *addr;
@@ -538,6 +544,8 @@ struct stream_in {
     error_log_t *error_log;
 
     simple_stats_t start_latency_ms;
+
+    int car_audio_stream; /* handle for car_audio_stream*/
 };
 
 typedef enum {
