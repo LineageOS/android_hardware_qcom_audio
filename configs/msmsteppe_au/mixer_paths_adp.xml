@@ -1170,8 +1170,18 @@
     </path>
 
     <path name="audio-record">
-        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
+        <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
         <ctl name="MultiMedia1 Mixer TERT_TDM_TX_0" value="1" />
+    </path>
+
+    <path name="front-passenger-record">
+        <ctl name="QUAT_TDM_TX_0 Channels" value="Eight" />
+        <ctl name="MultiMedia23 Mixer QUAT_TDM_TX_0" value="1" />
+    </path>
+
+    <path name="rear-seat-record">
+        <ctl name="QUAT_TDM_TX_0 Channels" value="Eight" />
+        <ctl name="MultiMedia22 Mixer QUAT_TDM_TX_0" value="1" />
     </path>
 
     <path name="audio-record usb-headset-mic">
@@ -1691,6 +1701,10 @@
 
     <path name="bus-speaker">
         <!--ctl name="TERT_TDM_RX_0 Channels" value="Six" /-->
+    </path>
+
+    <path name="bus-mic">
+        <!--ctl name="TERT_TDM_TX_0 Channels" value="Four" /-->
     </path>
 
    <path name="sidetone-iir">
