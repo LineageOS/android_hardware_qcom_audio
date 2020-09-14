@@ -34,7 +34,6 @@
 #include <cutils/list.h>
 #include <log/log.h>
 #include <fcntl.h>
-#include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include <audio_effects/effect_hwaccelerator.h>
 

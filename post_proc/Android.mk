@@ -64,7 +64,6 @@ LOCAL_HEADER_LIBRARIES := libhardware_headers \
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
         liblog \
-        libtinyalsa \
         libar-pal \
         libdl
 
@@ -78,7 +77,6 @@ LOCAL_MODULE_OWNER := qti
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_C_INCLUDES := \
-        external/tinyalsa/include \
         vendor/qcom/opensource/audio-hal/primary-hal/hal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
         vendor/qcom/opensource/pal \
@@ -199,11 +197,9 @@ LOCAL_C_INCLUDES := \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
-        external/tinyalsa/include \
         $(call include-path-for, audio-effects) \
         $(call include-path-for, audio-route) \
         vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn \
-        external/tinycompress/include \
         system/media/audio_utils/include
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)

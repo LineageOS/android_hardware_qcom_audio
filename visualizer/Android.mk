@@ -43,15 +43,13 @@ LOCAL_SHARED_LIBRARIES := \
     libcutils \
     liblog \
     libdl \
-    libar-pal \
-    libtinyalsa
+    libar-pal
 
 LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libqcomvisualizer
 LOCAL_VENDOR_MODULE := true
 
 LOCAL_C_INCLUDES := \
-    external/tinyalsa/include \
     vendor/qcom/opensource/pal \
     $(call include-path-for, audio-effects)
 

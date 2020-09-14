@@ -43,7 +43,6 @@
 #include <cutils/str_parms.h>
 #include <log/log.h>
 #include <system/thread_defs.h>
-#include <tinyalsa/asoundlib.h>
 #include <hardware/audio_effect.h>
 #include <pthread.h>
 #include <unistd.h>

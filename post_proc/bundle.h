@@ -20,7 +20,6 @@
 #ifndef OFFLOAD_EFFECT_BUNDLE_H
 #define OFFLOAD_EFFECT_BUNDLE_H
 
-#include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include "effect_api.h"
 #include "PalApi.h"

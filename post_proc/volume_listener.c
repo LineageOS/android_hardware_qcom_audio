@@ -39,7 +39,7 @@
 #include <log/log.h>
 #include <hardware/audio_effect.h>
 #include <cutils/properties.h>
-#include <platform_api.h>
+
 
 #define PRIMARY_HAL_PATH XSTR(LIB_AUDIO_HAL)
 #define XSTR(x) STR(x)
@@ -59,11 +59,19 @@
                                                             i == NOTIFICATION?"Notification":\
                                                             "--INVALID--"); \
 
+#define MAX_VOLUME_CAL_STEPS 15
+
 #define MAX_GAIN_LEVELS 5
 
 #define AHAL_GAIN_DEPENDENT_INTERFACE_FUNCTION "audio_hw_send_gain_dep_calibration"
 #define AHAL_GAIN_GET_MAPPING_TABLE "audio_hw_get_gain_level_mapping"
 #define DEFAULT_CAL_STEP 0
+
+struct amp_db_and_gain_table {
+    float amp;
+    float db;
+    uint32_t level;
+};
 
 #ifdef AUDIO_FEATURE_ENABLED_GCOV
 extern void  __gcov_flush();

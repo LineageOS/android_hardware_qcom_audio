@@ -23,7 +23,6 @@
 #include <cutils/list.h>
 #include <log/log.h>
 #include <cutils/properties.h>
-#include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include <audio_effects/effect_bassboost.h>
 #include <stdlib.h>

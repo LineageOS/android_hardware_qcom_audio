@@ -108,8 +108,6 @@ typedef enum {
 struct sound_trigger_session_info {
     void* p_ses; /* opaque pointer to st_session obj */
     int capture_handle;
-    struct pcm *pcm;
-    struct pcm_config config;
 };
 
 struct audio_read_samples_info {

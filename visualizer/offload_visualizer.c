@@ -29,17 +29,8 @@
 #include <cutils/list.h>
 #include <log/log.h>
 #include <system/thread_defs.h>
-#include <tinyalsa/asoundlib.h>
 #include <audio_effects/effect_visualizer.h>
 #include "PalApi.h"
-
-#define LIB_ACDB_LOADER "libacdbloader.so"
-#define ACDB_DEV_TYPE_OUT 1
-#define AFE_PROXY_ACDB_ID 45
-
-static void* acdb_handle;
-
-typedef void (*acdb_send_audio_cal_t)(int, int);
 
 #ifdef AUDIO_FEATURE_ENABLED_GCOV
 extern void  __gcov_flush();
@@ -52,8 +43,6 @@ static void enable_gcov()
 {
 }
 #endif
-
-acdb_send_audio_cal_t acdb_send_audio_cal;
 
 enum {
     EFFECT_STATE_UNINITIALIZED,
@@ -212,18 +201,6 @@ int thread_status;
 
 #define AUDIO_CAPTURE_BIT_WIDTH (16)
 
-struct pcm_config pcm_config_capture = {
-    .channels = AUDIO_CAPTURE_CHANNEL_COUNT,
-    .rate = AUDIO_CAPTURE_SMP_RATE,
-    .period_size = AUDIO_CAPTURE_PERIOD_SIZE,
-    .period_count = AUDIO_CAPTURE_PERIOD_COUNT,
-    .format = PCM_FORMAT_S16_LE,
-    .start_threshold = AUDIO_CAPTURE_PERIOD_SIZE / 4,
-    .stop_threshold = INT_MAX,
-    .avail_min = AUDIO_CAPTURE_PERIOD_SIZE / 4,
-};
-
-
 /*
  *  Local functions
  */
@@ -326,134 +303,6 @@ bool effects_enabled() {
     return false;
 }
 
-int set_control(const char* name, struct mixer *mixer, int value) {
-    struct mixer_ctl *ctl;
-
-    ctl = mixer_get_ctl_by_name(mixer, name);
-    if (ctl == NULL) {
-        ALOGW("%s: could not get %s ctl", __func__, name);
-        return -EINVAL;
-    }
-    if (mixer_ctl_set_value(ctl, 0, value) != 0) {
-        ALOGW("%s: error setting value %d on %s ", __func__, value, name);
-        return -EINVAL;
-    }
-
-    return 0;
-}
-
-int configure_proxy_capture(struct mixer *mixer, int value) {
-    int retval = 0;
-
-    if (value && acdb_send_audio_cal)
-        acdb_send_audio_cal(AFE_PROXY_ACDB_ID, ACDB_DEV_TYPE_OUT);
-
-    retval = set_control("AFE_PCM_RX Audio Mixer MultiMedia4", mixer, value);
-
-    if (retval != 0)
-        return retval;
-
-    // Extending visualizer to capture for compress2 path as well.
-    // for extending it to multiple offload either this needs to be extended
-    // or need to find better solution to enable only active offload sessions
-
-    retval = set_control("AFE_PCM_RX Audio Mixer MultiMedia7", mixer, value);
-    if (retval != 0)
-        return retval;
-
-    return 0;
-}
-
-// Get sound card number from pcm device
-int get_snd_card_num(char *device_info)
-{
-    char *token = NULL, *saveptr = NULL;;
-    int num = -1;
-
-    token = strtok_r(device_info, ": ", &saveptr);
-    token = strtok_r(token, "-", &saveptr);
-    if (token)
-        num = atoi(token);
-
-    return num;
-}
-
-// Get device id from pcm device
-int get_device_id(char *device_info)
-{
-    char *token = NULL, *saveptr = NULL;
-    int id = -1;
-
-    token = strtok_r(device_info, ": ", &saveptr);
-    token = strtok_r(token, "-", &saveptr);
-    while (token != NULL) {
-        token = strtok_r(NULL, "-", &saveptr);
-        if (token) {
-            id = atoi(token);
-            break;
-        }
-    }
-
-    return id;
-}
-
-int parse_device_info(int param, char *device_info)
-{
-    switch (param) {
-        case SND_CARD_NUM:
-            return get_snd_card_num(device_info);
-        case DEVICE_ID:
-            return get_device_id(device_info);
-        default:
-            ALOGE("%s: invalid pcm device param", __func__);
-            return -1;
-    }
-}
-
-/*
-* Parse a pcm device from procfs
-* Entries in pcm file will have one of two formats:
-* <snd_card_num>-<device_id>: <descriptor> : : <playback> : <capture>
-* <snd_card_num>-<device_id>: <descriptor> : : <playback or capture>
-*/
-int parse_pcm_device(char *descriptor, int param)
-{
-    const char *pcm_devices_path = "/proc/asound/pcm";
-    char *device_info = NULL;
-    size_t len = 0;
-    ssize_t bytes_read = -1;
-    FILE *fp = NULL;
-    int ret = -1;
-
-    if (descriptor == NULL) {
-        ALOGE("%s: pcm device descriptor is NULL", __func__);
-        return ret;
-    }
-
-    if ((fp = fopen(pcm_devices_path, "r")) == NULL) {
-        ALOGE("Cannot open %s file to get list of pcm devices",
-              pcm_devices_path);
-        return ret;
-    }
-
-    while ((bytes_read = getline(&device_info, &len, fp) != -1)) {
-        if (strstr(device_info, descriptor)) {
-            ret = parse_device_info(param, device_info);
-            break;
-        }
-    }
-
-    if (device_info) {
-        free(device_info);
-        device_info = NULL;
-    }
-
-    fclose(fp);
-    fp = NULL;
-
-    return ret;
-}
-
 void *capture_thread_loop(void *arg)
 {
     int16_t data[AUDIO_CAPTURE_PERIOD_SIZE * AUDIO_CAPTURE_CHANNEL_COUNT * sizeof(int16_t)];
@@ -461,13 +310,7 @@ void *capture_thread_loop(void *arg)
     buf.frameCount = AUDIO_CAPTURE_PERIOD_SIZE;
     buf.s16 = data;
     bool capture_enabled = false;
-    //struct mixer *mixer;
-    //struct pcm *pcm = NULL;
     int ret;
-    //int retry_num = 0;
-    //int sound_card = SOUND_CARD;
-    //int capture_device = CAPTURE_DEVICE;
-
     pal_stream_handle_t *in_stream_handle = NULL;
     uint32_t no_of_devices = 1;
     struct pal_stream_attributes stream_attr;
@@ -504,17 +347,6 @@ void *capture_thread_loop(void *arg)
     prctl(PR_SET_NAME, (unsigned long)"visualizer capture", 0, 0, 0);
 
     pthread_mutex_lock(&lock);
-
-    /*mixer = mixer_open(MIXER_CARD);
-    while (mixer == NULL && retry_num < RETRY_NUMBER) {
-        usleep(RETRY_US);
-        mixer = mixer_open(MIXER_CARD);
-        retry_num++;
-    }
-    if (mixer == NULL) {
-        pthread_mutex_unlock(&lock);
-        return NULL;
-    }*/
 
     for (;;) {
         if (exit_thread) {
@@ -841,19 +673,6 @@ int visualizer_init(effect_context_t *context)
     }
 
     set_config(context, &context->config);
-
-    /*if (acdb_handle == NULL) {
-        acdb_handle = dlopen(LIB_ACDB_LOADER, RTLD_NOW);
-        if (acdb_handle == NULL) {
-            ALOGE("%s: DLOPEN failed for %s", __func__, LIB_ACDB_LOADER);
-        } else {
-            acdb_send_audio_cal = (acdb_send_audio_cal_t)dlsym(acdb_handle,
-                                                    "acdb_loader_send_audio_cal");
-            if (!acdb_send_audio_cal)
-                ALOGE("%s: Could not find the symbol acdb_send_audio_cal from %s",
-                      __func__, LIB_ACDB_LOADER);
-            }
-    } */
 
     return 0;
 }

@@ -1849,9 +1849,9 @@ uint32_t StreamOutPrimary::GetBufferSize() {
 }
 
 /*Translates PCM formats to AOSP formats*/
-audio_format_t StreamOutPrimary::AlsatoHalFormat(uint32_t pcm_format) {
+audio_format_t StreamOutPrimary::AlsatoHalFormat(uint32_t pcm_format __unused) {
     audio_format_t format = AUDIO_FORMAT_INVALID;
-
+/*
     switch(pcm_format) {
     case PCM_FORMAT_S16_LE:
         format = AUDIO_FORMAT_PCM_16_BIT;
@@ -1869,13 +1869,14 @@ audio_format_t StreamOutPrimary::AlsatoHalFormat(uint32_t pcm_format) {
         ALOGW("Incorrect PCM format");
         format = AUDIO_FORMAT_INVALID;
     }
+*/
     return format;
 }
 
 /*Translates hal format (AOSP) to alsa formats*/
-uint32_t StreamOutPrimary::HaltoAlsaFormat(audio_format_t hal_format) {
-    uint32_t pcm_format;
-
+uint32_t StreamOutPrimary::HaltoAlsaFormat(audio_format_t hal_format __unused) {
+    uint32_t pcm_format = 0;
+/*
     switch (hal_format) {
     case AUDIO_FORMAT_PCM_32_BIT:
     case AUDIO_FORMAT_PCM_FLOAT: {
@@ -1899,6 +1900,7 @@ uint32_t StreamOutPrimary::HaltoAlsaFormat(audio_format_t hal_format) {
         pcm_format = PCM_FORMAT_S16_LE;
         break;
     }
+*/
     return pcm_format;
 }
 

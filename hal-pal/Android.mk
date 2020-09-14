@@ -40,7 +40,6 @@ LOCAL_SHARED_LIBRARIES := \
     android.hardware.power@1.2 \
 
 LOCAL_C_INCLUDES += \
-    external/tinyalsa/include \
     system/media/audio_utils/include \
     external/expat/lib \
     vendor/qcom/opensource/core-utils/fwk-detect \

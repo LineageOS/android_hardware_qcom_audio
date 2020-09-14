@@ -27,8 +27,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <tinyalsa/asoundlib.h>
-
 #include "AudioDevice.h"
 #include "AudioStream.h"
 
