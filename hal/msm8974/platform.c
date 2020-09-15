@@ -1803,8 +1803,12 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("bengal-qrd-snd-card")) ||
          !strncmp(snd_card_name, "holi-mtp-snd-card",
                    sizeof("holi-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "holi-mtpsku1-snd-card",
+                   sizeof("holi-mtpsku1-snd-card")) ||
          !strncmp(snd_card_name, "holi-qrd-snd-card",
                    sizeof("holi-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "holi-qrdsku1-snd-card",
+                   sizeof("holi-qrdsku1-snd-card")) ||
          !strncmp(snd_card_name, "msm8937-snd-card-mtp",
                    sizeof("msm8937-snd-card-mtp")) ||
          !strncmp(snd_card_name, "msm8953-snd-card-mtp",
@@ -3378,7 +3382,9 @@ void *platform_init(struct audio_device *adev)
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "holi-qrd-snd-card",
-               sizeof("holi-qrd-snd-card"))) {
+               sizeof("holi-qrd-snd-card")) ||
+               !strncmp(snd_card_name, "holi-qrdsku1-snd-card",
+               sizeof("holi-qrdsku1-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "qcs405-wsa-snd-card",

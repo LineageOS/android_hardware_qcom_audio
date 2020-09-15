@@ -574,15 +574,18 @@ static void update_hardware_info_holi(
           const char *snd_card_name)
 {
     if (!strncmp(snd_card_name, "holi-mtp-snd-card",
-                 sizeof("holi-mtp-snd-card"))) {
+                 sizeof("holi-mtp-snd-card")) ||
+        !strncmp(snd_card_name, "holi-qrd-snd-card",
+                 sizeof("holi-qrd-snd-card")) ||
+        !strncmp(snd_card_name, "holi-qrdsku1-snd-card",
+                 sizeof("holi-qrdsku1-snd-card")) ||
+        !strncmp(snd_card_name, "holi-mtpsku1-snd-card",
+                 sizeof("holi-mtpsku1-snd-card"))) {
         strlcpy(hw_info->name, "holi", sizeof(hw_info->name));
-    } else if (!strncmp(snd_card_name, "holi-qrd-snd-card",
-                 sizeof("holi-qrd-snd-card"))) {
-        strlcpy(hw_info->name, "holi", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else {
         ALOGW("%s: Not a holi device", __func__);
     }
-    hw_info->is_stereo_spkr = false;
 }
 
 static void update_hardware_info_lahaina(
