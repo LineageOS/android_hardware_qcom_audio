@@ -49,9 +49,19 @@ int AudioVoice::SetMode(const audio_mode_t mode) {
 
     ALOGD("%s: enter: %d", __func__, mode);
     if (mode_ != mode) {
-        mode_ = mode;
-        if (voice_.in_call && mode == AUDIO_MODE_NORMAL)
-            ret = StopCall();
+        /*start a new session for full voice call*/
+        if ((mode ==  AUDIO_MODE_CALL_SCREEN && mode_ == AUDIO_MODE_IN_CALL)||
+           (mode == AUDIO_MODE_IN_CALL && mode_ == AUDIO_MODE_CALL_SCREEN)){
+            mode_ = mode;
+            ALOGD("%s: call screen device switch called: %d", __func__, mode);
+            VoiceSetDevice(voice_.session);
+        } else {
+            mode_ = mode;
+            if (voice_.in_call && mode == AUDIO_MODE_NORMAL)
+                ret = StopCall();
+            else
+                UpdateCalls(voice_.session);
+        }
     }
     return ret;
 }
@@ -295,7 +305,7 @@ int AudioVoice::VoiceOutSetParameters(const char *kvpairs) {
         qal_voice_tx_device_id_ = qal_tx_device;
 
         if (!IsAnyCallActive()) {
-            if (mode_ == AUDIO_MODE_IN_CALL) {
+            if (mode_ == AUDIO_MODE_IN_CALL || mode_ == AUDIO_MODE_CALL_SCREEN) {
                 voice_.in_call = true;
                 ret = UpdateCalls(voice_.session);
             }
@@ -334,7 +344,7 @@ int AudioVoice::UpdateCallState(uint32_t vsid, int call_state) {
         ALOGD("%s is_call_active:%d in_call:%d, mode:%d",
               __func__, is_call_active, voice_.in_call, mode_);
         if (is_call_active ||
-                (voice_.in_call && mode_ == AUDIO_MODE_IN_CALL)) {
+                (voice_.in_call && (mode_ == AUDIO_MODE_IN_CALL || mode_ == AUDIO_MODE_CALL_SCREEN))) {
             ret = UpdateCalls(voice_.session);
         }
     } else {
@@ -463,6 +473,11 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     streamAttributes.type = QAL_STREAM_VOICE_CALL;
     streamAttributes.info.voice_call_info.VSID = session->vsid;
     streamAttributes.info.voice_call_info.tty_mode = session->tty_mode;
+    if (mode_ == AUDIO_MODE_CALL_SCREEN) {
+        ALOGD("%s: in call screen mode", __func__);
+        qalDevices[0].id = QAL_DEVICE_IN_PROXY;  //overwrite the device with proxy dev
+        qalDevices[1].id = QAL_DEVICE_OUT_PROXY;  //overwrite the device with proxy dev
+    }
     streamAttributes.direction = QAL_AUDIO_INPUT_OUTPUT;
     streamAttributes.in_media_config.sample_rate = 48000;
     streamAttributes.in_media_config.ch_info = in_ch_info;
@@ -592,6 +607,12 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     qalDevices[1].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
     qalDevices[1].address.card_id = adevice->usb_card_id_;
     qalDevices[1].address.device_num =adevice->usb_dev_num_;
+
+    if (mode_ == AUDIO_MODE_CALL_SCREEN) {
+        ALOGD("%s: in call screen mode", __func__);
+        qalDevices[0].id = QAL_DEVICE_IN_PROXY;  //overwrite the device with proxy dev
+        qalDevices[1].id = QAL_DEVICE_OUT_PROXY;  //overwrite the device with proxy dev
+    }
 
     if (session && session->qal_voice_handle) {
         ret = qal_stream_set_device(session->qal_voice_handle, 2, qalDevices);
