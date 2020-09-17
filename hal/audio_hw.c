@@ -4179,7 +4179,7 @@ int start_output_stream(struct stream_out *out)
     }
     audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
 
     if (out->usecase == USECASE_AUDIO_PLAYBACK_ULL ||
         out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
@@ -10797,7 +10797,7 @@ static int adev_open(const hw_module_t *module, const char *name,
         adev->use_old_pspd_mix_ctrl = true;
     }
 
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     return 0;
 
 adev_open_err:

@@ -3166,6 +3166,7 @@ void *platform_init(struct audio_device *adev)
     list_init(&operator_info_list);
     list_init(&app_type_entry_list);
 
+    ALOGD("%s: enter", __func__);
     adev->snd_card = audio_extn_utils_open_snd_mixer(&adev->mixer);
     if (adev->snd_card < 0) {
         ALOGE("%s: Unable to find correct sound card", __func__);
@@ -4055,6 +4056,7 @@ acdb_init_fail:
 
     platform_reset_edid_info(my_data);
     free(snd_card_name);
+    ALOGD("%s: exit", __func__);
     return my_data;
 }
 
@@ -10417,7 +10419,7 @@ int platform_set_snd_device_backend(snd_device_t device, const char *backend_tag
         goto done;
     }
 
-    ALOGD("%s: backend_tag_table[%s]: old = %s new = %s", __func__,
+    ALOGV("%s: backend_tag_table[%s]: old = %s new = %s", __func__,
           platform_get_snd_device_name(device),
           backend_tag_table[device] != NULL ? backend_tag_table[device]: "null",
           backend_tag);
@@ -10433,7 +10435,7 @@ int platform_set_snd_device_backend(snd_device_t device, const char *backend_tag
         if (hw_interface_table[device])
             free(hw_interface_table[device]);
 
-        ALOGD("%s: hw_interface_table[%d] = %s", __func__, device, hw_interface);
+        ALOGV("%s: hw_interface_table[%d] = %s", __func__, device, hw_interface);
         hw_interface_table[device] = strdup(hw_interface);
     }
 done:
