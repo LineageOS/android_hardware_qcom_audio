@@ -530,5 +530,6 @@ protected:
     uint64_t total_bytes_read_; /* total frames written, not cleared when entering standby */
     bool isECEnabled = false;
     bool isNSEnabled = false;
+    bool effects_applied_ = true;
 };
 #endif  // ANDROID_HARDWARE_AHAL_ASTREAM_H_

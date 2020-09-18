@@ -919,7 +919,7 @@ static int astream_in_add_audio_effect(
 {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
-    return 0;
+    ALOGD("%s: Enter ", __func__);
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
@@ -939,7 +939,7 @@ static int astream_in_remove_audio_effect(const struct audio_stream *stream,
 {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
-    return 0;
+    ALOGD("%s: Enter ", __func__);
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
@@ -2496,7 +2496,7 @@ int StreamInPrimary::Standby() {
             }
         }
     }
-
+    effects_applied_ = true;
     stream_started_ = false;
 
     if (qal_stream_handle_ && !is_st_session) {
@@ -2527,7 +2527,6 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
             if (enable) {
                 if (isECEnabled) {
                     ALOGE("%s: EC already enabled", __func__);
-                    status  = -EINVAL;
                     goto exit;
                 } else if (isNSEnabled) {
                     ALOGV("%s: Got EC enable and NS is already active. Enabling ECNS", __func__);
@@ -2555,7 +2554,6 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
                     }
                 } else {
                     ALOGE("%s: EC is not enabled", __func__);
-                    status = -EINVAL;
                     goto exit;
                }
             }
@@ -2565,7 +2563,6 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
             if (enable) {
                 if (isNSEnabled) {
                     ALOGE("%s: NS already enabled", __func__);
-                    status  = -EINVAL;
                     goto exit;
                 } else if (isECEnabled) {
                     ALOGV("%s: Got NS enable and EC is already active. Enabling ECNS", __func__);
@@ -2593,15 +2590,18 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
                     }
                 } else {
                     ALOGE("%s: NS is not enabled", __func__);
-                    status = -EINVAL;
                     goto exit;
                }
             }
         }
     }
 exit:
-    status = 0;
-    return status;
+    if (status) {
+       effects_applied_ = false;
+    } else
+       effects_applied_ = true;
+
+    return 0;
 }
 
 
@@ -2938,7 +2938,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     qalBuffer.offset = 0;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    ALOGD("%s: Bytes:(%zu)", __func__, bytes);
+    ALOGV("%s: Bytes:(%zu)", __func__, bytes);
     if (!qal_stream_handle_) {
         ret = Open();
     }
@@ -2972,6 +2972,12 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
 
     if (!stream_started_) {
         ret = qal_stream_start(qal_stream_handle_);
+        if (ret) {
+            ALOGE("%s:failed to start stream. ret=%d", __func__, ret);
+            qal_stream_close(qal_stream_handle_);
+            qal_stream_handle_ = NULL;
+            return -EINVAL;
+        }
         stream_started_ = true;
         /* set cached volume if any, dont return failure back up */
         if (volume_) {
@@ -2980,6 +2986,19 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
                 ALOGE("Qal Stream volume Error (%x)", ret);
             }
         }
+    }
+
+    if (!effects_applied_) {
+       if (isECEnabled && isNSEnabled) {
+          ret = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_ECNS,true);
+       } else if (isECEnabled) {
+          ret = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_EC,true);
+       } else if (isNSEnabled) {
+          ret = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_NS,true);
+       } else {
+          ret = qal_add_remove_effect(qal_stream_handle_,QAL_AUDIO_EFFECT_ECNS,false);
+       }
+       effects_applied_ = true;
     }
 
     local_bytes_read = qal_stream_read(qal_stream_handle_, &qalBuffer);
@@ -3140,6 +3159,12 @@ error:
 }
 
 StreamInPrimary::~StreamInPrimary() {
+    if (qal_stream_handle_) {
+        ALOGD("%s: close stream, qal_stream_handle (%p)", __func__,
+             qal_stream_handle_);
+        qal_stream_close(qal_stream_handle_);
+        qal_stream_handle_ = NULL;
+    }
 }
 
 StreamPrimary::StreamPrimary(audio_io_handle_t handle,
