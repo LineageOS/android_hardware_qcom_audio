@@ -377,62 +377,6 @@ static int usb_get_sample_rates(int type, char *rates_str,
     return 0;
 }
 
-int usb_get_service_interval(bool playback,
-                                        unsigned long *service_interval)
-{
-    const char *ctl_name = "USB_AUDIO_RX service_interval";
-    struct mixer_ctl *ctl = mixer_get_ctl_by_name(usbmod->adev->mixer,
-                                                  ctl_name);
-
-    if (!playback) {
-        ALOGE("%s not valid for capture", __func__);
-        return -1;
-    }
-
-    if (!ctl) {
-        ALOGV("%s: could not get mixer %s", __func__, ctl_name);
-        return -1;
-    }
-
-    *service_interval = mixer_ctl_get_value(ctl, 0);
-    return 0;
-}
-
-int usb_set_service_interval(bool playback,
-                                        unsigned long service_interval,
-                                        bool *reconfig)
-{
-    *reconfig = false;
-    unsigned long current_service_interval = 0;
-    const char *ctl_name = "USB_AUDIO_RX service_interval";
-    struct mixer_ctl *ctl = mixer_get_ctl_by_name(usbmod->adev->mixer,
-                                                  ctl_name);
-
-    if (!playback) {
-        ALOGE("%s not valid for capture", __func__);
-        return -1;
-    }
-
-    if (!ctl) {
-        ALOGV("%s: could not get mixer %s", __func__, ctl_name);
-        return -1;
-    }
-
-    if (usb_get_service_interval(playback,
-                                            &current_service_interval) != 0) {
-        ALOGE("%s Unable to get current service interval", __func__);
-        return -1;
-    }
-
-    if (current_service_interval != service_interval) {
-        mixer_ctl_set_value(ctl, 0, service_interval);
-        *reconfig = usbmod->usb_reconfig = true;
-    }
-    else
-        *reconfig = usbmod->usb_reconfig = false;
-    return 0;
-}
-
 static int get_usb_service_interval(const char *interval_str_start,
                                     struct usb_device_config *usb_device_info)
 {
@@ -640,7 +584,6 @@ static int usb_get_capability(int type,
         // Data packet interval is an optional field.
         // Assume 0ms interval if this cannot be read
         // LPASS USB and HLOS USB will figure out the default to use
-        bool reconfig = false;
         usb_device_info->service_interval_us = DEFAULT_SERVICE_INTERVAL_US;
         interval_str_start = strstr(str_start, DATA_PACKET_INTERVAL_STR);
         if (interval_str_start != NULL) {
@@ -651,9 +594,6 @@ static int usb_get_capability(int type,
                       __func__);
             }
         }
-        usb_set_service_interval(true /*playback*/,
-                                       usb_device_info->service_interval_us,
-                                       &reconfig);
         /* Add to list if every field is valid */
         list_add_tail(&usb_card_info->usb_device_conf_list,
                       &usb_device_info->list);
@@ -1450,6 +1390,62 @@ int usb_altset_for_service_interval(bool playback,
     return 0;
 #undef FIND_BEST_MATCH
 #undef SET_OR_RETURN_ON_ERROR
+}
+
+int usb_get_service_interval(bool playback,
+                                        unsigned long *service_interval)
+{
+    const char *ctl_name = "USB_AUDIO_RX service_interval";
+    struct mixer_ctl *ctl = mixer_get_ctl_by_name(usbmod->adev->mixer,
+                                                  ctl_name);
+
+    if (!playback) {
+        ALOGE("%s not valid for capture", __func__);
+        return -1;
+    }
+
+    if (!ctl) {
+        ALOGV("%s: could not get mixer %s", __func__, ctl_name);
+        return -1;
+    }
+
+    *service_interval = mixer_ctl_get_value(ctl, 0);
+    return 0;
+}
+
+int usb_set_service_interval(bool playback,
+                                        unsigned long service_interval,
+                                        bool *reconfig)
+{
+    *reconfig = false;
+    unsigned long current_service_interval = 0;
+    const char *ctl_name = "USB_AUDIO_RX service_interval";
+    struct mixer_ctl *ctl = mixer_get_ctl_by_name(usbmod->adev->mixer,
+                                                  ctl_name);
+
+    if (!playback) {
+        ALOGE("%s not valid for capture", __func__);
+        return -1;
+    }
+
+    if (!ctl) {
+        ALOGV("%s: could not get mixer %s", __func__, ctl_name);
+        return -1;
+    }
+
+    if (usb_get_service_interval(playback,
+                                            &current_service_interval) != 0) {
+        ALOGE("%s Unable to get current service interval", __func__);
+        return -1;
+    }
+
+    if (current_service_interval != service_interval) {
+        mixer_ctl_set_value(ctl, 0, service_interval);
+        *reconfig = usbmod->usb_reconfig = true;
+    }
+    else
+        *reconfig = usbmod->usb_reconfig = false;
+    return 0;
 }
 
 int usb_check_and_set_svc_int(struct audio_usecase *uc_info,

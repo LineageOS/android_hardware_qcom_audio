@@ -74,6 +74,8 @@
     <ctl name="VA SMIC MUX7" value="ZERO" />
     <ctl name="EC Reference Bit Format" value="0"/>
     <ctl name="EC Reference SampleRate" value="0"/>
+    <ctl name="ADC2_MIXER Switch" value="0" />
+    <ctl name="ADC2 MUX" value="ZERO" />
     <ctl name="LPI Enable" value="0" />
     <ctl name="VA_DEC0 MODE" value="ADC_DEFAULT" />
     <ctl name="ADC2_BCS Disable" value="0" />

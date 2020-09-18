@@ -89,6 +89,10 @@
     <ctl name="ADC2 ChMap" value="ZERO" />
     <ctl name="ADC3 ChMap" value="ZERO" />
     <ctl name="ADC4 ChMap" value="ZERO" />
+    <ctl name="TX0 MODE" value="ADC_LP" />
+    <ctl name="TX1 MODE" value="ADC_LP" />
+    <ctl name="TX2 MODE" value="ADC_LP" />
+    <ctl name="TX3 MODE" value="ADC_LP" />
 
    <path name="listen-voice-wakeup-1">
         <ctl name="LSM1 Mixer VA_CDC_DMA_TX_0" value="1" />
@@ -310,13 +314,13 @@
 
     <path name="echo-reference">
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="WSA_CDC_DMA_RX_0"/>
-        <ctl name="EC Reference Channels" value="Two"/>
+        <ctl name="EC Reference Channels" value="One"/>
         <ctl name="EC Reference Bit Format" value="S16_LE"/>
         <ctl name="EC Reference SampleRate" value="48000"/>
     </path>
 
     <path name="echo-reference headset">
-        <ctl name="AUDIO_REF_EC_UL1 MUX" value="WSA_CDC_DMA_RX_0"/>
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="RX_CDC_DMA_RX_0"/>
         <ctl name="EC Reference Channels" value="One"/>
         <ctl name="EC Reference Bit Format" value="S16_LE"/>
         <ctl name="EC Reference SampleRate" value="48000"/>
