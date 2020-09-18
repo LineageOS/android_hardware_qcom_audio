@@ -82,7 +82,7 @@
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
     defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL) || \
-    defined (PLATFORM_HOLI)
+    defined (PLATFORM_HOLI) || defined (PLATFORM_LAHAINA)
 
 #include <sound/devdep_params.h>
 #endif
@@ -12126,7 +12126,7 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
     defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL) || \
-    defined (PLATFORM_HOLI)
+    defined (PLATFORM_HOLI) || defined (PLATFORM_LAHAINA)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {
