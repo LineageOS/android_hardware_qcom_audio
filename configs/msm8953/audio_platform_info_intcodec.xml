@@ -50,6 +50,9 @@
         <usecase name="USECASE_INCALL_MUSIC_UPLINK" type="out" id="1" />
         <usecase name="USECASE_INCALL_MUSIC_UPLINK2" type="out" id="35" />
         <usecase name="USECASE_AUDIO_SPKR_CALIB_TX" type="in" id="26"/>
+        <usecase name="USECASE_INCALL_REC_UPLINK" type="in" id="14" />
+        <usecase name="USECASE_INCALL_REC_DOWNLINK" type="in" id="14" />
+        <usecase name="USECASE_INCALL_REC_UPLINK_AND_DOWNLINK" type="in" id="14" />
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsa881x.0f"/>
