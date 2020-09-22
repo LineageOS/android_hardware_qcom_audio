@@ -1803,6 +1803,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("bengal-qrd-snd-card")) ||
          !strncmp(snd_card_name, "holi-mtp-snd-card",
                    sizeof("holi-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "holi-usbc-snd-card",
+                   sizeof("holi-usbc-snd-card")) ||
          !strncmp(snd_card_name, "holi-mtpsku1-snd-card",
                    sizeof("holi-mtpsku1-snd-card")) ||
          !strncmp(snd_card_name, "holi-qrd-snd-card",
