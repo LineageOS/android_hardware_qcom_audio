@@ -19,7 +19,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <dlfcn.h>
-#include <cutils/log.h>
+#include <log/log.h>
 
 #include "audio_hw.h"
 #include "platform.h"
@@ -148,6 +148,15 @@ int amplifier_in_set_parameters(struct str_parms *parms)
     if (amp.hw && amp.hw->in_set_parameters)
         return amp.hw->in_set_parameters(amp.hw, parms);
 
+    return 0;
+}
+
+
+int amplifier_set_feedback(void *adev, uint32_t devices, bool enable)
+{
+    amp.adev = (struct audio_device *)adev;
+    if (amp.hw && amp.hw->set_feedback)
+        return amp.hw->set_feedback(amp.hw, amp.adev, devices, enable);
     return 0;
 }
 
