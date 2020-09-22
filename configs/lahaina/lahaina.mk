@@ -250,6 +250,11 @@ persist.vendor.audio.speaker.prot.enable=true\
 persist.vendor.audio.spv4.enable=true\
 persist.vendor.audio.avs.afe_api_version=9
 
+##bcl aka vbat monitor feature enable by default
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.vbat.enabled=true\
+persist.vendor.audio.bcl.enabled=true\
+
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.tunnel.encode=false
