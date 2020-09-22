@@ -9073,7 +9073,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
         ALOGD("%s: mode %d , prev_mode %d \n", __func__, mode , adev->mode);
         adev->prev_mode = adev->mode; /* prev_mode is kept to handle voip concurrency*/
         adev->mode = mode;
-        if( mode == AUDIO_MODE_CALL_SCREEN ){
+        if (mode == AUDIO_MODE_CALL_SCREEN) {
             adev->current_call_output = adev->primary_output;
             voice_start_call(adev);
         } else if (voice_is_in_call_or_call_screen(adev) &&
