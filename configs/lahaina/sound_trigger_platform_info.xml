@@ -50,7 +50,7 @@
         <!-- Param used to match and obtain device backend index -->
         <param backend_dai_name="VA_CDC_DMA_TX_0" />
         <!-- Param used to indicate if SVA has dedicated SLIM ports -->
-        <param dedicated_sva_path="true" />
+        <param dedicated_sva_path="false" />
         <param dedicated_headset_path="false" />
         <param platform_lpi_enable="true" />
         <param enable_debug_dumps="false" />
