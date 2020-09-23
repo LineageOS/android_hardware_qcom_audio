@@ -260,7 +260,7 @@
         <ctl name="VA DEC0 MUX" value="SWR_MIC" />
         <ctl name="VA SMIC MUX0" value="SWR_MIC3" />
         <ctl name="SWR_MIC3 LP PortMap" value="SWRM_TX1_CH4" />
-        <ctl name="VA_DEC0 Volume" value="99" />
+        <ctl name="VA_DEC0 Volume" value="84" />
         <ctl name="SWR_MIC3 SWR_DMIC_VA_MIXER Switch" value="1" />
     </path>
 
@@ -278,8 +278,8 @@
         <ctl name="VA SMIC MUX1" value="SWR_MIC0" />
         <ctl name="SWR_MIC3 LP PortMap" value="SWRM_TX1_CH4" />
         <ctl name="SWR_MIC0 LP PortMap" value="SWRM_TX1_CH1" />
-        <ctl name="VA_DEC0 Volume" value="99" />
-        <ctl name="VA_DEC1 Volume" value="99" />
+        <ctl name="VA_DEC0 Volume" value="84" />
+        <ctl name="VA_DEC1 Volume" value="84" />
         <ctl name="SWR_MIC3 SWR_DMIC_VA_MIXER Switch" value="1" />
         <ctl name="SWR_MIC0 SWR_DMIC_VA_MIXER Switch" value="1" />
     </path>
