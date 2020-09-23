@@ -74,6 +74,8 @@
 #define PLATFORM_INFO_XML_PATH_TDM_NAME  "audio_platform_info_tdm.xml"
 #define PLATFORM_INFO_XML_PATH_SHIMA_IDP "audio_platform_info_shimaidp.xml"
 #define PLATFORM_INFO_XML_PATH_SHIMA_QRD "audio_platform_info_shimaqrd.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_IDP "audio_platform_info_scubaidp.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_QRD "audio_platform_info_scubaqrd.xml"
 
 #include <linux/msm_audio.h>
 #if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || \
@@ -1799,6 +1801,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("bengal-idp-snd-card")) ||
          !strncmp(snd_card_name, "bengal-scubaidp-snd-card",
                    sizeof("bengal-scubaidp-snd-card")) ||
+         !strncmp(snd_card_name, "bengal-scubaqrd-snd-card",
+                   sizeof("bengal-scubaqrd-snd-card")) ||
          !strncmp(snd_card_name, "bengal-qrd-snd-card",
                    sizeof("bengal-qrd-snd-card")) ||
          !strncmp(snd_card_name, "holi-mtp-snd-card",
@@ -3405,6 +3409,12 @@ void *platform_init(struct audio_device *adev)
                sizeof("lahaina-shimaqrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SHIMA_QRD),
             my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
+               sizeof("bengal-scubaidp-snd-card"))) {
+        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_IDP, my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "bengal-scubaqrd-snd-card",
+               sizeof("bengal-scubaqrd-snd-card"))) {
+        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_QRD, my_data, PLATFORM);
     } else if (my_data->is_internal_codec) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_INTCODEC_NAME),
             my_data, PLATFORM);
