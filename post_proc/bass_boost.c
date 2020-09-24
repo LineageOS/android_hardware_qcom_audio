@@ -327,8 +327,8 @@ int bassboost_set_strength(bassboost_context_t *context, uint32_t strength)
     context->strength = strength;
 
     offload_bassboost_set_strength(&(context->offload_bass), strength);
-    if (context->qal_stream_handle)
-        offload_bassboost_send_params_qal(context->qal_stream_handle, &context->offload_bass,
+    if (context->pal_stream_handle)
+        offload_bassboost_send_params_pal(context->pal_stream_handle, &context->offload_bass,
                                       OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
                                       OFFLOAD_SEND_BASSBOOST_STRENGTH);
     if (context->hw_acc_fd > 0)
@@ -353,8 +353,8 @@ int bassboost_set_device(effect_context_t *context, uint32_t device)
         if (bass_ctxt->temp_disabled) {
             if (effect_is_active(&bass_ctxt->common)) {
                 offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), true);
-                if (bass_ctxt->qal_stream_handle)
-                    offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle,
+                if (bass_ctxt->pal_stream_handle)
+                    offload_bassboost_send_params_pal(bass_ctxt->pal_stream_handle,
                                                   &bass_ctxt->offload_bass,
                                                   OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
                 if (bass_ctxt->hw_acc_fd > 0)
@@ -367,8 +367,8 @@ int bassboost_set_device(effect_context_t *context, uint32_t device)
         if (!bass_ctxt->temp_disabled) {
             if (effect_is_active(&bass_ctxt->common)) {
                 offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), false);
-                if (bass_ctxt->qal_stream_handle)
-                    offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle,
+                if (bass_ctxt->pal_stream_handle)
+                    offload_bassboost_send_params_pal(bass_ctxt->pal_stream_handle,
                                                   &bass_ctxt->offload_bass,
                                                   OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
                 if (bass_ctxt->hw_acc_fd > 0)
@@ -428,8 +428,8 @@ int bassboost_enable(effect_context_t *context)
     if (!offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass)) &&
         !(bass_ctxt->temp_disabled)) {
         offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), true);
-        if (bass_ctxt->qal_stream_handle && bass_ctxt->strength)
-            offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle,
+        if (bass_ctxt->pal_stream_handle && bass_ctxt->strength)
+            offload_bassboost_send_params_pal(bass_ctxt->pal_stream_handle,
                                           &bass_ctxt->offload_bass,
                                           OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
                                           OFFLOAD_SEND_BASSBOOST_STRENGTH);
@@ -446,8 +446,8 @@ int bassboost_disable(effect_context_t *context)
     ALOGV("%s: ctxt %p", __func__, bass_ctxt);
     if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass))) {
         offload_bassboost_set_enable_flag(&(bass_ctxt->offload_bass), false);
-        if (bass_ctxt->qal_stream_handle)
-            offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle,
+        if (bass_ctxt->pal_stream_handle)
+            offload_bassboost_send_params_pal(bass_ctxt->pal_stream_handle,
                                           &bass_ctxt->offload_bass,
                                           OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
         if (bass_ctxt->hw_acc_fd > 0)
@@ -460,12 +460,12 @@ int bassboost_start(effect_context_t *context, output_context_t *output)
 {
     bassboost_context_t *bass_ctxt = (bassboost_context_t *)context;
 
-    ALOGV("%s: ctxt %p, qal_stream_handle %p, strength %d", __func__, bass_ctxt,
-                                   output->qal_stream_handle, bass_ctxt->strength);
-    bass_ctxt->qal_stream_handle = output->qal_stream_handle;
+    ALOGV("%s: ctxt %p, pal_stream_handle %p, strength %d", __func__, bass_ctxt,
+                                   output->pal_stream_handle, bass_ctxt->strength);
+    bass_ctxt->pal_stream_handle = output->pal_stream_handle;
     if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass))) {
-        if (bass_ctxt->qal_stream_handle)
-            offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle, &bass_ctxt->offload_bass,
+        if (bass_ctxt->pal_stream_handle)
+            offload_bassboost_send_params_pal(bass_ctxt->pal_stream_handle, &bass_ctxt->offload_bass,
                                           OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG |
                                           OFFLOAD_SEND_BASSBOOST_STRENGTH);
         if (bass_ctxt->hw_acc_fd > 0)
@@ -480,13 +480,13 @@ int bassboost_stop(effect_context_t *context, output_context_t *output __unused)
 
     ALOGV("%s: ctxt %p", __func__, bass_ctxt);
     if (offload_bassboost_get_enable_flag(&(bass_ctxt->offload_bass)) &&
-        bass_ctxt->qal_stream_handle) {
+        bass_ctxt->pal_stream_handle) {
         struct bass_boost_params bassboost;
         bassboost.enable_flag = false;
-        offload_bassboost_send_params_qal(bass_ctxt->qal_stream_handle, &bassboost,
+        offload_bassboost_send_params_pal(bass_ctxt->pal_stream_handle, &bassboost,
                                       OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG);
     }
-    bass_ctxt->qal_stream_handle = NULL;
+    bass_ctxt->pal_stream_handle = NULL;
     return 0;
 }
 
@@ -527,8 +527,8 @@ int pbe_set_device(effect_context_t *context, uint32_t device)
         if (pbe_ctxt->temp_disabled) {
             if (effect_is_active(&pbe_ctxt->common)) {
                 offload_pbe_set_enable_flag(&(pbe_ctxt->offload_pbe), true);
-                if (pbe_ctxt->qal_stream_handle)
-                    offload_pbe_send_params_qal(pbe_ctxt->qal_stream_handle,
+                if (pbe_ctxt->pal_stream_handle)
+                    offload_pbe_send_params_pal(pbe_ctxt->pal_stream_handle,
                                         &pbe_ctxt->offload_pbe,
                                         OFFLOAD_SEND_PBE_ENABLE_FLAG |
                                         OFFLOAD_SEND_PBE_CONFIG);
@@ -541,8 +541,8 @@ int pbe_set_device(effect_context_t *context, uint32_t device)
         if (!pbe_ctxt->temp_disabled) {
             if (effect_is_active(&pbe_ctxt->common)) {
                 offload_pbe_set_enable_flag(&(pbe_ctxt->offload_pbe), false);
-                if (pbe_ctxt->qal_stream_handle)
-                    offload_pbe_send_params_qal(pbe_ctxt->qal_stream_handle,
+                if (pbe_ctxt->pal_stream_handle)
+                    offload_pbe_send_params_pal(pbe_ctxt->pal_stream_handle,
                                         &pbe_ctxt->offload_pbe,
                                         OFFLOAD_SEND_PBE_ENABLE_FLAG);
                 if (pbe_ctxt->hw_acc_fd > 0)
@@ -600,8 +600,8 @@ int pbe_enable(effect_context_t *context)
     if (!offload_pbe_get_enable_flag(&(pbe_ctxt->offload_pbe)) &&
         !(pbe_ctxt->temp_disabled)) {
         offload_pbe_set_enable_flag(&(pbe_ctxt->offload_pbe), true);
-        if (pbe_ctxt->qal_stream_handle)
-            offload_pbe_send_params_qal(pbe_ctxt->qal_stream_handle,
+        if (pbe_ctxt->pal_stream_handle)
+            offload_pbe_send_params_pal(pbe_ctxt->pal_stream_handle,
                                     &pbe_ctxt->offload_pbe,
                                     OFFLOAD_SEND_PBE_ENABLE_FLAG |
                                     OFFLOAD_SEND_PBE_CONFIG);
@@ -618,8 +618,8 @@ int pbe_disable(effect_context_t *context)
     ALOGV("%s", __func__);
     if (offload_pbe_get_enable_flag(&(pbe_ctxt->offload_pbe))) {
         offload_pbe_set_enable_flag(&(pbe_ctxt->offload_pbe), false);
-        if (pbe_ctxt->qal_stream_handle)
-            offload_pbe_send_params_qal(pbe_ctxt->qal_stream_handle,
+        if (pbe_ctxt->pal_stream_handle)
+            offload_pbe_send_params_pal(pbe_ctxt->pal_stream_handle,
                                     &pbe_ctxt->offload_pbe,
                                     OFFLOAD_SEND_PBE_ENABLE_FLAG);
         if (pbe_ctxt->hw_acc_fd > 0)
@@ -633,11 +633,11 @@ int pbe_start(effect_context_t *context, output_context_t *output)
     pbe_context_t *pbe_ctxt = (pbe_context_t *)context;
 
     ALOGV("%s", __func__);
-    pbe_ctxt->qal_stream_handle = output->qal_stream_handle;
-    ALOGV("output->qal_stream_handle: %p", output->qal_stream_handle);
+    pbe_ctxt->pal_stream_handle = output->pal_stream_handle;
+    ALOGV("output->pal_stream_handle: %p", output->pal_stream_handle);
     if (offload_pbe_get_enable_flag(&(pbe_ctxt->offload_pbe))) {
-        if (pbe_ctxt->qal_stream_handle)
-            offload_pbe_send_params_qal(pbe_ctxt->qal_stream_handle,
+        if (pbe_ctxt->pal_stream_handle)
+            offload_pbe_send_params_pal(pbe_ctxt->pal_stream_handle,
                                     &pbe_ctxt->offload_pbe,
                                     OFFLOAD_SEND_PBE_ENABLE_FLAG |
                                     OFFLOAD_SEND_PBE_CONFIG);
@@ -652,7 +652,7 @@ int pbe_stop(effect_context_t *context, output_context_t *output  __unused)
     pbe_context_t *pbe_ctxt = (pbe_context_t *)context;
 
     ALOGV("%s", __func__);
-    pbe_ctxt->qal_stream_handle = NULL;
+    pbe_ctxt->pal_stream_handle = NULL;
     return 0;
 }
 

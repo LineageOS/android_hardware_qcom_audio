@@ -45,7 +45,7 @@ void audio_extn_sound_trigger_deinit(std::shared_ptr<AudioDevice> adev);
 void* audio_extn_sound_trigger_check_and_get_session(
     StreamInPrimary *in_stream);
 
-extern "C" int audio_hw_get_gain_level_mapping(struct qal_amp_db_and_gain_table *mapping_tbl,
+extern "C" int audio_hw_get_gain_level_mapping(struct pal_amp_db_and_gain_table *mapping_tbl,
                                       int table_size);
 extern "C" bool audio_hw_send_gain_dep_calibration(int level);
 
@@ -61,11 +61,11 @@ extern "C" bool audio_hw_send_gain_dep_calibration(int level);
 #else
 void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev);
 void audio_extn_gef_deinit(std::shared_ptr<AudioDevice> adev);
-int audio_extn_get_qal_info(void *hal_data,
+int audio_extn_get_pal_info(void *hal_data,
                                 const audio_devices_t hal_device_id,
-                                qal_device_id_t *qal_device_id,
+                                pal_device_id_t *pal_device_id,
                                 audio_output_flags_t hal_stream_flag,
-                                qal_stream_type_t *qal_stream_type);
+                                pal_stream_type_t *pal_stream_type);
 void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
                     audio_channel_mask_t channel_mask, int sample_rate);
 extern "C" int audio_extn_gef_send_audio_cal(void* data, int length);

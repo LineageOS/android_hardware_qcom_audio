@@ -34,7 +34,7 @@ LOCAL_SHARED_LIBRARIES := \
     libhidlbase \
     libprocessgroup \
     libutils \
-    libqal \
+    libar-pal \
     android.hardware.health@1.0 \
     android.hardware.health@2.0 \
     android.hardware.power@1.2 \
@@ -44,7 +44,7 @@ LOCAL_C_INCLUDES += \
     system/media/audio_utils/include \
     external/expat/lib \
     vendor/qcom/opensource/core-utils/fwk-detect \
-    vendor/qcom/opensource/qal \
+    vendor/qcom/opensource/pal \
     $(call include-path-for, audio-effects) \
     $(LOCAL_PATH)/audio_extn \
     $(LOCAL_PATH)/../hal/audio_extn

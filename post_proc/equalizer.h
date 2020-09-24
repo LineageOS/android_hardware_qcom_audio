@@ -37,7 +37,7 @@ typedef struct equalizer_context_s {
     int band_levels[NUM_EQ_BANDS];
 
     // Offload vars
-    qal_stream_handle_t *qal_stream_handle;
+    pal_stream_handle_t *pal_stream_handle;
     int hw_acc_fd;
     uint32_t device;
     struct eq_params offload_eq;

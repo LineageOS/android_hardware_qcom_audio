@@ -367,7 +367,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 _______________________________________________
-hal-qal/AudioDevice.cpp:
+hal-pal/AudioDevice.cpp:
 Copyright (C) 2013 The Android Open Source Project
 
 Licensed under the Apache License, Version 2.0 (the "License");

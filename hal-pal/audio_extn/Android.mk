@@ -5,7 +5,7 @@ LOCAL_PATH := $(call my-dir)
 #-------------------------------------------
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := libhfp_qal
+LOCAL_MODULE := libhfp_pal
 LOCAL_VENDOR_MODULE := true
 
 ifeq ($(TARGET_BOARD_AUTO),true)
@@ -28,11 +28,11 @@ LOCAL_SHARED_LIBRARIES := \
     libdl \
     libexpat \
     liblog \
-    libqal
+    libar-pal
 
 LOCAL_C_INCLUDES := \
-    vendor/qcom/opensource/qal \
-    vendor/qcom/opensource/audio-hal/primary-hal/hal-qal \
+    vendor/qcom/opensource/pal \
+    vendor/qcom/opensource/audio-hal/primary-hal/hal-pal \
     vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn \
     external/expat/lib \
     system/media/audio_utils/include \

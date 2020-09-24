@@ -28,28 +28,28 @@
  */
 
 #define LOG_TAG "audio_extn"
-#include "QalApi.h"
-#include "QalDefs.h"
+#include "PalApi.h"
+#include "PalDefs.h"
 #include "audio_extn.h"
 
 extern "C" {
 
 __attribute__ ((visibility ("default")))
-int audio_hw_get_gain_level_mapping(struct qal_amp_db_and_gain_table *mapping_tbl,
+int audio_hw_get_gain_level_mapping(struct pal_amp_db_and_gain_table *mapping_tbl,
                                       int table_size) {
     int ret = 0;
     size_t payload_size = 0;
-    qal_param_gain_lvl_map_t gain_lvl_map;
+    pal_param_gain_lvl_map_t gain_lvl_map;
     gain_lvl_map.mapping_tbl = mapping_tbl;
     gain_lvl_map.table_size  = table_size;
     gain_lvl_map.filled_size = 0;
 
-    ret = qal_get_param(QAL_PARAM_ID_GAIN_LVL_MAP,
+    ret = pal_get_param(PAL_PARAM_ID_GAIN_LVL_MAP,
             (void **)&gain_lvl_map,
             &payload_size, nullptr);
 
     if (ret != 0) {
-        ALOGE("%s: fail to get QAL_PARAM_ID_GAIN_LVL_MAP %d", __func__, ret);
+        ALOGE("%s: fail to get PAL_PARAM_ID_GAIN_LVL_MAP %d", __func__, ret);
         gain_lvl_map.filled_size = 0;
     }
 
@@ -59,12 +59,12 @@ int audio_hw_get_gain_level_mapping(struct qal_amp_db_and_gain_table *mapping_tb
 __attribute__ ((visibility ("default")))
 bool audio_hw_send_gain_dep_calibration(int level) {
     int32_t ret = 0;
-    qal_param_gain_lvl_cal_t gain_lvl_cal;
+    pal_param_gain_lvl_cal_t gain_lvl_cal;
     gain_lvl_cal.level = level;
 
-    ret = qal_set_param(QAL_PARAM_ID_GAIN_LVL_CAL, (void*)&gain_lvl_cal, sizeof(qal_param_gain_lvl_cal_t));
+    ret = pal_set_param(PAL_PARAM_ID_GAIN_LVL_CAL, (void*)&gain_lvl_cal, sizeof(pal_param_gain_lvl_cal_t));
     if (ret != 0) {
-        ALOGE("%s: fail to set QAL_PARAM_ID_GAIN_LVL_CAL %d", __func__, ret);
+        ALOGE("%s: fail to set PAL_PARAM_ID_GAIN_LVL_CAL %d", __func__, ret);
     }
 
     return (ret != 0) ? false: true;

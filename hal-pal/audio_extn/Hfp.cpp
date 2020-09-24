@@ -40,7 +40,7 @@
 #include <dlfcn.h>
 #include <math.h>
 #include <cutils/properties.h>
-#include "QalApi.h"
+#include "PalApi.h"
 #include "AudioDevice.h"
 
 #ifdef __cplusplus
@@ -61,8 +61,8 @@ struct hfp_module {
     float mic_volume;
     bool mic_mute;
     uint32_t sample_rate;
-    qal_stream_handle_t *rx_stream_handle;
-    qal_stream_handle_t *tx_stream_handle;
+    pal_stream_handle_t *rx_stream_handle;
+    pal_stream_handle_t *tx_stream_handle;
 };
 
 #define PLAYBACK_VOLUME_MAX 0x2000
@@ -79,7 +79,7 @@ static struct hfp_module hfpmod = {
 static int32_t hfp_set_volume(float value)
 {
     int32_t vol, ret = 0;
-    struct qal_volume_data *qal_volume = NULL;
+    struct pal_volume_data *pal_volume = NULL;
 
     ALOGV("%s: entry", __func__);
     ALOGD("%s: (%f)\n", __func__, value);
@@ -102,12 +102,12 @@ static int32_t hfp_set_volume(float value)
 
     ALOGD("%s: Setting HFP volume to %d \n", __func__, vol);
 
-    qal_volume = (struct qal_volume_data *)malloc(sizeof(struct qal_volume_data)
-            +sizeof(struct qal_channel_vol_kv));
-    qal_volume->no_of_volpair = 1;
-    qal_volume->volume_pair[0].channel_mask = 0x03;
-    qal_volume->volume_pair[0].vol = value;
-    ret = qal_stream_set_volume(hfpmod.rx_stream_handle, qal_volume);
+    pal_volume = (struct pal_volume_data *)malloc(sizeof(struct pal_volume_data)
+            +sizeof(struct pal_channel_vol_kv));
+    pal_volume->no_of_volpair = 1;
+    pal_volume->volume_pair[0].channel_mask = 0x03;
+    pal_volume->volume_pair[0].vol = value;
+    ret = pal_stream_set_volume(hfpmod.rx_stream_handle, pal_volume);
     if (ret)
         ALOGE("%s: set volume failed: %d \n", __func__, ret);
 
@@ -122,7 +122,7 @@ static int32_t hfp_set_volume(float value)
 static int hfp_set_mic_volume(float value)
 {
     int volume, ret = 0;
-    struct qal_volume_data *qal_volume = NULL;
+    struct pal_volume_data *pal_volume = NULL;
 
     ALOGD("%s: enter, value=%f", __func__, value);
 
@@ -143,12 +143,12 @@ static int hfp_set_mic_volume(float value)
 
     volume = (int)(value * PLAYBACK_VOLUME_MAX);
 
-    qal_volume = (struct qal_volume_data *)malloc(sizeof(struct qal_volume_data)
-            +sizeof(struct qal_channel_vol_kv));
-    qal_volume->no_of_volpair = 1;
-    qal_volume->volume_pair[0].channel_mask = 0x03;
-    qal_volume->volume_pair[0].vol = value;
-    if (qal_stream_set_volume(hfpmod.tx_stream_handle, qal_volume) < 0) {
+    pal_volume = (struct pal_volume_data *)malloc(sizeof(struct pal_volume_data)
+            +sizeof(struct pal_channel_vol_kv));
+    pal_volume->no_of_volpair = 1;
+    pal_volume->volume_pair[0].channel_mask = 0x03;
+    pal_volume->volume_pair[0].vol = value;
+    if (pal_stream_set_volume(hfpmod.tx_stream_handle, pal_volume) < 0) {
         ALOGE("%s: Couldn't set HFP Volume: [%d]", __func__, volume);
         return -EINVAL;
     }
@@ -168,45 +168,45 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
 {
     int32_t ret = 0;
     uint32_t no_of_devices = 2;
-    struct qal_stream_attributes stream_attr = {};
-    struct qal_stream_attributes stream_tx_attr = {};
-    struct qal_device devices[2] = {};
-    struct qal_channel_info ch_info;
+    struct pal_stream_attributes stream_attr = {};
+    struct pal_stream_attributes stream_tx_attr = {};
+    struct pal_device devices[2] = {};
+    struct pal_channel_info ch_info;
 
     ALOGD("%s: HFP start enter", __func__);
     if (hfpmod.rx_stream_handle || hfpmod.tx_stream_handle)
         return 0; //hfp already running;
 
-    qal_param_device_connection_t param_device_connection;
+    pal_param_device_connection_t param_device_connection;
 
-    param_device_connection.id = QAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
+    param_device_connection.id = PAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
     param_device_connection.connection_state = true;
-    ret =  qal_set_param(QAL_PARAM_ID_DEVICE_CONNECTION,
+    ret =  pal_set_param(PAL_PARAM_ID_DEVICE_CONNECTION,
                         (void*)&param_device_connection,
-                        sizeof(qal_param_device_connection_t));
+                        sizeof(pal_param_device_connection_t));
     if (ret != 0) {
-        ALOGE("%s: Set QAL_PARAM_ID_DEVICE_CONNECTION for %d failed", __func__, param_device_connection.id);
+        ALOGE("%s: Set PAL_PARAM_ID_DEVICE_CONNECTION for %d failed", __func__, param_device_connection.id);
         return ret;
     }
 
-    param_device_connection.id = QAL_DEVICE_OUT_BLUETOOTH_SCO;
+    param_device_connection.id = PAL_DEVICE_OUT_BLUETOOTH_SCO;
     param_device_connection.connection_state = true;
-    ret =  qal_set_param(QAL_PARAM_ID_DEVICE_CONNECTION,
+    ret =  pal_set_param(PAL_PARAM_ID_DEVICE_CONNECTION,
                         (void*)&param_device_connection,
-                        sizeof(qal_param_device_connection_t));
+                        sizeof(pal_param_device_connection_t));
     if (ret != 0) {
-        ALOGE("%s: Set QAL_PARAM_ID_DEVICE_CONNECTION for %d failed", __func__, param_device_connection.id);
+        ALOGE("%s: Set PAL_PARAM_ID_DEVICE_CONNECTION for %d failed", __func__, param_device_connection.id);
         return ret;
     }
 
-    qal_param_btsco_t param_btsco;
+    pal_param_btsco_t param_btsco;
 
     param_btsco.bt_sco_on = true;
-    ret =  qal_set_param(QAL_PARAM_ID_BT_SCO,
+    ret =  pal_set_param(PAL_PARAM_ID_BT_SCO,
                         (void*)&param_btsco,
-                        sizeof(qal_param_btsco_t));
+                        sizeof(pal_param_btsco_t));
     if (ret != 0) {
-        ALOGE("%s: Set QAL_PARAM_ID_BT_SCO failed", __func__);
+        ALOGE("%s: Set PAL_PARAM_ID_BT_SCO failed", __func__);
         return ret;
     }
 
@@ -218,40 +218,40 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
         param_btsco.bt_wb_speech_enabled = false;
     }
 
-    ret =  qal_set_param(QAL_PARAM_ID_BT_SCO_WB,
+    ret =  pal_set_param(PAL_PARAM_ID_BT_SCO_WB,
                         (void*)&param_btsco,
-                        sizeof(qal_param_btsco_t));
+                        sizeof(pal_param_btsco_t));
     if (ret != 0) {
-        ALOGE("%s: Set QAL_PARAM_ID_BT_SCO_WB failed", __func__);
+        ALOGE("%s: Set PAL_PARAM_ID_BT_SCO_WB failed", __func__);
         return ret;
     }
 
     ch_info.channels = 1;
-    ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
+    ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
 
     /* BT SCO -> Spkr */
-    stream_attr.type = QAL_STREAM_LOOPBACK;
-    stream_attr.info.opt_stream_info.loopback_type = QAL_STREAM_LOOPBACK_HFP_RX;
-    stream_attr.direction = QAL_AUDIO_INPUT_OUTPUT;
+    stream_attr.type = PAL_STREAM_LOOPBACK;
+    stream_attr.info.opt_stream_info.loopback_type = PAL_STREAM_LOOPBACK_HFP_RX;
+    stream_attr.direction = PAL_AUDIO_INPUT_OUTPUT;
     stream_attr.in_media_config.sample_rate = hfpmod.sample_rate;
     stream_attr.in_media_config.bit_width = 16;
     stream_attr.in_media_config.ch_info = ch_info;
-    stream_attr.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
 
     stream_attr.out_media_config.sample_rate = 48000;
     stream_attr.out_media_config.bit_width = 16;
     stream_attr.out_media_config.ch_info = ch_info;
-    stream_attr.out_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_attr.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
 
-    devices[0].id = QAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
+    devices[0].id = PAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
     devices[0].config.sample_rate = hfpmod.sample_rate;
     devices[0].config.bit_width = 16;
     devices[0].config.ch_info = ch_info;
-    devices[0].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    devices[0].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
 
-    devices[1].id = QAL_DEVICE_OUT_SPEAKER;
+    devices[1].id = PAL_DEVICE_OUT_SPEAKER;
 
-    ret = qal_stream_open(&stream_attr,
+    ret = pal_stream_open(&stream_attr,
             no_of_devices, devices,
             0,
             NULL,
@@ -262,36 +262,36 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
         ALOGE("%s: HFP rx stream (BT SCO->Spkr) open failed, rc %d", __func__, ret);
         return ret;
     }
-    ret = qal_stream_start(hfpmod.rx_stream_handle);
+    ret = pal_stream_start(hfpmod.rx_stream_handle);
     if (ret != 0) {
         ALOGE("%s: HFP rx stream (BT SCO->Spkr) start failed, rc %d", __func__, ret);
-        qal_stream_close(hfpmod.rx_stream_handle);
+        pal_stream_close(hfpmod.rx_stream_handle);
         return ret;
     }
 
     /* Mic -> BT SCO */
-    stream_tx_attr.type = QAL_STREAM_LOOPBACK;
-    stream_tx_attr.info.opt_stream_info.loopback_type = QAL_STREAM_LOOPBACK_HFP_TX;
-    stream_tx_attr.direction = QAL_AUDIO_INPUT_OUTPUT;
+    stream_tx_attr.type = PAL_STREAM_LOOPBACK;
+    stream_tx_attr.info.opt_stream_info.loopback_type = PAL_STREAM_LOOPBACK_HFP_TX;
+    stream_tx_attr.direction = PAL_AUDIO_INPUT_OUTPUT;
     stream_tx_attr.in_media_config.sample_rate = hfpmod.sample_rate;
     stream_tx_attr.in_media_config.bit_width = 16;
     stream_tx_attr.in_media_config.ch_info = ch_info;
-    stream_tx_attr.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_tx_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
 
     stream_tx_attr.out_media_config.sample_rate = 48000;
     stream_tx_attr.out_media_config.bit_width = 16;
     stream_tx_attr.out_media_config.ch_info = ch_info;
-    stream_tx_attr.out_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_tx_attr.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
 
-    devices[0].id = QAL_DEVICE_OUT_BLUETOOTH_SCO;
+    devices[0].id = PAL_DEVICE_OUT_BLUETOOTH_SCO;
     devices[0].config.sample_rate = hfpmod.sample_rate;
     devices[0].config.bit_width = 16;
     devices[0].config.ch_info = ch_info;
-    devices[0].config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    devices[0].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
 
-    devices[1].id = QAL_DEVICE_IN_SPEAKER_MIC;
+    devices[1].id = PAL_DEVICE_IN_SPEAKER_MIC;
 
-    ret = qal_stream_open(&stream_tx_attr,
+    ret = pal_stream_open(&stream_tx_attr,
             no_of_devices, devices,
             0,
             NULL,
@@ -300,16 +300,16 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
             &hfpmod.tx_stream_handle);
     if (ret != 0) {
         ALOGE("%s: HFP tx stream (Mic->BT SCO) open failed, rc %d", __func__, ret);
-        qal_stream_stop(hfpmod.rx_stream_handle);
-        qal_stream_close(hfpmod.rx_stream_handle);
+        pal_stream_stop(hfpmod.rx_stream_handle);
+        pal_stream_close(hfpmod.rx_stream_handle);
         return ret;
     }
-    ret = qal_stream_start(hfpmod.tx_stream_handle);
+    ret = pal_stream_start(hfpmod.tx_stream_handle);
     if (ret != 0) {
         ALOGE("%s: HFP tx stream (Mic->BT SCO) start failed, rc %d", __func__, ret);
-        qal_stream_close(hfpmod.tx_stream_handle);
-        qal_stream_stop(hfpmod.rx_stream_handle);
-        qal_stream_close(hfpmod.rx_stream_handle);
+        pal_stream_close(hfpmod.tx_stream_handle);
+        pal_stream_stop(hfpmod.rx_stream_handle);
+        pal_stream_close(hfpmod.rx_stream_handle);
         return ret;
     }
     hfpmod.is_hfp_running = true;
@@ -323,42 +323,42 @@ static int32_t stop_hfp()
 {
     int32_t ret = 0;
     if (hfpmod.rx_stream_handle) {
-        qal_stream_stop(hfpmod.rx_stream_handle);
-        qal_stream_close(hfpmod.rx_stream_handle);
+        pal_stream_stop(hfpmod.rx_stream_handle);
+        pal_stream_close(hfpmod.rx_stream_handle);
     }
     if (hfpmod.tx_stream_handle) {
-        qal_stream_stop(hfpmod.tx_stream_handle);
-        qal_stream_close(hfpmod.tx_stream_handle);
+        pal_stream_stop(hfpmod.tx_stream_handle);
+        pal_stream_close(hfpmod.tx_stream_handle);
     }
 
-    qal_param_btsco_t param_btsco;
+    pal_param_btsco_t param_btsco;
 
     param_btsco.bt_sco_on = true;
-    ret =  qal_set_param(QAL_PARAM_ID_BT_SCO,
+    ret =  pal_set_param(PAL_PARAM_ID_BT_SCO,
                         (void*)&param_btsco,
-                        sizeof(qal_param_btsco_t));
+                        sizeof(pal_param_btsco_t));
     if (ret != 0) {
-        ALOGE("%s: Set QAL_PARAM_ID_BT_SCO failed", __func__);
+        ALOGE("%s: Set PAL_PARAM_ID_BT_SCO failed", __func__);
     }
 
-    qal_param_device_connection_t param_device_connection;
+    pal_param_device_connection_t param_device_connection;
 
-    param_device_connection.id = QAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
+    param_device_connection.id = PAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
     param_device_connection.connection_state = true;
-    ret =  qal_set_param(QAL_PARAM_ID_DEVICE_CONNECTION,
+    ret =  pal_set_param(PAL_PARAM_ID_DEVICE_CONNECTION,
                         (void*)&param_device_connection,
-                        sizeof(qal_param_device_connection_t));
+                        sizeof(pal_param_device_connection_t));
     if (ret != 0) {
-        ALOGE("%s: Set QAL_PARAM_ID_DEVICE_DISCONNECTION for %d failed", __func__, param_device_connection.id);
+        ALOGE("%s: Set PAL_PARAM_ID_DEVICE_DISCONNECTION for %d failed", __func__, param_device_connection.id);
     }
 
-    param_device_connection.id = QAL_DEVICE_OUT_BLUETOOTH_SCO;
+    param_device_connection.id = PAL_DEVICE_OUT_BLUETOOTH_SCO;
     param_device_connection.connection_state = true;
-    ret =  qal_set_param(QAL_PARAM_ID_DEVICE_CONNECTION,
+    ret =  pal_set_param(PAL_PARAM_ID_DEVICE_CONNECTION,
                         (void*)&param_device_connection,
-                        sizeof(qal_param_device_connection_t));
+                        sizeof(pal_param_device_connection_t));
     if (ret != 0) {
-        ALOGE("%s: Set QAL_PARAM_ID_DEVICE_DISCONNECTION for %d failed", __func__, param_device_connection.id);
+        ALOGE("%s: Set PAL_PARAM_ID_DEVICE_DISCONNECTION for %d failed", __func__, param_device_connection.id);
     }
 
     return ret;

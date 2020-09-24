@@ -23,7 +23,7 @@
 #include <tinyalsa/asoundlib.h>
 #include <sound/audio_effects.h>
 #include "effect_api.h"
-#include "QalApi.h"
+#include "PalApi.h"
 
 
 /* Retry for delay for mixer open */
@@ -50,7 +50,7 @@ struct output_context_s {
     struct listnode effects_list;
     /* pcm device id */
     int pcm_device_id;
-    qal_stream_handle_t *qal_stream_handle;
+    pal_stream_handle_t *pal_stream_handle;
 };
 
 /* effect specific operations.

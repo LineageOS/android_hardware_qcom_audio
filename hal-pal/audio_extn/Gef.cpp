@@ -58,12 +58,12 @@
 #define GEF_LIBRARY "/vendor/lib/libqtigefar.so"
 #endif
 
-typedef int (*gef_get_qal_info)(void* adev,
+typedef int (*gef_get_pal_info)(void* adev,
                                     const audio_devices_t hal_device_id,
-                                    qal_device_id_t *qal_device_id,
+                                    pal_device_id_t *pal_device_id,
                                     audio_output_flags_t hal_stream_flag,
-                                    qal_stream_type_t *qal_stream_type);
-typedef void* (*gef_init_t)(void*, gef_get_qal_info);
+                                    pal_stream_type_t *pal_stream_type);
+typedef void* (*gef_init_t)(void*, gef_get_pal_info);
 typedef void (*gef_deinit_t)(void*);
 typedef void (*gef_device_config_cb_t)(void*, audio_devices_t,
     audio_channel_mask_t, int);
@@ -92,7 +92,7 @@ typedef enum {
 void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev)
 {
     const char* error = NULL;
-    gef_get_qal_info fp = audio_extn_get_qal_info;
+    gef_get_pal_info fp = audio_extn_get_pal_info;
 
     memset(&gef_hal_handle, 0, sizeof(gef_data));
 
@@ -199,7 +199,7 @@ int audio_extn_gef_get_audio_cal(void* data, int *length)
 //this will be called from GEF to store into acdb
 int audio_extn_gef_store_audio_cal(void* data __unused, int length __unused)
 {
-    ALOGE("%s: not supported by qal now.\n", __func__);
+    ALOGE("%s: not supported by pal now.\n", __func__);
 
     return -ENOSYS;
 }
@@ -208,7 +208,7 @@ int audio_extn_gef_store_audio_cal(void* data __unused, int length __unused)
 int audio_extn_gef_retrieve_audio_cal(void* data __unused,
     int* length __unused)
 {
-    ALOGE("%s: not supported by qal now.\n", __func__);
+    ALOGE("%s: not supported by pal now.\n", __func__);
 
     return -ENOSYS;
 }
@@ -245,19 +245,19 @@ void audio_extn_gef_deinit(std::shared_ptr<AudioDevice> adev __unused)
     ALOGV("%s: Exit", __func__);
 }
 
-int audio_extn_get_qal_info(void *hal_data,
+int audio_extn_get_pal_info(void *hal_data,
                                 const audio_devices_t hal_device_id,
-                                 qal_device_id_t *qal_device_id,
+                                 pal_device_id_t *pal_device_id,
                                  audio_output_flags_t hal_stream_flag,
-                                 qal_stream_type_t *qal_stream_type)
+                                 pal_stream_type_t *pal_stream_type)
 {
     int device_count = 0;
     AudioDevice *adev = nullptr;
 
     if (hal_data) {
         adev = (AudioDevice *)hal_data;
-        device_count = adev->GetQalDeviceIds(hal_device_id, qal_device_id);
-        *qal_stream_type = StreamOutPrimary::GetQalStreamType(hal_stream_flag);
+        device_count = adev->GetPalDeviceIds(hal_device_id, pal_device_id);
+        *pal_stream_type = StreamOutPrimary::GetPalStreamType(hal_stream_flag);
         return device_count;
     }
 

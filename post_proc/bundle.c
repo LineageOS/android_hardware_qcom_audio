@@ -211,7 +211,7 @@ bool effects_enabled()
  * Interface from audio HAL
  */
 __attribute__ ((visibility ("default")))
-int offload_effects_bundle_hal_start_output(audio_io_handle_t output,  qal_stream_handle_t* qal_stream_handle)
+int offload_effects_bundle_hal_start_output(audio_io_handle_t output,  pal_stream_handle_t* pal_stream_handle)
 {
     int ret = 0;
     struct listnode *node;
@@ -237,7 +237,7 @@ int offload_effects_bundle_hal_start_output(audio_io_handle_t output,  qal_strea
     }
 
     out_ctxt->handle = output;
-    out_ctxt->qal_stream_handle = qal_stream_handle;
+    out_ctxt->pal_stream_handle = pal_stream_handle;
     list_init(&out_ctxt->effects_list);
     list_for_each(node, &created_effects_list) {
         effect_context_t *fx_ctxt = node_to_item(node,
@@ -256,7 +256,7 @@ exit:
 }
 
 __attribute__ ((visibility ("default")))
-int offload_effects_bundle_hal_stop_output(audio_io_handle_t output,  qal_stream_handle_t* qal_stream_handle)
+int offload_effects_bundle_hal_stop_output(audio_io_handle_t output,  pal_stream_handle_t* pal_stream_handle)
 {
     int ret = 0;
     struct listnode *fx_node;
@@ -358,7 +358,7 @@ int effect_lib_create(const effect_uuid_t *uuid,
         context->ops.stop = equalizer_stop;
 
         context->desc = &equalizer_descriptor;
-        eq_ctxt->qal_stream_handle = NULL;
+        eq_ctxt->pal_stream_handle = NULL;
     } else if (memcmp(uuid, &bassboost_descriptor.uuid,
                sizeof(effect_uuid_t)) == 0) {
         bass_context_t *bass_ctxt = (bass_context_t *)
@@ -379,8 +379,8 @@ int effect_lib_create(const effect_uuid_t *uuid,
         context->ops.stop = bass_stop;
 
         context->desc = &bassboost_descriptor;
-        bass_ctxt->bassboost_ctxt.qal_stream_handle = NULL;
-        bass_ctxt->pbe_ctxt.qal_stream_handle = NULL;
+        bass_ctxt->bassboost_ctxt.pal_stream_handle = NULL;
+        bass_ctxt->pbe_ctxt.pal_stream_handle = NULL;
     } else if (memcmp(uuid, &virtualizer_descriptor.uuid,
                sizeof(effect_uuid_t)) == 0) {
         virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)
@@ -401,7 +401,7 @@ int effect_lib_create(const effect_uuid_t *uuid,
         context->ops.stop = virtualizer_stop;
 
         context->desc = &virtualizer_descriptor;
-        virt_ctxt-> qal_stream_handle = NULL;
+        virt_ctxt-> pal_stream_handle = NULL;
     } else if ((memcmp(uuid, &aux_env_reverb_descriptor.uuid,
                 sizeof(effect_uuid_t)) == 0) ||
                (memcmp(uuid, &ins_env_reverb_descriptor.uuid,
@@ -444,7 +444,7 @@ int effect_lib_create(const effect_uuid_t *uuid,
             context->desc = &ins_preset_reverb_descriptor;
             reverb_preset_init(reverb_ctxt);
         }
-        reverb_ctxt->qal_stream_handle = NULL;
+        reverb_ctxt->pal_stream_handle = NULL;
     } else {
         return -EINVAL;
     }

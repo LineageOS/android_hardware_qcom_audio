@@ -138,18 +138,18 @@ void offload_bassboost_set_strength(struct bass_boost_params *bassboost,
 #endif
 }
 
-static int send_kv_payload(qal_stream_handle_t *qal_stream_handle,
-                            uint32_t tag, qal_key_vector_t *kvp)
+static int send_kv_payload(pal_stream_handle_t *pal_stream_handle,
+                            uint32_t tag, pal_key_vector_t *kvp)
 {
    int ret = 0;
-   qal_param_payload *qal_payload;
-   effect_qal_payload_t *effect_payload = NULL;
+   pal_param_payload *pal_payload;
+   effect_pal_payload_t *effect_payload = NULL;
    uint8_t *payload = NULL;
-   qal_key_vector_t *qal_key_vector = NULL;
+   pal_key_vector_t *pal_key_vector = NULL;
    uint32_t payload_size = 0;
-   payload_size = sizeof(qal_param_payload) + sizeof(effect_qal_payload_t) +
-                  sizeof(qal_key_vector_t) +
-                  kvp->num_tkvs * sizeof(qal_key_value_pair_t);
+   payload_size = sizeof(pal_param_payload) + sizeof(effect_pal_payload_t) +
+                  sizeof(pal_key_vector_t) +
+                  kvp->num_tkvs * sizeof(pal_key_value_pair_t);
 
    payload = (uint8_t *) calloc (1, payload_size);
    if (!payload) {
@@ -157,42 +157,42 @@ static int send_kv_payload(qal_stream_handle_t *qal_stream_handle,
        ret = -ENOMEM;
        goto done;
    }
-   qal_payload = (qal_param_payload *) payload;
-   qal_payload->payload_size = sizeof(effect_qal_payload_t) +
-                                  sizeof(qal_key_vector_t) +
-                                  kvp->num_tkvs * sizeof(qal_key_value_pair_t);
+   pal_payload = (pal_param_payload *) payload;
+   pal_payload->payload_size = sizeof(effect_pal_payload_t) +
+                                  sizeof(pal_key_vector_t) +
+                                  kvp->num_tkvs * sizeof(pal_key_value_pair_t);
 
-    effect_payload = (effect_qal_payload_t *)(payload + sizeof(qal_param_payload));
+    effect_payload = (effect_pal_payload_t *)(payload + sizeof(pal_param_payload));
     effect_payload->isTKV = PARAM_TKV;
     effect_payload->tag = tag;
-    effect_payload->payloadSize = sizeof(qal_key_vector_t) +
-                                  kvp->num_tkvs * sizeof(qal_key_value_pair_t);
-    qal_key_vector = (qal_key_vector_t *)(payload +
-                                              sizeof(qal_param_payload) +
-                                              sizeof(effect_qal_payload_t));
+    effect_payload->payloadSize = sizeof(pal_key_vector_t) +
+                                  kvp->num_tkvs * sizeof(pal_key_value_pair_t);
+    pal_key_vector = (pal_key_vector_t *)(payload +
+                                              sizeof(pal_param_payload) +
+                                              sizeof(effect_pal_payload_t));
 
-    qal_key_vector->num_tkvs = kvp->num_tkvs;
-    memcpy(qal_key_vector->kvp, kvp->kvp,
-                        (kvp->num_tkvs * sizeof(qal_key_value_pair_t)));
-    ret = qal_stream_set_param(qal_stream_handle, QAL_PARAM_ID_UIEFFECT,
-                               qal_payload);
-    free(qal_payload);
+    pal_key_vector->num_tkvs = kvp->num_tkvs;
+    memcpy(pal_key_vector->kvp, kvp->kvp,
+                        (kvp->num_tkvs * sizeof(pal_key_value_pair_t)));
+    ret = pal_stream_set_param(pal_stream_handle, PAL_PARAM_ID_UIEFFECT,
+                               pal_payload);
+    free(pal_payload);
 done:
     return ret;
 }
 
-static int send_custom_payload(qal_stream_handle_t *qal_stream_handle,
-                              uint32_t tag, qal_effect_custom_payload_t *data,
+static int send_custom_payload(pal_stream_handle_t *pal_stream_handle,
+                              uint32_t tag, pal_effect_custom_payload_t *data,
                               uint32_t custom_data_sz)
 {
     int ret = 0;
-    qal_param_payload *qal_payload;
-    effect_qal_payload_t *effect_payload = NULL;
+    pal_param_payload *pal_payload;
+    effect_pal_payload_t *effect_payload = NULL;
     uint8_t *payload = NULL;
-    qal_effect_custom_payload_t *custom_payload = NULL;
+    pal_effect_custom_payload_t *custom_payload = NULL;
     uint32_t payload_size = 0;
-    payload_size = sizeof(qal_param_payload) + sizeof(effect_qal_payload_t) +
-                   sizeof(qal_effect_custom_payload_t) + custom_data_sz;
+    payload_size = sizeof(pal_param_payload) + sizeof(effect_pal_payload_t) +
+                   sizeof(pal_effect_custom_payload_t) + custom_data_sz;
 
     payload = (uint8_t *) calloc (1, payload_size);
     if (!payload) {
@@ -201,25 +201,25 @@ static int send_custom_payload(qal_stream_handle_t *qal_stream_handle,
         goto done;
     }
 
-    qal_payload = (qal_param_payload *) payload;
-    qal_payload->payload_size = sizeof(effect_qal_payload_t) +
-                                  sizeof(qal_effect_custom_payload_t) +
+    pal_payload = (pal_param_payload *) payload;
+    pal_payload->payload_size = sizeof(effect_pal_payload_t) +
+                                  sizeof(pal_effect_custom_payload_t) +
                                   custom_data_sz;
 
-    effect_payload = (effect_qal_payload_t *)(payload + sizeof(qal_param_payload));
+    effect_payload = (effect_pal_payload_t *)(payload + sizeof(pal_param_payload));
     effect_payload->isTKV = PARAM_NONTKV;
     effect_payload->tag = tag;
-    effect_payload->payloadSize = sizeof(qal_effect_custom_payload_t) +
+    effect_payload->payloadSize = sizeof(pal_effect_custom_payload_t) +
                                   custom_data_sz;
-    custom_payload = (qal_effect_custom_payload_t *)(payload +
-                                                   sizeof(qal_param_payload) +
-                                                   sizeof(effect_qal_payload_t));
+    custom_payload = (pal_effect_custom_payload_t *)(payload +
+                                                   sizeof(pal_param_payload) +
+                                                   sizeof(effect_pal_payload_t));
 
     custom_payload->paramId = data->paramId;
     memcpy(custom_payload->data, data->data, custom_data_sz);
-    ret = qal_stream_set_param(qal_stream_handle, QAL_PARAM_ID_UIEFFECT,
-                              qal_payload);
-    free(qal_payload);
+    ret = pal_stream_set_param(pal_stream_handle, PAL_PARAM_ID_UIEFFECT,
+                              pal_payload);
+    free(pal_payload);
 done:
     return ret;
 }
@@ -231,44 +231,44 @@ void offload_bassboost_set_mode(struct bass_boost_params *bassboost,
     bassboost->mode = mode;
 }
 
-static int bassboost_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_handle,
+static int bassboost_send_params_pal(eff_mode_t mode, pal_stream_handle_t *pal_stream_handle,
                                   struct bass_boost_params *bassboost,
                                  unsigned param_send_flags)
 {
     int ret = 0;
-    qal_effect_custom_payload_t *custom_payload = NULL;
+    pal_effect_custom_payload_t *custom_payload = NULL;
 
-    if (!qal_stream_handle) {
-        ALOGE("%s: qal stream handle is null.\n", __func__);
+    if (!pal_stream_handle) {
+        ALOGE("%s: pal stream handle is null.\n", __func__);
         return -EINVAL;
     }
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG) {
         uint32_t num_kvs = 1;
-        qal_key_vector_t *qal_key_vector = NULL;
-        qal_key_vector = (qal_key_vector_t *) calloc(1, sizeof(qal_key_vector_t) +
-                                            num_kvs * sizeof(qal_key_value_pair_t));
-        if (!qal_key_vector) {
+        pal_key_vector_t *pal_key_vector = NULL;
+        pal_key_vector = (pal_key_vector_t *) calloc(1, sizeof(pal_key_vector_t) +
+                                            num_kvs * sizeof(pal_key_value_pair_t));
+        if (!pal_key_vector) {
             ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
-                 sizeof(qal_key_vector_t) + num_kvs * sizeof(qal_key_value_pair_t));
+                 sizeof(pal_key_vector_t) + num_kvs * sizeof(pal_key_value_pair_t));
             ret = -ENOMEM;
             goto done;
         }
-        qal_key_vector->num_tkvs = num_kvs;
-        qal_key_vector->kvp[0].key= BASS_BOOST_SWITCH;
-        qal_key_vector->kvp[0].value = bassboost->enable_flag;
+        pal_key_vector->num_tkvs = num_kvs;
+        pal_key_vector->kvp[0].key= BASS_BOOST_SWITCH;
+        pal_key_vector->kvp[0].value = bassboost->enable_flag;
 
-        ret = send_kv_payload(qal_stream_handle, TAG_STREAM_BASS_BOOST, qal_key_vector);
-        free(qal_key_vector);
+        ret = send_kv_payload(pal_stream_handle, TAG_STREAM_BASS_BOOST, pal_key_vector);
+        free(pal_key_vector);
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
 
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_STRENGTH) {
         uint32_t custom_data_sz = BASS_BOOST_STRENGTH_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                           sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                           sizeof(pal_effect_custom_payload_t) +
                                            custom_data_sz);
         if (!custom_payload) {
             ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -278,20 +278,20 @@ static int bassboost_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_s
         }
         custom_payload->paramId = PARAM_ID_BASS_BOOST_STRENGTH;
         custom_payload->data[0] = bassboost->strength;
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_BASS_BOOST,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_BASS_BOOST,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
 
     if (param_send_flags & OFFLOAD_SEND_BASSBOOST_MODE) {
         uint32_t custom_data_sz = BASS_BOOST_STRENGTH_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                           sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                           sizeof(pal_effect_custom_payload_t) +
                                            custom_data_sz);
         if (!custom_payload) {
             ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -302,12 +302,12 @@ static int bassboost_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_s
         custom_payload->paramId = PARAM_ID_BASS_BOOST_MODE;
         custom_payload->data[0] = bassboost->strength;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_BASS_BOOST,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_BASS_BOOST,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
@@ -316,11 +316,11 @@ done:
     return ret;
 }
 
-int offload_bassboost_send_params_qal(qal_stream_handle_t *qal_handle,
+int offload_bassboost_send_params_pal(pal_stream_handle_t *pal_handle,
                                   struct bass_boost_params *bassboost,
                                   unsigned param_send_flags)
 {
-    return bassboost_send_params_qal(OFFLOAD, qal_handle, bassboost,
+    return bassboost_send_params_pal(OFFLOAD, pal_handle, bassboost,
                                  param_send_flags);
 }
 
@@ -344,40 +344,40 @@ int offload_pbe_get_enable_flag(struct pbe_params *pbe)
     return pbe->enable_flag;
 }
 
-static int pbe_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_handle,
+static int pbe_send_params_pal(eff_mode_t mode, pal_stream_handle_t *pal_stream_handle,
                             struct pbe_params *pbe,
                             unsigned param_send_flags)
 {
     int ret = 0;
 
-    if (!qal_stream_handle) {
-        ALOGE("%s: qal stream handle is null.\n", __func__);
+    if (!pal_stream_handle) {
+        ALOGE("%s: pal stream handle is null.\n", __func__);
         return -EINVAL;
     }
 
     ALOGV("%s: enabled=%d", __func__, pbe->enable_flag);
     if (param_send_flags & OFFLOAD_SEND_PBE_ENABLE_FLAG) {
         uint32_t num_kvs = 1;
-        qal_key_vector_t *qal_key_vector = NULL;
+        pal_key_vector_t *pal_key_vector = NULL;
 
-        qal_key_vector = (qal_key_vector_t *) calloc (1, sizeof(qal_key_vector_t) +
-                                         num_kvs * sizeof(qal_key_value_pair_t));
-        if (!qal_key_vector) {
+        pal_key_vector = (pal_key_vector_t *) calloc (1, sizeof(pal_key_vector_t) +
+                                         num_kvs * sizeof(pal_key_value_pair_t));
+        if (!pal_key_vector) {
             ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
-                 sizeof(qal_key_vector_t) + num_kvs * sizeof(qal_key_value_pair_t));
+                 sizeof(pal_key_vector_t) + num_kvs * sizeof(pal_key_value_pair_t));
             ret = -ENOMEM;
             goto done;
         }
 
-        qal_key_vector->num_tkvs = num_kvs;
-        qal_key_vector->kvp[0].key= PBE_SWITCH;
-        qal_key_vector->kvp[0].value = pbe->enable_flag;
+        pal_key_vector->num_tkvs = num_kvs;
+        pal_key_vector->kvp[0].key= PBE_SWITCH;
+        pal_key_vector->kvp[0].value = pbe->enable_flag;
 
-        ret = send_kv_payload(qal_stream_handle, TAG_STREAM_PBE,
-                              qal_key_vector);
-        free(qal_key_vector);
+        ret = send_kv_payload(pal_stream_handle, TAG_STREAM_PBE,
+                              pal_key_vector);
+        free(pal_key_vector);
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
@@ -385,11 +385,11 @@ done:
     return ret;
 }
 
-int offload_pbe_send_params_qal(qal_stream_handle_t *qal_handle,
+int offload_pbe_send_params_pal(pal_stream_handle_t *pal_handle,
                                   struct pbe_params *pbe,
                                   unsigned param_send_flags)
 {
-    return pbe_send_params_qal(OFFLOAD, qal_handle, pbe,
+    return pbe_send_params_pal(OFFLOAD, pal_handle, pbe,
                                  param_send_flags);
 }
 
@@ -442,42 +442,42 @@ void offload_virtualizer_set_gain_adjust(struct virtualizer_params *virtualizer,
     virtualizer->gain_adjust = gain_adjust;
 }
 
-static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_handle,
+static int virtualizer_send_params_pal(eff_mode_t mode, pal_stream_handle_t *pal_stream_handle,
                                     struct virtualizer_params *virtualizer,
                                    unsigned param_send_flags)
 {
     int ret = 0;
-    qal_effect_custom_payload_t *custom_payload = NULL;
+    pal_effect_custom_payload_t *custom_payload = NULL;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG) {
         uint32_t num_kvs = 1;
-        qal_key_vector_t *qal_key_vector = NULL;
-        qal_key_vector = (qal_key_vector_t *) calloc (1, sizeof(qal_key_vector_t) +
-                                         num_kvs * sizeof(qal_key_value_pair_t));
-        if (!qal_key_vector) {
+        pal_key_vector_t *pal_key_vector = NULL;
+        pal_key_vector = (pal_key_vector_t *) calloc (1, sizeof(pal_key_vector_t) +
+                                         num_kvs * sizeof(pal_key_value_pair_t));
+        if (!pal_key_vector) {
             ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
-                 sizeof(qal_key_vector_t) + num_kvs * sizeof(qal_key_value_pair_t));
+                 sizeof(pal_key_vector_t) + num_kvs * sizeof(pal_key_value_pair_t));
             ret = -ENOMEM;
             goto done;
         }
 
-        qal_key_vector->num_tkvs = num_kvs;
-        qal_key_vector->kvp[0].key= VIRTUALIZER_SWITCH;
-        qal_key_vector->kvp[0].value =  virtualizer->enable_flag;
+        pal_key_vector->num_tkvs = num_kvs;
+        pal_key_vector->kvp[0].key= VIRTUALIZER_SWITCH;
+        pal_key_vector->kvp[0].value =  virtualizer->enable_flag;
 
-        ret = send_kv_payload(qal_stream_handle, TAG_STREAM_VIRTUALIZER,
-                              qal_key_vector);
-        free(qal_key_vector);
+        ret = send_kv_payload(pal_stream_handle, TAG_STREAM_VIRTUALIZER,
+                              pal_key_vector);
+        free(pal_key_vector);
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_STRENGTH) {
         uint32_t custom_data_sz = VIRTUALIZER_STRENGTH_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                          sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                          sizeof(pal_effect_custom_payload_t) +
                                           custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -488,19 +488,19 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
         custom_payload->paramId = PARAM_ID_VIRTUALIZER_STRENGTH;
         custom_payload->data[0] = virtualizer->strength;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_VIRTUALIZER,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_VIRTUALIZER,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_OUT_TYPE) {
         uint32_t custom_data_sz = VIRTUALIZER_STRENGTH_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                         sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                         sizeof(pal_effect_custom_payload_t) +
                                          custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -510,20 +510,20 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
         }
         custom_payload->paramId = PARAM_ID_VIRTUALIZER_OUT_TYPE;
         custom_payload->data[0] = virtualizer->out_type;
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_VIRTUALIZER,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_VIRTUALIZER,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
 
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_VIRTUALIZER_GAIN_ADJUST) {
         uint32_t custom_data_sz = VIRTUALIZER_STRENGTH_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                                sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                                sizeof(pal_effect_custom_payload_t) +
                                                 custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -534,12 +534,12 @@ static int virtualizer_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal
         custom_payload->paramId = PARAM_ID_VIRTUALIZER_GAIN_ADJUST;
         custom_payload->data[0] = virtualizer->gain_adjust;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_VIRTUALIZER,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_VIRTUALIZER,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
@@ -547,11 +547,11 @@ done:
     return ret;
 }
 
-int offload_virtualizer_send_params_qal(qal_stream_handle_t *qal_stream_handle,
+int offload_virtualizer_send_params_pal(pal_stream_handle_t *pal_stream_handle,
                                     struct virtualizer_params *virtualizer,
                                     unsigned param_send_flags)
 {
-    return virtualizer_send_params_qal(OFFLOAD, qal_stream_handle, virtualizer,
+    return virtualizer_send_params_pal(OFFLOAD, pal_stream_handle, virtualizer,
                                    param_send_flags);
 }
 
@@ -604,15 +604,15 @@ void offload_eq_set_bands_level(struct eq_params *eq, int num_bands,
 
 }
 
-static int eq_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_handle, struct eq_params *eq,
+static int eq_send_params_pal(eff_mode_t mode, pal_stream_handle_t *pal_stream_handle, struct eq_params *eq,
                           unsigned param_send_flags)
 {
     uint32_t i = 0, index = 0;
     int ret = 0;
-    qal_effect_custom_payload_t *custom_payload = NULL;
+    pal_effect_custom_payload_t *custom_payload = NULL;
 
-    if (!qal_stream_handle) {
-        ALOGE("%s: qal stream handle is null.\n", __func__);
+    if (!pal_stream_handle) {
+        ALOGE("%s: pal stream handle is null.\n", __func__);
         return -EINVAL;
     }
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
@@ -624,32 +624,32 @@ static int eq_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_h
 
     if (param_send_flags & OFFLOAD_SEND_EQ_ENABLE_FLAG) {
         uint32_t num_kvs = 1;
-        qal_key_vector_t *qal_key_vector = NULL;
-        qal_key_vector = (qal_key_vector_t *) calloc (1, sizeof(qal_key_vector_t) +
-                                           num_kvs * sizeof(qal_key_value_pair_t));
-        if (!qal_key_vector) {
+        pal_key_vector_t *pal_key_vector = NULL;
+        pal_key_vector = (pal_key_vector_t *) calloc (1, sizeof(pal_key_vector_t) +
+                                           num_kvs * sizeof(pal_key_value_pair_t));
+        if (!pal_key_vector) {
             ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
-                 sizeof(qal_key_vector_t) + num_kvs * sizeof(qal_key_value_pair_t));
+                 sizeof(pal_key_vector_t) + num_kvs * sizeof(pal_key_value_pair_t));
             ret = -ENOMEM;
             goto done;
         }
 
-        qal_key_vector->num_tkvs = num_kvs;
-        qal_key_vector->kvp[0].key= EQUALIZER_SWITCH;
-        qal_key_vector->kvp[0].value = eq->enable_flag;
-        ret = send_kv_payload(qal_stream_handle, TAG_STREAM_EQUALIZER,
-                              qal_key_vector);
-        free(qal_key_vector);
+        pal_key_vector->num_tkvs = num_kvs;
+        pal_key_vector->kvp[0].key= EQUALIZER_SWITCH;
+        pal_key_vector->kvp[0].value = eq->enable_flag;
+        ret = send_kv_payload(pal_stream_handle, TAG_STREAM_EQUALIZER,
+                              pal_key_vector);
+        free(pal_key_vector);
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
 
     if (param_send_flags & OFFLOAD_SEND_EQ_PRESET) {
         uint32_t custom_data_sz = EQ_CONFIG_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                           sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                           sizeof(pal_effect_custom_payload_t) +
                                            custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -663,12 +663,12 @@ static int eq_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_h
             map_eq_opensl_preset_2_offload_preset[eq->config.preset_id];
         custom_payload->data[2] = 0;    // num_of_band must be 0 for preset
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_EQUALIZER,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_EQUALIZER,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
@@ -677,8 +677,8 @@ static int eq_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_h
         uint32_t custom_data_sz = (EQ_CONFIG_PARAM_LEN +
          (eq->config.num_bands * EQ_CONFIG_PER_BAND_PARAM_LEN)) * sizeof(uint32_t);
 
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                           sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                           sizeof(pal_effect_custom_payload_t) +
                                            custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -698,12 +698,12 @@ static int eq_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_h
             custom_payload->data[index++] = eq->per_band_cfg[i].quality_factor;
             custom_payload->data[index++] = eq->per_band_cfg[i].band_idx;
         }
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_EQUALIZER,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_EQUALIZER,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
@@ -711,10 +711,10 @@ done:
     return ret;
 }
 
-int offload_eq_send_params_qal(qal_stream_handle_t *qal_handle, struct eq_params *eq,
+int offload_eq_send_params_pal(pal_stream_handle_t *pal_handle, struct eq_params *eq,
                            unsigned param_send_flags)
 {
-    return eq_send_params_qal(OFFLOAD, qal_handle, eq, param_send_flags);
+    return eq_send_params_pal(OFFLOAD, pal_handle, eq, param_send_flags);
 }
 
 void offload_reverb_set_device(struct reverb_params *reverb, uint32_t device)
@@ -827,42 +827,42 @@ void offload_reverb_set_density(struct reverb_params *reverb, int density)
 }
 
 
-static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stream_handle,
+static int reverb_send_params_pal(eff_mode_t mode, pal_stream_handle_t *pal_stream_handle,
                                struct reverb_params *reverb,
                               unsigned param_send_flags)
 {
     int ret = 0;
-    qal_effect_custom_payload_t *custom_payload = NULL;
+    pal_effect_custom_payload_t *custom_payload = NULL;
 
     ALOGV("%s: flags 0x%x", __func__, param_send_flags);
 
     if (param_send_flags & OFFLOAD_SEND_REVERB_ENABLE_FLAG) {
         uint32_t num_kvs = 1;
-        qal_key_vector_t *qal_key_vector = NULL;
-        qal_key_vector = (qal_key_vector_t *) calloc (1, sizeof(qal_key_vector_t) +
-                                         num_kvs * sizeof(qal_key_value_pair_t));
-        if (!qal_key_vector) {
+        pal_key_vector_t *pal_key_vector = NULL;
+        pal_key_vector = (pal_key_vector_t *) calloc (1, sizeof(pal_key_vector_t) +
+                                         num_kvs * sizeof(pal_key_value_pair_t));
+        if (!pal_key_vector) {
             ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
-                 sizeof(qal_key_vector_t) + num_kvs * sizeof(qal_key_value_pair_t));
+                 sizeof(pal_key_vector_t) + num_kvs * sizeof(pal_key_value_pair_t));
             ret = -ENOMEM;
             goto done;
         }
-        qal_key_vector->num_tkvs = num_kvs;
-        qal_key_vector->kvp[0].key= REVERB_SWITCH;
-        qal_key_vector->kvp[0].value = reverb->enable_flag;
-        ret = send_kv_payload(qal_stream_handle, TAG_STREAM_REVERB,
-                              qal_key_vector);
-        free(qal_key_vector);
+        pal_key_vector->num_tkvs = num_kvs;
+        pal_key_vector->kvp[0].key= REVERB_SWITCH;
+        pal_key_vector->kvp[0].value = reverb->enable_flag;
+        ret = send_kv_payload(pal_stream_handle, TAG_STREAM_REVERB,
+                              pal_key_vector);
+        free(pal_key_vector);
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_MODE) {
         uint32_t custom_data_sz = REVERB_MODE_PARAM_LEN * sizeof(uint32_t);
 
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                           sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                           sizeof(pal_effect_custom_payload_t) +
                                            custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -873,20 +873,20 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload->paramId = PARAM_ID_REVERB_MODE;
         custom_payload->data[0] = reverb->mode;;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_PRESET) {
         uint32_t custom_data_sz = REVERB_PRESET_PARAM_LEN * sizeof(uint32_t);
 
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                           sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                           sizeof(pal_effect_custom_payload_t) +
                                            custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -897,12 +897,12 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload->paramId = PARAM_ID_REVERB_PRESET;
         custom_payload->data[0] = reverb->preset;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
@@ -910,8 +910,8 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         // param_id + actual payload
         uint32_t custom_data_sz = REVERB_WET_MIX_PARAM_LEN * sizeof(uint32_t);
 
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                            sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                            sizeof(pal_effect_custom_payload_t) +
                                             custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -923,20 +923,20 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload->paramId = PARAM_ID_REVERB_WET_MIX;
         custom_payload->data[0] = reverb->wet_mix;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_GAIN_ADJUST) {
         uint32_t custom_data_sz = REVERB_GAIN_ADJUST_PARAM_LEN * sizeof(uint32_t);
 
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                            sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                            sizeof(pal_effect_custom_payload_t) +
                                             custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -948,19 +948,19 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload->paramId = PARAM_ID_REVERB_GAIN_ADJUST;
         custom_payload->data[0] = reverb->gain_adjust;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_ROOM_LEVEL) {
         uint32_t custom_data_sz = REVERB_ROOM_LEVEL_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                            sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                            sizeof(pal_effect_custom_payload_t) +
                                             custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -971,19 +971,19 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload->paramId = PARAM_ID_REVERB_ROOM_LEVEL;
         custom_payload->data[0] = reverb->room_level;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_ROOM_HF_LEVEL) {
         uint32_t custom_data_sz = REVERB_ROOM_HF_LEVEL_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                            sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                            sizeof(pal_effect_custom_payload_t) +
                                             custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -994,19 +994,19 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload->paramId = PARAM_ID_REVERB_ROOM_HF_LEVEL;
         custom_payload->data[0] = reverb->room_hf_level;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DECAY_TIME) {
         uint32_t custom_data_sz = REVERB_DECAY_TIME_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                              sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                              sizeof(pal_effect_custom_payload_t) +
                                               custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -1017,19 +1017,19 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload->paramId = PARAM_ID_REVERB_DECAY_TIME;
         custom_payload->data[0] = reverb->decay_time;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DECAY_HF_RATIO) {
         uint32_t custom_data_sz = REVERB_DECAY_HF_RATIO_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                              sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                              sizeof(pal_effect_custom_payload_t) +
                                               custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -1040,19 +1040,19 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload->paramId = PARAM_ID_REVERB_DECAY_HF_RATIO;
         custom_payload->data[0] = reverb->decay_hf_ratio;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_REFLECTIONS_LEVEL) {
         uint32_t custom_data_sz = REVERB_REFLECTIONS_LEVEL_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                            sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                            sizeof(pal_effect_custom_payload_t) +
                                             custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -1063,19 +1063,19 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
 
         custom_payload->paramId = PARAM_ID_REVERB_REFLECTIONS_LEVEL;
         custom_payload->data[0] = reverb->reflections_level;
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_REFLECTIONS_DELAY) {
         uint32_t custom_data_sz = REVERB_REFLECTIONS_DELAY_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                             sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                             sizeof(pal_effect_custom_payload_t) +
                                              custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -1087,19 +1087,19 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload->paramId = PARAM_ID_REVERB_REFLECTIONS_DELAY;
         custom_payload->data[0] = reverb->reflections_delay;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_LEVEL) {
         uint32_t custom_data_sz = REVERB_LEVEL_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                              sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                              sizeof(pal_effect_custom_payload_t) +
                                               custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -1109,20 +1109,20 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         }
         custom_payload->paramId = PARAM_ID_REVERB_LEVEL;
         custom_payload->data[0] = reverb->level;
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
 
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DELAY) {
         uint32_t custom_data_sz = REVERB_DELAY_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                             sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                             sizeof(pal_effect_custom_payload_t) +
                                              custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -1132,19 +1132,19 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         }
         custom_payload->paramId = PARAM_ID_REVERB_DELAY;
         custom_payload->data[0] = reverb->delay;
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DIFFUSION) {
         uint32_t custom_data_sz = REVERB_DIFFUSION_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                           sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                           sizeof(pal_effect_custom_payload_t) +
                                            custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -1155,19 +1155,19 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         custom_payload->paramId = PARAM_ID_REVERB_DIFFUSION;
         custom_payload->data[0] = reverb->diffusion;
 
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             goto done;
         }
     }
     if (param_send_flags & OFFLOAD_SEND_REVERB_DENSITY) {
         uint32_t custom_data_sz = REVERB_DENSITY_PARAM_LEN * sizeof(uint32_t);
-        custom_payload = (qal_effect_custom_payload_t *) calloc (1,
-                                           sizeof(qal_effect_custom_payload_t) +
+        custom_payload = (pal_effect_custom_payload_t *) calloc (1,
+                                           sizeof(pal_effect_custom_payload_t) +
                                            custom_data_sz);
         if (!custom_payload) {
              ALOGE("%s:%d calloc failed for size %d", __func__, __LINE__,
@@ -1177,12 +1177,12 @@ static int reverb_send_params_qal(eff_mode_t mode, qal_stream_handle_t *qal_stre
         }
         custom_payload->paramId = PARAM_ID_REVERB_DENSITY;
         custom_payload->data[0] = reverb->density;
-        ret = send_custom_payload(qal_stream_handle, TAG_STREAM_REVERB,
+        ret = send_custom_payload(pal_stream_handle, TAG_STREAM_REVERB,
                               custom_payload, custom_data_sz);
         free(custom_payload);
         custom_payload = NULL;
         if (ret) {
-            ALOGE("%s: qal_stream_set_param failed. ret = %d", __func__, ret);
+            ALOGE("%s: pal_stream_set_param failed. ret = %d", __func__, ret);
             return ret;
         }
     }
@@ -1190,11 +1190,11 @@ done:
     return ret;
 }
 
-int offload_reverb_send_params_qal(qal_stream_handle_t *qal_stream_handle,
+int offload_reverb_send_params_pal(pal_stream_handle_t *pal_stream_handle,
                                struct reverb_params *reverb,
                                unsigned param_send_flags)
 {
-    return reverb_send_params_qal(OFFLOAD, qal_stream_handle, reverb,
+    return reverb_send_params_pal(OFFLOAD, pal_stream_handle, reverb,
                               param_send_flags);
 }
 

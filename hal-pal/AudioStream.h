@@ -39,7 +39,7 @@
 #include <hardware/audio.h>
 #include <system/audio.h>
 
-#include "QalDefs.h"
+#include "PalDefs.h"
 #include <audio_extn/AudioExtn.h>
 #include <mutex>
 #include <map>
@@ -246,19 +246,19 @@ static const struct string_to_enum channels_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_CHANNEL_INDEX_MASK_8),
 };
 
-const std::map<uint32_t, qal_audio_fmt_t> getFormatId {
-    {AUDIO_FORMAT_PCM,                 QAL_AUDIO_FMT_DEFAULT_PCM},
-    {AUDIO_FORMAT_MP3,                 QAL_AUDIO_FMT_MP3},
-    {AUDIO_FORMAT_AAC,                 QAL_AUDIO_FMT_AAC},
-    {AUDIO_FORMAT_AAC_ADTS,            QAL_AUDIO_FMT_AAC_ADTS},
-    {AUDIO_FORMAT_AAC_ADIF,            QAL_AUDIO_FMT_AAC_ADIF},
-    {AUDIO_FORMAT_AAC_LATM,            QAL_AUDIO_FMT_AAC_LATM},
-    {AUDIO_FORMAT_WMA,                 QAL_AUDIO_FMT_WMA_STD},
-    {AUDIO_FORMAT_ALAC,                QAL_AUDIO_FMT_ALAC},
-    {AUDIO_FORMAT_APE,                 QAL_AUDIO_FMT_APE},
-    {AUDIO_FORMAT_WMA_PRO,             QAL_AUDIO_FMT_WMA_PRO},
-    {AUDIO_FORMAT_FLAC,                QAL_AUDIO_FMT_FLAC},
-    {AUDIO_FORMAT_VORBIS,              QAL_AUDIO_FMT_VORBIS}
+const std::map<uint32_t, pal_audio_fmt_t> getFormatId {
+    {AUDIO_FORMAT_PCM,                 PAL_AUDIO_FMT_DEFAULT_PCM},
+    {AUDIO_FORMAT_MP3,                 PAL_AUDIO_FMT_MP3},
+    {AUDIO_FORMAT_AAC,                 PAL_AUDIO_FMT_AAC},
+    {AUDIO_FORMAT_AAC_ADTS,            PAL_AUDIO_FMT_AAC_ADTS},
+    {AUDIO_FORMAT_AAC_ADIF,            PAL_AUDIO_FMT_AAC_ADIF},
+    {AUDIO_FORMAT_AAC_LATM,            PAL_AUDIO_FMT_AAC_LATM},
+    {AUDIO_FORMAT_WMA,                 PAL_AUDIO_FMT_WMA_STD},
+    {AUDIO_FORMAT_ALAC,                PAL_AUDIO_FMT_ALAC},
+    {AUDIO_FORMAT_APE,                 PAL_AUDIO_FMT_APE},
+    {AUDIO_FORMAT_WMA_PRO,             PAL_AUDIO_FMT_WMA_PRO},
+    {AUDIO_FORMAT_FLAC,                PAL_AUDIO_FMT_FLAC},
+    {AUDIO_FORMAT_VORBIS,              PAL_AUDIO_FMT_VORBIS}
 };
 
 const uint32_t format_to_bitwidth_table[] = {
@@ -360,14 +360,14 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
 
 extern "C" typedef void (*hello_t)( const char* text );
 extern "C" typedef int (*offload_effects_start_output)(audio_io_handle_t,
-                                                       qal_stream_handle_t*);
+                                                       pal_stream_handle_t*);
 extern "C" typedef int (*offload_effects_stop_output)(audio_io_handle_t,
-                                                      qal_stream_handle_t*);
+                                                      pal_stream_handle_t*);
 
 extern "C" typedef int (*visualizer_hal_start_output)(audio_io_handle_t,
-                                                       qal_stream_handle_t*);
+                                                       pal_stream_handle_t*);
 extern "C" typedef int (*visualizer_hal_stop_output)(audio_io_handle_t,
-                                                      qal_stream_handle_t*);
+                                                      pal_stream_handle_t*);
 
 int adev_open(audio_hw_device_t **device);
 
@@ -383,7 +383,7 @@ public:
     uint32_t        GetBufferSize();
     audio_format_t  GetFormat();
     uint32_t        GetChannelMask();
-    int getQalDeviceIds(const audio_devices_t halDeviceId, qal_device_id_t* qalOutDeviceIds);
+    int getPalDeviceIds(const audio_devices_t halDeviceId, pal_device_id_t* palOutDeviceIds);
     audio_io_handle_t GetHandle();
     int             GetUseCase();
     std::mutex write_wait_mutex_;
@@ -399,25 +399,25 @@ public:
     int GetLookupTableIndex(const struct string_to_enum *table,
                                         const int table_size, int value);
 protected:
-    struct qal_stream_attributes streamAttributes_;
-    qal_stream_handle_t*      qal_stream_handle_;
+    struct pal_stream_attributes streamAttributes_;
+    pal_stream_handle_t*      pal_stream_handle_;
     audio_io_handle_t         handle_;
-    qal_device_id_t           qal_device_id_;
+    pal_device_id_t           pal_device_id_;
     struct audio_config       config_;
     char                      address_[AUDIO_DEVICE_MAX_ADDRESS_LEN];
     bool                      stream_started_ = false;
     bool                      stream_paused_ = false;
     int usecase_;
-    struct qal_volume_data *volume_; /* used to cache volume */
-    std::map <audio_devices_t, qal_device_id_t> mAndroidDeviceMap;
+    struct pal_volume_data *volume_; /* used to cache volume */
+    std::map <audio_devices_t, pal_device_id_t> mAndroidDeviceMap;
 };
 
 class StreamOutPrimary : public StreamPrimary {
 
 private:
     int mNoOfOutDevices;
-    struct qal_device* mQalOutDevice;
-    qal_device_id_t* mQalOutDeviceIds;
+    struct pal_device* mPalOutDevice;
+    pal_device_id_t* mPalOutDeviceIds;
     audio_devices_t mAndroidOutDevices;
     bool mInitialized;
 public:
@@ -449,18 +449,18 @@ public:
     void GetStreamHandle(audio_stream_out** stream);
     uint32_t GetBufferSize();
     int GetFrames(uint64_t *frames);
-    static qal_stream_type_t GetQalStreamType(audio_output_flags_t halStreamFlags);
+    static pal_stream_type_t GetPalStreamType(audio_output_flags_t halStreamFlags);
     static int64_t GetRenderLatency(audio_output_flags_t halStreamFlags);
     int GetOutputUseCase(audio_output_flags_t halStreamFlags);
-    int StartOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
-    int StopOffloadEffects(audio_io_handle_t, qal_stream_handle_t*);
-    bool CheckOffloadEffectsType(qal_stream_type_t qal_stream_type);
-    int StartOffloadVisualizer(audio_io_handle_t, qal_stream_handle_t*);
-    int StopOffloadVisualizer(audio_io_handle_t, qal_stream_handle_t*);
+    int StartOffloadEffects(audio_io_handle_t, pal_stream_handle_t*);
+    int StopOffloadEffects(audio_io_handle_t, pal_stream_handle_t*);
+    bool CheckOffloadEffectsType(pal_stream_type_t pal_stream_type);
+    int StartOffloadVisualizer(audio_io_handle_t, pal_stream_handle_t*);
+    int StopOffloadVisualizer(audio_io_handle_t, pal_stream_handle_t*);
     audio_output_flags_t flags_;
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
     int GetMmapPosition(struct audio_mmap_position *position);
-    bool isDeviceAvailable(qal_device_id_t deviceId);
+    bool isDeviceAvailable(pal_device_id_t deviceId);
 protected:
     struct timespec writeAt;
     int get_compressed_buffer_size();
@@ -470,8 +470,8 @@ protected:
     uint32_t convertBufSize;
     uint32_t fragments_ = 0;
     uint32_t fragment_size_ = 0;
-    qal_snd_dec_t qalSndDec;
-    struct qal_compr_gapless_mdata gaplessMeta;
+    pal_snd_dec_t palSndDec;
+    struct pal_compr_gapless_mdata gaplessMeta;
     uint32_t msample_rate;
     uint16_t mchannels;
     std::shared_ptr<audio_stream_out>   stream_;
@@ -491,8 +491,8 @@ class StreamInPrimary : public StreamPrimary{
 
 private:
      int mNoOfInDevices;
-     struct qal_device* mQalInDevice;
-     qal_device_id_t* mQalInDeviceIds;
+     struct pal_device* mPalInDevice;
+     pal_device_id_t* mPalInDeviceIds;
      audio_devices_t mAndroidInDevices;
      bool mInitialized;
 public:
@@ -512,7 +512,7 @@ public:
     int Stop();
     ssize_t Read(const void *buffer, size_t bytes);
     uint32_t GetBufferSize();
-    qal_stream_type_t GetQalStreamType(audio_input_flags_t halStreamFlags,
+    pal_stream_type_t GetPalStreamType(audio_input_flags_t halStreamFlags,
             uint32_t sample_rate);
     int GetInputUseCase(audio_input_flags_t halStreamFlags, audio_source_t source);
     int addRemoveAudioEffect(const struct audio_stream *stream, effect_handle_t effect,bool enable);
@@ -522,7 +522,7 @@ public:
     audio_input_flags_t                 flags_;
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
     int GetMmapPosition(struct audio_mmap_position *position);
-    bool isDeviceAvailable(qal_device_id_t deviceId);
+    bool isDeviceAvailable(pal_device_id_t deviceId);
 protected:
     int FillHalFnPtrs();
     std::shared_ptr<audio_stream_in>    stream_;

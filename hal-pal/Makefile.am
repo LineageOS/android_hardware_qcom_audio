@@ -2,7 +2,7 @@ AM_CFLAGS = -I ${WORKSPACE}/system/media/audio_effects/include \
         -I ${WORKSPACE}/system/media/audio_utils/include \
         -I $(PKG_CONFIG_SYSROOT_DIR)/usr/include/audio-kernel \
 
-c_sources = audio_hw_qal.cpp
+c_sources = audio_hw_pal.cpp
 
 #if LISTEN
 #AM_CFLAGS += -DAUDIO_LISTEN_ENABLED
@@ -63,7 +63,7 @@ AM_CFLAGS += -DUSE_LL_AS_PRIMARY_OUTPUT
 endif
 
 h_sources = audio_extn/audio_defs.h \
-            audio_hw_qal.h
+            audio_hw_pal.h
 
 library_include_HEADERS = $(h_sources)
 library_includedir = $(includedir)

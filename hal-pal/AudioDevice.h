@@ -86,15 +86,15 @@ public:
     int SetVoiceVolume(float volume);
     void SetChargingMode(bool is_charging);
     void FillAndroidDeviceMap();
-    int GetQalDeviceIds(
+    int GetPalDeviceIds(
             const audio_devices_t hal_device_id,
-            qal_device_id_t* qal_device_id);
+            pal_device_id_t* pal_device_id);
     int                       usb_card_id_;
     int                       usb_dev_num_;
     int   dp_controller;
     int   dp_stream;
     int num_va_sessions_ = 0;
-    qal_speaker_rotation_type current_rotation;
+    pal_speaker_rotation_type current_rotation;
     static card_status_t sndCardState;
     std::mutex adev_init_mutex;
     uint32_t adev_init_ref_count = 0;
@@ -117,9 +117,9 @@ protected:
     void *visualizer_lib_;
     visualizer_hal_start_output fnp_visualizer_start_output_ = nullptr;
     visualizer_hal_stop_output fnp_visualizer_stop_output_ = nullptr;
-    std::map<audio_devices_t, qal_device_id_t> android_device_map_;
+    std::map<audio_devices_t, pal_device_id_t> android_device_map_;
     bool usb_input_dev_enabled = false;
-    int add_input_headset_if_usb_out_headset(int *device_count,  qal_device_id_t** qal_device_ids);
+    int add_input_headset_if_usb_out_headset(int *device_count,  pal_device_id_t** pal_device_ids);
 };
 
 #endif //ANDROID_HARDWARE_AHAL_ADEVICE_H_

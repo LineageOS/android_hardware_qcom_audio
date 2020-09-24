@@ -83,8 +83,8 @@ int virtualizer_set_strength(virtualizer_context_t *context, uint32_t strength)
                                         ((strength > 0) && !(context->temp_disabled)) ?
                                         true : false);
     offload_virtualizer_set_strength(&(context->offload_virt), strength);
-    if (context->qal_stream_handle)
-        offload_virtualizer_send_params_qal(context->qal_stream_handle, &context->offload_virt,
+    if (context->pal_stream_handle)
+        offload_virtualizer_send_params_pal(context->pal_stream_handle, &context->offload_virt,
                                         OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
                                         OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
     if (context->hw_acc_fd > 0)
@@ -188,8 +188,8 @@ int virtualizer_force_virtualization_mode(virtualizer_context_t *context,
         if (virt_ctxt->temp_disabled == true) {
             if (effect_is_active(&virt_ctxt->common)) {
                 offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), true);
-                if (virt_ctxt->qal_stream_handle)
-                    offload_virtualizer_send_params_qal(virt_ctxt->qal_stream_handle,
+                if (virt_ctxt->pal_stream_handle)
+                    offload_virtualizer_send_params_pal(virt_ctxt->pal_stream_handle,
                                                     &virt_ctxt->offload_virt,
                                                     OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
                 if (virt_ctxt->hw_acc_fd > 0)
@@ -205,8 +205,8 @@ int virtualizer_force_virtualization_mode(virtualizer_context_t *context,
         if (virt_ctxt->temp_disabled == false) {
             if (effect_is_active(&virt_ctxt->common)) {
                 offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), false);
-                if (virt_ctxt->qal_stream_handle)
-                    offload_virtualizer_send_params_qal(virt_ctxt->qal_stream_handle,
+                if (virt_ctxt->pal_stream_handle)
+                    offload_virtualizer_send_params_pal(virt_ctxt->pal_stream_handle,
                                                     &virt_ctxt->offload_virt,
                                                     OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
                 if (virt_ctxt->hw_acc_fd > 0)
@@ -423,8 +423,8 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
             if (!virt_ctxt->temp_disabled) {
                 if (effect_is_active(&virt_ctxt->common) && virt_ctxt->enabled_by_client) {
                     offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), false);
-                    if (virt_ctxt->qal_stream_handle)
-                        offload_virtualizer_send_params_qal(virt_ctxt->qal_stream_handle,
+                    if (virt_ctxt->pal_stream_handle)
+                        offload_virtualizer_send_params_pal(virt_ctxt->pal_stream_handle,
                                                         &virt_ctxt->offload_virt,
                                                         OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
                     if (virt_ctxt->hw_acc_fd > 0)
@@ -438,8 +438,8 @@ int virtualizer_set_device(effect_context_t *context, uint32_t device)
             if (virt_ctxt->temp_disabled) {
                 if (effect_is_active(&virt_ctxt->common) && virt_ctxt->enabled_by_client) {
                     offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), true);
-                    if (virt_ctxt->qal_stream_handle)
-                        offload_virtualizer_send_params_qal(virt_ctxt->qal_stream_handle,
+                    if (virt_ctxt->pal_stream_handle)
+                        offload_virtualizer_send_params_pal(virt_ctxt->pal_stream_handle,
                                                         &virt_ctxt->offload_virt,
                                                         OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
                     if (virt_ctxt->hw_acc_fd > 0)
@@ -505,8 +505,8 @@ int virtualizer_enable(effect_context_t *context)
     if (!offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt)) &&
         !(virt_ctxt->temp_disabled)) {
         offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), true);
-        if (virt_ctxt->qal_stream_handle && virt_ctxt->strength)
-            offload_virtualizer_send_params_qal(virt_ctxt->qal_stream_handle,
+        if (virt_ctxt->pal_stream_handle && virt_ctxt->strength)
+            offload_virtualizer_send_params_pal(virt_ctxt->pal_stream_handle,
                                           &virt_ctxt->offload_virt,
                                           OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
                                           OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
@@ -527,8 +527,8 @@ int virtualizer_disable(effect_context_t *context)
     virt_ctxt->enabled_by_client = false;
     if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt))) {
         offload_virtualizer_set_enable_flag(&(virt_ctxt->offload_virt), false);
-        if (virt_ctxt->qal_stream_handle)
-            offload_virtualizer_send_params_qal(virt_ctxt->qal_stream_handle,
+        if (virt_ctxt->pal_stream_handle)
+            offload_virtualizer_send_params_pal(virt_ctxt->pal_stream_handle,
                                           &virt_ctxt->offload_virt,
                                           OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
         if (virt_ctxt->hw_acc_fd > 0)
@@ -543,11 +543,11 @@ int virtualizer_start(effect_context_t *context, output_context_t *output)
 {
     virtualizer_context_t *virt_ctxt = (virtualizer_context_t *)context;
 
-    ALOGV("%s: ctxt %p, qal_stream_handle %p", __func__, virt_ctxt, output->qal_stream_handle);
-    virt_ctxt->qal_stream_handle = output->qal_stream_handle;
+    ALOGV("%s: ctxt %p, pal_stream_handle %p", __func__, virt_ctxt, output->pal_stream_handle);
+    virt_ctxt->pal_stream_handle = output->pal_stream_handle;
     if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt))) {
-        if (virt_ctxt->qal_stream_handle)
-            offload_virtualizer_send_params_qal(virt_ctxt->qal_stream_handle, &virt_ctxt->offload_virt,
+        if (virt_ctxt->pal_stream_handle)
+            offload_virtualizer_send_params_pal(virt_ctxt->pal_stream_handle, &virt_ctxt->offload_virt,
                                           OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG |
                                           OFFLOAD_SEND_VIRTUALIZER_STRENGTH);
         if (virt_ctxt->hw_acc_fd > 0)
@@ -564,13 +564,13 @@ int virtualizer_stop(effect_context_t *context, output_context_t *output __unuse
 
     ALOGV("%s: ctxt %p", __func__, virt_ctxt);
     if (offload_virtualizer_get_enable_flag(&(virt_ctxt->offload_virt)) &&
-        virt_ctxt->qal_stream_handle) {
+        virt_ctxt->pal_stream_handle) {
         struct virtualizer_params virt;
         virt.enable_flag = false;
-        offload_virtualizer_send_params_qal(virt_ctxt->qal_stream_handle, &virt,
+        offload_virtualizer_send_params_pal(virt_ctxt->pal_stream_handle, &virt,
                                         OFFLOAD_SEND_VIRTUALIZER_ENABLE_FLAG);
     }
-    virt_ctxt->qal_stream_handle = NULL;
+    virt_ctxt->pal_stream_handle = NULL;
     enable_gcov();
     return 0;
 }

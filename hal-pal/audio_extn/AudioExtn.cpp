@@ -38,7 +38,7 @@ static batt_prop_is_charging_t batt_prop_is_charging;
 static bool battery_listener_enabled;
 static void *batt_listener_lib_handle;
 
-int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, qal_snd_dec_t *qal_snd_dec, str_parms *parms, uint32_t *sr, uint16_t *ch) {
+int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, pal_snd_dec_t *pal_snd_dec, str_parms *parms, uint32_t *sr, uint16_t *ch) {
    int ret = 0;
    char value[32];
    *sr = 0;
@@ -48,199 +48,199 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
    if (config_->offload_info.format == AUDIO_FORMAT_FLAC) {
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_BLK_SIZE, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->flac_dec.min_blk_size = atoi(value);
+            pal_snd_dec->flac_dec.min_blk_size = atoi(value);
             //out->is_compr_metadata_avail = true; check about this 
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_BLK_SIZE, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->flac_dec.max_blk_size = atoi(value);
+            pal_snd_dec->flac_dec.max_blk_size = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MIN_FRAME_SIZE, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->flac_dec.min_frame_size = atoi(value);
+            pal_snd_dec->flac_dec.min_frame_size = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_FLAC_MAX_FRAME_SIZE, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->flac_dec.max_frame_size = atoi(value);
+            pal_snd_dec->flac_dec.max_frame_size = atoi(value);
         }
-        qal_snd_dec->flac_dec.sample_size = flac_sample_size;
+        pal_snd_dec->flac_dec.sample_size = flac_sample_size;
         ALOGD("FLAC metadata: sample_size %d min_blk_size %d, max_blk_size %d min_frame_size %d max_frame_size %d",
-              qal_snd_dec->flac_dec.sample_size,
-              qal_snd_dec->flac_dec.min_blk_size,
-              qal_snd_dec->flac_dec.max_blk_size,
-              qal_snd_dec->flac_dec.min_frame_size,
-              qal_snd_dec->flac_dec.max_frame_size);
+              pal_snd_dec->flac_dec.sample_size,
+              pal_snd_dec->flac_dec.min_blk_size,
+              pal_snd_dec->flac_dec.max_blk_size,
+              pal_snd_dec->flac_dec.min_frame_size,
+              pal_snd_dec->flac_dec.max_frame_size);
     }
 
     else if (config_->offload_info.format == AUDIO_FORMAT_ALAC) {
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_FRAME_LENGTH, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.frame_length = atoi(value);
+            pal_snd_dec->alac_dec.frame_length = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_COMPATIBLE_VERSION, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.compatible_version = atoi(value);
+            pal_snd_dec->alac_dec.compatible_version = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_BIT_DEPTH, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.bit_depth = atoi(value);
+            pal_snd_dec->alac_dec.bit_depth = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_PB, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.pb = atoi(value);
+            pal_snd_dec->alac_dec.pb = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_MB, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.mb = atoi(value);
+            pal_snd_dec->alac_dec.mb = atoi(value);
         }
 
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_KB, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.kb = atoi(value);
+            pal_snd_dec->alac_dec.kb = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_NUM_CHANNELS, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.num_channels = atoi(value);
+            pal_snd_dec->alac_dec.num_channels = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_MAX_RUN, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.max_run = atoi(value);
+            pal_snd_dec->alac_dec.max_run = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_MAX_FRAME_BYTES, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.max_frame_bytes = atoi(value);
+            pal_snd_dec->alac_dec.max_frame_bytes = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_AVG_BIT_RATE, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.avg_bit_rate = atoi(value);
+            pal_snd_dec->alac_dec.avg_bit_rate = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_SAMPLING_RATE, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.sample_rate = atoi(value);
+            pal_snd_dec->alac_dec.sample_rate = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_ALAC_CHANNEL_LAYOUT_TAG, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->alac_dec.channel_layout_tag = atoi(value);
+            pal_snd_dec->alac_dec.channel_layout_tag = atoi(value);
         }
-        *sr = qal_snd_dec->alac_dec.sample_rate;
-        *ch = qal_snd_dec->alac_dec.num_channels;
+        *sr = pal_snd_dec->alac_dec.sample_rate;
+        *ch = pal_snd_dec->alac_dec.num_channels;
         ALOGD("ALAC CSD values: frameLength %d bitDepth %d numChannels %d"
                 " maxFrameBytes %d, avgBitRate %d, sampleRate %d",
-                qal_snd_dec->alac_dec.frame_length,
-                qal_snd_dec->alac_dec.bit_depth,
-                qal_snd_dec->alac_dec.num_channels,
-                qal_snd_dec->alac_dec.max_frame_bytes,
-                qal_snd_dec->alac_dec.avg_bit_rate,
-                qal_snd_dec->alac_dec.sample_rate);
+                pal_snd_dec->alac_dec.frame_length,
+                pal_snd_dec->alac_dec.bit_depth,
+                pal_snd_dec->alac_dec.num_channels,
+                pal_snd_dec->alac_dec.max_frame_bytes,
+                pal_snd_dec->alac_dec.avg_bit_rate,
+                pal_snd_dec->alac_dec.sample_rate);
     }
 
     else if (config_->offload_info.format == AUDIO_FORMAT_APE) {
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_COMPATIBLE_VERSION, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->ape_dec.compatible_version = atoi(value);
+            pal_snd_dec->ape_dec.compatible_version = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_COMPRESSION_LEVEL, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->ape_dec.compression_level = atoi(value);
+            pal_snd_dec->ape_dec.compression_level = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_FORMAT_FLAGS, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->ape_dec.format_flags = atoi(value);
+            pal_snd_dec->ape_dec.format_flags = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_BLOCKS_PER_FRAME, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->ape_dec.blocks_per_frame = atoi(value);
+            pal_snd_dec->ape_dec.blocks_per_frame = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_FINAL_FRAME_BLOCKS, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->ape_dec.final_frame_blocks = atoi(value);
+            pal_snd_dec->ape_dec.final_frame_blocks = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_TOTAL_FRAMES, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->ape_dec.total_frames = atoi(value);
+            pal_snd_dec->ape_dec.total_frames = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_BITS_PER_SAMPLE, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->ape_dec.bits_per_sample = atoi(value);
+            pal_snd_dec->ape_dec.bits_per_sample = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_NUM_CHANNELS, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->ape_dec.num_channels = atoi(value);
+            pal_snd_dec->ape_dec.num_channels = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_SAMPLE_RATE, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->ape_dec.sample_rate = atoi(value);
+            pal_snd_dec->ape_dec.sample_rate = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_APE_SEEK_TABLE_PRESENT, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->ape_dec.seek_table_present = atoi(value);
+            pal_snd_dec->ape_dec.seek_table_present = atoi(value);
         }
-        *sr = qal_snd_dec->ape_dec.sample_rate;
-        *ch = qal_snd_dec->ape_dec.num_channels;
+        *sr = pal_snd_dec->ape_dec.sample_rate;
+        *ch = pal_snd_dec->ape_dec.num_channels;
         ALOGD("APE CSD values: compatibleVersion %d compressionLevel %d"
                 " formatFlags %d blocksPerFrame %d finalFrameBlocks %d"
                 " totalFrames %d bitsPerSample %d numChannels %d"
                 " sampleRate %d seekTablePresent %d",
-                qal_snd_dec->ape_dec.compatible_version,
-                qal_snd_dec->ape_dec.compression_level,
-                qal_snd_dec->ape_dec.format_flags,
-                qal_snd_dec->ape_dec.blocks_per_frame,
-                qal_snd_dec->ape_dec.final_frame_blocks,
-                qal_snd_dec->ape_dec.total_frames,
-                qal_snd_dec->ape_dec.bits_per_sample,
-                qal_snd_dec->ape_dec.num_channels,
-                qal_snd_dec->ape_dec.sample_rate,
-                qal_snd_dec->ape_dec.seek_table_present);
+                pal_snd_dec->ape_dec.compatible_version,
+                pal_snd_dec->ape_dec.compression_level,
+                pal_snd_dec->ape_dec.format_flags,
+                pal_snd_dec->ape_dec.blocks_per_frame,
+                pal_snd_dec->ape_dec.final_frame_blocks,
+                pal_snd_dec->ape_dec.total_frames,
+                pal_snd_dec->ape_dec.bits_per_sample,
+                pal_snd_dec->ape_dec.num_channels,
+                pal_snd_dec->ape_dec.sample_rate,
+                pal_snd_dec->ape_dec.seek_table_present);
     }
     else if (config_->offload_info.format == AUDIO_FORMAT_VORBIS) {
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_VORBIS_BITSTREAM_FMT, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->vorbis_dec.bit_stream_fmt = atoi(value);
+            pal_snd_dec->vorbis_dec.bit_stream_fmt = atoi(value);
         }
     }
     else if (config_->offload_info.format == AUDIO_FORMAT_WMA || config_->offload_info.format == AUDIO_FORMAT_WMA_PRO) {
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_FORMAT_TAG, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->wma_dec.fmt_tag = atoi(value);
+            pal_snd_dec->wma_dec.fmt_tag = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_AVG_BIT_RATE, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->wma_dec.avg_bit_rate = atoi(value);
+            pal_snd_dec->wma_dec.avg_bit_rate = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BLOCK_ALIGN, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->wma_dec.super_block_align = atoi(value);
+            pal_snd_dec->wma_dec.super_block_align = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_BIT_PER_SAMPLE, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->wma_dec.bits_per_sample = atoi(value);
+            pal_snd_dec->wma_dec.bits_per_sample = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_CHANNEL_MASK, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->wma_dec.channelmask = atoi(value);
+            pal_snd_dec->wma_dec.channelmask = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->wma_dec.encodeopt = atoi(value);
+            pal_snd_dec->wma_dec.encodeopt = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION1, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->wma_dec.encodeopt1 = atoi(value);
+            pal_snd_dec->wma_dec.encodeopt1 = atoi(value);
         }
         ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_WMA_ENCODE_OPTION2, value, sizeof(value));
         if (ret >= 0) {
-            qal_snd_dec->wma_dec.encodeopt2 = atoi(value);
+            pal_snd_dec->wma_dec.encodeopt2 = atoi(value);
         }
         ALOGD("WMA params: fmt %x, bit rate %x, balgn %x, sr %d, chmsk %x"
                 " encop %x, op1 %x, op2 %x",
-                qal_snd_dec->wma_dec.fmt_tag,
-                qal_snd_dec->wma_dec.avg_bit_rate,
-                qal_snd_dec->wma_dec.super_block_align,
-                qal_snd_dec->wma_dec.bits_per_sample,
-                qal_snd_dec->wma_dec.channelmask,
-                qal_snd_dec->wma_dec.encodeopt,
-                qal_snd_dec->wma_dec.encodeopt1,
-                qal_snd_dec->wma_dec.encodeopt2);
+                pal_snd_dec->wma_dec.fmt_tag,
+                pal_snd_dec->wma_dec.avg_bit_rate,
+                pal_snd_dec->wma_dec.super_block_align,
+                pal_snd_dec->wma_dec.bits_per_sample,
+                pal_snd_dec->wma_dec.channelmask,
+                pal_snd_dec->wma_dec.encodeopt,
+                pal_snd_dec->wma_dec.encodeopt1,
+                pal_snd_dec->wma_dec.encodeopt2);
     }
 
     else if ((config_->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC ||
@@ -248,9 +248,9 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
              (config_->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_ADIF ||
              (config_->offload_info.format & AUDIO_FORMAT_MAIN_MASK) == AUDIO_FORMAT_AAC_LATM) {
 
-       qal_snd_dec->aac_dec.audio_obj_type = 29;
-       qal_snd_dec->aac_dec.pce_bits_size = 0;
-       ALOGD("AAC params: aot %d pce %d", qal_snd_dec->aac_dec.audio_obj_type, qal_snd_dec->aac_dec.pce_bits_size);
+       pal_snd_dec->aac_dec.audio_obj_type = 29;
+       pal_snd_dec->aac_dec.pce_bits_size = 0;
+       ALOGD("AAC params: aot %d pce %d", pal_snd_dec->aac_dec.audio_obj_type, pal_snd_dec->aac_dec.pce_bits_size);
        ALOGD("format %x", config_->offload_info.format);
     }
     return 0;
@@ -331,9 +331,9 @@ bool AudioExtn::battery_properties_is_charging()
 
 // START: HFP ======================================================================
 #ifdef __LP64__
-#define HFP_LIB_PATH "/vendor/lib64/libhfp_qal.so"
+#define HFP_LIB_PATH "/vendor/lib64/libhfp_pal.so"
 #else
-#define HFP_LIB_PATH "/vendor/lib/libhfp_qal.so"
+#define HFP_LIB_PATH "/vendor/lib/libhfp_pal.so"
 #endif
 
 static void *hfp_lib_handle = NULL;

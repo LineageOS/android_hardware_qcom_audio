@@ -47,7 +47,7 @@ typedef struct reverb_settings_s {
 typedef struct reverb_context_s {
     effect_context_t common;
     // Offload vars
-    qal_stream_handle_t *qal_stream_handle;
+    pal_stream_handle_t *pal_stream_handle;
     int hw_acc_fd;
     bool enabled_by_client;
     bool auxiliary;

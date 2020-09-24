@@ -73,7 +73,7 @@ public:
             call_state_t state;
             uint32_t vsid;
             uint32_t tty_mode;
-            qal_stream_handle_t*  qal_voice_handle;
+            pal_stream_handle_t*  pal_voice_handle;
             bool volume_boost;
             bool slow_talk;
     };
@@ -110,8 +110,8 @@ public:
     int StopCall();
     AudioVoice();
     ~AudioVoice();
-    qal_device_id_t qal_voice_tx_device_id_;
-    qal_device_id_t qal_voice_rx_device_id_;
+    pal_device_id_t pal_voice_tx_device_id_;
+    pal_device_id_t pal_voice_rx_device_id_;
 
 
 };

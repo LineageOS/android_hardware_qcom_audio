@@ -37,7 +37,7 @@ typedef struct bassboost_context_s {
     effect_context_t common;
     int strength;
     // Offload vars
-    qal_stream_handle_t *qal_stream_handle;
+    pal_stream_handle_t *pal_stream_handle;
     int hw_acc_fd;
     bool temp_disabled;
     uint32_t device;
@@ -47,7 +47,7 @@ typedef struct bassboost_context_s {
 typedef struct pbe_context_s {
     effect_context_t common;
     // Offload vars
-    qal_stream_handle_t *qal_stream_handle;
+    pal_stream_handle_t *pal_stream_handle;
     int hw_acc_fd;
     bool temp_disabled;
     uint32_t device;

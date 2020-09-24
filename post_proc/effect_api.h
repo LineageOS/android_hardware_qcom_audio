@@ -29,7 +29,7 @@
 
 #ifndef OFFLOAD_EFFECT_API_H_
 #define OFFLOAD_EFFECT_API_H_
-#include "QalApi.h"
+#include "PalApi.h"
 
 
 #define EQ_PARAM_LATENCY 0x80000000
@@ -79,7 +79,7 @@ void offload_pbe_set_enable_flag(struct pbe_params *pbe,
                                  bool enable);
 int offload_pbe_get_enable_flag(struct pbe_params *pbe);
 
-int offload_pbe_send_params_qal(qal_stream_handle_t *qal_handle,
+int offload_pbe_send_params_pal(pal_stream_handle_t *pal_handle,
                             struct pbe_params *pbe,
                             unsigned param_send_flags);
 #define OFFLOAD_SEND_BASSBOOST_ENABLE_FLAG      (1 << 0)
@@ -96,7 +96,7 @@ void offload_bassboost_set_strength(struct bass_boost_params *bassboost,
                                     int strength);
 void offload_bassboost_set_mode(struct bass_boost_params *bassboost,
                                 int mode);
-int offload_bassboost_send_params_qal(qal_stream_handle_t *qal_handle,
+int offload_bassboost_send_params_pal(pal_stream_handle_t *pal_handle,
                                   struct bass_boost_params *bassboost,
                                   unsigned param_send_flags);
 
@@ -118,7 +118,7 @@ void offload_virtualizer_set_out_type(struct virtualizer_params *virtualizer,
                                       int out_type);
 void offload_virtualizer_set_gain_adjust(struct virtualizer_params *virtualizer,
                                          int gain_adjust);
-int offload_virtualizer_send_params_qal(qal_stream_handle_t *qal_stream_handle,
+int offload_virtualizer_send_params_pal(pal_stream_handle_t *pal_stream_handle,
                                   struct virtualizer_params *virtualizer,
                                   unsigned param_send_flags);
 
@@ -134,7 +134,7 @@ void offload_eq_set_preset(struct eq_params *eq, int preset);
 void offload_eq_set_bands_level(struct eq_params *eq, int num_bands,
                                 const uint16_t *band_freq_list,
                                 int *band_gain_list);
-int offload_eq_send_params_qal(qal_stream_handle_t *qal_handle, struct eq_params *eq,
+int offload_eq_send_params_pal(pal_stream_handle_t *pal_handle, struct eq_params *eq,
                            unsigned param_send_flags);
 
 #define OFFLOAD_SEND_REVERB_ENABLE_FLAG         (1 << 0)
@@ -191,7 +191,7 @@ void offload_reverb_set_reverb_level(struct reverb_params *reverb,
 void offload_reverb_set_delay(struct reverb_params *reverb, int delay);
 void offload_reverb_set_diffusion(struct reverb_params *reverb, int diffusion);
 void offload_reverb_set_density(struct reverb_params *reverb, int density);
-int offload_reverb_send_params_qal(qal_stream_handle_t *qal_stream_handle,
+int offload_reverb_send_params_pal(pal_stream_handle_t *pal_stream_handle,
                                struct reverb_params *reverb,
                                unsigned param_send_flags);
 

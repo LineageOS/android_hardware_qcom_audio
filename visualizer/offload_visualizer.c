@@ -31,7 +31,7 @@
 #include <system/thread_defs.h>
 #include <tinyalsa/asoundlib.h>
 #include <audio_effects/effect_visualizer.h>
-#include "QalApi.h"
+#include "PalApi.h"
 
 #define LIB_ACDB_LOADER "libacdbloader.so"
 #define ACDB_DEV_TYPE_OUT 1
@@ -468,36 +468,36 @@ void *capture_thread_loop(void *arg)
     //int sound_card = SOUND_CARD;
     //int capture_device = CAPTURE_DEVICE;
 
-    qal_stream_handle_t *in_stream_handle = NULL;
+    pal_stream_handle_t *in_stream_handle = NULL;
     uint32_t no_of_devices = 1;
-    struct qal_stream_attributes stream_attr;
-    struct qal_device devices;
-    struct qal_channel_info ch_info;
+    struct pal_stream_attributes stream_attr;
+    struct pal_device devices;
+    struct pal_channel_info ch_info;
     uint32_t in_buff_size = AUDIO_CAPTURE_PERIOD_SIZE * AUDIO_CAPTURE_CHANNEL_COUNT * sizeof(int16_t);
     uint32_t in_buff_count = 1;
-    struct qal_buffer in_buffer;
+    struct pal_buffer in_buffer;
     ssize_t read_status = 0;
 
 
-    memset(&stream_attr, 0x0, sizeof(struct qal_stream_attributes));
-    memset(&devices, 0x0, sizeof(struct qal_device));
+    memset(&stream_attr, 0x0, sizeof(struct pal_stream_attributes));
+    memset(&devices, 0x0, sizeof(struct pal_device));
     ch_info.channels = AUDIO_CAPTURE_CHANNEL_COUNT;
-    ch_info.ch_map[0] = QAL_CHMAP_CHANNEL_FL;
-    ch_info.ch_map[1] = QAL_CHMAP_CHANNEL_FR;
+    ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
+    ch_info.ch_map[1] = PAL_CHMAP_CHANNEL_FR;
 
-    stream_attr.type = QAL_STREAM_PROXY;
+    stream_attr.type = PAL_STREAM_PROXY;
     stream_attr.flags = 0;
-    stream_attr.direction = QAL_AUDIO_INPUT;
+    stream_attr.direction = PAL_AUDIO_INPUT;
     stream_attr.in_media_config.sample_rate = AUDIO_CAPTURE_SMP_RATE;
     stream_attr.in_media_config.bit_width = AUDIO_CAPTURE_BIT_WIDTH;
     stream_attr.in_media_config.ch_info = ch_info;
-    stream_attr.in_media_config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
 
-    devices.id = QAL_DEVICE_IN_PROXY;
+    devices.id = PAL_DEVICE_IN_PROXY;
     devices.config.sample_rate = AUDIO_CAPTURE_SMP_RATE;
     devices.config.bit_width = AUDIO_CAPTURE_BIT_WIDTH;
     devices.config.ch_info = ch_info;
-    devices.config.aud_fmt_id = QAL_AUDIO_FMT_DEFAULT_PCM;
+    devices.config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
 
     ALOGD("thread enter");
 
@@ -523,7 +523,7 @@ void *capture_thread_loop(void *arg)
         if (effects_enabled()) {
             if (!capture_enabled) {
 
-                ret = qal_stream_open(&stream_attr,
+                ret = pal_stream_open(&stream_attr,
                     no_of_devices, &devices,
                     0,
                     NULL,
@@ -531,22 +531,22 @@ void *capture_thread_loop(void *arg)
                     NULL,
                     &in_stream_handle);
                 if (ret == 0 && in_stream_handle) {
-                    ret = qal_stream_set_buffer_size(in_stream_handle,
+                    ret = pal_stream_set_buffer_size(in_stream_handle,
                         (size_t*)&in_buff_size,
                         in_buff_count,
                         NULL,
                         0);
                     if(ret != 0)
                     {
-                        ALOGW("%s: qal_stream_set_buffer_size failed with err=%d", __func__, ret);
-                        qal_stream_close(in_stream_handle);
+                        ALOGW("%s: pal_stream_set_buffer_size failed with err=%d", __func__, ret);
+                        pal_stream_close(in_stream_handle);
                         pthread_cond_wait(&cond, &lock);
                     } else {
-                        ret = qal_stream_start(in_stream_handle);
+                        ret = pal_stream_start(in_stream_handle);
                         if(ret != 0)
                         {
-                            ALOGW("%s: qal_stream_start failed with err=%d", __func__, ret);
-                            qal_stream_close(in_stream_handle);
+                            ALOGW("%s: pal_stream_start failed with err=%d", __func__, ret);
+                            pal_stream_close(in_stream_handle);
                             pthread_cond_wait(&cond, &lock);
                         }  else {
                             capture_enabled = true;
@@ -554,20 +554,20 @@ void *capture_thread_loop(void *arg)
                         }
                     }
                 } else {
-                    ALOGW("%s: qal_stream_open failed with err=%d", __func__, ret);
+                    ALOGW("%s: pal_stream_open failed with err=%d", __func__, ret);
                     pthread_cond_wait(&cond, &lock);
                 }
             }
         } else {
             if (capture_enabled) {
                 if (in_stream_handle != NULL) {
-                    ret = qal_stream_stop(in_stream_handle);
+                    ret = pal_stream_stop(in_stream_handle);
                     if(ret != 0) {
-                        ALOGW("%s: qal_stream_stop failed with err=%d", __func__, ret);
+                        ALOGW("%s: pal_stream_stop failed with err=%d", __func__, ret);
                     }
-                    ret = qal_stream_close(in_stream_handle);
+                    ret = pal_stream_close(in_stream_handle);
                     if(ret != 0) {
-                        ALOGW("%s: qal_stream_close failed with err=%d", __func__, ret);
+                        ALOGW("%s: pal_stream_close failed with err=%d", __func__, ret);
                     }
                     in_stream_handle = NULL;
                 }
@@ -582,15 +582,15 @@ void *capture_thread_loop(void *arg)
         pthread_mutex_unlock(&lock);
         if(in_stream_handle)
         {
-            memset(&in_buffer, 0, sizeof(struct qal_buffer));
+            memset(&in_buffer, 0, sizeof(struct pal_buffer));
             in_buffer.buffer = (void*)&data[0];
             in_buffer.size = in_buff_size;
-            read_status = qal_stream_read(in_stream_handle, &in_buffer);
+            read_status = pal_stream_read(in_stream_handle, &in_buffer);
         }
         pthread_mutex_lock(&lock);
 
         if (read_status > 0) {
-            ALOGD("%s: qal_stream_read success no_of_bytes_read = %zu",
+            ALOGD("%s: pal_stream_read success no_of_bytes_read = %zu",
                     __func__, read_status );
 
             struct listnode *out_node;
@@ -610,20 +610,20 @@ void *capture_thread_loop(void *arg)
                 }
             }
         } else {
-            ALOGW("%s: qal_stream_read failed with read status %zu",
+            ALOGW("%s: pal_stream_read failed with read status %zu",
                 __func__, read_status);
         }
     }
 
     if (capture_enabled) {
         if (in_stream_handle != NULL) {
-            ret = qal_stream_stop(in_stream_handle);
+            ret = pal_stream_stop(in_stream_handle);
             if(ret != 0) {
-                ALOGW("%s: qal_stream_stop failed with err=%d", __func__, ret);
+                ALOGW("%s: pal_stream_stop failed with err=%d", __func__, ret);
             }
-            ret = qal_stream_close(in_stream_handle);
+            ret = pal_stream_close(in_stream_handle);
             if(ret != 0) {
-                ALOGW("%s: qal_stream_close failed with err=%d", __func__, ret);
+                ALOGW("%s: pal_stream_close failed with err=%d", __func__, ret);
                 }
             in_stream_handle = NULL;
         }
@@ -641,7 +641,7 @@ void *capture_thread_loop(void *arg)
 
 __attribute__ ((visibility ("default")))
 int visualizer_hal_start_output(audio_io_handle_t output,
-                                    qal_stream_handle_t* qal_stream_handle) {
+                                    pal_stream_handle_t* pal_stream_handle) {
     int ret = 0;
     struct listnode *node;
 
@@ -693,7 +693,7 @@ exit:
 
 __attribute__ ((visibility ("default")))
 int visualizer_hal_stop_output(audio_io_handle_t output,
-                                    qal_stream_handle_t* qal_stream_handle) {
+                                    pal_stream_handle_t* pal_stream_handle) {
     int ret = 0;
     struct listnode *node;
     struct listnode *fx_node;

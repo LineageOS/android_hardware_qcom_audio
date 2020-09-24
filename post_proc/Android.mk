@@ -65,7 +65,7 @@ LOCAL_SHARED_LIBRARIES := \
         libcutils \
         liblog \
         libtinyalsa \
-        libqal \
+        libar-pal \
         libdl
 
 LOCAL_MODULE_TAGS := optional
@@ -81,7 +81,7 @@ LOCAL_C_INCLUDES := \
         external/tinyalsa/include \
         vendor/qcom/opensource/audio-hal/primary-hal/hal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
-        vendor/qcom/opensource/qal \
+        vendor/qcom/opensource/pal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         $(call include-path-for, audio-effects) \
