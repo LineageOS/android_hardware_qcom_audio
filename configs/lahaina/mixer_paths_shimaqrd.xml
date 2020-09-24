@@ -2607,8 +2607,7 @@
         <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
     </path>
 
-    <path name="speaker-and-haptics">
-        <path name="speaker" />
+    <path name="haptics">
         <ctl name="SWR DAC_Port Switch" value="1" />
     </path>
 

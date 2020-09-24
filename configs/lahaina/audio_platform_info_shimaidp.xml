@@ -117,6 +117,8 @@
         <usecase name="USECASE_INCALL_MUSIC_UPLINK" type="out" id="23" />
         <usecase name="USECASE_INCALL_MUSIC_UPLINK2" type="out" id="23" />
         <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="37" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_WITH_HAPTICS" type="out" id="40" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_HAPTICS" type="out" id="41" />
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsatz.13"/>
