@@ -16,6 +16,24 @@
       "revId": "f7d70125cba1d1a19b311c71140fa062c838fb3c",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "3baa2b00_e3135e35",
+        "filename": "hal/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 340,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-09-24T22:58:33Z",
+      "side": 1,
+      "message": "Well, I guess that this is the answer: https://android.googlesource.com/platform/system/libhidl/+/refs/heads/master/Android.bp#113",
+      "parentUuid": "f7d67abd_8539f184",
+      "revId": "f7d70125cba1d1a19b311c71140fa062c838fb3c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
