@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f7d67abd_8539f184",
+        "filename": "hal/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 340,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-09-24T22:40:54Z",
+      "side": 1,
+      "message": "Unsure if we need to replace this one here by libhidlbase or just leave it.",
+      "revId": "f7d70125cba1d1a19b311c71140fa062c838fb3c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
