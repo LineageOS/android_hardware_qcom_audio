@@ -1385,6 +1385,11 @@ int enable_snd_device(struct audio_device *adev,
                                        new_snd_devices) != 0)) {
         ALOGV("%s: snd_device(%d: %s) is already active",
               __func__, snd_device, device_name);
+        /* Set backend config for A2DP to ensure slimbus configuration
+           is correct if A2DP is already active and backend is closed
+           and re-opened */
+        if (snd_device == SND_DEVICE_OUT_BT_A2DP)
+            audio_extn_a2dp_set_source_backend_cfg();
         return 0;
     }
 
