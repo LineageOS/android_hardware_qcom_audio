@@ -1135,11 +1135,6 @@ static size_t astream_in_get_buffer_size(const struct audio_stream *stream) {
         return 0;
 }
 
-bool platform_supports_true_32bit() {
-    //TODO: Remove the hardcoding.
-    return true;
-}
-
 int StreamPrimary::getPalDeviceIds(const std::set<audio_devices_t>& halDeviceIds,
                                    pal_device_id_t* qualIds) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
@@ -1848,62 +1843,6 @@ uint32_t StreamOutPrimary::GetBufferSize() {
     }
 }
 
-/*Translates PCM formats to AOSP formats*/
-audio_format_t StreamOutPrimary::AlsatoHalFormat(uint32_t pcm_format __unused) {
-    audio_format_t format = AUDIO_FORMAT_INVALID;
-/*
-    switch(pcm_format) {
-    case PCM_FORMAT_S16_LE:
-        format = AUDIO_FORMAT_PCM_16_BIT;
-        break;
-    case PCM_FORMAT_S24_3LE:
-        format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
-        break;
-    case PCM_FORMAT_S24_LE:
-        format = AUDIO_FORMAT_PCM_8_24_BIT;
-        break;
-    case PCM_FORMAT_S32_LE:
-        format = AUDIO_FORMAT_PCM_32_BIT;
-        break;
-    default:
-        ALOGW("Incorrect PCM format");
-        format = AUDIO_FORMAT_INVALID;
-    }
-*/
-    return format;
-}
-
-/*Translates hal format (AOSP) to alsa formats*/
-uint32_t StreamOutPrimary::HaltoAlsaFormat(audio_format_t hal_format __unused) {
-    uint32_t pcm_format = 0;
-/*
-    switch (hal_format) {
-    case AUDIO_FORMAT_PCM_32_BIT:
-    case AUDIO_FORMAT_PCM_FLOAT: {
-        if (platform_supports_true_32bit())
-            pcm_format = PCM_FORMAT_S32_LE;
-        else
-            pcm_format = PCM_FORMAT_S24_3LE;
-        }
-        break;
-    case AUDIO_FORMAT_PCM_8_24_BIT:
-        pcm_format = PCM_FORMAT_S24_3LE;
-        break;
-    case AUDIO_FORMAT_PCM_8_BIT:
-        pcm_format = PCM_FORMAT_S8;
-        break;
-    case AUDIO_FORMAT_PCM_24_BIT_PACKED:
-        pcm_format = PCM_FORMAT_S24_3LE;
-        break;
-    default:
-    case AUDIO_FORMAT_PCM_16_BIT:
-        pcm_format = PCM_FORMAT_S16_LE;
-        break;
-    }
-*/
-    return pcm_format;
-}
-
 int StreamOutPrimary::Open() {
     int ret = -EINVAL;
     uint8_t channels = 0;
@@ -1912,7 +1851,6 @@ int StreamOutPrimary::Open() {
     uint32_t outBufSize = 0;
     uint32_t inBufCount = NO_OF_BUF;
     uint32_t outBufCount = NO_OF_BUF;
-    uint32_t pcmFormat;
 
     if (!mInitialized) {
         ALOGE("%s: Not initialized, returning error", __func__);
@@ -1951,8 +1889,7 @@ int StreamOutPrimary::Open() {
     } else if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD ||
                streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
         halInputFormat = config_.format;
-        pcmFormat = HaltoAlsaFormat(halInputFormat);
-        halOutputFormat = AlsatoHalFormat(pcmFormat);
+        halOutputFormat = (audio_format_t)(getAlsaSupportedFmt.at(halInputFormat));
         ALOGD("halInputFormat %d halOutputFormat %d", halInputFormat, halOutputFormat);
         streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[halOutputFormat];
         if (streamAttributes_.out_media_config.bit_width == 0)

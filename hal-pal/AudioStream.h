@@ -272,6 +272,15 @@ const uint32_t format_to_bitwidth_table[] = {
     [AUDIO_FORMAT_PCM_24_BIT_PACKED] = 24,
 };
 
+const std::map<uint32_t, uint32_t> getAlsaSupportedFmt {
+    {AUDIO_FORMAT_PCM_32_BIT,           AUDIO_FORMAT_PCM_32_BIT},
+    {AUDIO_FORMAT_PCM_FLOAT,            AUDIO_FORMAT_PCM_32_BIT},
+    {AUDIO_FORMAT_PCM_8_24_BIT,         AUDIO_FORMAT_PCM_24_BIT_PACKED},
+    {AUDIO_FORMAT_PCM_8_BIT,            AUDIO_FORMAT_PCM_8_BIT},
+    {AUDIO_FORMAT_PCM_24_BIT_PACKED,    AUDIO_FORMAT_PCM_24_BIT_PACKED},
+    {AUDIO_FORMAT_PCM_16_BIT,           AUDIO_FORMAT_PCM_16_BIT},
+};
+
 const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = "deep-buffer-playback",
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = "low-latency-playback",
@@ -482,8 +491,6 @@ protected:
     visualizer_hal_stop_output fnp_visualizer_stop_output_ = nullptr;
     void *convertBuffer;
     int FillHalFnPtrs();
-    audio_format_t AlsatoHalFormat(uint32_t pcm_format);
-    uint32_t HaltoAlsaFormat(audio_format_t hal_format);
     friend class AudioDevice;
 };
 
