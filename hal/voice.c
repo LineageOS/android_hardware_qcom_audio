@@ -231,6 +231,11 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         return -EINVAL;
     }
 
+    if (!adev->current_call_output) {
+        ALOGE("start_call: invalid current call output");
+        return -EINVAL;
+    }
+
     uc_info = (struct audio_usecase *)calloc(1, sizeof(struct audio_usecase));
     if (!uc_info) {
         ALOGE("start_call: couldn't allocate mem for audio_usecase");
