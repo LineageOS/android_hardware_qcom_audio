@@ -203,6 +203,8 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     disable_snd_device(adev, uc_info->out_snd_device);
     disable_snd_device(adev, uc_info->in_snd_device);
 
+    adev->voice.lte_call = false;
+
     list_remove(&uc_info->list);
     free(uc_info);
 
@@ -644,6 +646,11 @@ int voice_set_mic_mute(struct audio_device *adev, bool state)
     return err;
 }
 
+bool voice_is_lte_call_active(struct audio_device *adev)
+{
+   return adev->voice.lte_call;
+}
+
 bool voice_get_mic_mute(struct audio_device *adev)
 {
     return adev->voice.mic_mute;
@@ -828,6 +835,7 @@ void voice_init(struct audio_device *adev)
     adev->voice.volume = 1.0f;
     adev->voice.mic_mute = false;
     adev->voice.in_call = false;
+    adev->voice.lte_call = false;
     for (i = 0; i < max_voice_sessions; i++) {
         adev->voice.session[i].pcm_rx = NULL;
         adev->voice.session[i].pcm_tx = NULL;
