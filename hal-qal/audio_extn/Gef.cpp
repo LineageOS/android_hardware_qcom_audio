@@ -53,9 +53,9 @@
 #ifdef AUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED
 
 #if LINUX_ENABLED
-#define GEF_LIBRARY "libqtigef.so"
+#define GEF_LIBRARY "libqtigefar.so"
 #else
-#define GEF_LIBRARY "/vendor/lib/libqtigef.so"
+#define GEF_LIBRARY "/vendor/lib/libqtigefar.so"
 #endif
 
 typedef int (*gef_get_qal_info)(void* adev,
@@ -197,7 +197,7 @@ int audio_extn_gef_get_audio_cal(void* data, int *length)
 }
 
 //this will be called from GEF to store into acdb
-int audio_extn_gef_store_audio_cal(void* data __unused)
+int audio_extn_gef_store_audio_cal(void* data __unused, int length __unused)
 {
     ALOGE("%s: not supported by qal now.\n", __func__);
 
