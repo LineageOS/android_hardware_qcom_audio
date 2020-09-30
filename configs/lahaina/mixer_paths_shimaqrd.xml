@@ -2453,12 +2453,12 @@
 
     <path name="audio-with-haptics-playback speaker-and-display-port">
         <path name="audio-with-haptics-playback display-port" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-and-display-port1">
         <path name="audio-with-haptics-playback display-port1" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback afe-proxy">
@@ -2478,12 +2478,12 @@
 
     <path name="audio-with-haptics-playback speaker-and-usb-headphones">
         <path name="audio-with-haptics-playback usb-headphones" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-safe-and-usb-headphones">
         <path name="audio-with-haptics-playback usb-headphones" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback headphones">
@@ -2497,37 +2497,37 @@
 
     <path name="audio-with-haptics-playback speaker-and-headphones">
         <path name="audio-with-haptics-playback headphones" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-safe-and-headphones">
         <path name="audio-with-haptics-playback headphones" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-and-bt-sco">
         <path name="audio-with-haptics-playback bt-sco" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-safe-and-bt-sco">
         <path name="audio-with-haptics-playback bt-sco" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-and-bt-sco-wb">
         <path name="audio-with-haptics-playback bt-sco-wb" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-safe-and-bt-sco-wb">
         <path name="audio-with-haptics-playback bt-sco-wb" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-and-bt-sco-swb">
         <path name="audio-with-haptics-playback bt-sco-swb" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback bt-a2dp">
@@ -2537,12 +2537,12 @@
 
     <path name="audio-with-haptics-playback speaker-and-bt-a2dp">
         <path name="audio-with-haptics-playback bt-a2dp" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-safe-and-bt-a2dp">
         <path name="audio-with-haptics-playback bt-a2dp" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <!-- These are actual sound device specific mixer settings -->
