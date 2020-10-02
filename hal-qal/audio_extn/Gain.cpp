@@ -39,7 +39,6 @@ int audio_hw_get_gain_level_mapping(struct qal_amp_db_and_gain_table *mapping_tb
                                       int table_size) {
     int ret = 0;
     size_t payload_size = 0;
-    struct qal_param_gain_lvl_map gain_lvl_map;
     qal_param_gain_lvl_map_t gain_lvl_map;
     gain_lvl_map.mapping_tbl = mapping_tbl;
     gain_lvl_map.table_size  = table_size;
