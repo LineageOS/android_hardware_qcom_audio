@@ -1385,6 +1385,11 @@ int enable_snd_device(struct audio_device *adev,
                                        new_snd_devices) != 0)) {
         ALOGV("%s: snd_device(%d: %s) is already active",
               __func__, snd_device, device_name);
+        /* Set backend config for A2DP to ensure slimbus configuration
+           is correct if A2DP is already active and backend is closed
+           and re-opened */
+        if (snd_device == SND_DEVICE_OUT_BT_A2DP)
+            audio_extn_a2dp_set_source_backend_cfg();
         return 0;
     }
 
@@ -3173,7 +3178,8 @@ int start_input_stream(struct stream_in *in)
     if (get_usecase_from_list(adev, in->usecase) != NULL) {
         ALOGE("%s: use case assigned already in use, stream(%p)usecase(%d: %s)",
             __func__, &in->stream, in->usecase, use_case_table[in->usecase]);
-        return -EINVAL;
+        ret = -EINVAL;
+        goto error_config;
     }
 
     in->pcm_device_id = platform_get_pcm_device_id(in->usecase, PCM_CAPTURE);
@@ -3322,6 +3328,8 @@ error_open:
     stop_input_stream(in);
 
 error_config:
+    if (audio_extn_cin_attached_usecase(in))
+        audio_extn_cin_close_input_stream(in);
     /*
      * sleep 50ms to allow sufficient time for kernel
      * drivers to recover incases like SSR.
@@ -4936,20 +4944,20 @@ int route_output_stream(struct stream_out *out,
             if (!voice_is_call_state_active(adev)) {
                 if (adev->mode == AUDIO_MODE_IN_CALL) {
                     adev->current_call_output = out;
-                    if (is_usb_out_device_type(&out->device_list)) {
-                        service_interval =
-                            audio_extn_usb_find_service_interval(true, true /*playback*/);
-                        audio_extn_usb_set_service_interval(true /*playback*/,
-                                                            service_interval,
-                                                            &reconfig);
-                        ALOGD("%s, svc_int(%ld),reconfig(%d)",__func__,service_interval, reconfig);
-                    }
                     ret = voice_start_call(adev);
                 }
             } else {
                 adev->current_call_output = out;
                 voice_update_devices_for_all_voice_usecases(adev);
             }
+        }
+
+        if (is_usb_out_device_type(&out->device_list)) {
+             service_interval = audio_extn_usb_find_service_interval(false, true /*playback*/);
+             audio_extn_usb_set_service_interval(true /*playback*/,
+                                                 service_interval,
+                                                 &reconfig);
+             ALOGD("%s, svc_int(%ld),reconfig(%d)",__func__,service_interval, reconfig);
         }
 
         if (!out->standby) {
@@ -8860,7 +8868,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
     }
 
-    audio_extn_hfp_set_parameters(adev, parms);
     audio_extn_qdsp_set_parameters(adev, parms);
 
     status = audio_extn_a2dp_set_parameters(parms, &a2dp_reconfig);
