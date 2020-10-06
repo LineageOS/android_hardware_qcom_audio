@@ -316,11 +316,6 @@ vendor.audio.parser.ip.buffer.size=262144
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.flac.sw.decoder.24bit=true
 
-#timeout crash duration set to 20sec before system is ready.
-#timeout duration updates to default timeout of 5sec once the system is ready.
-PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.hal.boot.timeout.ms=20000
-
 #split a2dp DSP supported encoder list
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac-ldac
