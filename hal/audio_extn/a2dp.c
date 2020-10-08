@@ -256,6 +256,7 @@ typedef enum {
 // --- external function dependency ---
 fp_platform_get_pcm_device_id_t fp_platform_get_pcm_device_id;
 fp_check_a2dp_restore_t fp_check_a2dp_restore_l;
+fp_platform_switch_voice_call_device_post_t fp_platform_switch_voice_call_device_post;
 
 /* PCM config for ABR Feedback hostless front end */
 static struct pcm_config pcm_config_abr = {
@@ -3020,6 +3021,8 @@ void a2dp_init(void *adev,
   fp_platform_get_pcm_device_id =
               init_config.fp_platform_get_pcm_device_id;
   fp_check_a2dp_restore_l = init_config.fp_check_a2dp_restore_l;
+  fp_platform_switch_voice_call_device_post =
+                init_config.fp_platform_switch_voice_call_device_post;
 
   reset_a2dp_enc_config_params();
   reset_a2dp_source_dec_config_params();
@@ -3197,6 +3200,12 @@ int sco_start_configuration()
     ALOGD("sco_start_configuration start");
 
     if (!a2dp.swb_configured) {
+        /*Before starting sco config, we must ensure to set correct acdb id
+         because sco cofiguration will trigger port open which needs acdb_id*/
+         fp_platform_switch_voice_call_device_post(a2dp.adev->platform,
+                                            SND_DEVICE_OUT_BT_SCO_SWB,
+                                            SND_DEVICE_IN_BT_SCO_MIC_SWB);
+
         a2dp.bt_encoder_format = CODEC_TYPE_APTX_AD_SPEECH;
         /* Configure AFE codec*/
         if (configure_aptx_ad_speech_enc_fmt() &&
