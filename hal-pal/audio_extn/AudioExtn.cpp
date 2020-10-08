@@ -250,8 +250,8 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
 
        pal_snd_dec->aac_dec.audio_obj_type = 29;
        pal_snd_dec->aac_dec.pce_bits_size = 0;
-       ALOGD("AAC params: aot %d pce %d", pal_snd_dec->aac_dec.audio_obj_type, pal_snd_dec->aac_dec.pce_bits_size);
-       ALOGD("format %x", config_->offload_info.format);
+       ALOGV("AAC params: aot %d pce %d", pal_snd_dec->aac_dec.audio_obj_type, pal_snd_dec->aac_dec.pce_bits_size);
+       ALOGV("format %x", config_->offload_info.format);
     }
     return 0;
 }

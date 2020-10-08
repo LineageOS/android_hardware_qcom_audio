@@ -1203,7 +1203,7 @@ exit:
     str_parms_destroy(query);
     str_parms_destroy(reply);
 
-    ALOGD("%s: exit: returns - %s", __func__, str);
+    ALOGV_IF(str != NULL, "%s: exit: returns - %s", __func__, str);
     return str;
 }
 

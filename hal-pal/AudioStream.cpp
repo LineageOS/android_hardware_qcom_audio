@@ -105,7 +105,7 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
     stream_callback_event_t event;
     StreamOutPrimary *astream_out = static_cast<StreamOutPrimary *> (cookie);
 
-    ALOGD("%s: stream_handle (%p), event_id (%x), event_data (%p), cookie (%p)"
+    ALOGV("%s: stream_handle (%p), event_id (%x), event_data (%p), cookie (%p)"
           "event_size (%d)", __func__, stream_handle, event_id, event_data,
            cookie, event_size);
 
@@ -115,7 +115,7 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
         {
             std::lock_guard<std::mutex> write_guard (astream_out->write_wait_mutex_);
             astream_out->write_ready_ = true;
-            ALOGD("%s: received WRITE_READY event", __func__);
+            ALOGV("%s: received WRITE_READY event", __func__);
             (astream_out->write_condition_).notify_all();
             event = STREAM_CBK_EVENT_WRITE_READY;
         }
@@ -316,7 +316,8 @@ static uint32_t astream_out_get_channels(const struct audio_stream *stream) {
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
-    ALOGD("%s: stream_out(%p)", __func__, stream);
+
+    ALOGV("%s: stream_out(%p)", __func__, stream);
     if (adevice != nullptr) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
@@ -1603,6 +1604,7 @@ done:
 int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     char value[64];
     int ret =  -EINVAL, controller = -1, stream = -1;
+    int ret1 = 0;
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
@@ -1625,16 +1627,16 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
         goto error;
     }
 
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
-    if (ret >= 0 ) {
+    ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
+    if (ret1 >= 0 ) {
         gaplessMeta.encoderDelay = atoi(value);
+        ALOGD("%s new encoder delay %u", __func__, gaplessMeta.encoderDelay);
     }
-    ret = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
-    if (ret >= 0) {
+    ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
+    if (ret1 >= 0) {
         gaplessMeta.encoderPadding = atoi(value);
+        ALOGD("%s padding %u", __func__, gaplessMeta.encoderPadding);
     }
-    ALOGD("%s new encoder delay %u and padding %u", __func__,
-           gaplessMeta.encoderDelay, gaplessMeta.encoderPadding);
 error:
     ALOGE("%s: exit %d", __func__, ret);
     return ret;
@@ -1961,7 +1963,6 @@ int StreamOutPrimary::Open() {
         streamAttributes_.flags = (pal_stream_flags_t)(PAL_STREAM_FLAG_MMAP);
     }
 
-    ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
     ALOGD("channels %d samplerate %d format id %d, stream type %d  stream bitwidth %d",
            streamAttributes_.out_media_config.ch_info.channels, streamAttributes_.out_media_config.sample_rate,
            streamAttributes_.out_media_config.aud_fmt_id, streamAttributes_.type,
@@ -2064,7 +2065,7 @@ error_open:
 int StreamOutPrimary::GetFrames(uint64_t *frames) {
     int ret = 0;
     if (!pal_stream_handle_) {
-        ALOGE("%s: pal_stream_handle_ NULL", __func__);
+        ALOGV("%s: pal_stream_handle_ NULL", __func__);
         *frames = 0;
         return 0;
     }
@@ -2077,11 +2078,11 @@ int StreamOutPrimary::GetFrames(uint64_t *frames) {
     }
     timestamp = (uint64_t)tstamp.session_time.value_msw;
     timestamp = timestamp  << 32 | tstamp.session_time.value_lsw;
-    ALOGI("%s: session msw %u", __func__, tstamp.session_time.value_msw);
-    ALOGI("%s: session lsw %u", __func__, tstamp.session_time.value_lsw);
-    ALOGI("%s: session timespec %lld", __func__, ((long long) timestamp));
+    ALOGV("%s: session msw %u", __func__, tstamp.session_time.value_msw);
+    ALOGV("%s: session lsw %u", __func__, tstamp.session_time.value_lsw);
+    ALOGV("%s: session timespec %lld", __func__, ((long long) timestamp));
     timestamp *= (streamAttributes_.out_media_config.sample_rate);
-    ALOGI("%s: timestamp %lld", __func__, ((long long) timestamp));
+    ALOGV("%s: timestamp %lld", __func__, ((long long) timestamp));
     *frames = timestamp/1000000;
 exit:
     return ret;
@@ -2397,10 +2398,10 @@ StreamOutPrimary::StreamOutPrimary(
             mPalOutDevice[i].config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
-        ALOGI("%s: device rate = %#x width=%#x fmt=%#x %d",
+        ALOGI("%s: device rate = %#x width=%#x fmt=%#x",
             __func__, mPalOutDevice[i].config.sample_rate,
             mPalOutDevice[i].config.bit_width,
-            mPalOutDevice[i].config.aud_fmt_id, __LINE__);
+            mPalOutDevice[i].config.aud_fmt_id);
             mPalOutDevice[i].config.ch_info = {0, {0}};
         if ((mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_DEVICE) ||
            (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_HEADSET)) {
