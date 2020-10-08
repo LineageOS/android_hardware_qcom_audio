@@ -2453,12 +2453,12 @@
 
     <path name="audio-with-haptics-playback speaker-and-display-port">
         <path name="audio-with-haptics-playback display-port" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-and-display-port1">
         <path name="audio-with-haptics-playback display-port1" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback afe-proxy">
@@ -2478,12 +2478,12 @@
 
     <path name="audio-with-haptics-playback speaker-and-usb-headphones">
         <path name="audio-with-haptics-playback usb-headphones" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-safe-and-usb-headphones">
         <path name="audio-with-haptics-playback usb-headphones" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback headphones">
@@ -2497,37 +2497,37 @@
 
     <path name="audio-with-haptics-playback speaker-and-headphones">
         <path name="audio-with-haptics-playback headphones" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-safe-and-headphones">
         <path name="audio-with-haptics-playback headphones" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-and-bt-sco">
         <path name="audio-with-haptics-playback bt-sco" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-safe-and-bt-sco">
         <path name="audio-with-haptics-playback bt-sco" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-and-bt-sco-wb">
         <path name="audio-with-haptics-playback bt-sco-wb" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-safe-and-bt-sco-wb">
         <path name="audio-with-haptics-playback bt-sco-wb" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-and-bt-sco-swb">
         <path name="audio-with-haptics-playback bt-sco-swb" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback bt-a2dp">
@@ -2537,12 +2537,12 @@
 
     <path name="audio-with-haptics-playback speaker-and-bt-a2dp">
         <path name="audio-with-haptics-playback bt-a2dp" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="audio-with-haptics-playback speaker-safe-and-bt-a2dp">
         <path name="audio-with-haptics-playback bt-a2dp" />
-        <path name="audio-with-haptics-playback" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <!-- These are actual sound device specific mixer settings -->
@@ -2607,8 +2607,7 @@
         <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
     </path>
 
-    <path name="speaker-and-haptics">
-        <path name="speaker" />
+    <path name="haptics">
         <ctl name="SWR DAC_Port Switch" value="1" />
     </path>
 
@@ -2693,11 +2692,11 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="dmic5" />
+        <path name="dmic6" />
     </path>
 
     <path name="speaker-mic-liquid">
-        <path name="dmic5" />
+        <path name="dmic6" />
     </path>
 
     <path name="speaker-mic-sbc">
@@ -2708,7 +2707,7 @@
         <ctl name="WSA_CDC_DMA_0 TX Format" value="PACKED_16B" />
         <path name="speaker" />
         <ctl name="VI_FEED_TX Channels" value="One" />
-        <ctl name="WSA_RX_0_VI_FB_RCH_MUX" value="WSA_CDC_DMA_TX_0" />
+        <ctl name="WSA_RX_0_VI_FB_LCH_MUX" value="WSA_CDC_DMA_TX_0" />
     </path>
 
     <path name="voice-speaker-protected">
@@ -2716,7 +2715,7 @@
         <ctl name="WSA_CDC_DMA_0 TX Format" value="PACKED_16B" />
         <path name="speaker-mono" />
         <ctl name="VI_FEED_TX Channels" value="One" />
-        <ctl name="WSA_RX_0_VI_FB_RCH_MUX" value="WSA_CDC_DMA_TX_0" />
+        <ctl name="WSA_RX_0_VI_FB_LCH_MUX" value="WSA_CDC_DMA_TX_0" />
     </path>
 
     <path name="voice-speaker-2-protected">
@@ -2724,7 +2723,7 @@
         <ctl name="WSA_CDC_DMA_0 TX Format" value="PACKED_16B" />
         <path name="speaker-mono-2" />
         <ctl name="VI_FEED_TX Channels" value="One" />
-        <ctl name="WSA_RX_0_VI_FB_RCH_MUX" value="WSA_CDC_DMA_TX_0" />
+        <ctl name="WSA_RX_0_VI_FB_LCH_MUX" value="WSA_CDC_DMA_TX_0" />
     </path>
 
     <path name="voice-speaker-stereo-protected">
@@ -2995,15 +2994,15 @@
     <path name="handset-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC4" />
+        <ctl name="TX DMIC MUX1" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC1" />
+        <ctl name="TX DMIC MUX2" value="DMIC5" />
     </path>
 
     <path name="speaker-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC2" />
+        <ctl name="TX DMIC MUX1" value="DMIC5" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="TX DMIC MUX2" value="DMIC1" />
     </path>
@@ -3076,7 +3075,7 @@
     <path name="speaker-dmic-broadside">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC3" />
+        <ctl name="TX DMIC MUX1" value="DMIC5" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="TX DMIC MUX2" value="DMIC1" />
     </path>
@@ -3094,21 +3093,21 @@
     <path name="three-mic">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Three" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC2" />
+        <ctl name="TX DMIC MUX1" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC1" />
+        <ctl name="TX DMIC MUX2" value="DMIC3" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
-        <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX DMIC MUX3" value="DMIC5" />
     </path>
 
     <path name="speaker-tmic">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Three" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC4" />
+        <ctl name="TX DMIC MUX1" value="DMIC5" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="TX DMIC MUX2" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
-        <ctl name="TX DMIC MUX3" value="DMIC2" />
+        <ctl name="TX DMIC MUX3" value="DMIC3" />
     </path>
 
     <path name="voice-speaker-tmic">
@@ -3119,13 +3118,13 @@
     <path name="speaker-qmic">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Four" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC4" />
+        <ctl name="TX DMIC MUX1" value="DMIC5" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC1" />
+        <ctl name="TX DMIC MUX2" value="DMIC2" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
         <ctl name="TX DMIC MUX3" value="DMIC3" />
         <ctl name="TX_AIF1_CAP Mixer DEC4" value="1" />
-        <ctl name="TX DMIC MUX4" value="DMIC2" />
+        <ctl name="TX DMIC MUX4" value="DMIC1" />
     </path>
 
     <path name="speaker-qmic-liquid">

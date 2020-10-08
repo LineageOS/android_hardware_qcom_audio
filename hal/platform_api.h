@@ -305,6 +305,7 @@ int platform_set_device_params(struct stream_out *out, int param, int value);
 int platform_set_audio_device_interface(const char * device_name, const char *intf_name,
                                         const char * codec_type);
 void platform_set_gsm_mode(void *platform, bool enable);
+void platform_set_tx_lpi_mode(void *platform, bool enable);
 bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device);
 int platform_get_spkr_prot_acdb_id(snd_device_t snd_device);
 int platform_get_spkr_prot_snd_device(snd_device_t snd_device);

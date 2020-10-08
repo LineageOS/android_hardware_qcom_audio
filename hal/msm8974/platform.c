@@ -74,6 +74,8 @@
 #define PLATFORM_INFO_XML_PATH_TDM_NAME  "audio_platform_info_tdm.xml"
 #define PLATFORM_INFO_XML_PATH_SHIMA_IDP "audio_platform_info_shimaidp.xml"
 #define PLATFORM_INFO_XML_PATH_SHIMA_QRD "audio_platform_info_shimaqrd.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_IDP "audio_platform_info_scubaidp.xml"
+#define PLATFORM_INFO_XML_PATH_SCUBA_QRD "audio_platform_info_scubaqrd.xml"
 
 #include <linux/msm_audio.h>
 #if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || \
@@ -82,7 +84,7 @@
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
     defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL) || \
-    defined (PLATFORM_HOLI)
+    defined (PLATFORM_HOLI) || defined (PLATFORM_LAHAINA)
 
 #include <sound/devdep_params.h>
 #endif
@@ -323,6 +325,7 @@ struct platform_data {
     bool is_vbat_speaker;
     bool is_bcl_speaker;
     bool gsm_mode_enabled;
+    bool lpi_enabled;
     bool is_slimbus_interface;
     bool is_internal_codec;
     bool is_default_be_config;
@@ -1799,10 +1802,14 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("bengal-idp-snd-card")) ||
          !strncmp(snd_card_name, "bengal-scubaidp-snd-card",
                    sizeof("bengal-scubaidp-snd-card")) ||
+         !strncmp(snd_card_name, "bengal-scubaqrd-snd-card",
+                   sizeof("bengal-scubaqrd-snd-card")) ||
          !strncmp(snd_card_name, "bengal-qrd-snd-card",
                    sizeof("bengal-qrd-snd-card")) ||
          !strncmp(snd_card_name, "holi-mtp-snd-card",
                    sizeof("holi-mtp-snd-card")) ||
+         !strncmp(snd_card_name, "holi-usbc-snd-card",
+                   sizeof("holi-usbc-snd-card")) ||
          !strncmp(snd_card_name, "holi-mtpsku1-snd-card",
                    sizeof("holi-mtpsku1-snd-card")) ||
          !strncmp(snd_card_name, "holi-qrd-snd-card",
@@ -2043,6 +2050,24 @@ void platform_set_echo_reference(struct audio_device *adev, bool enable,
             audio_route_apply_and_update_path(adev->audio_route, my_data->ec_ref_mixer_path);
 
         ALOGD("%s: enabling %s", __func__, my_data->ec_ref_mixer_path);
+    }
+}
+
+void platform_set_tx_lpi_mode(void *platform, bool enable)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    struct audio_device *adev = my_data->adev;
+
+    if (!enable && my_data->lpi_enabled) {
+        my_data->lpi_enabled = false;
+        ALOGV("%s: disabling TX LPI mode", __func__);
+        audio_route_reset_and_update_path(adev->audio_route, "tx-lpi-enable");
+    }
+
+    if (enable) {
+        my_data->lpi_enabled = true;
+        ALOGD("%s: enabling TX LPI mode", __func__);
+        audio_route_apply_and_update_path(adev->audio_route, "tx-lpi-enable");
     }
 }
 
@@ -3195,6 +3220,7 @@ void *platform_init(struct audio_device *adev)
     my_data->use_sprk_default_sample_rate = true;
     my_data->fluence_in_voice_comm = false;
     my_data->ec_car_state = false;
+    my_data->lpi_enabled = false;
     my_data->is_multiple_sample_rate_combo_supported = true;
     platform_reset_edid_info(my_data);
 
@@ -3405,6 +3431,12 @@ void *platform_init(struct audio_device *adev)
                sizeof("lahaina-shimaqrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SHIMA_QRD),
             my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
+               sizeof("bengal-scubaidp-snd-card"))) {
+        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_IDP, my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "bengal-scubaqrd-snd-card",
+               sizeof("bengal-scubaqrd-snd-card"))) {
+        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_QRD, my_data, PLATFORM);
     } else if (my_data->is_internal_codec) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_INTCODEC_NAME),
             my_data, PLATFORM);
@@ -12126,7 +12158,7 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr)
     defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
     defined (PLATFORM_LITO) || defined (PLATFORM_MSMFALCON) || \
     defined (PLATFORM_ATOLL) || defined (PLATFORM_BENGAL) || \
-    defined (PLATFORM_HOLI)
+    defined (PLATFORM_HOLI) || defined (PLATFORM_LAHAINA)
 int platform_get_mmap_data_fd(void *platform, int fe_dev, int dir, int *fd,
                               uint32_t *size)
 {

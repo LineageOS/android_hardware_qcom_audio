@@ -168,8 +168,8 @@
             <param operation_mode_ids="0x00012C1C, 0x00012C02" />
             <param polling_enable_ids="0x00012C1C, 0x00012C1B" />
             <param custom_config_ids="0x00012C1C, 0x00012C20" />
+            <param det_event_type_ids="0x00012C1C, 0x00012C2C" />
         </lsm_usecase>
-
         <lsm_usecase>
             <param execution_mode="WDSP" />
             <param load_sound_model_ids="0x00012C0D, 0x00012C14" />

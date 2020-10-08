@@ -577,6 +577,8 @@ static void update_hardware_info_holi(
                  sizeof("holi-mtp-snd-card")) ||
         !strncmp(snd_card_name, "holi-qrd-snd-card",
                  sizeof("holi-qrd-snd-card")) ||
+        !strncmp(snd_card_name, "holi-usbc-snd-card",
+                 sizeof("holi-usbc-snd-card")) ||
         !strncmp(snd_card_name, "holi-qrdsku1-snd-card",
                  sizeof("holi-qrdsku1-snd-card")) ||
         !strncmp(snd_card_name, "holi-mtpsku1-snd-card",

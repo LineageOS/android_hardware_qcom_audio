@@ -278,6 +278,16 @@
     <ctl name="SLIM7_RX ADM Channels" value="Zero" />
     <!-- split a2dp end-->
 
+    <!-- VoIP over audio -->
+    <ctl name="MultiMedia10 Mixer INT3_MI2S_TX" value="0" />
+    <ctl name="MultiMedia10 Mixer SLIM_7_TX" value="0" />
+    <ctl name="MultiMedia10 Mixer USB_AUDIO_TX" value="0" />
+    <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia10" value="0" />
+    <ctl name="INT4_MI2S_RX Audio Mixer MultiMedia10" value="0" />
+    <ctl name="INT0_MI2S_RX Audio Mixer MultiMedia10" value="0" />
+    <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia10" value="0" />
+    <!-- VoIP over audio -->
+
     <!-- ADSP testfwk -->
     <ctl name="INT4_MI2S_RX_DL_HL Switch" value="0" />
     <ctl name="INT0_MI2S_RX_DL_HL Switch" value="0" />
@@ -2565,6 +2575,61 @@
     <path name="speaker-and-hdmi">
         <path name="speaker" />
         <path name="hdmi" />
+    </path>
+
+    <!-- VoIP Rx settings -->
+    <path name="audio-playback-voip">
+        <ctl name="INT4_MI2S_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip headphones">
+        <ctl name="INT0_MI2S_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip bt-sco">
+        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip bt-sco-wb">
+        <path name="audio-playback-voip bt-sco" />
+    </path>
+
+    <path name="audio-playback-voip usb-headphones">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip usb-headset">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip afe-proxy">
+        <ctl name="AFE_PCM_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip speaker-and-display-port">
+        <path name="audio-playback-voip display-port" />
+        <path name="audio-playback-voip" />
+    </path>
+
+    <!-- VoIP Tx settings -->
+    <path name="audio-record-voip">
+         <ctl name="MultiMedia10 Mixer INT3_MI2S_TX" value="1" />
+    </path>
+
+    <path name="audio-record-voip bt-sco">
+         <ctl name="MultiMedia10 Mixer SLIM_7_TX" value="1" />
+    </path>
+
+    <path name="audio-record-voip bt-sco-wb">
+        <path name="audio-record-voip bt-sco" />
+    </path>
+
+    <path name="audio-record-voip usb-headset-mic">
+        <ctl name="MultiMedia10 Mixer USB_AUDIO_TX" value="1" />
     </path>
 
     <path name="speaker-and-display-port">

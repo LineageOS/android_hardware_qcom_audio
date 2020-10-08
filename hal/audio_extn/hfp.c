@@ -67,7 +67,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
       defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
       defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
       defined (PLATFORM_LITO) || defined(PLATFORM_ATOLL) || \
-      defined (PLATFORM_BENGAL)
+      defined (PLATFORM_BENGAL) || defined (PLATFORM_LAHAINA)
 #define HFP_RX_VOLUME     "SLIMBUS_7 LOOPBACK Volume"
 #else
 #define HFP_RX_VOLUME     "Internal HFP RX Volume"

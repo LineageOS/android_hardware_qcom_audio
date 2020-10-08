@@ -4750,7 +4750,7 @@ void audio_extn_a2dp_init(void *adev)
     if (a2dp_init) {
         a2dp_offload_init_config_t a2dp_init_config;
         a2dp_init_config.fp_platform_get_pcm_device_id = platform_get_pcm_device_id;
-        a2dp_init_config.fp_check_a2dp_restore = check_a2dp_restore;
+        a2dp_init_config.fp_check_a2dp_restore_l = check_a2dp_restore_l;
 
         a2dp_init(adev, a2dp_init_config);
     }
@@ -6345,8 +6345,6 @@ void audio_extn_feature_init()
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
-   bool a2dp_reconfig = false;
-
    audio_extn_set_aanc_noise_level(adev, parms);
    audio_extn_set_anc_parameters(adev, parms);
    audio_extn_set_fluence_parameters(adev, parms);
@@ -6355,9 +6353,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_sound_trigger_set_parameters(adev, parms);
    audio_extn_listen_set_parameters(adev, parms);
    audio_extn_ssr_set_parameters(adev, parms);
-   audio_extn_hfp_set_parameters(adev, parms);
    audio_extn_dts_eagle_set_parameters(adev, parms);
-   audio_extn_a2dp_set_parameters(parms, &a2dp_reconfig);
    audio_extn_ddp_set_parameters(adev, parms);
    audio_extn_ds2_set_parameters(adev, parms);
    audio_extn_customstereo_set_parameters(adev, parms);

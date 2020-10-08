@@ -3445,7 +3445,7 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="amic3" />
+        <path name="amic1" />
     </path>
 
     <path name="speaker-protected">
@@ -3685,7 +3685,7 @@
     </path>
 
     <!-- Dual MIC devices -->
-    <path name="handset-dmic-endfire">
+    <path name="speaker-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two" />
         <ctl name="TX DEC1 MUX" value="SWR_MIC" />
         <ctl name="TX SMIC MUX1" value="SWR_MIC0" />
@@ -3700,7 +3700,7 @@
         <ctl name="ADC2 MUX" value="INP3" />
     </path>
 
-    <path name="speaker-dmic-endfire">
+    <path name="handset-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two" />
         <ctl name="TX DEC1 MUX" value="SWR_MIC" />
         <ctl name="TX SMIC MUX1" value="SWR_MIC4" />
