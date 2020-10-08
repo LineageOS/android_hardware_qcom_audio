@@ -2132,7 +2132,7 @@
         <ctl name="SpkrLeft COMP Switch" value="1" />
         <ctl name="SpkrLeft VISENSE Switch" value="1" />
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
-        <ctl name="EAR SPKR PA Gain" value="G_6_DB" />
+        <ctl name="WSA_RX0 Digital Volume" value="50" />
     </path>
 
     <path name="handset-mic">
