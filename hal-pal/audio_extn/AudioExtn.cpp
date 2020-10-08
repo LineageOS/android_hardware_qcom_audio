@@ -256,6 +256,33 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
     return 0;
 }
 
+int AudioExtn::GetProxyParameters(std::shared_ptr<AudioDevice> adev __unused,
+                struct str_parms *query, struct str_parms *reply)
+{
+    int ret, val = 0;
+    char value[32] = {0};
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_CAN_OPEN_PROXY, value,
+            sizeof(value));
+    if (ret >= 0) {
+        val = 1;
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_CAN_OPEN_PROXY, val);
+    }
+    ALOGV("%s: called ... can_use_proxy %d", __func__, val);
+    return 0;
+}
+
+void AudioExtn::audio_extn_get_parameters(std::shared_ptr<AudioDevice> adev,
+       struct str_parms *query, struct str_parms *reply)
+{
+    char *kv_pairs = NULL;
+
+    GetProxyParameters(adev, query, reply);
+    kv_pairs = str_parms_to_str(reply);
+    ALOGV_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
+    free(kv_pairs);
+}
+
 int AudioExtn::get_controller_stream_from_params(struct str_parms *parms,
                                            int *controller, int *stream) {
 

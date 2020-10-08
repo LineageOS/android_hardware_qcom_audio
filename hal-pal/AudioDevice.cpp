@@ -1289,6 +1289,7 @@ char* AudioDevice::GetParameters(const char *keys) {
 
     }
 
+    AudioExtn::audio_extn_get_parameters(adev_, query, reply);
 exit:
     str = str_parms_to_str(reply);
     str_parms_destroy(query);

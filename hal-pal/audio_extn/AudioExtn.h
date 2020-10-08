@@ -53,8 +53,14 @@ typedef int(*hfp_set_mic_mute2_t)(std::shared_ptr<AudioDevice> adev, bool state)
 
 class AudioExtn
 {
+private:
+    static int GetProxyParameters(std::shared_ptr<AudioDevice> adev,
+            struct str_parms *query, struct str_parms *reply);
+
 public:
     static int audio_extn_parse_compress_metadata(struct audio_config *config_, pal_snd_dec_t *pal_snd_dec, str_parms *parms, uint32_t *sr, uint16_t *ch);
+    static void audio_extn_get_parameters(std::shared_ptr<AudioDevice> adev,
+           struct str_parms *query, struct str_parms *reply);
     static int get_controller_stream_from_params(struct str_parms *parms, int *controller, int *stream);
     static void battery_listener_feature_init(bool is_feature_enabled);
     static void battery_properties_listener_init(battery_status_change_fn_t fn);
