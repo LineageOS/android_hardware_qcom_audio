@@ -6,8 +6,6 @@ cc_binary {
 
     srcs: ["adsprpcd.c"],
 
-    header_libs: ["libfastrpcshippable_headers"],
-
     shared_libs: [
         "liblog",
         "libdl",
