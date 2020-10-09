@@ -31,16 +31,20 @@
 #define VERIFY_PRINT_ERROR
 #endif
 
+#define VERIFY_EPRINTF ALOGE
+#define VERIFY_IPRINTF ALOGI
+
 #include <stdio.h>
 #include <dlfcn.h>
 #include <unistd.h>
-#include "verify.h"
-#include "AEEStdErr.h"
 
+#include <log/log.h>
 
 #ifndef ADSP_DEFAULT_LISTENER_NAME
 #define ADSP_DEFAULT_LISTENER_NAME "libadsp_default_listener.so"
 #endif
+
+#define AEE_ECONNREFUSED 0x72
 
 typedef int (*adsp_default_listener_start_t)(int argc, char *argv[]);
 
@@ -72,6 +76,5 @@ int main(int argc, char *argv[]) {
     usleep(25000);
   }
   VERIFY_EPRINTF("audio adsp daemon exiting %x", nErr);
-bail:
   return nErr;
 }
