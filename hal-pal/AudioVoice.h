@@ -51,6 +51,7 @@
 #define AUDIO_PARAMETER_KEY_DIRECTION           "direction"
 #define AUDIO_PARAMETER_KEY_VOLUME_BOOST        "volume_boost"
 #define AUDIO_PARAMETER_KEY_SLOWTALK            "st_enable"
+#define AUDIO_PARAMETER_KEY_HD_VOICE            "hd_voice"
 
 /* TTY mode selection */
 #define AUDIO_PARAMETER_KEY_TTY_MODE "tty_mode"
@@ -74,6 +75,7 @@ public:
             pal_stream_handle_t*  pal_voice_handle;
             bool volume_boost;
             bool slow_talk;
+            bool hd_voice;
     };
     struct voice_t {
             voice_session_t session[MAX_VOICE_SESSIONS];

@@ -79,6 +79,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
     uint32_t tty_mode;
     bool volume_boost;
     bool slow_talk;
+    bool hd_voice;
 
     ALOGD("%s: Enter", __func__);
 
@@ -201,6 +202,37 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
 
             for ( i = 0; i < max_voice_sessions_; i++) {
                 voice_.session[i].slow_talk = slow_talk;
+                if (IsCallActive(&voice_.session[i])) {
+                    pal_stream_set_param(voice_.session[i].pal_voice_handle,
+                                         PAL_PARAM_ID_SLOW_TALK, params);
+                }
+            }
+            free(params);
+            params = nullptr;
+        }
+    }
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HD_VOICE, c_value, sizeof(c_value));
+    if (err >= 0) {
+        if (strcmp(c_value, "true") == 0)
+            hd_voice = true;
+        else if (strcmp(c_value, "false") == 0) {
+            hd_voice = false;
+        }
+        else {
+            ret = -EINVAL;
+            goto done;
+        }
+        params = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
+                                                sizeof(hd_voice));
+        if (!params) {
+            ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+                   sizeof(pal_param_payload) + sizeof(hd_voice));
+        } else {
+            params->payload_size = sizeof(hd_voice);
+            params->payload[0] = hd_voice;
+
+            for ( i = 0; i < max_voice_sessions_; i++) {
+                voice_.session[i].hd_voice = hd_voice;
                 if (IsCallActive(&voice_.session[i])) {
                     pal_stream_set_param(voice_.session[i].pal_voice_handle,
                                          PAL_PARAM_ID_SLOW_TALK, params);
@@ -549,6 +581,24 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
         }
     }
 
+    if (session->hd_voice) {
+        param_payload = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
+                                             sizeof(session->hd_voice));
+        if (!param_payload) {
+            ALOGE("%s:%d calloc for size %zu failed", __func__, __LINE__,
+                  sizeof(pal_param_payload) + sizeof(session->hd_voice));
+        } else {
+            param_payload->payload_size = sizeof(session->hd_voice);
+            param_payload->payload[0] = session->hd_voice;
+            ret = pal_stream_set_param(session->pal_voice_handle, PAL_PARAM_ID_HD_VOICE,
+                                   param_payload);
+            if (ret)
+                ALOGE("%s VHD Voice enable failed %x", __func__, ret);
+            free(param_payload);
+            param_payload = nullptr;
+        }
+    }
+
    ret = pal_stream_start(session->pal_voice_handle);
    if (ret) {
        ALOGE("%s Pal Stream Start Error (%x)", __func__, ret);
@@ -697,6 +747,7 @@ AudioVoice::AudioVoice() {
         voice_.session[i].volume_boost = false;
         voice_.session[i].slow_talk = false;
         voice_.session[i].pal_voice_handle = NULL;
+        voice_.session[i].hd_voice = false;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
@@ -717,6 +768,7 @@ AudioVoice::~AudioVoice() {
         voice_.session[i].volume_boost = false;
         voice_.session[i].slow_talk = false;
         voice_.session[i].pal_voice_handle = NULL;
+        voice_.session[i].hd_voice = false;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
