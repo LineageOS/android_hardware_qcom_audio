@@ -51,8 +51,12 @@
 #include <log/log.h>
 #include <cutils/str_parms.h>
 
+#include <vector>
+#include <map>
+
 #include "PalApi.h"
 #include "PalDefs.h"
+
 #include "audio_extn.h"
 #include "audio_hidl.h"
 #include "battery_listener.h"
@@ -83,7 +87,7 @@ std::shared_ptr<AudioDevice> AudioDevice::GetInstance(audio_hw_device_t* device)
 
 std::shared_ptr<StreamOutPrimary> AudioDevice::CreateStreamOut(
                         audio_io_handle_t handle,
-                        audio_devices_t devices,
+                        const std::set<audio_devices_t>& devices,
                         audio_output_flags_t flags,
                         struct audio_config *config,
                         audio_stream_out **stream_out,
@@ -110,7 +114,6 @@ void AudioDevice::CloseStreamOut(std::shared_ptr<StreamOutPrimary> stream) {
     out_list_mutex.lock();
     auto iter =
         std::find(stream_out_list_.begin(), stream_out_list_.end(), stream);
-
     if (iter == stream_out_list_.end()) {
         ALOGE("%s: invalid output stream", __func__);
     } else {
@@ -119,9 +122,178 @@ void AudioDevice::CloseStreamOut(std::shared_ptr<StreamOutPrimary> stream) {
     out_list_mutex.unlock();
 }
 
+int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
+                                  const std::vector<struct audio_port_config>& sources,
+                                  const std::vector<struct audio_port_config>& sinks) {
+    int ret = 0;
+    bool new_patch = false;
+    AudioPatch *patch = NULL;
+    std::shared_ptr<StreamPrimary> stream = nullptr;
+    AudioPatch::PatchType patch_type = AudioPatch::PATCH_NONE;
+    audio_io_handle_t io_handle = AUDIO_IO_HANDLE_NONE;
+    audio_source_t input_source = AUDIO_SOURCE_DEFAULT;
+    std::set<audio_devices_t> device_types;
+
+    ALOGD("%s: enter: num sources %zu, num_sinks %zu", __func__, sources.size(), sinks.size());
+
+    if (!handle || sources.empty() || sources.size() > AUDIO_PATCH_PORTS_MAX ||
+        sinks.empty() || sinks.size() > AUDIO_PATCH_PORTS_MAX) {
+        ALOGE("%s: Invalid patch arguments", __func__);
+        return -EINVAL;
+    }
+
+    if (sources.size() > 1) {
+        ALOGE("%s: Multiple sources are not supported", __func__);
+        return -EINVAL;
+    }
+
+    ALOGD("%s: source role %d, source type %d", __func__, sources[0].role, sources[0].type);
+
+    // Populate source/sink information and fetch stream info
+    switch (sources[0].type) {
+        case AUDIO_PORT_TYPE_DEVICE: // Patch for audio capture or loopback
+            device_types.insert(sources[0].ext.device.type);
+            if (sinks[0].type == AUDIO_PORT_TYPE_MIX) {
+                io_handle = sinks[0].ext.mix.handle;
+                input_source = sinks[0].ext.mix.usecase.source;
+                patch_type = AudioPatch::PATCH_CAPTURE;
+                ALOGD("%s: Capture patch from device %x to mix %d",
+                      __func__, sources[0].ext.device.type, sinks[0].ext.mix.handle);
+            } else {
+                /*Device to device patch is not implemented.
+                  This space will need changes if audio HAL
+                  handles device to device patches in the future.*/
+                patch_type = AudioPatch::PATCH_DEVICE_LOOPBACK;
+                ALOGE("%s Device to device patches not supported", __func__);
+                return -ENOSYS;
+            }
+            break;
+        case AUDIO_PORT_TYPE_MIX: // Patch for audio playback
+            io_handle = sources[0].ext.mix.handle;
+            for (const auto &sink : sinks)
+               device_types.insert(sink.ext.device.type);
+            patch_type = AudioPatch::PATCH_PLAYBACK;
+            ALOGD("%s: Playback patch from mix handle %d to device %x", __func__,
+                  io_handle, AudioExtn::get_device_types(device_types));
+            break;
+        case AUDIO_PORT_TYPE_SESSION:
+        case AUDIO_PORT_TYPE_NONE:
+            ALOGE("%s: Unsupported source type %d", __func__, sources[0].type);
+            return -EINVAL;
+    }
+
+    if (patch_type == AudioPatch::PATCH_PLAYBACK)
+        stream = OutGetStream(io_handle);
+    else
+        stream = InGetStream(io_handle);
+
+    if(!stream){
+        ALOGE("%s: Failed to fetch stream with io handle %d", __func__, io_handle);
+        return -EINVAL;
+    }
+
+    // empty patch...generate new handle
+    if (*handle == AUDIO_PATCH_HANDLE_NONE) {
+        patch = new AudioPatch(patch_type, sources, sinks);
+        *handle = patch->handle;
+        new_patch = true;
+    } else {
+        std::lock_guard<std::mutex> lock(patch_map_mutex);
+        auto it = patch_map_.find(*handle);
+        if (it == patch_map_.end()) {
+            ALOGE("%s: Unable to fetch patch with handle %d", __func__, *handle);
+            return -EINVAL;
+        }
+        patch = &(*it->second);
+        patch->type = patch_type;
+        patch->sources = sources;
+        patch->sinks = sinks;
+    }
+
+    ret = stream->RouteStream(device_types);
+    if (voice_ && patch_type == AudioPatch::PATCH_PLAYBACK)
+        ret |= voice_->RouteStream(device_types);
+
+    if (ret) {
+        if (new_patch)
+            delete patch;
+        ALOGE("%s: Stream routing failed for io_handle %d", __func__, io_handle);
+    } else if (new_patch) {
+        // new patch...add to patch map
+        std::lock_guard<std::mutex> lock(patch_map_mutex);
+        patch_map_[patch->handle] = patch;
+        ALOGD("%s: Added a new patch with handle %d", __func__, patch->handle);
+    }
+
+    return ret;
+}
+
+int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
+    int ret = 0;
+    AudioPatch *patch = NULL;
+    std::shared_ptr<StreamPrimary> stream = nullptr;
+    audio_io_handle_t io_handle = AUDIO_IO_HANDLE_NONE;
+    AudioPatch::PatchType patch_type = AudioPatch::PATCH_NONE;
+
+    ALOGD("%s: Release patch with handle %d", __func__, handle);
+
+    if (handle == AUDIO_PATCH_HANDLE_NONE) {
+        ALOGE("%s: Invalid patch handle %d", __func__, handle);
+        return -EINVAL;
+    }
+
+    // grab the io_handle from the patch
+    patch_map_mutex.lock();
+    auto patch_it = patch_map_.find(handle);
+    if (patch_it == patch_map_.end() || !patch_it->second) {
+        ALOGE("%s: Patch info not found with handle %d", __func__, handle);
+        return -EINVAL;
+    }
+    patch = &(*patch_it->second);
+    patch_type = patch->type;
+    switch (patch->sources[0].type) {
+        case AUDIO_PORT_TYPE_MIX:
+            io_handle = patch->sources[0].ext.mix.handle;
+            break;
+        case AUDIO_PORT_TYPE_DEVICE:
+            if (patch->type == AudioPatch::PATCH_CAPTURE)
+                io_handle = patch->sinks[0].ext.mix.handle;
+            break;
+        case AUDIO_PORT_TYPE_SESSION:
+        case AUDIO_PORT_TYPE_NONE:
+            ALOGD("%s: Invalid port type: %d", __func__, patch->sources[0].type);
+            return -EINVAL;
+    }
+    patch_map_mutex.unlock();
+
+    if (patch_type == AudioPatch::PATCH_PLAYBACK)
+        stream = OutGetStream(io_handle);
+    else
+        stream = InGetStream(io_handle);
+
+    if (!stream){
+        ALOGE("%s: Failed to fetch stream with io handle %d", __func__, io_handle);
+        return -EINVAL;
+    }
+
+    ret = stream->RouteStream({AUDIO_DEVICE_NONE});
+    if (patch_type == AudioPatch::PATCH_PLAYBACK)
+        ret |= voice_->RouteStream({AUDIO_DEVICE_NONE});
+
+    if (ret)
+        ALOGE("%s: Stream routing failed for io_handle %d", __func__, io_handle);
+
+    std::lock_guard lock(patch_map_mutex);
+    patch_map_.erase(handle);
+    delete patch;
+
+    ALOGD("%s: Successfully released patch %d", __func__, handle);
+    return ret;
+}
+
 std::shared_ptr<StreamInPrimary> AudioDevice::CreateStreamIn(
                                         audio_io_handle_t handle,
-                                        audio_devices_t devices,
+                                        const std::set<audio_devices_t>& devices,
                                         audio_input_flags_t flags,
                                         struct audio_config *config,
                                         const char *address,
@@ -167,7 +339,6 @@ void adev_on_battery_status_changed(bool charging)
 }
 
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume) {
-
     std::shared_ptr<AudioDevice>adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
         ALOGE("%s: invalid adevice object", __func__);
@@ -175,8 +346,6 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume) {
     }
 
     return adevice->SetVoiceVolume(volume);
-
-
 }
 
 static int adev_pal_global_callback(uint32_t event_id, uint32_t *event_data,
@@ -225,20 +394,16 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         ALOGE("%s: sound card offline", __func__);
         return -ENODEV;
     }
+
     astream = adevice->OutGetStream(handle);
-
-    if (astream == nullptr) {
-        adevice->CreateStreamOut(handle, devices, flags, config,
-                                 stream_out, address);
-    }
-
+    if (astream == nullptr)
+        astream = adevice->CreateStreamOut(handle, {devices}, flags, config, stream_out, address);
 exit:
     return ret;
 }
 
 void adev_close_output_stream(struct audio_hw_device *dev,
                               struct audio_stream_out *stream) {
-
     std::shared_ptr<StreamOutPrimary> astream_out;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
     if (!adevice) {
@@ -253,6 +418,7 @@ void adev_close_output_stream(struct audio_hw_device *dev,
     }
 
     ALOGD("%s: enter:stream_handle(%p)", __func__, astream_out.get());
+
     adevice->CloseStreamOut(astream_out);
 }
 
@@ -267,13 +433,13 @@ void adev_close_input_stream(struct audio_hw_device *dev,
     }
 
     astream_in = adevice->InGetStream((audio_stream_t*)stream);
-
     if (!astream_in) {
         ALOGE("%s: invalid astream_in object", __func__);
         return;
     }
 
     ALOGD("%s: enter:stream_handle(%p)", __func__, astream_in.get());
+
     adevice->CloseStreamIn(astream_in);
 }
 
@@ -328,11 +494,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     }
 
     astream = adevice->InGetStream(handle);
-    if (astream == nullptr) {
-        adevice->CreateStreamIn(handle, devices, flags, config, address,
-                                stream_in, source);
-    }
-    //Need keep track of the list of streams that are allocated
+    if (astream == nullptr)
+        astream = adevice->CreateStreamIn(handle, {devices}, flags, config,
+                address, stream_in, source);
+
   exit:
       return ret;
 }
@@ -419,11 +584,13 @@ static size_t adev_get_input_buffer_size(
 }
 
 int adev_release_audio_patch(struct audio_hw_device *dev,
-                           audio_patch_handle_t handle) {
-    std::ignore = dev;
-    std::ignore = handle;
-
-    return 0;
+                             audio_patch_handle_t handle) {
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
+    if (!adevice){
+        ALOGE("%s: GetInstance() failed", __func__);
+        return -EINVAL;
+    }
+    return adevice->ReleaseAudioPatch(handle);
 }
 
 int adev_create_audio_patch(struct audio_hw_device *dev,
@@ -432,14 +599,22 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
                             unsigned int num_sinks,
                             const struct audio_port_config *sinks,
                             audio_patch_handle_t *handle) {
-    std::ignore = dev;
-    std::ignore = num_sources;
-    std::ignore = sources;
-    std::ignore = num_sinks;
-    std::ignore = sinks;
-    std::ignore = handle;
 
-    return 0;
+    if (!handle){
+        ALOGE("%s: Invalid handle", __func__);
+        return -EINVAL;
+    }
+
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
+    if (!adevice){
+        ALOGE("%s: GetInstance() failed", __func__);
+        return -EINVAL;
+    }
+
+    std::vector<struct audio_port_config> source_vec(sources, sources + num_sources);
+    std::vector<struct audio_port_config> sink_vec(sinks, sinks + num_sinks);
+
+    return adevice->CreateAudioPatch(handle, source_vec, sink_vec);
 }
 
 int adev_get_audio_port(struct audio_hw_device *dev,
@@ -473,7 +648,7 @@ static int adev_get_microphones(const struct audio_hw_device *dev __unused,
 int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     int ret = 0;
     /* default audio HAL major version */
-    uint32_t maj_version = 2;
+    uint32_t maj_version = 3;
 
     ret = pal_init();
     if (ret) {
@@ -704,13 +879,13 @@ int AudioDevice::add_input_headset_if_usb_out_headset(int *device_count,
 }
 
 int AudioDevice::SetParameters(const char *kvpairs) {
-    int ret = 0;
-    int val = 0;
+    int ret = 0, val = 0;
     struct str_parms *parms;
     char value[32];
-    int device_count = 0;
     int pal_device_count = 0;
     pal_device_id_t* pal_device_ids = NULL;
+    char *test_r = NULL;
+    char *cfg_str = NULL;
 
     ALOGD("%s: enter: %s", __func__, kvpairs);
     ret = voice_->VoiceSetParameters(kvpairs);
@@ -763,7 +938,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 ALOGI("%s: plugin device num=%d", __func__,
                     param_device_connection.device_config.usb_addr.device_num);
             }
-        } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        } else if (val == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             int controller = -1, stream = -1;
             AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
             param_device_connection.device_config.dp_config.controller = controller;
@@ -773,11 +948,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             ALOGI("%s: plugin device cont %d stream %d", __func__, controller, stream);
         }
 
-        device_count = popcount(device);
-        if (device_count) {
-
-            pal_device_ids = (pal_device_id_t *) calloc(device_count, sizeof(pal_device_id_t));
-            pal_device_count = GetPalDeviceIds(device, pal_device_ids);
+        if (device) {
+            pal_device_ids = (pal_device_id_t *) calloc(1, sizeof(pal_device_id_t));
+            pal_device_count = GetPalDeviceIds({device}, pal_device_ids);
             ret = add_input_headset_if_usb_out_headset(&pal_device_count, &pal_device_ids);
             if (ret) {
                 free(pal_device_ids);
@@ -847,6 +1020,81 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         }
     }
 
+    /* Speaker Protection: Factory Test Mode */
+    ret = str_parms_get_str(parms, "fbsp_cfg_wait_time", value, sizeof(value));
+    if (ret >= 0) {
+        str_parms_del(parms, "fbsp_cfg_wait_time");
+        cfg_str = strtok_r(value, ";", &test_r);
+        if (cfg_str != NULL) {
+            pal_spkr_prot_payload spPayload;
+            spPayload.operationMode = PAL_SP_MODE_FACTORY_TEST;
+            spPayload.spkrHeatupTime = atoi(cfg_str);
+
+            ret = str_parms_get_str(parms, "fbsp_cfg_ftm_time", value, sizeof(value));
+            if (ret >= 0) {
+                str_parms_del(parms, "fbsp_cfg_ftm_time");
+                cfg_str = strtok_r(value, ";", &test_r);
+                if (cfg_str != NULL) {
+                    spPayload.operationModeRunTime = atoi(cfg_str);
+                    ret = pal_set_param(PAL_PARAM_ID_SP_MODE, (void*)&spPayload,
+                                sizeof(pal_spkr_prot_payload));
+                }
+                else {
+                    ALOGE ("Unable to parse the FTM time");
+                }
+            }
+            else {
+                ALOGE ("Parameter missing for the FTM time");
+            }
+        }
+        else {
+            ALOGE ("Unable to parse the FTM wait time");
+        }
+    }
+
+    /* Speaker Protection: V-validation mode */
+    ret = str_parms_get_str(parms, "fbsp_v_vali_wait_time", value, sizeof(value));
+    if (ret >= 0) {
+        str_parms_del(parms, "fbsp_v_vali_wait_time");
+        cfg_str = strtok_r(value, ";", &test_r);
+        if (cfg_str != NULL) {
+            pal_spkr_prot_payload spPayload;
+            spPayload.operationMode = PAL_SP_MODE_V_VALIDATION;
+            spPayload.spkrHeatupTime = atoi(cfg_str);
+
+            ret = str_parms_get_str(parms, "fbsp_v_vali_vali_time", value, sizeof(value));
+            if (ret >= 0) {
+                str_parms_del(parms, "fbsp_v_vali_vali_time");
+                cfg_str = strtok_r(value, ";", &test_r);
+                if (cfg_str != NULL) {
+                    spPayload.operationModeRunTime = atoi(cfg_str);
+                    ret = pal_set_param(PAL_PARAM_ID_SP_MODE, (void*)&spPayload,
+                                sizeof(pal_spkr_prot_payload));
+                }
+                else {
+                    ALOGE ("Unable to parse the V_Validation time");
+                }
+            }
+            else {
+                ALOGE ("Parameter missing for the V-Validation time");
+            }
+        }
+        else {
+            ALOGE ("Unable to parse the V-Validation wait time");
+        }
+    }
+
+    /* Speaker Protection: Dynamic calibration mode */
+    ret = str_parms_get_str(parms, "trigger_spkr_cal", value, sizeof(value));
+    if (ret >= 0) {
+        if ((strcmp(value, "true") == 0) || (strcmp(value, "yes") == 0)) {
+            pal_spkr_prot_payload spPayload;
+            spPayload.operationMode = PAL_SP_MODE_DYNAMIC_CAL;
+            ret = pal_set_param(PAL_PARAM_ID_SP_MODE, (void*)&spPayload,
+                        sizeof(pal_spkr_prot_payload));
+        }
+    }
+
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT,
                             value, sizeof(value));
     if (ret >= 0) {
@@ -864,7 +1112,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 (audio_is_usb_in_device(device)) && (usb_input_dev_enabled == true)) {
                    usb_input_dev_enabled = false;
             }
-        } else if (val & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        } else if (val == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
             int controller = -1, stream = -1;
             AudioExtn::get_controller_stream_from_params(parms, &controller, &stream);
             param_device_connection.device_config.dp_config.controller = controller;
@@ -873,11 +1121,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             ALOGI("%s: plugin device cont %d stream %d", __func__, controller, stream);
         }
 
-        device_count = popcount(device);
-        if (device_count) {
-
-            pal_device_ids = (pal_device_id_t *) calloc(device_count, sizeof(pal_device_id_t));
-            pal_device_count = GetPalDeviceIds(device, pal_device_ids);
+        if (device) {
+            pal_device_ids = (pal_device_id_t *) calloc(1, sizeof(pal_device_id_t));
+            pal_device_count = GetPalDeviceIds({device}, pal_device_ids);
             for (int i = 0; i < pal_device_count; i++) {
                 param_device_connection.connection_state = false;
                 param_device_connection.id = pal_device_ids[i];
@@ -980,7 +1226,6 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     str_parms_destroy(parms);
 
     ALOGD("%s: exit: %s", __func__, kvpairs);
-
     return ret;
 }
 
@@ -1030,12 +1275,27 @@ char* AudioDevice::GetParameters(const char *keys) {
         }
     }
 
+    ret = str_parms_get_str(query, "get_ftm_param", value, sizeof(value));
+    if (ret >=0 ) {
+        char ftm_value[255];
+        ret = pal_get_param(PAL_PARAM_ID_SP_MODE, (void **)&ftm_value, &size, nullptr);
+        if (!ret) {
+            if (size > 0) {
+                str_parms_add_str(reply, "get_ftm_param", ftm_value);
+            }
+            else
+                ALOGE("Error happened for getting FTM param");
+        }
+
+    }
+
+    AudioExtn::audio_extn_get_parameters(adev_, query, reply);
 exit:
     str = str_parms_to_str(reply);
     str_parms_destroy(query);
     str_parms_destroy(reply);
 
-    ALOGD("%s: exit: returns - %s", __func__, str);
+    ALOGV_IF(str != NULL, "%s: exit: returns - %s", __func__, str);
     return str;
 }
 
@@ -1105,56 +1365,46 @@ void AudioDevice::FillAndroidDeviceMap() {
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_DEFAULT, PAL_DEVICE_IN_DEFAULT));
 }
 
-int AudioDevice::GetPalDeviceIds(const audio_devices_t hal_device_id,
+int AudioDevice::GetPalDeviceIds(const std::set<audio_devices_t>& hal_device_ids,
                                  pal_device_id_t* pal_device_id) {
-    int device_count_allocated = popcount(hal_device_id & ~AUDIO_DEVICE_BIT_IN);
-    int device_count_used = 0;
-
-    std::map<audio_devices_t, pal_device_id_t>::iterator it = android_device_map_.begin();
-
+    int device_count = 0;
     if (!pal_device_id) {
         ALOGE("%s: invalid pal device id", __func__);
         goto error;
     }
+
     // pal device ids is supposed to have to space for the new ids
-    ALOGD("%s: haldeviceIds: %x, devices allocated %d, pal device ids %d",
-          __func__, hal_device_id, device_count_allocated, device_count_used);
+    ALOGD("%s: haldeviceIds: %zu", __func__, hal_device_ids.size());
 
-    while(it != android_device_map_.end() &&
-          (device_count_used != device_count_allocated)) {
-        ALOGV("%s: hal_device_id %x it->first %x, it->second %d",
-              __func__, hal_device_id, it->first, it->second);
-
+    for(auto hal_device_id : hal_device_ids) {
         // skip AUDIO_DEVICE_NONE as device count not 0
-        if (it->first == AUDIO_DEVICE_NONE) {
-            it = std::next(it, 1);
-            continue;
-        }
-
-        if (((hal_device_id & it->first) == it->first) &&
-            ((hal_device_id & AUDIO_DEVICE_BIT_IN) == (it->first & AUDIO_DEVICE_BIT_IN))) {
-            ALOGD("%s: haldeviceId: %x and PAL Device ID %d",
-                  __func__, it->first, it->second);
-            if ( (it->second == PAL_DEVICE_OUT_AUX_DIGITAL) ||
-                 (it->second == PAL_DEVICE_OUT_HDMI) ) {
-               ALOGE("%s: dp_controller: %d dp_stream: %d", __func__, dp_controller, dp_stream);
-               if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
-                  pal_device_id[device_count_used] = PAL_DEVICE_OUT_AUX_DIGITAL_1;
-               } else {
-                  pal_device_id[device_count_used] = it->second;
-               }
-            } else {
-               pal_device_id[device_count_used] = it->second;
+        if (hal_device_id != AUDIO_DEVICE_NONE) {
+            auto it = android_device_map_.find(hal_device_id);
+            if (it != android_device_map_.end() &&
+               audio_is_input_device(it->first) == audio_is_input_device(hal_device_id)) {
+                ALOGD("%s: Found haldeviceId: %x and PAL Device ID %d", __func__,
+                        it->first, it->second);
+                if (it->second == PAL_DEVICE_OUT_AUX_DIGITAL ||
+                        it->second == PAL_DEVICE_OUT_HDMI) {
+                   ALOGE("%s: dp_controller: %d dp_stream: %d", __func__,
+                           dp_controller, dp_stream);
+                   if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
+                      pal_device_id[device_count] = PAL_DEVICE_OUT_AUX_DIGITAL_1;
+                   } else {
+                      pal_device_id[device_count] = it->second;
+                   }
+                } else {
+                   pal_device_id[device_count] = it->second;
+                }
             }
-            device_count_used = (device_count_used + 1);
         }
-        it = std::next(it, 1);
+        ++device_count;
     }
-    ALOGD("%s: haldeviceIds: %x, devices allocated %d, pal device ids before returning %d",
-          __func__, hal_device_id, device_count_allocated, device_count_used);
 
 error:
-    return device_count_used;
+    ALOGD("%s: devices allocated %zu, pal device ids before returning %d",
+          __func__, hal_device_ids.size(), device_count);
+    return device_count;
 }
 
 void AudioDevice::SetChargingMode(bool is_charging) {
@@ -1226,3 +1476,19 @@ struct audio_module HAL_MODULE_INFO_SYM = {
         .methods = &hal_module_methods,
     },
 };
+
+audio_patch_handle_t AudioPatch::generate_patch_handle_l(){
+    static audio_patch_handle_t handles = AUDIO_PATCH_HANDLE_NONE;
+    if (++handles < 0)
+        handles = AUDIO_PATCH_HANDLE_NONE + 1;
+    return handles;
+}
+
+AudioPatch::AudioPatch(PatchType patch_type,
+                       const std::vector<struct audio_port_config>& sources,
+                       const std::vector<struct audio_port_config>& sinks):
+                       type(patch_type), sources(sources), sinks(sinks){
+        static std::mutex patch_lock;
+        std::lock_guard<std::mutex> lock(patch_lock);
+        handle = AudioPatch::generate_patch_handle_l();
+}

@@ -250,10 +250,37 @@ int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, 
 
        pal_snd_dec->aac_dec.audio_obj_type = 29;
        pal_snd_dec->aac_dec.pce_bits_size = 0;
-       ALOGD("AAC params: aot %d pce %d", pal_snd_dec->aac_dec.audio_obj_type, pal_snd_dec->aac_dec.pce_bits_size);
-       ALOGD("format %x", config_->offload_info.format);
+       ALOGV("AAC params: aot %d pce %d", pal_snd_dec->aac_dec.audio_obj_type, pal_snd_dec->aac_dec.pce_bits_size);
+       ALOGV("format %x", config_->offload_info.format);
     }
     return 0;
+}
+
+int AudioExtn::GetProxyParameters(std::shared_ptr<AudioDevice> adev __unused,
+                struct str_parms *query, struct str_parms *reply)
+{
+    int ret, val = 0;
+    char value[32] = {0};
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_CAN_OPEN_PROXY, value,
+            sizeof(value));
+    if (ret >= 0) {
+        val = 1;
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_CAN_OPEN_PROXY, val);
+    }
+    ALOGV("%s: called ... can_use_proxy %d", __func__, val);
+    return 0;
+}
+
+void AudioExtn::audio_extn_get_parameters(std::shared_ptr<AudioDevice> adev,
+       struct str_parms *query, struct str_parms *reply)
+{
+    char *kv_pairs = NULL;
+
+    GetProxyParameters(adev, query, reply);
+    kv_pairs = str_parms_to_str(reply);
+    ALOGV_IF(kv_pairs != NULL, "%s: returns %s", __func__, kv_pairs);
+    free(kv_pairs);
 }
 
 int AudioExtn::get_controller_stream_from_params(struct str_parms *parms,
@@ -432,3 +459,30 @@ int AudioExtn::audio_extn_hfp_set_mic_mute2(std::shared_ptr<AudioDevice> adev, b
 }
 // END: HFP ========================================================================
 
+// START: DEVICE UTILS =============================================================
+bool AudioExtn::audio_devices_cmp(const std::set<audio_devices_t>& devs, audio_device_cmp_fn_t fn){
+    for(auto dev : devs)
+        if(!fn(dev))
+            return false;
+    return true;
+}
+
+bool AudioExtn::audio_devices_cmp(const std::set<audio_devices_t>& devs, audio_devices_t dev){
+    for(auto d : devs)
+        if(d != dev)
+            return false;
+    return true;
+}
+
+audio_devices_t AudioExtn::get_device_types(const std::set<audio_devices_t>& devs){
+    audio_devices_t device = AUDIO_DEVICE_NONE;
+    for(auto d : devs)
+        device |= d;
+    return device;
+}
+
+bool AudioExtn::audio_devices_empty(const std::set<audio_devices_t>& devs){
+    return devs.empty()
+           || (devs.size() == 1 && *devs.begin() == AUDIO_DEVICE_NONE);
+}
+// END: DEVICE UTILS ===============================================================

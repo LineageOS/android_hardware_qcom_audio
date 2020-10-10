@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <mutex>
 #include <vector>
+#include <set>
 
 #include <cutils/properties.h>
 #include <hardware/audio.h>
@@ -47,6 +48,26 @@
 #define COMPRESS_VOIP_IO_BUF_SIZE_SWB 1280
 #define COMPRESS_VOIP_IO_BUF_SIZE_FB 1920
 
+class AudioPatch{
+    public:
+        enum PatchType{
+            PATCH_NONE = -1,
+            PATCH_PLAYBACK,
+            PATCH_CAPTURE,
+            PATCH_DEVICE_LOOPBACK
+        };
+        AudioPatch() = default;
+        AudioPatch(PatchType patch_type,
+                   const std::vector<struct audio_port_config>& sources,
+                   const std::vector<struct audio_port_config>& sinks);
+   protected:
+        enum PatchType type = PATCH_NONE;
+        audio_patch_handle_t handle = AUDIO_PATCH_HANDLE_NONE;
+        std::vector<struct audio_port_config> sources, sinks;
+        static audio_patch_handle_t generate_patch_handle_l();
+        friend class AudioDevice;
+};
+
 class AudioDevice {
 public:
     ~AudioDevice();
@@ -55,19 +76,23 @@ public:
     int Init(hw_device_t **device, const hw_module_t *module);
     std::shared_ptr<StreamOutPrimary> CreateStreamOut(
             audio_io_handle_t handle,
-            audio_devices_t devices,
+            const std::set<audio_devices_t> &devices,
             audio_output_flags_t flags,
             struct audio_config *config,
             audio_stream_out **stream_out,
             const char *address);
     void CloseStreamOut(std::shared_ptr<StreamOutPrimary> stream);
+    int CreateAudioPatch(audio_patch_handle_t* handle,
+                         const std::vector<struct audio_port_config>& sources,
+                         const std::vector<struct audio_port_config>& sinks);
+    int ReleaseAudioPatch(audio_patch_handle_t handle);
     int SetGEFParam(void *data, int length);
     int GetGEFParam(void *data, int *length);
     std::shared_ptr<StreamOutPrimary> OutGetStream(audio_io_handle_t handle);
     std::shared_ptr<StreamOutPrimary> OutGetStream(audio_stream_t* audio_stream);
     std::shared_ptr<StreamInPrimary> CreateStreamIn(
             audio_io_handle_t handle,
-            audio_devices_t devices,
+            const std::set<audio_devices_t> &devices,
             audio_input_flags_t flags,
             struct audio_config *config,
             const char *address,
@@ -87,7 +112,7 @@ public:
     void SetChargingMode(bool is_charging);
     void FillAndroidDeviceMap();
     int GetPalDeviceIds(
-            const audio_devices_t hal_device_id,
+            const std::set<audio_devices_t>& hal_device_id,
             pal_device_id_t* pal_device_id);
     int                       usb_card_id_;
     int                       usb_dev_num_;
@@ -100,9 +125,7 @@ public:
     uint32_t adev_init_ref_count = 0;
     hw_device_t *GetAudioDeviceCommon();
 protected:
-    AudioDevice(){
-    }
-
+    AudioDevice(){}
     std::shared_ptr<AudioVoice> VoiceInit();
     static std::shared_ptr<AudioDevice> adev_;
     static std::shared_ptr<audio_hw_device_t> device_;
@@ -110,6 +133,7 @@ protected:
     std::vector<std::shared_ptr<StreamInPrimary>> stream_in_list_;
     std::mutex out_list_mutex;
     std::mutex in_list_mutex;
+    std::mutex patch_map_mutex;
     void *offload_effects_lib_;
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;
@@ -118,9 +142,9 @@ protected:
     visualizer_hal_start_output fnp_visualizer_start_output_ = nullptr;
     visualizer_hal_stop_output fnp_visualizer_stop_output_ = nullptr;
     std::map<audio_devices_t, pal_device_id_t> android_device_map_;
+    std::map<audio_patch_handle_t, AudioPatch*> patch_map_;
     bool usb_input_dev_enabled = false;
     int add_input_headset_if_usb_out_headset(int *device_count,  pal_device_id_t** pal_device_ids);
 };
 
 #endif //ANDROID_HARDWARE_AHAL_ADEVICE_H_
-
