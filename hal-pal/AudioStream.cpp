@@ -3220,7 +3220,7 @@ error:
 }
 
 StreamInPrimary::~StreamInPrimary() {
-    if (pal_stream_handle_) {
+    if (pal_stream_handle_ && !is_st_session) {
         ALOGD("%s: close stream, pal_stream_handle (%p)", __func__,
              pal_stream_handle_);
         pal_stream_close(pal_stream_handle_);
