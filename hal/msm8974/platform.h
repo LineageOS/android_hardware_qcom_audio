@@ -169,6 +169,7 @@ enum {
     SND_DEVICE_OUT_BUS_RSE,
     SND_DEVICE_OUT_CALL_PROXY,
     SND_DEVICE_OUT_HAPTICS,
+    SND_DEVICE_OUT_ICC,
     SND_DEVICE_OUT_END,
 
     /*
@@ -322,6 +323,7 @@ enum {
     SND_DEVICE_IN_HANDSET_6MIC_AND_EC_REF_LOOPBACK,
     SND_DEVICE_IN_HANDSET_8MIC_AND_EC_REF_LOOPBACK,
     SND_DEVICE_IN_CALL_PROXY,
+    SND_DEVICE_IN_ICC,
     SND_DEVICE_IN_END,
 
     SND_DEVICE_MAX = SND_DEVICE_IN_END,
@@ -641,9 +643,13 @@ enum {
 #define HFP_SCO_RX 28
 #endif
 #define HFP_ASM_RX_TX 29
+#define HFP_SEC_SCO_RX -1
+#define HFP_SEC_ASM_RX_TX -1
 #elif PLATFORM_BEAR_FAMILY
 #define HFP_SCO_RX 17
 #define HFP_ASM_RX_TX 18
+#define HFP_SEC_SCO_RX -1
+#define HFP_SEC_ASM_RX_TX -1
 #elif PLATFORM_AUTO
 #define HFP_SCO_RX 29
 #define HFP_ASM_RX_TX 36
@@ -651,9 +657,13 @@ enum {
       defined (PLATFORM_MSM8953)
 #define HFP_SCO_RX 17
 #define HFP_ASM_RX_TX 18
+#define HFP_SEC_SCO_RX -1
+#define HFP_SEC_ASM_RX_TX -1
 #else
 #define HFP_SCO_RX 23
 #define HFP_ASM_RX_TX 24
+#define HFP_SEC_SCO_RX -1
+#define HFP_SEC_ASM_RX_TX -1
 #endif
 
 #define TRANSCODE_LOOPBACK_RX_DEV_ID 43
@@ -685,6 +695,12 @@ enum {
 #define FM_RX_VOLUME "SLIMBUS_8 LOOPBACK Volume"
 #else
 #define FM_RX_VOLUME "Internal FM RX Volume"
+#endif
+
+#ifdef PLATFORM_AUTO
+#define ICC_PCM_DEVICE 33
+#else
+#define ICC_PCM_DEVICE -1
 #endif
 
 #define PLATFORM_MAX_MIC_COUNT "input_mic_max_count"

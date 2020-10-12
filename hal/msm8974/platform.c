@@ -522,6 +522,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_REAR_SEAT] = {REAR_SEAT_PCM_DEVICE,
                                           REAR_SEAT_PCM_DEVICE},
     [USECASE_AUDIO_FM_TUNER_EXT] = {-1, -1},
+    [USECASE_ICC_CALL] = {ICC_PCM_DEVICE, ICC_PCM_DEVICE},
 };
 
 /* Array to store sound devices */
@@ -633,6 +634,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_BUS_RSE] = "bus-speaker",
     [SND_DEVICE_OUT_CALL_PROXY] = "call-proxy",
     [SND_DEVICE_OUT_HAPTICS] = "haptics",
+    [SND_DEVICE_OUT_ICC] = "bus-speaker",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -782,6 +784,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_HANDSET_6MIC_AND_EC_REF_LOOPBACK] = "handset-6mic-and-ec-ref-loopback",
     [SND_DEVICE_IN_HANDSET_8MIC_AND_EC_REF_LOOPBACK] = "handset-8mic-and-ec-ref-loopback",
     [SND_DEVICE_IN_CALL_PROXY] = "call-proxy-in",
+    [SND_DEVICE_IN_ICC] = "speaker-mic",
 };
 
 // Platform specific backend bit width table
@@ -927,6 +930,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_BUS_RSE] = 60,
     [SND_DEVICE_OUT_CALL_PROXY] = 32,
     [SND_DEVICE_OUT_HAPTICS] = 200,
+    [SND_DEVICE_OUT_ICC] = 16,
     [SND_DEVICE_IN_HANDSET_MIC] = 4,
     [SND_DEVICE_IN_HANDSET_MIC_SB] = 163,
     [SND_DEVICE_IN_HANDSET_MIC_NN] = 183,
@@ -1066,6 +1070,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_HEARING_AID] = 44,
     [SND_DEVICE_IN_BUS] = 11,
     [SND_DEVICE_IN_CALL_PROXY] = 33,
+    [SND_DEVICE_IN_ICC] = 46,
 };
 
 struct name_to_index {
@@ -1323,6 +1328,9 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_6MIC_AND_EC_REF_LOOPBACK)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_8MIC_AND_EC_REF_LOOPBACK)},
     {TO_NAME_INDEX(SND_DEVICE_IN_CALL_PROXY)},
+    /* ICC */
+    {TO_NAME_INDEX(SND_DEVICE_IN_ICC)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_ICC)},
 };
 
 static char * backend_tag_table[SND_DEVICE_MAX] = {0};
@@ -2611,6 +2619,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_VOICE_HEARING_AID] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_BUS] = strdup("TERT_TDM_TX_0");
     hw_interface_table[SND_DEVICE_IN_CALL_PROXY] = strdup("CALL_PROXY_TX");
+    hw_interface_table[SND_DEVICE_IN_ICC] = strdup("TERT_TDM_TX_0");
+    hw_interface_table[SND_DEVICE_OUT_ICC] = strdup("TERT_TDM_RX_0");
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
 
      /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
@@ -5376,7 +5386,8 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         snd_device = usecase->out_snd_device;
     else if ((usecase->type == PCM_CAPTURE) && is_incall_rec_usecase)
         snd_device = voice_get_incall_rec_snd_device(usecase->in_snd_device);
-    else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE))
+    else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE)||
+            (usecase->type == ICC_CALL))
         snd_device = usecase->in_snd_device;
     else if (usecase->type == TRANSCODE_LOOPBACK_RX)
         snd_device = usecase->out_snd_device;
@@ -5400,7 +5411,8 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
             new_snd_device[0] = snd_device;
         }
     }
-    if ((usecase->type == PCM_HFP_CALL) && is_bus_dev_usecase) {
+    if (((usecase->type == PCM_HFP_CALL) || (usecase->type == ICC_CALL)) &&
+          is_bus_dev_usecase) {
         num_devices = 2;
         new_snd_device[0] = usecase->in_snd_device;
         new_snd_device[1] = usecase->out_snd_device;
@@ -5424,7 +5436,8 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         if ((usecase->type == PCM_CAPTURE) && (app_type == DEFAULT_APP_TYPE_RX_PATH)) {
             ALOGD("Resetting app type for Tx path to default");
             app_type  = DEFAULT_APP_TYPE_TX_PATH;
-        } else if ((usecase->type == PCM_HFP_CALL) && is_bus_dev_usecase) {
+        } else if (((usecase->type == PCM_HFP_CALL) || (usecase->type == ICC_CALL)) &&
+                     is_bus_dev_usecase) {
             if (new_snd_device[i] >= SND_DEVICE_OUT_BEGIN &&
                 new_snd_device[i] < SND_DEVICE_OUT_END) {
                 app_type  = usecase->out_app_type_cfg.app_type;
