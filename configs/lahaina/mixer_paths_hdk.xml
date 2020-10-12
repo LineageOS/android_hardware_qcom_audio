@@ -116,6 +116,7 @@
     <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia13" value="0" />
     <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia14" value="0" />
     <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia15" value="0" />
+    <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia16" value="0" />
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia16" value="0" />
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia1" value="0" />
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia2" value="0" />
@@ -354,6 +355,7 @@
     <ctl name="ADC2_BCS Disable" value="0" />
     <ctl name="ADC3 MUX" value="INP4" />
     <ctl name="ADC4 MUX" value="INP5" />
+    <ctl name="TX LPI Enable" value="0" />
     <ctl name="TX_AIF1_CAP Mixer DEC0" value="0" />
     <ctl name="TX_AIF1_CAP Mixer DEC1" value="0" />
     <ctl name="TX_AIF1_CAP Mixer DEC2" value="0" />
@@ -505,6 +507,10 @@
         <ctl name="GSM mode Enable" value="ON" />
     </path>
 
+    <path name="tx-lpi-enable">
+        <ctl name="TX LPI Enable" value="1" />
+    </path>
+
     <path name="echo-reference">
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="WSA_CDC_DMA_RX_0" />
         <ctl name="EC Reference Channels" value="One"/>
@@ -549,6 +555,21 @@
 
     <path name="echo-reference bt-sco-swb">
         <path name="echo-reference bt-sco" />
+    </path>
+
+    <path name="echo-reference-voip-low-latency">
+        <ctl name="AUDIO_REF_EC_UL8 MUX" value="WSA_CDC_DMA_RX_0" />
+        <ctl name="EC Reference Channels" value="One"/>
+    </path>
+
+    <path name="echo-reference-voip-low-latency handset">
+        <ctl name="AUDIO_REF_EC_UL8 MUX" value="RX_CDC_DMA_RX_0" />
+        <ctl name="EC Reference Channels" value="One"/>
+    </path>
+
+    <path name="echo-reference-voip-low-latency headphones">
+        <ctl name="AUDIO_REF_EC_UL8 MUX" value="RX_CDC_DMA_RX_0" />
+        <ctl name="EC Reference Channels" value="Two"/>
     </path>
 
     <path name="echo-reference-voip">
@@ -2387,6 +2408,10 @@
     </path>
 
     <!-- VoIP Tx settings -->
+    <path name="audio-record-voip-low-latency">
+        <ctl name="MultiMedia8 Mixer TX_CDC_DMA_TX_3" value="1" />
+    </path>
+
     <path name="audio-record-voip">
         <ctl name="MultiMedia10 Mixer TX_CDC_DMA_TX_3" value="1" />
     </path>
@@ -2418,85 +2443,133 @@
     <path name="spkr-vi-record">
     </path>
 
-    <path name="audio-with-haptics-playback speaker-and-haptics">
+    <path name="audio-with-haptics-playback">
         <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
         <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
-    <path name="audio-with-haptics-playback headphones-and-haptics">
+    <path name="audio-with-haptics-playback speaker-protected">
+        <path name="audio-with-haptics-playback" />
+    </path>
+
+    <path name="audio-with-haptics-playback speaker-safe">
+        <path name="audio-with-haptics-playback" />
+    </path>
+
+    <path name="audio-with-haptics-playback display-port">
+        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
+        <ctl name="DISPLAY_PORT Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback display-port1">
+        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
+        <ctl name="DISPLAY_PORT1 Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback bt-sco">
+        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
+        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback bt-sco-wb">
+        <path name="audio-with-haptics-playback bt-sco" />
+    </path>
+
+    <path name="audio-with-haptics-playback bt-sco-swb">
+        <path name="audio-with-haptics-playback bt-sco" />
+    </path>
+
+    <path name="audio-with-haptics-playback speaker-and-display-port">
+        <path name="audio-with-haptics-playback display-port" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback speaker-and-display-port1">
+        <path name="audio-with-haptics-playback display-port1" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback afe-proxy">
+        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
+        <ctl name="AFE_PCM_RX Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback usb-headphones">
+        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback usb-headset">
+        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback speaker-and-usb-headphones">
+        <path name="audio-with-haptics-playback usb-headphones" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback speaker-safe-and-usb-headphones">
+        <path name="audio-with-haptics-playback usb-headphones" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback headphones">
         <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
         <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
-    <path name="audio-with-haptics-playback speaker-headphones-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
-	    <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
+    <path name="audio-with-haptics-playback headset">
+        <path name="audio-with-haptics-playback headphones" />
     </path>
 
-	<path name="audio-with-haptics-playback speaker-saefe-headphones-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
-	    <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
-    </path>
-
-    <path name="audio-with-haptics-playback speaker-usb-headphones-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
-	    <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia31" value="1" />
-    </path>
-
-    <path name="audio-with-haptics-playback speaker-safe-usb-headphones-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
-	    <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia31" value="1" />
-    </path>
-
-    <path name="audio-with-haptics-playback speaker-bt-a2dp-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia31" value="1" />
-	    <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
-    </path>
-
-    <path name="audio-with-haptics-playback speaker-safe-bt-a2dp-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia31" value="1" />
-	    <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
-    </path>
-
-    <path name="audio-with-haptics-playback speaker-bt-sco-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia31" value="1" />
-	    <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
-    </path>
-
-    <path name="audio-with-haptics-playback speaker-safe-bt-sco-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia31" value="1" />
+    <path name="audio-with-haptics-playback speaker-and-headphones">
+        <path name="audio-with-haptics-playback headphones" />
         <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
-    <path name="audio-with-haptics-playback speaker-bt-sco-wb-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia31" value="1" />
+    <path name="audio-with-haptics-playback speaker-safe-and-headphones">
+        <path name="audio-with-haptics-playback headphones" />
         <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
-    <path name="audio-with-haptics-playback speaker-safe-bt-sco-wb-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia31" value="1" />
+    <path name="audio-with-haptics-playback speaker-and-bt-sco">
+        <path name="audio-with-haptics-playback bt-sco" />
         <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
-    <path name="audio-with-haptics-playback speaker-bt-sco-swb-and-haptics">
-        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
-        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia31" value="1" />
+    <path name="audio-with-haptics-playback speaker-safe-and-bt-sco">
+        <path name="audio-with-haptics-playback bt-sco" />
         <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
-    <path name="audio-with-haptics-playback speaker-safe-bt-sco-swb-and-haptics">
+    <path name="audio-with-haptics-playback speaker-and-bt-sco-wb">
+        <path name="audio-with-haptics-playback bt-sco-wb" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback speaker-safe-and-bt-sco-wb">
+        <path name="audio-with-haptics-playback bt-sco-wb" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback speaker-and-bt-sco-swb">
+        <path name="audio-with-haptics-playback bt-sco-swb" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback bt-a2dp">
         <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
         <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback speaker-and-bt-a2dp">
+        <path name="audio-with-haptics-playback bt-a2dp" />
+        <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="audio-with-haptics-playback speaker-safe-and-bt-a2dp">
+        <path name="audio-with-haptics-playback bt-a2dp" />
         <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
@@ -2512,14 +2585,15 @@
 
     <path name="amic2">
         <ctl name="TX DEC0 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX0" value="SWR_MIC1" />
+        <ctl name="TX SMIC MUX0" value="SWR_MIC5" />
         <ctl name="TX_CDC_DMA_TX_4 Channels" value="One" />
         <ctl name="DEC0_BCS Switch" value="1" />
         <ctl name="TX_AIF2_CAP Mixer DEC0" value="1" />
         <ctl name="ADC2 MUX" value="INP2" />
-        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
-        <ctl name="MBHC ChMap" value="SWRM_TX1_CH3" />
-        <ctl name="BCS Channel" value="CH2" />
+        <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
+        <ctl name="MBHC ChMap" value="SWRM_TX3_CH3" />
+        <ctl name="TX1 MODE" value="ADC_LP" />
+        <ctl name="BCS Channel" value="CH10" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
         <ctl name="ADC2_MIXER Switch" value="1" />
     </path>
@@ -2532,6 +2606,7 @@
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="ADC2 MUX" value="INP3" />
+        <ctl name="ADC2_BCS Disable" value="1" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
         <ctl name="ADC2_MIXER Switch" value="1" />
     </path>
@@ -2582,14 +2657,7 @@
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
     </path>
 
-    <path name="speaker-and-haptics">
-        <ctl name="WSA_CDC_DMA_RX_0 Channels" value="One" />
-        <ctl name="WSA RX0 MUX" value="AIF1_PB" />
-        <ctl name="WSA_RX0 INP0" value="RX0" />
-        <ctl name="WSA_COMP1 Switch" value="1" />
-        <ctl name="SpkrLeft COMP Switch" value="1" />
-        <ctl name="SpkrLeft VISENSE Switch" value="1" />
-        <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
+    <path name="haptics">
         <ctl name="SWR DAC_Port Switch" value="1" />
     </path>
 
@@ -2766,25 +2834,6 @@
         <ctl name="HPHR_RDAC Switch" value="1" />
     </path>
 
-    <path name="headphones-and-haptics">
-        <ctl name="RX_MACRO RX0 MUX" value="AIF1_PB" />
-        <ctl name="RX_MACRO RX1 MUX" value="AIF1_PB" />
-        <ctl name="RX_CDC_DMA_RX_0 Channels" value="Two" />
-        <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
-        <ctl name="RX INT1_1 MIX1 INP0" value="RX1" />
-        <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
-        <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT" />
-        <ctl name="RX_COMP1 Switch" value="1" />
-        <ctl name="RX_COMP2 Switch" value="1" />
-        <ctl name="HPH_L Switch" value="1" />
-        <ctl name="HPH_R Switch" value="1" />
-        <ctl name="HPHL_COMP Switch" value="1" />
-        <ctl name="HPHR_COMP Switch" value="1" />
-        <ctl name="HPHL_RDAC Switch" value="1" />
-        <ctl name="HPHR_RDAC Switch" value="1" />
-        <ctl name="SWR DAC_Port Switch" value="1" />
-    </path>
-
     <path name="headphones-dsd">
         <ctl name="RX_CDC_DMA_5 RX Format" value="DSD_DOP" />
         <ctl name="RX_CDC_DMA_RX_5 Channels" value="One" />
@@ -2896,11 +2945,6 @@
         <path name="speaker" />
     </path>
 
-    <path name="speaker-headphones-and-haptics">
-        <path name="headphones" />
-        <path name="speaker-and-haptics" />
-    </path>
-
     <path name="speaker-and-headphones-hifi-filter">
         <path name="headphones" />
         <path name="speaker" />
@@ -2947,11 +2991,6 @@
 
     <path name="speaker-and-usb-headphones">
         <path name="speaker" />
-        <path name="usb-headphones" />
-    </path>
-
-    <path name="speaker-usb-headphones-and-haptics">
-        <path name="speaker-and-haptics" />
         <path name="usb-headphones" />
     </path>
 
@@ -3208,10 +3247,15 @@
 
     <path name="voice-tty-hco-headset-mic">
         <ctl name="TX DEC6 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX6" value="ADC1" />
+        <ctl name="TX SMIC MUX6" value="SWR_MIC5" />
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
-        <ctl name="TX_AIF1_CAP Mixer DEC6" value="1" />
+        <ctl name="TX_AIF2_CAP Mixer DEC6" value="1" />
         <ctl name="ADC2 MUX" value="INP2" />
+        <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
+        <ctl name="MBHC ChMap" value="SWRM_TX3_CH3" />
+        <ctl name="TX1 MODE" value="ADC_LP" />
+        <ctl name="BCS Channel" value="CH10" />
+        <ctl name="HDR12 MUX" value="NO_HDR12" />
         <ctl name="ADC2_MIXER Switch" value="1" />
     </path>
 
@@ -3674,6 +3718,10 @@
         <path name="incall_music_uplink" />
     </path>
 
+    <path name="incall_music_uplink hearing-aid">
+        <path name="incall_music_uplink" />
+    </path>
+
     <path name="incall_music_uplink2">
         <ctl name="Incall_Music_2 Audio Mixer MultiMedia9" value="1" />
     </path>
@@ -3745,7 +3793,16 @@
     <path name="incall_music_uplink2 bt-a2dp">
         <path name="incall_music_uplink2" />
     </path>
+
     <path name="incall_music_uplink2 afe-proxy">
+        <path name="incall_music_uplink2" />
+    </path>
+
+    <path name="incall_music_uplink2 call-proxy">
+        <path name="incall_music_uplink2" />
+    </path>
+
+    <path name="incall_music_uplink2 hearing-aid">
         <path name="incall_music_uplink2" />
     </path>
 

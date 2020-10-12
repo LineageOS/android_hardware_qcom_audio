@@ -568,7 +568,7 @@
     </path>
 
     <path name="echo-reference-voip-low-latency headphones">
-        <ctl name="AUDIO_REF_EC_UL8 MUX" value="WSA_CDC_DMA_RX_0" />
+        <ctl name="AUDIO_REF_EC_UL8 MUX" value="RX_CDC_DMA_RX_0" />
         <ctl name="EC Reference Channels" value="Two"/>
     </path>
 
