@@ -30,6 +30,7 @@
 #define LOG_TAG "AHAL: AudioExtn"
 #include <dlfcn.h>
 #include "AudioExtn.h"
+#include <cutils/properties.h>
 #define AUDIO_OUTPUT_BIT_WIDTH ((config_->offload_info.bit_width == 32) ? 24:config_->offload_info.bit_width)
 
 static batt_listener_init_t batt_listener_init;
@@ -37,6 +38,7 @@ static batt_listener_deinit_t batt_listener_deinit;
 static batt_prop_is_charging_t batt_prop_is_charging;
 static bool battery_listener_enabled;
 static void *batt_listener_lib_handle;
+static bool audio_extn_kpi_optimize_feature_enabled = false;
 
 int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, pal_snd_dec_t *pal_snd_dec, str_parms *parms, uint32_t *sr, uint16_t *ch) {
    int ret = 0;
@@ -486,3 +488,98 @@ bool AudioExtn::audio_devices_empty(const std::set<audio_devices_t>& devs){
            || (devs.size() == 1 && *devs.begin() == AUDIO_DEVICE_NONE);
 }
 // END: DEVICE UTILS ===============================================================
+
+//START: KPI_OPTIMIZE =============================================================================
+void AudioExtn::audio_extn_kpi_optimize_feature_init(bool is_feature_enabled)
+{
+    audio_extn_kpi_optimize_feature_enabled = is_feature_enabled;
+    ALOGD(":: %s: ---- Feature KPI_OPTIMIZE is %s ----", __func__, is_feature_enabled? "ENABLED": " NOT ENABLED");
+}
+
+typedef int (*perf_lock_acquire_t)(int, int, int*, int);
+typedef int (*perf_lock_release_t)(int);
+
+static void *qcopt_handle;
+static perf_lock_acquire_t perf_lock_acq;
+static perf_lock_release_t perf_lock_rel;
+
+char opt_lib_path[512] = {0};
+
+int AudioExtn::audio_extn_perf_lock_init(void)
+{
+    int ret = 0;
+
+    //if feature is disabled, exit immediately
+    if(!audio_extn_kpi_optimize_feature_enabled)
+        goto err;
+
+    if (qcopt_handle == NULL) {
+        if (property_get("ro.vendor.extension_library",
+                         opt_lib_path, NULL) <= 0) {
+            ALOGE("%s: Failed getting perf property \n", __func__);
+            ret = -EINVAL;
+            goto err;
+        }
+        if ((qcopt_handle = dlopen(opt_lib_path, RTLD_NOW)) == NULL) {
+            ALOGE("%s: Failed to open perf handle \n", __func__);
+            ret = -EINVAL;
+            goto err;
+        } else {
+            perf_lock_acq = (perf_lock_acquire_t)dlsym(qcopt_handle,
+                                                       "perf_lock_acq");
+            if (perf_lock_acq == NULL) {
+                ALOGE("%s: Perf lock Acquire NULL \n", __func__);
+                dlclose(qcopt_handle);
+                ret = -EINVAL;
+                goto err;
+            }
+            perf_lock_rel = (perf_lock_release_t)dlsym(qcopt_handle,
+                                                       "perf_lock_rel");
+            if (perf_lock_rel == NULL) {
+                ALOGE("%s: Perf lock Release NULL \n", __func__);
+                dlclose(qcopt_handle);
+                ret = -EINVAL;
+                goto err;
+            }
+            ALOGE("%s: Perf lock handles Success \n", __func__);
+        }
+    }
+err:
+    return ret;
+}
+
+void AudioExtn::audio_extn_perf_lock_acquire(int *handle, int duration,
+                                 int *perf_lock_opts, int size)
+{
+    if (audio_extn_kpi_optimize_feature_enabled)
+    {
+        if (!perf_lock_opts || !size || !perf_lock_acq || !handle) {
+            ALOGE("%s: Incorrect params, Failed to acquire perf lock, err ",
+                  __func__);
+            return;
+        }
+        /*
+         * Acquire performance lock for 1 sec during device path bringup.
+         * Lock will be released either after 1 sec or when perf_lock_release
+         * function is executed.
+         */
+        *handle = perf_lock_acq(*handle, duration, perf_lock_opts, size);
+        if (*handle <= 0)
+            ALOGE("%s: Failed to acquire perf lock, err: %d\n",
+                  __func__, *handle);
+    }
+}
+
+void AudioExtn::audio_extn_perf_lock_release(int *handle)
+{
+    if (audio_extn_kpi_optimize_feature_enabled) {
+         if (perf_lock_rel && handle && (*handle > 0)) {
+            perf_lock_rel(*handle);
+            *handle = 0;
+        } else
+            ALOGE("%s: Perf lock release error \n", __func__);
+    }
+}
+
+//END: KPI_OPTIMIZE =============================================================================
+

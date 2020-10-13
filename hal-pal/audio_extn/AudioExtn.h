@@ -81,6 +81,15 @@ public:
     static audio_devices_t get_device_types(const std::set<audio_devices_t>&);
     static bool audio_devices_empty(const std::set<audio_devices_t>&);
     /* end device utils */
+
+    /* start kpi optimize perf apis */
+    static void audio_extn_kpi_optimize_feature_init(bool is_feature_enabled);
+    static int audio_extn_perf_lock_init(void);
+    static void audio_extn_perf_lock_acquire(int *handle, int duration,
+            int *perf_lock_opts, int size);
+    static void audio_extn_perf_lock_release(int *handle);
+    /* end kpi optimize perf apis */
+
 };
 
 #endif /* AUDIOEXTN_H */
