@@ -334,6 +334,7 @@ int platform_get_backend_index(snd_device_t snd_device);
 int platform_get_ext_disp_type(void *platform);
 void platform_invalidate_hdmi_config(void *platform);
 void platform_invalidate_backend_config(void * platform,snd_device_t snd_device);
+bool platform_get_spkr_hph_single_be_native_concurrency_flag();
 
 #ifdef INSTANCE_ID_ENABLED
 void platform_make_cal_cfg(acdb_audio_cal_cfg_t* cal, int acdb_dev_id,
