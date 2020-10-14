@@ -48,7 +48,7 @@ AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL := true
 AUDIO_FEATURE_ENABLED_A2DP_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_3D_AUDIO := true
-AUDIO_FEATURE_ENABLED_AHAL_EXT := true
+AUDIO_FEATURE_ENABLED_AHAL_EXT := false
 ifneq ($(GENERIC_ODM_IMAGE),true)
 AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
 else
@@ -203,8 +203,6 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_lagoonqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_lagoonqrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_cdp.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/lito/audio_configs_stock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs_stock.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
 
@@ -507,10 +505,7 @@ PRODUCT_PACKAGES += \
     android.hardware.audio.common@4.0-util \
     android.hardware.audio@4.0-impl \
     android.hardware.audio.effect@4.0 \
-    android.hardware.audio.effect@4.0-impl \
-    vendor.qti.hardware.audiohalext@1.0 \
-    vendor.qti.hardware.audiohalext@1.0-impl \
-    vendor.qti.hardware.audiohalext-utils
+    android.hardware.audio.effect@4.0-impl
 
 # enable audio hidl hal 5.0
 PRODUCT_PACKAGES += \
