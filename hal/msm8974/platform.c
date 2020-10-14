@@ -5573,6 +5573,24 @@ int platform_switch_voice_call_enable_device_config(void *platform,
     return ret;
 }
 
+void platform_is_volume_boost_supported_device(void *platform,
+                                               struct listnode *devices)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+
+    if (my_data->voice_feature_set &&
+        !(compare_device_type(devices,
+                              AUDIO_DEVICE_OUT_SPEAKER)) &&
+        !(compare_device_type(devices,
+                              AUDIO_DEVICE_OUT_EARPIECE)) &&
+        !(my_data->adev->voice.tty_mode == TTY_MODE_HCO)) {
+          if(!my_data->acdb_reload_vocvoltable(VOICE_FEATURE_SET_DEFAULT)) {
+             my_data->voice_feature_set = 0;
+             ALOGD("%s: Unsupported volume boost device", __func__);
+          }
+    }
+}
+
 int platform_switch_voice_call_device_post(void *platform,
                                            snd_device_t out_snd_device,
                                            snd_device_t in_snd_device)

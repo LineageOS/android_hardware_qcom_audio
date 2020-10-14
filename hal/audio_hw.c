@@ -4975,6 +4975,7 @@ int route_output_stream(struct stream_out *out,
                     ret = voice_start_call(adev);
                 }
             } else {
+                platform_is_volume_boost_supported_device(adev->platform, &new_devices);
                 adev->current_call_output = out;
                 voice_update_devices_for_all_voice_usecases(adev);
             }
