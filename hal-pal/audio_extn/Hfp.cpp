@@ -27,12 +27,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define LOG_TAG "hfp"
+#define LOG_TAG "AHAL: hfp"
 #define LOG_NDDEBUG 0
 
 #include <errno.h>
 #include <math.h>
-#include <log/log.h>
+#include "AudioCommon.h"
 #include <fcntl.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -81,26 +81,26 @@ static int32_t hfp_set_volume(float value)
     int32_t vol, ret = 0;
     struct pal_volume_data *pal_volume = NULL;
 
-    ALOGV("%s: entry", __func__);
-    ALOGD("%s: (%f)\n", __func__, value);
+    AHAL_VERBOSE("entry");
+    AHAL_DBG("(%f)\n", value);
 
     hfpmod.hfp_volume = value;
 
     if (value < 0.0) {
-        ALOGW("%s: (%f) Under 0.0, assuming 0.0\n", __func__, value);
+        ALOGW("(%f) Under 0.0, assuming 0.0\n", value);
         value = 0.0;
     } else {
         value = ((value > 15.000000) ? 1.0 : (value / 15));
-        ALOGW("%s: Volume brought with in range (%f)\n", __func__, value);
+        ALOGW("Volume brought with in range (%f)\n", value);
     }
     vol  = lrint((value * 0x2000) + 0.5);
 
     if (!hfpmod.is_hfp_running) {
-        ALOGV("%s: HFP not active, ignoring set_hfp_volume call", __func__);
+        AHAL_VERBOSE("HFP not active, ignoring set_hfp_volume call");
         return -EIO;
     }
 
-    ALOGD("%s: Setting HFP volume to %d \n", __func__, vol);
+    AHAL_DBG("Setting HFP volume to %d \n", vol);
 
     pal_volume = (struct pal_volume_data *)malloc(sizeof(struct pal_volume_data)
             +sizeof(struct pal_channel_vol_kv));
@@ -109,9 +109,9 @@ static int32_t hfp_set_volume(float value)
     pal_volume->volume_pair[0].vol = value;
     ret = pal_stream_set_volume(hfpmod.rx_stream_handle, pal_volume);
     if (ret)
-        ALOGE("%s: set volume failed: %d \n", __func__, ret);
+        AHAL_ERR("set volume failed: %d \n", ret);
 
-    ALOGV("%s: exit", __func__);
+    AHAL_VERBOSE("exit");
     return ret;
 }
 
@@ -124,19 +124,19 @@ static int hfp_set_mic_volume(float value)
     int volume, ret = 0;
     struct pal_volume_data *pal_volume = NULL;
 
-    ALOGD("%s: enter, value=%f", __func__, value);
+    AHAL_DBG("enter, value=%f", value);
 
     if (!hfpmod.is_hfp_running) {
-        ALOGE("%s: HFP not active, ignoring set_hfp_mic_volume call", __func__);
+        AHAL_ERR("HFP not active, ignoring set_hfp_mic_volume call");
         return -EIO;
     }
 
     if (value < 0.0) {
-        ALOGW("%s: (%f) Under 0.0, assuming 0.0\n", __func__, value);
+        ALOGW("(%f) Under 0.0, assuming 0.0\n", value);
         value = 0.0;
     } else if (value > CAPTURE_VOLUME_DEFAULT) {
         value = CAPTURE_VOLUME_DEFAULT;
-        ALOGW("%s: Volume brought within range (%f)\n", __func__, value);
+        ALOGW("Volume brought within range (%f)\n", value);
     }
 
     value = value / CAPTURE_VOLUME_DEFAULT;
@@ -149,7 +149,7 @@ static int hfp_set_mic_volume(float value)
     pal_volume->volume_pair[0].channel_mask = 0x03;
     pal_volume->volume_pair[0].vol = value;
     if (pal_stream_set_volume(hfpmod.tx_stream_handle, pal_volume) < 0) {
-        ALOGE("%s: Couldn't set HFP Volume: [%d]", __func__, volume);
+        AHAL_ERR("Couldn't set HFP Volume: [%d]", volume);
         return -EINVAL;
     }
 
@@ -173,7 +173,7 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
     struct pal_device devices[2] = {};
     struct pal_channel_info ch_info;
 
-    ALOGD("%s: HFP start enter", __func__);
+    AHAL_DBG("HFP start enter");
     if (hfpmod.rx_stream_handle || hfpmod.tx_stream_handle)
         return 0; //hfp already running;
 
@@ -185,7 +185,7 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
                         (void*)&param_device_connection,
                         sizeof(pal_param_device_connection_t));
     if (ret != 0) {
-        ALOGE("%s: Set PAL_PARAM_ID_DEVICE_CONNECTION for %d failed", __func__, param_device_connection.id);
+        AHAL_ERR("Set PAL_PARAM_ID_DEVICE_CONNECTION for %d failed", param_device_connection.id);
         return ret;
     }
 
@@ -195,7 +195,7 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
                         (void*)&param_device_connection,
                         sizeof(pal_param_device_connection_t));
     if (ret != 0) {
-        ALOGE("%s: Set PAL_PARAM_ID_DEVICE_CONNECTION for %d failed", __func__, param_device_connection.id);
+        AHAL_ERR("Set PAL_PARAM_ID_DEVICE_CONNECTION for %d failed", param_device_connection.id);
         return ret;
     }
 
@@ -206,7 +206,7 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
                         (void*)&param_btsco,
                         sizeof(pal_param_btsco_t));
     if (ret != 0) {
-        ALOGE("%s: Set PAL_PARAM_ID_BT_SCO failed", __func__);
+        AHAL_ERR("Set PAL_PARAM_ID_BT_SCO failed");
         return ret;
     }
 
@@ -222,7 +222,7 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
                         (void*)&param_btsco,
                         sizeof(pal_param_btsco_t));
     if (ret != 0) {
-        ALOGE("%s: Set PAL_PARAM_ID_BT_SCO_WB failed", __func__);
+        AHAL_ERR("Set PAL_PARAM_ID_BT_SCO_WB failed");
         return ret;
     }
 
@@ -259,12 +259,12 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
             NULL,
             &hfpmod.rx_stream_handle);
     if (ret != 0) {
-        ALOGE("%s: HFP rx stream (BT SCO->Spkr) open failed, rc %d", __func__, ret);
+        AHAL_ERR("HFP rx stream (BT SCO->Spkr) open failed, rc %d", ret);
         return ret;
     }
     ret = pal_stream_start(hfpmod.rx_stream_handle);
     if (ret != 0) {
-        ALOGE("%s: HFP rx stream (BT SCO->Spkr) start failed, rc %d", __func__, ret);
+        AHAL_ERR("HFP rx stream (BT SCO->Spkr) start failed, rc %d", ret);
         pal_stream_close(hfpmod.rx_stream_handle);
         return ret;
     }
@@ -299,14 +299,14 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
             NULL,
             &hfpmod.tx_stream_handle);
     if (ret != 0) {
-        ALOGE("%s: HFP tx stream (Mic->BT SCO) open failed, rc %d", __func__, ret);
+        AHAL_ERR("HFP tx stream (Mic->BT SCO) open failed, rc %d", ret);
         pal_stream_stop(hfpmod.rx_stream_handle);
         pal_stream_close(hfpmod.rx_stream_handle);
         return ret;
     }
     ret = pal_stream_start(hfpmod.tx_stream_handle);
     if (ret != 0) {
-        ALOGE("%s: HFP tx stream (Mic->BT SCO) start failed, rc %d", __func__, ret);
+        AHAL_ERR("HFP tx stream (Mic->BT SCO) start failed, rc %d", ret);
         pal_stream_close(hfpmod.tx_stream_handle);
         pal_stream_stop(hfpmod.rx_stream_handle);
         pal_stream_close(hfpmod.rx_stream_handle);
@@ -315,7 +315,7 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
     hfpmod.is_hfp_running = true;
     hfp_set_volume(hfpmod.hfp_volume);
 
-    ALOGD("%s: HFP start end", __func__);
+    AHAL_DBG("HFP start end");
     return ret;
 }
 
@@ -338,7 +338,7 @@ static int32_t stop_hfp()
                         (void*)&param_btsco,
                         sizeof(pal_param_btsco_t));
     if (ret != 0) {
-        ALOGE("%s: Set PAL_PARAM_ID_BT_SCO failed", __func__);
+        AHAL_ERR("Set PAL_PARAM_ID_BT_SCO failed");
     }
 
     pal_param_device_connection_t param_device_connection;
@@ -349,7 +349,7 @@ static int32_t stop_hfp()
                         (void*)&param_device_connection,
                         sizeof(pal_param_device_connection_t));
     if (ret != 0) {
-        ALOGE("%s: Set PAL_PARAM_ID_DEVICE_DISCONNECTION for %d failed", __func__, param_device_connection.id);
+        AHAL_ERR("Set PAL_PARAM_ID_DEVICE_DISCONNECTION for %d failed", param_device_connection.id);
     }
 
     param_device_connection.id = PAL_DEVICE_OUT_BLUETOOTH_SCO;
@@ -358,7 +358,7 @@ static int32_t stop_hfp()
                         (void*)&param_device_connection,
                         sizeof(pal_param_device_connection_t));
     if (ret != 0) {
-        ALOGE("%s: Set PAL_PARAM_ID_DEVICE_DISCONNECTION for %d failed", __func__, param_device_connection.id);
+        AHAL_ERR("Set PAL_PARAM_ID_DEVICE_DISCONNECTION for %d failed", param_device_connection.id);
     }
 
     return ret;
@@ -396,13 +396,13 @@ int hfp_set_mic_mute(std::shared_ptr<AudioDevice> adev,
     }
     rc = hfp_set_mic_volume((state == true) ? 0.0 : hfpmod.mic_volume);
     hfpmod.mic_mute = state;
-    ALOGD("%s: Setting mute state %d, rc %d\n", __func__, state, rc);
+    AHAL_DBG("Setting mute state %d, rc %d\n", state, rc);
     return rc;
 }
 
 int hfp_set_mic_mute2(std::shared_ptr<AudioDevice> adev __unused, bool state __unused)
 {
-    ALOGD("%s: Unsupported\n", __func__);
+    AHAL_DBG("Unsupported\n");
     return 0;
 }
 
@@ -414,7 +414,7 @@ void hfp_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *par
     int val;
     int rate;
 
-    ALOGD("%s: enter", __func__);
+    AHAL_DBG("enter");
 
     status = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
                                     sizeof(value));
@@ -424,7 +424,7 @@ void hfp_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *par
         else if (!strncmp(value, "false", sizeof(value)) && hfpmod.is_hfp_running)
             stop_hfp();
         else
-            ALOGE("hfp_enable=%s is unsupported", value);
+            AHAL_ERR("hfp_enable=%s is unsupported", value);
     }
 
     memset(value, 0, sizeof(value));
@@ -439,7 +439,7 @@ void hfp_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *par
             hfpmod.ucid = USECASE_AUDIO_HFP_SCO_WB;
             hfpmod.sample_rate = (uint32_t) rate;
         } else
-            ALOGE("Unsupported rate.. %d", rate);
+            AHAL_ERR("Unsupported rate.. %d", rate);
     }
 
     memset(value, 0, sizeof(value));
@@ -447,11 +447,11 @@ void hfp_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *par
                                     value, sizeof(value));
     if (status >= 0) {
         if (sscanf(value, "%f", &vol) != 1){
-            ALOGE("%s: error in retrieving hfp volume", __func__);
+            AHAL_ERR("error in retrieving hfp volume");
             status = -EIO;
             goto exit;
         }
-        ALOGD("%s: set_hfp_volume usecase, Vol: [%f]", __func__, vol);
+        AHAL_DBG("set_hfp_volume usecase, Vol: [%f]", vol);
         hfp_set_volume(vol);
     }
 
@@ -460,16 +460,16 @@ void hfp_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *par
                                     value, sizeof(value));
     if (status >= 0) {
         if (sscanf(value, "%f", &vol) != 1){
-            ALOGE("%s: error in retrieving hfp mic volume", __func__);
+            AHAL_ERR("error in retrieving hfp mic volume");
             status = -EIO;
             goto exit;
         }
-        ALOGD("%s: set_hfp_mic_volume usecase, Vol: [%f]", __func__, vol);
+        AHAL_DBG("set_hfp_mic_volume usecase, Vol: [%f]", vol);
         hfp_set_mic_volume(vol);
     }
 
 exit:
-    ALOGV("%s Exit",__func__);
+    AHAL_VERBOSE("Exit");
 }
 
 #ifdef __cplusplus

@@ -30,34 +30,29 @@
 #define LOG_TAG "AHAL: AudioVoice"
 #define ATRACE_TAG (ATRACE_TAG_AUDIO|ATRACE_TAG_HAL)
 #define LOG_NDEBUG 0
-/*#define VERY_VERY_VERBOSE_LOGGING*/
-#ifdef VERY_VERY_VERBOSE_LOGGING
-#define ALOGVV ALOGV
-#else
-#define ALOGVV(a...) do { } while(0)
-#endif
 
-#include <log/log.h>
 #include <stdio.h>
 #include <cutils/str_parms.h>
 #include "audio_extn.h"
 #include "AudioVoice.h"
 #include "PalApi.h"
+#include "AudioCommon.h"
 
 #ifndef AUDIO_MODE_CALL_SCREEN
 #define AUDIO_MODE_CALL_SCREEN 4
 #endif
 
+
 int AudioVoice::SetMode(const audio_mode_t mode) {
     int ret = 0;
 
-    ALOGD("%s: enter: %d", __func__, mode);
+    AHAL_DBG("Enter: mode: %d", mode);
     if (mode_ != mode) {
         /*start a new session for full voice call*/
         if ((mode ==  AUDIO_MODE_CALL_SCREEN && mode_ == AUDIO_MODE_IN_CALL)||
            (mode == AUDIO_MODE_IN_CALL && mode_ == AUDIO_MODE_CALL_SCREEN)){
             mode_ = mode;
-            ALOGD("%s: call screen device switch called: %d", __func__, mode);
+            AHAL_DBG("call screen device switch called: %d", mode);
             VoiceSetDevice(voice_.session);
         } else {
             mode_ = mode;
@@ -67,6 +62,7 @@ int AudioVoice::SetMode(const audio_mode_t mode) {
                 UpdateCalls(voice_.session);
         }
     }
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
@@ -81,7 +77,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
     bool slow_talk;
     bool hd_voice;
 
-    ALOGD("%s: Enter", __func__);
+    AHAL_DBG("Enter params: %s", kvpairs);
 
     parms = str_parms_create_str(kvpairs);
     if (!parms)
@@ -95,7 +91,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
         if (err >= 0) {
             call_state = value;
         } else {
-            ALOGE("%s: call_state key not found", __func__);
+            AHAL_ERR("call_state key not found");
             ret = -EINVAL;
             goto done;
         }
@@ -103,8 +99,8 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
         if (is_valid_vsid(vsid) && is_valid_call_state(call_state)) {
             ret = UpdateCallState(vsid, call_state);
         } else {
-            ALOGE("%s: invalid vsid:%x or call_state:%d",
-                __func__, vsid, call_state);
+            AHAL_ERR("invalid vsid:%x or call_state:%d",
+                     vsid, call_state);
             ret = -EINVAL;
             goto done;
         }
@@ -130,7 +126,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
                 params = (pal_param_payload *)calloc(1,
                                    sizeof(pal_param_payload) + sizeof(tty_mode));
                 if (!params) {
-                    ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+                    AHAL_ERR("calloc failed for size %zu",
                             sizeof(pal_param_payload) + sizeof(tty_mode));
                     continue;
                 }
@@ -162,7 +158,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
         params = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
                                                 sizeof(volume_boost));
         if (!params) {
-            ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+            AHAL_ERR("calloc failed for size %zu",
                    sizeof(pal_param_payload) + sizeof(volume_boost));
         } else {
             params->payload_size = sizeof(volume_boost);
@@ -194,7 +190,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
         params = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
                                                 sizeof(slow_talk));
         if (!params) {
-            ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+            AHAL_ERR("calloc failed for size %zu",
                    sizeof(pal_param_payload) + sizeof(slow_talk));
         } else {
             params->payload_size = sizeof(slow_talk);
@@ -225,8 +221,8 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
         params = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
                                                 sizeof(hd_voice));
         if (!params) {
-            ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
-                   sizeof(pal_param_payload) + sizeof(hd_voice));
+            AHAL_ERR("calloc failed for size %zu",
+                     sizeof(pal_param_payload) + sizeof(hd_voice));
         } else {
             params->payload_size = sizeof(hd_voice);
             params->payload[0] = hd_voice;
@@ -245,6 +241,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
 
 done:
     str_parms_destroy(parms);
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
@@ -290,7 +287,7 @@ int AudioVoice::GetMatchingTxDevices(const std::set<audio_devices_t>& rx_devices
                 break;
             default:
                 tx_devices.insert(AUDIO_DEVICE_NONE);
-                ALOGE("%s: unsupported Device Id of %d", __func__, rx_dev);
+                AHAL_ERR("unsupported Device Id of %d", rx_dev);
                 break;
         }
 
@@ -305,10 +302,10 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
     pal_device_id_t* pal_device_ids = NULL;
     uint16_t device_count = 0;
 
-    ALOGD("%s Enter", __func__);
+    AHAL_DBG("Enter");
 
     if (AudioExtn::audio_devices_empty(rx_devices)){
-        ALOGE("%s invalid routing device %d", __func__, AudioExtn::get_device_types(rx_devices));
+        AHAL_ERR("Exit invalid routing device %d", AudioExtn::get_device_types(rx_devices));
         return 0;
     }
 
@@ -317,11 +314,11 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
 
     pal_device_ids = (pal_device_id_t *)calloc(1, device_count * sizeof(pal_device_id_t));
     if (!pal_device_ids) {
-        ALOGE("%s fail to allocate memory for pal device array", __func__);
+        AHAL_ERR("Exit fail to allocate memory for pal device array");
         return -ENOMEM;
     }
 
-    ALOGD("%s Routing is %d", __func__, AudioExtn::get_device_types(rx_devices));
+    AHAL_DBG("Routing is %d", AudioExtn::get_device_types(rx_devices));
 
     if (stream_out_primary_) {
         stream_out_primary_->getPalDeviceIds(rx_devices, pal_device_ids);
@@ -346,13 +343,13 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
             for (int i = 0; i < max_voice_sessions_; i++) {
                 ret = VoiceSetDevice(&voice_.session[i]);
                 if (ret)
-                    ALOGE("%s Device switch failed for session[%d]", __func__, i);
+                    AHAL_ERR("Device switch failed for session[%d]", i);
             }
         }
     }
 
     free(pal_device_ids);
-
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
@@ -372,8 +369,8 @@ int AudioVoice::UpdateCallState(uint32_t vsid, int call_state) {
     if (session) {
         session->state.new_ = call_state;
         is_call_active = IsCallActive(session);
-        ALOGD("%s is_call_active:%d in_call:%d, mode:%d",
-              __func__, is_call_active, voice_.in_call, mode_);
+        AHAL_DBG("is_call_active:%d in_call:%d, mode:%d",
+                 is_call_active, voice_.in_call, mode_);
         if (is_call_active ||
                 (voice_.in_call && (mode_ == AUDIO_MODE_IN_CALL || mode_ == AUDIO_MODE_CALL_SCREEN))) {
             ret = UpdateCalls(voice_.session);
@@ -392,8 +389,8 @@ int AudioVoice::UpdateCalls(voice_session_t *pSession) {
 
     for (i = 0; i < max_voice_sessions_; i++) {
         session = &pSession[i];
-        ALOGD("%s: cur_state=%d new_state=%d vsid=%x",
-              __func__, session->state.current_, session->state.new_, session->vsid);
+        AHAL_DBG("cur_state=%d new_state=%d vsid=%x",
+                 session->state.current_, session->state.new_, session->vsid);
 
         switch(session->state.new_)
         {
@@ -401,17 +398,17 @@ int AudioVoice::UpdateCalls(voice_session_t *pSession) {
             switch(session->state.current_)
             {
             case CALL_INACTIVE:
-                ALOGD("%s: INACTIVE -> ACTIVE vsid:%x", __func__, session->vsid);
+                AHAL_DBG("INACTIVE -> ACTIVE vsid:%x", session->vsid);
                 ret = VoiceStart(session);
                 if (ret < 0) {
-                    ALOGE("%s: VoiceStart() failed", __func__);
+                    AHAL_ERR("VoiceStart() failed");
                 } else {
                     session->state.current_ = session->state.new_;
                 }
                 break;
             default:
-                ALOGE("%s: CALL_ACTIVE cannot be handled in state=%d vsid:%x",
-                      __func__, session->state.current_, session->vsid);
+                AHAL_ERR("CALL_ACTIVE cannot be handled in state=%d vsid:%x",
+                          session->state.current_, session->vsid);
                 break;
             }
             break;
@@ -420,18 +417,18 @@ int AudioVoice::UpdateCalls(voice_session_t *pSession) {
             switch(session->state.current_)
             {
             case CALL_ACTIVE:
-                ALOGD("%s: ACTIVE -> INACTIVE vsid:%x", __func__, session->vsid);
+                AHAL_DBG("ACTIVE -> INACTIVE vsid:%x", session->vsid);
                 ret = VoiceStop(session);
                 if (ret < 0) {
-                    ALOGE("%s: VoiceStop() failed", __func__);
+                    AHAL_ERR("VoiceStop() failed");
                 } else {
                     session->state.current_ = session->state.new_;
                 }
                 break;
 
             default:
-                ALOGE("%s: CALL_INACTIVE cannot be handled in state=%d vsid:%x",
-                      __func__, session->state.current_, session->vsid);
+                AHAL_ERR("CALL_INACTIVE cannot be handled in state=%d vsid:%x",
+                         session->state.current_, session->vsid);
                 break;
             }
             break;
@@ -444,12 +441,15 @@ int AudioVoice::UpdateCalls(voice_session_t *pSession) {
 }
 
 int AudioVoice::StopCall() {
-    int i;
+    int i, ret = 0;;
 
+    AHAL_DBG("Enter");
     voice_.in_call = false;
     for (i = 0; i < max_voice_sessions_; i++)
         voice_.session[i].state.new_ = CALL_INACTIVE;
-    return UpdateCalls(voice_.session);
+    ret = UpdateCalls(voice_.session);
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 bool AudioVoice::IsCallActive(AudioVoice::voice_session_t *pSession) {
@@ -476,6 +476,8 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     struct pal_device palDevices[2];
     struct pal_channel_info out_ch_info = {0, {0}}, in_ch_info = {0, {0}};
     pal_param_payload *param_payload = nullptr;
+
+    AHAL_DBG("Enter");
 
     in_ch_info.channels = 1;
     in_ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
@@ -506,7 +508,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     streamAttributes.info.voice_call_info.tty_mode = session->tty_mode;
     /*device overrides for specific use cases*/
     if (mode_ == AUDIO_MODE_CALL_SCREEN) {
-        ALOGD("%s: in call screen mode", __func__);
+        AHAL_DBG("in call screen mode");
         palDevices[0].id = PAL_DEVICE_IN_PROXY;  //overwrite the device with proxy dev
         palDevices[1].id = PAL_DEVICE_OUT_PROXY;  //overwrite the device with proxy dev
     }
@@ -536,9 +538,9 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
                           (void *)this,
                           &session->pal_voice_handle);// Need to add this to the audio stream structure.
 
-    ALOGD("%s:pal_stream_open() ret:%d line:%d", __func__, ret, __LINE__);
+    AHAL_DBG("pal_stream_open() ret:%d", ret);
     if (ret) {
-        ALOGE("%s Pal Stream Open Error (%x)", __func__, ret);
+        AHAL_ERR("Pal Stream Open Error (%x)", ret);
         ret = -EINVAL;
         goto error_open;
     }
@@ -548,7 +550,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
         param_payload = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
                                              sizeof(session->slow_talk));
         if (!param_payload) {
-            ALOGE("%s:%d calloc for size %zu failed", __func__, __LINE__,
+            AHAL_ERR("calloc for size %zu failed",
                    sizeof(pal_param_payload) + sizeof(session->slow_talk));
         } else {
             param_payload->payload_size = sizeof(session->slow_talk);
@@ -557,7 +559,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
                                        PAL_PARAM_ID_SLOW_TALK,
                                        param_payload);
             if (ret)
-                ALOGE("%s Slow Talk enable failed %x", __func__, ret);
+                AHAL_ERR("Slow Talk enable failed %x", ret);
             free(param_payload);
             param_payload = nullptr;
         }
@@ -567,7 +569,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
         param_payload = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
                                              sizeof(session->volume_boost));
         if (!param_payload) {
-            ALOGE("%s:%d calloc for size %zu failed", __func__, __LINE__,
+            AHAL_ERR("calloc for size %zu failed",
                   sizeof(pal_param_payload) + sizeof(session->volume_boost));
         } else {
             param_payload->payload_size = sizeof(session->volume_boost);
@@ -575,7 +577,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
             ret = pal_stream_set_param(session->pal_voice_handle, PAL_PARAM_ID_VOLUME_BOOST,
                                    param_payload);
             if (ret)
-                ALOGE("%s Volume Boost enable failed %x", __func__, ret);
+                AHAL_ERR("Volume Boost enable failed %x", ret);
             free(param_payload);
             param_payload = nullptr;
         }
@@ -585,15 +587,15 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
         param_payload = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
                                              sizeof(session->hd_voice));
         if (!param_payload) {
-            ALOGE("%s:%d calloc for size %zu failed", __func__, __LINE__,
-                  sizeof(pal_param_payload) + sizeof(session->hd_voice));
+            AHAL_ERR("calloc for size %zu failed",
+                     sizeof(pal_param_payload) + sizeof(session->hd_voice));
         } else {
             param_payload->payload_size = sizeof(session->hd_voice);
             param_payload->payload[0] = session->hd_voice;
             ret = pal_stream_set_param(session->pal_voice_handle, PAL_PARAM_ID_HD_VOICE,
                                    param_payload);
             if (ret)
-                ALOGE("%s VHD Voice enable failed %x", __func__, ret);
+                AHAL_ERR("HD Voice enable failed %x",ret);
             free(param_payload);
             param_payload = nullptr;
         }
@@ -601,38 +603,39 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
 
    ret = pal_stream_start(session->pal_voice_handle);
    if (ret) {
-       ALOGE("%s Pal Stream Start Error (%x)", __func__, ret);
+       AHAL_ERR("Pal Stream Start Error (%x)", ret);
        ret = pal_stream_close(session->pal_voice_handle);
        if (ret)
-           ALOGE("%s Pal Stream close failed %x", __func__, ret);
+           AHAL_ERR("Pal Stream close failed %x", ret);
            session->pal_voice_handle = NULL;
            ret = -EINVAL;
    } else {
-      ALOGD("%s Pal Stream Start Success", __func__);
+      AHAL_DBG("Pal Stream Start Success");
    }
 
 error_open:
-
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
 int AudioVoice::VoiceStop(voice_session_t *session) {
     int ret = 0;
 
+    AHAL_DBG("Enter");
     if (session && session->pal_voice_handle) {
         ret = pal_stream_stop(session->pal_voice_handle);
         if (ret)
-            ALOGE("%s Pal Stream stop failed %x", __func__, ret);
+            AHAL_ERR("Pal Stream stop failed %x", ret);
         ret = pal_stream_close(session->pal_voice_handle);
         if (ret)
-            ALOGE("%s Pal Stream close failed %x", __func__, ret);
+            AHAL_ERR("Pal Stream close failed %x", ret);
         session->pal_voice_handle = NULL;
     }
 
     if (ret)
-        return -EINVAL;
-    else
-        return ret;
+        ret = -EINVAL;
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 int AudioVoice::VoiceSetDevice(voice_session_t *session) {
@@ -641,6 +644,7 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     struct pal_channel_info out_ch_info = {0, {0}}, in_ch_info = {0, {0}};
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
+    AHAL_DBG("Enter");
     in_ch_info.channels = 1;
     in_ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
 
@@ -665,7 +669,7 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     palDevices[1].address.device_num =adevice->usb_dev_num_;
     /*device overwrites for usecases*/
     if (mode_ == AUDIO_MODE_CALL_SCREEN) {
-        ALOGD("%s: in call screen mode", __func__);
+        AHAL_DBG("in call screen mode");
         palDevices[0].id = PAL_DEVICE_IN_PROXY;  //overwrite the device with proxy dev
         palDevices[1].id = PAL_DEVICE_OUT_PROXY;  //overwrite the device with proxy dev
     }
@@ -679,30 +683,33 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     if (session && session->pal_voice_handle) {
         ret = pal_stream_set_device(session->pal_voice_handle, 2, palDevices);
         if (ret)
-            ALOGE("%s Pal Stream Set Device failed %x", __func__, ret);
+            AHAL_ERR("Pal Stream Set Device failed %x", ret);
     } else {
-        ALOGE("%s Voice handle not found", __func__);
+        AHAL_ERR("Voice handle not found");
     }
 
     if (ret)
-        return -EINVAL;
-    else
-        return ret;
+        ret = -EINVAL;
+
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 int AudioVoice::SetMicMute(bool mute) {
     int ret = 0;
     voice_session_t *session = voice_.session;
 
+    AHAL_DBG("Enter mute: %d", mute);
     if (session) {
         for (int i = 0; i < max_voice_sessions_; i++) {
             if (session[i].pal_voice_handle) {
                 ret = pal_stream_set_mute(session[i].pal_voice_handle, mute);
                 if (ret)
-                    ALOGE("%s Error applying mute %d for voice session %d", __func__, mute, i);
+                    AHAL_ERR("Error applying mute %d for voice session %d", mute, i);
             }
         }
     }
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 
 }
@@ -712,7 +719,7 @@ int AudioVoice::SetVoiceVolume(float volume) {
     struct pal_volume_data *pal_vol;
     voice_session_t *session = voice_.session;
 
-
+    AHAL_DBG("Enter vol: %f", volume);
     pal_vol = (struct pal_volume_data*)malloc(sizeof(uint32_t)
                 + sizeof(struct pal_channel_vol_kv));
     if (pal_vol && session) {
@@ -723,13 +730,13 @@ int AudioVoice::SetVoiceVolume(float volume) {
         for (int i = 0; i < max_voice_sessions_; i++) {
             if (session[i].pal_voice_handle) {
                 ret = pal_stream_set_volume(session[i].pal_voice_handle, pal_vol);
-                ALOGD("%s volume applied on voice session %d", __func__, i);
+                AHAL_DBG("volume applied on voice session %d", i);
             }
         }
 
         free(pal_vol);
     }
-
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 

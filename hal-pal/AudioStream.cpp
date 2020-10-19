@@ -29,13 +29,7 @@
 
 #define LOG_TAG "AHAL: AudioStream"
 #define ATRACE_TAG (ATRACE_TAG_AUDIO | ATRACE_TAG_HAL)
-/*#define LOG_NDEBUG 0*/
-/*#define VERY_VERY_VERBOSE_LOGGING*/
-#ifdef VERY_VERY_VERBOSE_LOGGING
-#define ALOGVV ALOGV
-#else
-#define ALOGVV(a...) do { } while(0)
-#endif
+#include "AudioCommon.h"
 
 #include "AudioDevice.h"
 #include "AudioStream.h"
@@ -123,8 +117,8 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
     stream_callback_event_t event;
     StreamOutPrimary *astream_out = static_cast<StreamOutPrimary *> (cookie);
 
-    ALOGV("%s: stream_handle (%p), event_id (%x), event_data (%p), cookie (%p)"
-          "event_size (%d)", __func__, stream_handle, event_id, event_data,
+    AHAL_VERBOSE("stream_handle (%p), event_id (%x), event_data (%p), cookie (%p)"
+          "event_size (%d)", stream_handle, event_id, event_data,
            cookie, event_size);
 
     switch (event_id)
@@ -133,7 +127,7 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
         {
             std::lock_guard<std::mutex> write_guard (astream_out->write_wait_mutex_);
             astream_out->write_ready_ = true;
-            ALOGV("%s: received WRITE_READY event", __func__);
+            AHAL_VERBOSE("received WRITE_READY event");
             (astream_out->write_condition_).notify_all();
             event = STREAM_CBK_EVENT_WRITE_READY;
         }
@@ -144,7 +138,7 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
             std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
             astream_out->drain_ready_ = true;
             astream_out->sendGaplessMetadata = false;
-            ALOGD("%s: received DRAIN_READY event", __func__);
+            AHAL_DBG("received DRAIN_READY event");
             (astream_out->drain_condition_).notify_all();
             event = STREAM_CBK_EVENT_DRAIN_READY;
         }
@@ -154,7 +148,7 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
             std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
             astream_out->drain_ready_ = true;
             astream_out->sendGaplessMetadata = true;
-            ALOGD("%s: received PARTIAL DRAIN_READY event", __func__);
+            AHAL_DBG("received PARTIAL DRAIN_READY event");
             (astream_out->drain_condition_).notify_all();
             event = STREAM_CBK_EVENT_DRAIN_READY;
         }
@@ -163,7 +157,7 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
         event = STREAM_CBK_EVENT_ERROR;
         break;
     default:
-        ALOGE("%s: Invalid event id:%d", __func__, event_id);
+        AHAL_ERR("Invalid event id:%d", event_id);
         return -EINVAL;
     }
 
@@ -180,13 +174,13 @@ static int astream_out_mmap_noirq_start(const struct audio_stream_out *stream)
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio OutStream", __func__);
+        AHAL_ERR("unable to get audio OutStream");
         return -EINVAL;
     }
 
@@ -199,13 +193,13 @@ static int astream_out_mmap_noirq_stop(const struct audio_stream_out *stream)
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio OutStream", __func__);
+        AHAL_ERR("unable to get audio OutStream");
         return -EINVAL;
     }
 
@@ -220,28 +214,28 @@ static int astream_out_create_mmap_buffer(const struct audio_stream_out *stream,
     int ret = 0;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio OutStream", __func__);
+        AHAL_ERR("unable to get audio OutStream");
         return -EINVAL;
     }
 
     if (info == NULL || !(min_size_frames > 0 && min_size_frames < INT32_MAX)) {
-        ALOGE("%s: info = %p, min_size_frames = %d", __func__, info, min_size_frames);
+        AHAL_ERR("info = %p, min_size_frames = %d", info, min_size_frames);
         return -EINVAL;
     }
     if (astream_out->GetUseCase() != USECASE_AUDIO_PLAYBACK_MMAP) {
-         ALOGE("%s: usecase = %d", __func__, astream_out->GetUseCase());
+         AHAL_ERR("usecase = %d", astream_out->GetUseCase());
          return -ENOSYS;
     }
 
     ret = astream_out->CreateMmapBuffer(min_size_frames, info);
     if (ret)
-        ALOGE("%s: failed %d\n", __func__, ret);
+        AHAL_ERR("failed %d\n", ret);
 
     return ret;
 }
@@ -253,17 +247,17 @@ static int astream_out_get_mmap_position(const struct audio_stream_out *stream,
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio OutStream", __func__);
+        AHAL_ERR("unable to get audio OutStream");
         return -EINVAL;
     }
     if (astream_out->GetUseCase() != USECASE_AUDIO_PLAYBACK_MMAP) {
-         ALOGE("%s: usecase = %d", __func__, astream_out->GetUseCase());
+         AHAL_ERR("usecase = %d", astream_out->GetUseCase());
          return -ENOSYS;
     }
 
@@ -277,7 +271,7 @@ static uint32_t astream_out_get_sample_rate(const struct audio_stream *stream) {
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return 0;
     }
 
@@ -300,7 +294,7 @@ static audio_format_t astream_out_get_format(
     if (adevice)
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     else
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
 
     if (astream_out)
         return astream_out->GetFormat();
@@ -335,18 +329,18 @@ static uint32_t astream_out_get_channels(const struct audio_stream *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
 
-    ALOGV("%s: stream_out(%p)", __func__, stream);
+    AHAL_VERBOSE("stream_out(%p)", stream);
     if (adevice != nullptr) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return 0;
     }
 
     if (astream_out != nullptr) {
         return astream_out->GetChannelMask();
     } else {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return 0;
     }
 }
@@ -357,17 +351,17 @@ static int astream_pause(struct audio_stream_out *stream)
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return -EINVAL;
     }
 
-    ALOGD("%s: pause", __func__);
+    AHAL_DBG("pause");
     return astream_out->Pause();
 }
 
@@ -377,13 +371,13 @@ static int astream_resume(struct audio_stream_out *stream)
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return -EINVAL;
     }
 
@@ -396,13 +390,13 @@ static int astream_flush(struct audio_stream_out *stream)
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return -EINVAL;
     }
 
@@ -415,13 +409,13 @@ static int astream_drain(struct audio_stream_out *stream, audio_drain_type_t typ
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return -EINVAL;
     }
 
@@ -434,18 +428,18 @@ static int astream_set_callback(struct audio_stream_out *stream, stream_callback
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!callback) {
-        ALOGE("%s: NULL Callback passed", __func__);
+        AHAL_ERR("NULL Callback passed");
         return -EINVAL;
     }
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     if (!astream_out) {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return -EINVAL;
     }
 
@@ -458,29 +452,32 @@ static int astream_set_callback(struct audio_stream_out *stream, stream_callback
 static int astream_out_standby(struct audio_stream *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
+    int ret = 0;
 
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
-    ALOGD("%s: enter: stream (%p), usecase(%d: %s)", __func__, astream_out.get(),
+    AHAL_DBG("enter: stream (%p), usecase(%d: %s)", astream_out.get(),
           astream_out->GetUseCase(), use_case_table[astream_out->GetUseCase()]);
 
     if (astream_out) {
-        return astream_out->Standby();
+        ret = astream_out->Standby();
     } else {
-        ALOGE("%s: unable to get audio stream", __func__);
-        return -EINVAL;
+        AHAL_ERR("unable to get audio stream");
+        ret = -EINVAL;
     }
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 static int astream_dump(const struct audio_stream *stream, int fd) {
     std::ignore = stream;
     std::ignore = fd;
-    ALOGD("%s: dump function not implemented", __func__);
+    AHAL_DBG("dump function not implemented");
     return 0;
 }
 
@@ -492,7 +489,7 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
@@ -540,7 +537,7 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
             latency += param_bt_a2dp->latency;
     }
 
-    ALOGV("%s: Latency %d", __func__, latency);
+    AHAL_VERBOSE("Latency %d", latency);
     return latency;
 }
 
@@ -554,11 +551,11 @@ static int astream_out_get_presentation_position(
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
     if (!timestamp) {
-       ALOGE("%s: timestamp NULL", __func__);
+       AHAL_ERR("timestamp NULL");
        return -EINVAL;
     }
     if (astream_out) {
@@ -566,7 +563,7 @@ static int astream_out_get_presentation_position(
        case PAL_STREAM_COMPRESSED:
           ret = astream_out->GetFrames(frames);
           if (ret != 0) {
-             ALOGE("%s: GetTimestamp failed %d", __func__, ret);
+             AHAL_ERR("GetTimestamp failed %d", ret);
              return ret;
           }
           clock_gettime(CLOCK_MONOTONIC, timestamp);
@@ -576,10 +573,10 @@ static int astream_out_get_presentation_position(
           break;
        }
     } else {
-        //ALOGE("%s: unable to get audio stream", __func__);
+        //AHAL_ERR("unable to get audio stream");
         return -EINVAL;
     }
-    ALOGV("%s: frames %lld played at %lld ", __func__, ((long long) *frames), timestamp->tv_sec * 1000000LL + timestamp->tv_nsec / 1000);
+    AHAL_VERBOSE("frames %lld played at %lld ", ((long long) *frames), timestamp->tv_sec * 1000000LL + timestamp->tv_nsec / 1000);
 
     return ret;
 }
@@ -588,7 +585,6 @@ static int out_get_render_position(const struct audio_stream_out *stream,
                                    uint32_t *dsp_frames) {
     std::ignore = stream;
     std::ignore = dsp_frames;
-    ALOGD("%s: enter", __func__);
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
     int ret = 0;
@@ -597,7 +593,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
     if (astream_out) {
@@ -605,7 +601,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
         case PAL_STREAM_COMPRESSED:
            ret = astream_out->GetFrames(&frames);
            if (ret != 0) {
-              ALOGE("%s: Get DSP Frames failed %d", __func__, ret);
+              AHAL_ERR("Get DSP Frames failed %d", ret);
               return ret;
            }
            *dsp_frames = (uint32_t) frames;
@@ -629,12 +625,12 @@ static int astream_out_set_parameters(struct audio_stream *stream,
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
         ret = -EINVAL;
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         goto exit;
     }
 
-    ALOGD("%s: enter: usecase(%d: %s) kvpairs: %s",
-          __func__, astream_out->GetUseCase(), use_case_table[astream_out->GetUseCase()], kvpairs);
+    AHAL_DBG("enter: usecase(%d: %s) kvpairs: %s",
+             astream_out->GetUseCase(), use_case_table[astream_out->GetUseCase()], kvpairs);
 
     parms = str_parms_create_str(kvpairs);
     if (!parms) {
@@ -645,12 +641,13 @@ static int astream_out_set_parameters(struct audio_stream *stream,
 
     ret = astream_out->SetParameters(parms);
     if (ret) {
-        ALOGE("Stream SetParameters Error (%x)", ret);
+        AHAL_ERR("Stream SetParameters Error (%x)", ret);
         goto exit;
     }
 exit:
     if (parms)
         str_parms_destroy(parms);
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
@@ -670,7 +667,7 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
         ret = -EINVAL;
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         goto exit;
     }
 
@@ -679,10 +676,10 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
             str_parms_destroy(reply);
         if (query)
             str_parms_destroy(query);
-        ALOGE("out_get_parameters: failed to allocate mem for query or reply");
+        AHAL_ERR("out_get_parameters: failed to allocate mem for query or reply");
         return nullptr;
     }
-    ALOGD("%s: keys: %s", __func__, keys);
+    AHAL_DBG("keys: %s", keys);
 
     ret = str_parms_get_str(query, "is_direct_pcm_track", value, sizeof(value));
     if (ret >= 0) {
@@ -690,10 +687,10 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
 
         if (astream_out->flags_ & AUDIO_OUTPUT_FLAG_DIRECT &&
              !(astream_out->flags_ & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
-            ALOGV("in direct_pcm");
+            AHAL_VERBOSE("in direct_pcm");
             strlcat(value, "true", sizeof(value));
         } else {
-            ALOGV("not in direct_pcm");
+            AHAL_VERBOSE("not in direct_pcm");
             strlcat(value, "false", sizeof(value));
         }
         str_parms_add_str(reply, "is_direct_pcm_track", value);
@@ -756,14 +753,14 @@ static int astream_out_set_volume(struct audio_stream_out *stream,
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     if (astream_out) {
         return astream_out->SetVolume(left, right);
     } else {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return -EINVAL;
     }
 }
@@ -789,14 +786,14 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     if (astream_in) {
         return astream_in->Read(buffer, bytes);
     } else {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return -EINVAL;
     }
 
@@ -812,14 +809,14 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     if (astream_out) {
         return astream_out->Write(buffer, bytes);
     } else {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return -EINVAL;
     }
 
@@ -832,13 +829,13 @@ static int astream_in_mmap_noirq_start(const struct audio_stream_in *stream)
     std::shared_ptr<StreamInPrimary> astream_in;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_in = adevice->InGetStream((audio_stream_t*)stream);
     if (!astream_in) {
-        ALOGE("%s: unable to get audio InStream", __func__);
+        AHAL_ERR("unable to get audio InStream");
         return -EINVAL;
     }
 
@@ -851,13 +848,13 @@ static int astream_in_mmap_noirq_stop(const struct audio_stream_in *stream)
     std::shared_ptr<StreamInPrimary> astream_in;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_in = adevice->InGetStream((audio_stream_t*)stream);
     if (!astream_in) {
-        ALOGE("%s: unable to get audio InStream", __func__);
+        AHAL_ERR("unable to get audio InStream");
         return -EINVAL;
     }
 
@@ -871,22 +868,22 @@ static int astream_in_create_mmap_buffer(const struct audio_stream_in *stream,
     std::shared_ptr<StreamInPrimary> astream_in;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_in = adevice->InGetStream((audio_stream_t*)stream);
     if (!astream_in) {
-        ALOGE("%s: unable to get audio InStream", __func__);
+        AHAL_ERR("unable to get audio InStream");
         return -EINVAL;
     }
 
     if (info == NULL || !(min_size_frames > 0 && min_size_frames < INT32_MAX)) {
-        ALOGE("%s: info = %p, min_size_frames = %d", __func__, info, min_size_frames);
+        AHAL_ERR("info = %p, min_size_frames = %d", info, min_size_frames);
         return -EINVAL;
     }
     if (astream_in->GetUseCase() != USECASE_AUDIO_RECORD_MMAP) {
-         ALOGE("%s: usecase = %d", __func__, astream_in->GetUseCase());
+         AHAL_ERR("usecase = %d", astream_in->GetUseCase());
          return -ENOSYS;
     }
 
@@ -900,17 +897,17 @@ static int astream_in_get_mmap_position(const struct audio_stream_in *stream,
     std::shared_ptr<StreamInPrimary> astream_in;
 
     if (!adevice) {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     astream_in = adevice->InGetStream((audio_stream_t*)stream);
     if (!astream_in) {
-        ALOGE("%s: unable to get audio InStream", __func__);
+        AHAL_ERR("unable to get audio InStream");
         return -EINVAL;
     }
     if (astream_in->GetUseCase() != USECASE_AUDIO_RECORD_MMAP) {
-         ALOGE("%s: usecase = %d", __func__, astream_in->GetUseCase());
+         AHAL_ERR("usecase = %d", astream_in->GetUseCase());
          return -ENOSYS;
     }
 
@@ -922,7 +919,7 @@ static int astream_in_set_microphone_direction(
                         audio_microphone_direction_t dir) {
     std::ignore = stream;
     std::ignore = dir;
-    ALOGV("%s: function not implemented", __func__);
+    AHAL_VERBOSE("function not implemented");
     //No plans to implement audiozoom
     return -1;
 }
@@ -932,7 +929,7 @@ static int in_set_microphone_field_dimension(
                         float zoom) {
     std::ignore = stream;
     std::ignore = zoom;
-    ALOGV("%s: function not implemented", __func__);
+    AHAL_VERBOSE("function not implemented");
     //No plans to implement audiozoom
     return -1;
 }
@@ -943,19 +940,26 @@ static int astream_in_add_audio_effect(
 {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
-    ALOGD("%s: Enter ", __func__);
+    int ret = 0;
+
+    AHAL_DBG("Enter ");
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
-        return -EINVAL;
+        AHAL_ERR("unable to get audio device");
+        ret= -EINVAL;
+        goto exit;
     }
     if (astream_in) {
-        return astream_in->addRemoveAudioEffect(stream, effect, true);
+        ret = astream_in->addRemoveAudioEffect(stream, effect, true);
     } else {
-        ALOGE("%s: unable to get audio stream", __func__);
-        return -EINVAL;
+        AHAL_ERR("unable to get audio stream");
+        ret = -EINVAL;
+        goto exit;
     }
+exit:
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 static int astream_in_remove_audio_effect(const struct audio_stream *stream,
@@ -963,19 +967,25 @@ static int astream_in_remove_audio_effect(const struct audio_stream *stream,
 {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
-    ALOGD("%s: Enter ", __func__);
+    int ret = 0;
+
+    AHAL_DBG("Enter ");
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
-        return -EINVAL;
+        AHAL_ERR("unable to get audio device");
+        ret = -EINVAL;
+        goto exit;
     }
     if (astream_in) {
-        return astream_in->addRemoveAudioEffect(stream, effect, false);
+        ret = astream_in->addRemoveAudioEffect(stream, effect, false);
     } else {
-        ALOGE("%s: unable to get audio stream", __func__);
-        return -EINVAL;
+        AHAL_ERR("unable to get audio stream");
+        ret = -EINVAL;
     }
+exit:
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 static int astream_in_get_capture_position(const struct audio_stream_in *stream,
@@ -984,7 +994,7 @@ static int astream_in_get_capture_position(const struct audio_stream_in *stream,
     std::ignore = frames;
     std::ignore = time;
     //TODO: get timestamp for input streams
-    ALOGV("%s: position not implemented currently supported in pal", __func__);
+    AHAL_VERBOSE("position not implemented currently supported in pal");
     return 0;
 }
 
@@ -999,7 +1009,7 @@ static void in_update_sink_metadata(
     std::ignore = stream;
     std::ignore = sink_metadata;
 
-    ALOGV("%s: sink meta data update not  supported in pal", __func__);
+    AHAL_VERBOSE("sink meta data update not  supported in pal");
 }
 
 static int astream_in_get_active_microphones(
@@ -1009,19 +1019,19 @@ static int astream_in_get_active_microphones(
     std::ignore = stream;
     std::ignore = mic_array;
     std::ignore = mic_count;
-    ALOGV("%s: get active mics not currently supported in pal", __func__);
+    AHAL_VERBOSE("get active mics not currently supported in pal");
     return 0;
 }
 
 static uint32_t astream_in_get_sample_rate(const struct audio_stream *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
-    ALOGE("%s: Inside", __func__);
+    AHAL_ERR("Inside");
 
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return 0;
     }
 
@@ -1039,14 +1049,14 @@ static uint32_t astream_in_get_channels(const struct audio_stream *stream) {
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return 0;
     }
 
     if (astream_in) {
         return astream_in->GetChannelMask();
     } else {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return 0;
     }
 }
@@ -1058,7 +1068,7 @@ static audio_format_t astream_in_get_format(const struct audio_stream *stream) {
     if (adevice)
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     else
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
 
     if (astream_in)
         return astream_in->GetFormat();
@@ -1069,23 +1079,28 @@ static audio_format_t astream_in_get_format(const struct audio_stream *stream) {
 static int astream_in_standby(struct audio_stream *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
+    int ret = 0;
 
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
-        return -EINVAL;
+        AHAL_ERR("unable to get audio device");
+        ret = -EINVAL;
+        goto exit;
     }
 
-    ALOGD("%s: enter: stream (%p) usecase(%d: %s)", __func__, astream_in.get(),
+    AHAL_DBG("enter: stream (%p) usecase(%d: %s)", astream_in.get(),
           astream_in->GetUseCase(), use_case_table[astream_in->GetUseCase()]);
 
     if (astream_in) {
-        return astream_in->Standby();
+        ret = astream_in->Standby();
     } else {
-        ALOGE("%s: unable to get audio stream", __func__);
-        return -EINVAL;
+        AHAL_ERR("unable to get audio stream");
+        ret = -EINVAL;
     }
+exit:
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 static int astream_in_set_parameters(struct audio_stream *stream, const char *kvpairs) {
@@ -1103,7 +1118,7 @@ static int astream_in_set_parameters(struct audio_stream *stream, const char *kv
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
@@ -1119,7 +1134,7 @@ static char* astream_in_get_parameters(const struct audio_stream *stream,
                                        const char *keys) {
     std::ignore = stream;
     std::ignore = keys;
-    ALOGD("%s: function not implemented", __func__);
+    AHAL_DBG("function not implemented");
     return 0;
 }
 
@@ -1130,14 +1145,14 @@ static int astream_in_set_gain(struct audio_stream_in *stream, float gain) {
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
     if (astream_in) {
         return astream_in->SetGain(gain);
     } else {
-        ALOGE("%s: unable to get audio stream", __func__);
+        AHAL_ERR("unable to get audio stream");
         return -EINVAL;
     }
 }
@@ -1235,8 +1250,8 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
             AUDIO_INPUT_FLAG_SYNC        = 0x8,
             AUDIO_INPUT_FLAG_HW_AV_SYNC = 0x40,
             */
-            ALOGE("%s: flag %#x is not supported from PAL." ,
-                      __func__, halStreamFlags);
+            AHAL_ERR("flag %#x is not supported from PAL." ,
+                      halStreamFlags);
             break;
     }
 
@@ -1335,13 +1350,13 @@ int StreamOutPrimary::GetMmapPosition(struct audio_mmap_position *position)
     int32_t ret = 0;
 
     if (pal_stream_handle_ == nullptr) {
-        ALOGE("%s: pal handle is null\n", __func__);
+        AHAL_ERR("pal handle is null\n");
         return -EINVAL;
     }
 
     ret = pal_stream_get_mmap_position(pal_stream_handle_, &pal_mmap_pos);
     if (ret) {
-        ALOGE("%s: failed to get mmap position %d\n", __func__, ret);
+        AHAL_ERR("failed to get mmap position %d\n", ret);
         return ret;
     }
     position->position_frames = pal_mmap_pos.position_frames;
@@ -1376,19 +1391,19 @@ int StreamOutPrimary::CreateMmapBuffer(int32_t min_size_frames,
     struct pal_mmap_buffer palMmapBuf;
 
     if (pal_stream_handle_) {
-        ALOGE("%s: pal handle already created\n", __func__);
+        AHAL_ERR("pal handle already created\n");
         return -EINVAL;
     }
 
     ret = Open();
     if (ret) {
-        ALOGE("%s: failed to open stream.", __func__);
+        AHAL_ERR("failed to open stream.");
         return ret;
     }
     ret = pal_stream_create_mmap_buffer(pal_stream_handle_,
             min_size_frames, &palMmapBuf);
     if (ret) {
-        ALOGE("%s: failed to create mmap buffer: %d", __func__, ret);
+        AHAL_ERR("failed to create mmap buffer: %d", ret);
         Standby();
         return ret;
     }
@@ -1404,6 +1419,7 @@ int StreamOutPrimary::CreateMmapBuffer(int32_t min_size_frames,
 int StreamOutPrimary::Stop() {
     int ret = -ENOSYS;
 
+    AHAL_DBG("Enter");
     if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP &&
             pal_stream_handle_ && stream_started_) {
 
@@ -1413,12 +1429,14 @@ int StreamOutPrimary::Stop() {
             stream_paused_ = false;
         }
     }
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
 int StreamOutPrimary::Start() {
     int ret = -ENOSYS;
 
+    AHAL_DBG("Enter");
     if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP &&
             pal_stream_handle_ && !stream_started_) {
 
@@ -1426,41 +1444,47 @@ int StreamOutPrimary::Start() {
         if (ret == 0)
             stream_started_ = true;
     }
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
 int StreamOutPrimary::Pause() {
     int ret = 0;
 
+    AHAL_DBG("Enter" );
     if (pal_stream_handle_) {
         ret = pal_stream_pause(pal_stream_handle_);
     }
     if (ret)
-        return -EINVAL;
+        ret =  -EINVAL;
     else
     {
         stream_paused_ = true;
-        return ret;
     }
+
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 int StreamOutPrimary::Resume() {
     int ret = 0;
 
+    AHAL_DBG("Enter" );
     if (pal_stream_handle_) {
         ret = pal_stream_resume(pal_stream_handle_);
     }
     if (ret)
-        return -EINVAL;
+        ret = -EINVAL;
     else {
         stream_paused_ = false;
-        return ret;
     }
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 int StreamOutPrimary::Flush() {
     int ret = 0;
-    ALOGD("%s: Enter", __func__);
+    AHAL_DBG("Enter");
     if (pal_stream_handle_) {
         if(stream_paused_ == true)
         {
@@ -1471,16 +1495,16 @@ int StreamOutPrimary::Flush() {
                     stream_paused_ = false;
             }
         } else {
-            ALOGI("%s: called in invalid state (stream not paused)", __func__ );
+            AHAL_INFO("called in invalid state (stream not paused)" );
         }
         total_bytes_written_ = 0;
     }
 
     if (ret)
-        return -EINVAL;
-    else {
-        return ret;
-    }
+        ret = -EINVAL;
+
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 int StreamOutPrimary::Drain(audio_drain_type_t type) {
@@ -1495,7 +1519,7 @@ int StreamOutPrimary::Drain(audio_drain_type_t type) {
            palDrainType = PAL_DRAIN_PARTIAL;
            break;
     default:
-           ALOGE("%s: Invalid drain type:%d", __func__, type);
+           AHAL_ERR("Invalid drain type:%d", type);
            return -EINVAL;
     }
 
@@ -1503,7 +1527,7 @@ int StreamOutPrimary::Drain(audio_drain_type_t type) {
         ret = pal_stream_drain(pal_stream_handle_, palDrainType);
 
     if (ret) {
-        ALOGE("%s: Invalid drain type:%d", __func__, type);
+        AHAL_ERR("Invalid drain type:%d", type);
     }
 
     return ret;
@@ -1512,10 +1536,11 @@ int StreamOutPrimary::Drain(audio_drain_type_t type) {
 int StreamOutPrimary::Standby() {
     int ret = 0;
 
+    AHAL_DBG("Enter");
     if (pal_stream_handle_) {
         ret = pal_stream_stop(pal_stream_handle_);
         if (ret) {
-            ALOGE("%s: failed to stop stream.", __func__);
+            AHAL_ERR("failed to stop stream.");
             return -EINVAL;
         }
     }
@@ -1532,9 +1557,10 @@ int StreamOutPrimary::Standby() {
     }
 
     if (ret)
-        return -EINVAL;
-    else
-        return ret;
+        ret = -EINVAL;
+
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
@@ -1543,17 +1569,17 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
     struct pal_device* deviceIdConfigs;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    ALOGD("StreamOutPrimary::%s: enter ", __func__);
+    AHAL_DBG("enter ");
 
     if (!mInitialized){
-        ALOGE("%s: Not initialized, returning error", __func__);
+        AHAL_ERR("Not initialized, returning error");
         ret = -EINVAL;
         goto done;
     }
 
-    ALOGD("%s: mAndroidOutDevices %d, mNoOfOutDevices %zu, new_devices %d, num new_devices: %zu",
-          __func__, AudioExtn::get_device_types(mAndroidOutDevices),
-          mAndroidOutDevices.size(), AudioExtn::get_device_types(new_devices), new_devices.size());
+    AHAL_DBG("mAndroidOutDevices %d, mNoOfOutDevices %zu, new_devices %d, num new_devices: %zu",
+             AudioExtn::get_device_types(mAndroidOutDevices),
+             mAndroidOutDevices.size(), AudioExtn::get_device_types(new_devices), new_devices.size());
 
     /* If its the same device as what was already routed to, dont bother */
     if (!AudioExtn::audio_devices_empty(new_devices) && mAndroidOutDevices != new_devices) {
@@ -1564,7 +1590,7 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
             deviceIdConfigs = (struct pal_device*) realloc(mPalOutDevice,
                     new_devices.size() * sizeof(struct pal_device));
             if (!deviceId || !deviceIdConfigs) {
-                ALOGE("%s: Failed to allocate PalOutDeviceIds!", __func__);
+                AHAL_ERR("Failed to allocate PalOutDeviceIds!");
                 ret = -ENOMEM;
                 goto done;
             }
@@ -1573,11 +1599,11 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
         }
 
         noPalDevices = getPalDeviceIds(new_devices, mPalOutDeviceIds);
-        ALOGD("%s: noPalDevices: %d , new_devices: %zu", __func__,
+        AHAL_DBG("noPalDevices: %d , new_devices: %zu",
                 noPalDevices, new_devices.size());
 
         if (noPalDevices != new_devices.size()) {
-            ALOGE("%s: Device count mismatch! Expected: %zu Got: %d", __func__,
+            AHAL_ERR("Device count mismatch! Expected: %zu Got: %d",
                     new_devices.size(), noPalDevices);
             ret = -EINVAL;
             goto done;
@@ -1605,12 +1631,12 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
                     audio_extn_gef_notify_device_config(dev,
                             config_.channel_mask, config_.sample_rate);
             else
-                ALOGE("%s: failed to set device. Error %d", __func__ ,ret);
+                AHAL_ERR("failed to set device. Error %d" ,ret);
         }
     }
 
 done:
-    ALOGD("StreamOutPrimary::%s: exit %d", __func__, ret);
+    AHAL_DBG("exit %d", ret);
     return ret;
 }
 
@@ -1621,7 +1647,7 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    ALOGD("%s: enter ", __func__);
+    AHAL_DBG("enter ");
 
     if (!mInitialized)
         goto error;
@@ -1630,34 +1656,34 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     if (ret >= 0) {
         adevice->dp_controller = controller;
         adevice->dp_stream = stream;
-        ALOGE("%s: plugin device cont %d stream %d",__func__, controller, stream);
+        AHAL_ERR("plugin device cont %d stream %d",controller, stream);
     }
 
     //TBD: check if its offload and check call the following
     ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &palSndDec, parms, &msample_rate, &mchannels);
     if (ret) {
-        ALOGE("parse_compress_metadata Error (%x)", ret);
+        AHAL_ERR("parse_compress_metadata Error (%x)", ret);
         goto error;
     }
 
     ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
     if (ret1 >= 0 ) {
         gaplessMeta.encoderDelay = atoi(value);
-        ALOGD("%s new encoder delay %u", __func__, gaplessMeta.encoderDelay);
+        AHAL_DBG("new encoder delay %u", gaplessMeta.encoderDelay);
     }
     ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
     if (ret1 >= 0) {
         gaplessMeta.encoderPadding = atoi(value);
-        ALOGD("%s padding %u", __func__, gaplessMeta.encoderPadding);
+        AHAL_DBG("padding %u", gaplessMeta.encoderPadding);
     }
 error:
-    ALOGE("%s: exit %d", __func__, ret);
+    AHAL_ERR("exit %d", ret);
     return ret;
 }
 
 int StreamOutPrimary::SetVolume(float left , float right) {
     int ret = 0;
-    ALOGD("%s: left %f, right %f", __func__, left, right);
+    AHAL_DBG("Enter: left %f, right %f", left, right);
 
     /* free previously cached volume if any */
     if (volume_) {
@@ -1685,9 +1711,10 @@ int StreamOutPrimary::SetVolume(float left , float right) {
     if (pal_stream_handle_) {
         ret = pal_stream_set_volume(pal_stream_handle_, volume_);
         if (ret) {
-            ALOGE("Pal Stream volume Error (%x)", ret);
+            AHAL_ERR("Pal Stream volume Error (%x)", ret);
         }
     }
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
@@ -1697,7 +1724,7 @@ int64_t StreamOutPrimary::GetRenderLatency(audio_output_flags_t halStreamFlags)
 {
     struct pal_stream_attributes streamAttributes_;
     streamAttributes_.type = StreamOutPrimary::GetPalStreamType(halStreamFlags);
-    ALOGV("%s:%d type %d", __func__, __LINE__, streamAttributes_.type);
+    AHAL_VERBOSE(" type %d",streamAttributes_.type);
     switch (streamAttributes_.type) {
          case PAL_STREAM_DEEP_BUFFER:
              return DEEP_BUFFER_PLATFORM_DELAY;
@@ -1732,7 +1759,7 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
         (streamAttributes_.out_media_config.sample_rate) / 1000000LL;
 
     if (!timestamp) {
-       ALOGE("%s: timestamp NULL", __func__);
+       AHAL_ERR("timestamp NULL");
        return 0;
     }
     written_frames = total_bytes_written_ / audio_bytes_per_frame(
@@ -1775,9 +1802,9 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
        *timestamp = writeAt;
     }
 
-    ALOGV("%s signed frames %lld written frames %lld kernel frames %lld dsp frames %lld, bt extra frames %lld",
-            __func__, (long long)signed_frames, (long long)written_frames, (long long)kernel_frames,
-            (long long)dsp_frames, (long long)bt_extra_frames);
+    AHAL_VERBOSE("signed frames %lld written frames %lld kernel frames %lld dsp frames %lld, bt extra frames %lld",
+                 (long long)signed_frames, (long long)written_frames, (long long)kernel_frames,
+                 (long long)dsp_frames, (long long)bt_extra_frames);
 
     return signed_frames;
 }
@@ -1785,10 +1812,10 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
 int StreamOutPrimary::get_compressed_buffer_size()
 {
     int fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-    ALOGD("%s:%d config_ %x", __func__, __LINE__, config_.format);
+    AHAL_DBG("config_ %x", config_.format);
     if(config_.format ==  AUDIO_FORMAT_FLAC ) {
         fragment_size = FLAC_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
-        ALOGD("%s:%d aud_fmt_id: 0x%x  FLAC buffer size:%d", __func__, __LINE__,
+        AHAL_DBG("aud_fmt_id: 0x%x  FLAC buffer size:%d",
             streamAttributes_.out_media_config.aud_fmt_id,
             fragment_size);
     } else {
@@ -1803,8 +1830,8 @@ int StreamOutPrimary::get_pcm_buffer_size()
     uint8_t bytes_per_sample = audio_bytes_per_sample(config_.format);
     uint32_t fragment_size = 0;
 
-    ALOGD("%s:%d config_ format:%x, SR %d ch_mask 0x%x",
-            __func__, __LINE__, config_.format, config_.sample_rate,
+    AHAL_DBG("config_ format:%x, SR %d ch_mask 0x%x",
+            config_.format, config_.sample_rate,
             config_.channel_mask);
     fragment_size = PCM_OFFLOAD_OUTPUT_PERIOD_DURATION *
         config_.sample_rate * bytes_per_sample * channels;
@@ -1817,7 +1844,7 @@ int StreamOutPrimary::get_pcm_buffer_size()
 
     fragment_size = ALIGN(fragment_size, (bytes_per_sample * channels * 32));
 
-    ALOGD("%s: fragment size: %d", __func__, fragment_size);
+    AHAL_DBG("fragment size: %d", fragment_size);
     return fragment_size;
 }
 
@@ -1838,7 +1865,7 @@ uint32_t StreamOutPrimary::GetBufferSize() {
     struct pal_stream_attributes streamAttributes_;
 
     streamAttributes_.type = StreamOutPrimary::GetPalStreamType(flags_);
-    ALOGD("%s:%d type %d", __func__, __LINE__, streamAttributes_.type);
+    AHAL_DBG("type %d", streamAttributes_.type);
     if (streamAttributes_.type == PAL_STREAM_VOIP_RX) {
         return voip_get_buffer_size(config_.sample_rate);
     } else if (streamAttributes_.type == PAL_STREAM_COMPRESSED) {
@@ -1870,11 +1897,13 @@ int StreamOutPrimary::Open() {
     uint32_t inBufCount = NO_OF_BUF;
     uint32_t outBufCount = NO_OF_BUF;
 
+    AHAL_DBG("Enter OutPrimary ");
+
     if (!mInitialized) {
-        ALOGE("%s: Not initialized, returning error", __func__);
+        AHAL_ERR("Not initialized, returning error");
         goto error_open;
     }
-    ALOGD("%s: no_of_devices %zu", __func__, mAndroidOutDevices.size());
+    AHAL_DBG("no_of_devices %zu", mAndroidOutDevices.size());
     //need to convert channel mask to pal channel mask
     // Stream channel mask
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
@@ -1908,7 +1937,7 @@ int StreamOutPrimary::Open() {
                streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
         halInputFormat = config_.format;
         halOutputFormat = (audio_format_t)(getAlsaSupportedFmt.at(halInputFormat));
-        ALOGD("halInputFormat %d halOutputFormat %d", halInputFormat, halOutputFormat);
+        AHAL_DBG("halInputFormat %d halOutputFormat %d", halInputFormat, halOutputFormat);
         streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[halOutputFormat];
         if (streamAttributes_.out_media_config.bit_width == 0)
             streamAttributes_.out_media_config.bit_width = 16;
@@ -1920,12 +1949,12 @@ int StreamOutPrimary::Open() {
         streamAttributes_.flags = (pal_stream_flags_t)(PAL_STREAM_FLAG_MMAP);
     }
 
-    ALOGD("channels %d samplerate %d format id %d, stream type %d  stream bitwidth %d",
+    AHAL_DBG("channels %d samplerate %d format id %d, stream type %d  stream bitwidth %d",
            streamAttributes_.out_media_config.ch_info.channels, streamAttributes_.out_media_config.sample_rate,
            streamAttributes_.out_media_config.aud_fmt_id, streamAttributes_.type,
            streamAttributes_.out_media_config.bit_width);
-    ALOGD("msample_rate %d mchannels %d", msample_rate, mchannels);
-    ALOGD("mNoOfOutDevices %zu", mAndroidOutDevices.size());
+    AHAL_DBG("msample_rate %d mchannels %d", msample_rate, mchannels);
+    AHAL_DBG("mNoOfOutDevices %zu", mAndroidOutDevices.size());
     ret = pal_stream_open (&streamAttributes_,
                           mAndroidOutDevices.size(),
                           mPalOutDevice,
@@ -1935,9 +1964,9 @@ int StreamOutPrimary::Open() {
                           (void *)this,
                           &pal_stream_handle_);
 
-    ALOGD("%s:(%x:ret)%d",__func__,ret, __LINE__);
+    AHAL_DBG("(%x:ret)",ret);
     if (ret) {
-        ALOGE("Pal Stream Open Error (%x)", ret);
+        AHAL_ERR("Pal Stream Open Error (%x)", ret);
         ret = -EINVAL;
         goto error_open;
     }
@@ -1951,7 +1980,7 @@ int StreamOutPrimary::Open() {
                                               sizeof(pal_snd_dec_t));
 
         if (!param_payload) {
-            ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+            AHAL_ERR("calloc failed for size %zu",
                    sizeof(pal_param_payload) + sizeof(pal_snd_dec_t));
         } else {
             param_payload->payload_size = sizeof(pal_snd_dec_t);
@@ -1961,7 +1990,7 @@ int StreamOutPrimary::Open() {
                                        PAL_PARAM_ID_CODEC_CONFIGURATION,
                                        param_payload);
             if (ret)
-                ALOGE("Pal Set Param Error (%x)", ret);
+                AHAL_ERR("Pal Set Param Error (%x)", ret);
             free(param_payload);
 
         }
@@ -1996,25 +2025,26 @@ int StreamOutPrimary::Open() {
         convertBuffer = realloc(convertBuffer, convertBufSize);
         if (!convertBuffer) {
             ret = -ENOMEM;
-            ALOGE("convert Buffer allocation failed. ret %d", ret);
+            AHAL_ERR("convert Buffer allocation failed. ret %d", ret);
             goto error_open;
         }
         outBufSize = convertBufSize;
-        ALOGD("convert buffer allocated for size %d", convertBufSize);
+        AHAL_DBG("convert buffer allocated for size %d", convertBufSize);
     }
 
     fragment_size_ = outBufSize;
     fragments_ = outBufCount;
 
-    ALOGD("%s:fragment_size_ %d fragments_ %d",__func__, fragment_size_, fragments_);
+    AHAL_DBG("fragment_size_ %d fragments_ %d",fragment_size_, fragments_);
 
     ret = pal_stream_set_buffer_size(pal_stream_handle_, (size_t*)&inBufSize,
             inBufCount, (size_t*)&outBufSize, outBufCount);
     if (ret) {
-        ALOGE("Pal Stream set buffer size Error  (%x)", ret);
+        AHAL_ERR("Pal Stream set buffer size Error  (%x)", ret);
     }
 
 error_open:
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
@@ -2022,7 +2052,7 @@ error_open:
 int StreamOutPrimary::GetFrames(uint64_t *frames) {
     int ret = 0;
     if (!pal_stream_handle_) {
-        ALOGV("%s: pal_stream_handle_ NULL", __func__);
+        AHAL_VERBOSE("pal_stream_handle_ NULL");
         *frames = 0;
         return 0;
     }
@@ -2030,16 +2060,16 @@ int StreamOutPrimary::GetFrames(uint64_t *frames) {
     uint64_t timestamp = 0;
     ret = pal_get_timestamp(pal_stream_handle_, &tstamp);
     if (ret != 0) {
-       ALOGE("%s: pal_get_timestamp failed %d", __func__, ret);
+       AHAL_ERR("pal_get_timestamp failed %d", ret);
        goto exit;
     }
     timestamp = (uint64_t)tstamp.session_time.value_msw;
     timestamp = timestamp  << 32 | tstamp.session_time.value_lsw;
-    ALOGV("%s: session msw %u", __func__, tstamp.session_time.value_msw);
-    ALOGV("%s: session lsw %u", __func__, tstamp.session_time.value_lsw);
-    ALOGV("%s: session timespec %lld", __func__, ((long long) timestamp));
+    AHAL_VERBOSE("session msw %u", tstamp.session_time.value_msw);
+    AHAL_VERBOSE("session lsw %u", tstamp.session_time.value_lsw);
+    AHAL_VERBOSE("session timespec %lld", ((long long) timestamp));
     timestamp *= (streamAttributes_.out_media_config.sample_rate);
-    ALOGV("%s: timestamp %lld", __func__, ((long long) timestamp));
+    AHAL_VERBOSE("timestamp %lld", ((long long) timestamp));
     *frames = timestamp/1000000;
 exit:
     return ret;
@@ -2081,7 +2111,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
     palBuffer.size = bytes;
     palBuffer.offset = 0;
 
-    ALOGV("%s: handle_ %x Bytes:(%zu)", __func__, handle_, bytes);
+    AHAL_VERBOSE("handle_ %x Bytes:(%zu)", handle_, bytes);
     is_perf_lock_acquired = AcquirePerfLock();
 
     if (!pal_stream_handle_) {
@@ -2089,7 +2119,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
         ret = Open();
         ATRACE_END();
         if (ret) {
-            ALOGE("%s: failed to open stream.", __func__);
+            AHAL_ERR("failed to open stream.");
             return -EINVAL;
         }
     }
@@ -2099,14 +2129,14 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
         if (volume_) {
             ret = pal_stream_set_volume(pal_stream_handle_, volume_);
             if (ret) {
-                ALOGE("Pal Stream volume Error (%x)", ret);
+                AHAL_ERR("Pal Stream volume Error (%x)", ret);
             }
         }
 
         ATRACE_BEGIN("hal: pal_stream_start");
         ret = pal_stream_start(pal_stream_handle_);
         if (ret) {
-            ALOGE("%s:failed to start stream. ret=%d", __func__, ret);
+            AHAL_ERR("failed to start stream. ret=%d", ret);
             pal_stream_close(pal_stream_handle_);
             pal_stream_handle_ = NULL;
             ATRACE_END();
@@ -2132,10 +2162,10 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
                                               sizeof(pal_param_payload) +
                                               sizeof(struct pal_compr_gapless_mdata));
         if (!param_payload) {
-            ALOGE("%s:%d calloc failed for size %zu", __func__, __LINE__,
+            AHAL_ERR("calloc failed for size %zu",
                    sizeof(pal_param_payload) + sizeof(struct pal_compr_gapless_mdata));
         } else {
-            ALOGD("%s sending gapless metadata", __func__);
+            AHAL_DBG("sending gapless metadata");
             param_payload->payload_size = sizeof(struct pal_compr_gapless_mdata);
             memcpy(param_payload->payload, &gaplessMeta, param_payload->payload_size);
 
@@ -2143,7 +2173,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
                                        PAL_PARAM_ID_GAPLESS_MDATA,
                                        param_payload);
             if (ret)
-                ALOGE("PAL set param for gapless failed, error (%x)", ret);
+                AHAL_ERR("PAL set param for gapless failed, error (%x)", ret);
             free(param_payload);
         }
         sendGaplessMetadata = false;
@@ -2188,10 +2218,10 @@ int StreamOutPrimary::StartOffloadEffects(
     if (fnp_offload_effect_start_output_) {
         ret = fnp_offload_effect_start_output_(ioHandle, pal_stream_handle);
         if (ret) {
-            ALOGE("%s: failed to start offload effect.", __func__);
+            AHAL_ERR("failed to start offload effect.");
         }
     } else {
-        ALOGE("%s: function pointer is null.", __func__);
+        AHAL_ERR("function pointer is null.");
         return -EINVAL;
     }
 
@@ -2205,10 +2235,10 @@ int StreamOutPrimary::StopOffloadEffects(
     if (fnp_offload_effect_stop_output_) {
         ret = fnp_offload_effect_stop_output_(ioHandle, pal_stream_handle);
         if (ret) {
-            ALOGE("%s: failed to stop offload effect.\n", __func__);
+            AHAL_ERR("failed to stop offload effect.\n");
         }
     } else {
-        ALOGE("%s: function pointer is null.", __func__);
+        AHAL_ERR("function pointer is null.");
         return -EINVAL;
     }
 
@@ -2223,10 +2253,10 @@ int StreamOutPrimary::StartOffloadVisualizer(
     if (fnp_visualizer_start_output_) {
         ret = fnp_visualizer_start_output_(ioHandle, pal_stream_handle);
         if (ret) {
-            ALOGE("%s: failed to visualizer_start.", __func__);
+            AHAL_ERR("failed to visualizer_start.");
         }
     } else {
-        ALOGE("%s: function pointer is null.", __func__);
+        AHAL_ERR("function pointer is null.");
         return -EINVAL;
     }
 
@@ -2240,10 +2270,10 @@ int StreamOutPrimary::StopOffloadVisualizer(
     if (fnp_visualizer_stop_output_) {
         ret = fnp_visualizer_stop_output_(ioHandle, pal_stream_handle);
         if (ret) {
-            ALOGE("%s: failed to visualizer_stop.\n", __func__);
+            AHAL_ERR("failed to visualizer_stop.\n");
         }
     } else {
-        ALOGE("%s: function pointer is null.", __func__);
+        AHAL_ERR("function pointer is null.");
         return -EINVAL;
     }
 
@@ -2271,11 +2301,11 @@ StreamOutPrimary::StreamOutPrimary(
     int ret = 0;
 
     if (!stream_) {
-        ALOGE("%s: No memory allocated for stream_", __func__);
+        AHAL_ERR("No memory allocated for stream_");
         goto error;
     }
-    ALOGE("%s: enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)\
-          address(%s)", __func__, handle, config->format, config->sample_rate, config->channel_mask,
+    AHAL_ERR("enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)\
+          address(%s)", handle, config->format, config->sample_rate, config->channel_mask,
           mAndroidOutDevices.size(), flags, address);
 
     //TODO: check if USB device is connected or not
@@ -2299,15 +2329,15 @@ StreamOutPrimary::StreamOutPrimary(
             config->channel_mask = dynamic_media_config.mask;
             config->format = (audio_format_t)dynamic_media_config.format;
             memcpy(&config_, config, sizeof(struct audio_config));
-            ALOGI("%s: sample rate = %#x channel_mask=%#x fmt=%#x %d",
-                  __func__, config->sample_rate, config->channel_mask,
-                  config->format, __LINE__);
+            AHAL_INFO("sample rate = %#x channel_mask=%#x fmt=%#x",
+                      config->sample_rate, config->channel_mask,
+                      config->format);
 
         }
     }
 
     if (AudioExtn::audio_devices_cmp(mAndroidOutDevices, AUDIO_DEVICE_OUT_AUX_DIGITAL)){
-        ALOGD("AUDIO_DEVICE_OUT_AUX_DIGITAL and DIRECT | OFFLOAD, check hdmi caps");
+        AHAL_DBG("AUDIO_DEVICE_OUT_AUX_DIGITAL and DIRECT | OFFLOAD, check hdmi caps");
         if (config->sample_rate == 0) {
             config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
             config_.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
@@ -2326,7 +2356,7 @@ StreamOutPrimary::StreamOutPrimary(
     if (address) {
         strlcpy((char *)&address_, address, AUDIO_DEVICE_MAX_ADDRESS_LEN);
     } else {
-        ALOGD("%s: invalid address", __func__);
+        AHAL_DBG("invalid address");
     }
 
     fnp_offload_effect_start_output_ = start_offload_effect;
@@ -2342,7 +2372,7 @@ StreamOutPrimary::StreamOutPrimary(
 
     if (mAndroidOutDevices.empty())
         mAndroidOutDevices.insert(AUDIO_DEVICE_OUT_DEFAULT);
-    ALOGD("%s: No of Android devices %zu", __func__, mAndroidOutDevices.size());
+    AHAL_DBG("No of Android devices %zu", mAndroidOutDevices.size());
 
     mPalOutDeviceIds = new pal_device_id_t[mAndroidOutDevices.size()];
     if (!mPalOutDeviceIds) {
@@ -2351,7 +2381,7 @@ StreamOutPrimary::StreamOutPrimary(
 
     noPalDevices = getPalDeviceIds(mAndroidOutDevices, mPalOutDeviceIds);
     if (noPalDevices != mAndroidOutDevices.size()) {
-        ALOGE("%s: mismatched pal no of devices %d and hal devices %zu", __func__, noPalDevices, mAndroidOutDevices.size());
+        AHAL_ERR("mismatched pal no of devices %d and hal devices %zu", noPalDevices, mAndroidOutDevices.size());
         goto error;
     }
 
@@ -2369,8 +2399,8 @@ StreamOutPrimary::StreamOutPrimary(
             mPalOutDevice[i].config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
-        ALOGI("%s: device rate = %#x width=%#x fmt=%#x",
-            __func__, mPalOutDevice[i].config.sample_rate,
+        AHAL_INFO("device rate = %#x width=%#x fmt=%#x",
+            mPalOutDevice[i].config.sample_rate,
             mPalOutDevice[i].config.bit_width,
             mPalOutDevice[i].config.aud_fmt_id);
             mPalOutDevice[i].config.ch_info = {0, {0}};
@@ -2393,11 +2423,12 @@ StreamOutPrimary::StreamOutPrimary(
         audio_extn_gef_notify_device_config(dev, config_.channel_mask, config_.sample_rate);
 
 error:
+    AHAL_DBG("Exit");
     return;
 }
 
 StreamOutPrimary::~StreamOutPrimary() {
-    ALOGD("%s: close stream, handle(%x), pal_stream_handle (%p)", __func__,
+    AHAL_DBG("close stream, handle(%x), pal_stream_handle (%p)",
           handle_, pal_stream_handle_);
 
     if (pal_stream_handle_) {
@@ -2442,6 +2473,8 @@ int StreamInPrimary::Stop() {
 int StreamInPrimary::Start() {
     int ret = -ENOSYS;
 
+    AHAL_DBG("Enter");
+
     if (usecase_ == USECASE_AUDIO_RECORD_MMAP &&
             pal_stream_handle_ && !stream_started_) {
 
@@ -2449,6 +2482,7 @@ int StreamInPrimary::Start() {
         if (ret == 0)
             stream_started_ = true;
     }
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
@@ -2459,19 +2493,19 @@ int StreamInPrimary::CreateMmapBuffer(int32_t min_size_frames,
     struct pal_mmap_buffer palMmapBuf;
 
     if (pal_stream_handle_) {
-        ALOGE("%s: pal handle already created\n", __func__);
+        AHAL_ERR("pal handle already created\n");
         return -EINVAL;
     }
 
     ret = Open();
     if (ret) {
-        ALOGE("%s: failed to open stream.", __func__);
+        AHAL_ERR("failed to open stream.");
         return ret;
     }
     ret = pal_stream_create_mmap_buffer(pal_stream_handle_,
             min_size_frames, &palMmapBuf);
     if (ret) {
-        ALOGE("%s: failed to create mmap buffer: %d", __func__, ret);
+        AHAL_ERR("failed to create mmap buffer: %d", ret);
         Standby();
         return ret;
     }
@@ -2490,13 +2524,13 @@ int StreamInPrimary::GetMmapPosition(struct audio_mmap_position *position)
     int32_t ret = 0;
 
     if (pal_stream_handle_ == nullptr) {
-        ALOGE("%s: pal handle is null\n", __func__);
+        AHAL_ERR("pal handle is null\n");
         return -EINVAL;
     }
 
     ret = pal_stream_get_mmap_position(pal_stream_handle_, &pal_mmap_pos);
     if (ret) {
-        ALOGE("%s: failed to get mmap position %d\n", __func__, ret);
+        AHAL_ERR("failed to get mmap position %d\n", ret);
         return ret;
     }
     position->position_frames = pal_mmap_pos.position_frames;
@@ -2509,6 +2543,7 @@ int StreamInPrimary::Standby() {
     int ret = 0;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
+    AHAL_DBG("Enter");
     if (pal_stream_handle_) {
         if (!is_st_session) {
             ret = pal_stream_stop(pal_stream_handle_);
@@ -2529,9 +2564,10 @@ int StreamInPrimary::Standby() {
     }
 
     if (ret)
-        return -EINVAL;
-    else
-        return ret;
+        ret = -EINVAL;
+
+    AHAL_DBG("Exit ret: %d", ret);
+    return ret;
 }
 
 int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __unused,
@@ -2550,15 +2586,15 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
         if (memcmp(&desc.type, FX_IID_AEC, sizeof(effect_uuid_t)) == 0) {
             if (enable) {
                 if (isECEnabled) {
-                    ALOGE("%s: EC already enabled", __func__);
+                    AHAL_ERR("EC already enabled");
                     goto exit;
                 } else if (isNSEnabled) {
-                    ALOGV("%s: Got EC enable and NS is already active. Enabling ECNS", __func__);
+                    AHAL_VERBOSE("Got EC enable and NS is already active. Enabling ECNS");
                     status = pal_add_remove_effect(pal_stream_handle_,PAL_AUDIO_EFFECT_ECNS,true);
                     isECEnabled = true;
                     goto exit;
                 } else {
-                    ALOGV("%s: Got EC enable. Enabling EC", __func__);
+                    AHAL_VERBOSE("Got EC enable. Enabling EC");
                     status = pal_add_remove_effect(pal_stream_handle_,PAL_AUDIO_EFFECT_EC,true);
                     isECEnabled = true;
                     goto exit;
@@ -2566,12 +2602,12 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
             } else {
                 if (isECEnabled) {
                     if (isNSEnabled) {
-                        ALOGV("%s: ECNS is running. Disabling EC and enabling NS alone", __func__);
+                        AHAL_VERBOSE("ECNS is running. Disabling EC and enabling NS alone");
                         status = pal_add_remove_effect(pal_stream_handle_,PAL_AUDIO_EFFECT_NS,true);
                         isECEnabled = false;
                         goto exit;
                     } else {
-                        ALOGV("%s: EC is running. Disabling it", __func__);
+                        AHAL_VERBOSE("EC is running. Disabling it");
 
                         status = pal_add_remove_effect(pal_stream_handle_,PAL_AUDIO_EFFECT_ECNS,false);
 
@@ -2579,7 +2615,7 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
                         goto exit;
                     }
                 } else {
-                    ALOGE("%s: EC is not enabled", __func__);
+                    AHAL_ERR("EC is not enabled");
                     goto exit;
                }
             }
@@ -2588,15 +2624,15 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
         if (memcmp(&desc.type, FX_IID_NS, sizeof(effect_uuid_t)) == 0) {
             if (enable) {
                 if (isNSEnabled) {
-                    ALOGE("%s: NS already enabled", __func__);
+                    AHAL_ERR("NS already enabled");
                     goto exit;
                 } else if (isECEnabled) {
-                    ALOGV("%s: Got NS enable and EC is already active. Enabling ECNS", __func__);
+                    AHAL_VERBOSE("Got NS enable and EC is already active. Enabling ECNS");
                     status = pal_add_remove_effect(pal_stream_handle_,PAL_AUDIO_EFFECT_ECNS,true);
                     isNSEnabled = true;
                     goto exit;
                 } else {
-                    ALOGV("%s: Got NS enable. Enabling NS", __func__);
+                    AHAL_VERBOSE("Got NS enable. Enabling NS");
                     status = pal_add_remove_effect(pal_stream_handle_,PAL_AUDIO_EFFECT_NS,true);
                     isNSEnabled = true;
                     goto exit;
@@ -2604,12 +2640,12 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
             } else {
                 if (isNSEnabled) {
                     if (isECEnabled) {
-                        ALOGV("%s: ECNS is running. Disabling NS and enabling EC alone", __func__);
+                        AHAL_VERBOSE("ECNS is running. Disabling NS and enabling EC alone");
                         status = pal_add_remove_effect(pal_stream_handle_,PAL_AUDIO_EFFECT_EC,true);
                         isNSEnabled = false;
                         goto exit;
                     } else {
-                        ALOGV("%s: NS is running. Disabling it", __func__);
+                        AHAL_VERBOSE("NS is running. Disabling it");
 
                         status = pal_add_remove_effect(pal_stream_handle_,PAL_AUDIO_EFFECT_ECNS,false);
 
@@ -2617,7 +2653,7 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
                         goto exit;
                     }
                 } else {
-                    ALOGE("%s: NS is not enabled", __func__);
+                    AHAL_ERR("NS is not enabled");
                     goto exit;
                }
             }
@@ -2637,6 +2673,7 @@ int StreamInPrimary::SetGain(float gain) {
     struct pal_volume_data* volume;
     int ret = 0;
 
+    AHAL_DBG("Enter");
     volume = (struct pal_volume_data*)malloc(sizeof(uint32_t)
                 +sizeof(struct pal_channel_vol_kv));
     volume->no_of_volpair = 1;
@@ -2646,9 +2683,9 @@ int StreamInPrimary::SetGain(float gain) {
 
     free(volume);
     if (ret) {
-        ALOGE("Pal Stream volume Error (%x)", ret);
+        AHAL_ERR("Pal Stream volume Error (%x)", ret);
     }
-
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
@@ -2660,17 +2697,17 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
     struct pal_channel_info ch_info = {0, {0}};
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    ALOGD("StreamInPrimary::%s: enter ", __func__);
+    AHAL_DBG("enter ");
 
     if (!mInitialized){
-        ALOGE("%s: Not initialized, returning error", __func__);
+        AHAL_ERR("Not initialized, returning error");
         ret = -EINVAL;
         goto done;
     }
 
-    ALOGD("%s: mAndroidInDevices %d, mNoOfInDevices %zu, new_devices %d, num new_devices: %zu",
-          __func__, AudioExtn::get_device_types(mAndroidInDevices),
-          mAndroidInDevices.size(), AudioExtn::get_device_types(new_devices), new_devices.size());
+    AHAL_DBG("mAndroidInDevices %d, mNoOfInDevices %zu, new_devices %d, num new_devices: %zu",
+             AudioExtn::get_device_types(mAndroidInDevices),
+             mAndroidInDevices.size(), AudioExtn::get_device_types(new_devices), new_devices.size());
 
     // TBD: Hard code number of channels to 2 for now.
     // channels = audio_channel_count_from_out_mask(config_.channel_mask);
@@ -2699,10 +2736,10 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
             mPalInDevice = deviceIdConfigs;
         }
         noPalDevices = getPalDeviceIds(new_devices, mPalInDeviceIds);
-        ALOGD("%s: noPalDevices: %d , new_devices: %zu", __func__,
+        AHAL_DBG("noPalDevices: %d , new_devices: %zu",
                 noPalDevices, new_devices.size());
         if (noPalDevices != new_devices.size()) {
-            ALOGE("%s: Device count mismatch! Expected: %d Got: %zu", __func__, noPalDevices, new_devices.size());
+            AHAL_ERR("Device count mismatch! Expected: %d Got: %zu", noPalDevices, new_devices.size());
             ret = -EINVAL;
             goto done;
         }
@@ -2727,7 +2764,7 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
     }
 
 done:
-   ALOGD("StreamInPrimary::%s: exit %d", __func__, ret);
+   AHAL_DBG("exit %d", ret);
    return ret;
 }
 
@@ -2735,7 +2772,7 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
     struct str_parms *parms = (str_parms *)NULL;
     int ret = -EINVAL;
 
-    ALOGD("%s: enter: kvpairs=%s", __func__, kvpairs);
+    AHAL_DBG("enter: kvpairs=%s", kvpairs);
     if(!mInitialized)
         goto exit;
 
@@ -2744,7 +2781,7 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
         goto exit;
 
 exit:
-   ALOGE("%s: exit %d", __func__, ret);
+   AHAL_ERR("exit %d", ret);
    return ret;
 }
 
@@ -2758,21 +2795,22 @@ int StreamInPrimary::Open() {
     uint32_t outBufCount = NO_OF_BUF;
     void *handle = nullptr;
 
+    AHAL_DBG("Enter InPrimary");
     if (!mInitialized) {
-        ALOGE("%s: Not initialized, returning error", __func__);
+        AHAL_ERR("Not initialized, returning error");
         goto error_open;
     }
 
     handle = audio_extn_sound_trigger_check_and_get_session(this);
     if (handle) {
-        ALOGV("Found existing pal stream handle associated with capture handle");
+        AHAL_VERBOSE("Found existing pal stream handle associated with capture handle");
         pal_stream_handle_ = (pal_stream_handle_t *)handle;
         goto set_buff_size;
     }
 
     channels = audio_channel_count_from_in_mask(config_.channel_mask);
     if (channels == 0) {
-       ALOGE("invalid channel count");
+       AHAL_ERR("invalid channel count");
        return -EINVAL;
     }
     //need to convert channel mask to pal channel mask
@@ -2862,7 +2900,7 @@ int StreamInPrimary::Open() {
             (isDeviceAvailable(PAL_DEVICE_IN_PROXY)))
         streamAttributes_.info.opt_stream_info.tx_proxy_type = PAL_STREAM_PROXY_TX_WFD;
 
-    ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
+    AHAL_DBG("(%x:ret)", ret);
 
     ret = pal_stream_open(&streamAttributes_,
                          mAndroidInDevices.size(),
@@ -2873,10 +2911,10 @@ int StreamInPrimary::Open() {
                          (void *)this,
                          &pal_stream_handle_);
 
-    ALOGD("%s:(%x:ret)%d", __func__, ret, __LINE__);
+    AHAL_DBG("(%x:ret)", ret);
 
     if (ret) {
-        ALOGE("Pal Stream Open Error (%x)", ret);
+        AHAL_ERR("Pal Stream Open Error (%x)", ret);
         ret = -EINVAL;
         goto error_open;
     }
@@ -2897,13 +2935,14 @@ set_buff_size:
     if (!handle) {
         ret = pal_stream_set_buffer_size(pal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
         if (ret) {
-            ALOGE("Pal Stream set buffer size Error  (%x)", ret);
+            AHAL_ERR("Pal Stream set buffer size Error  (%x)", ret);
         }
     }
 
     total_bytes_read_ = 0; // reset at each open
 
 error_open:
+    AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
 
@@ -2974,8 +3013,9 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     palBuffer.offset = 0;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    ALOGV("%s: Bytes:(%zu)", __func__, bytes);
+    AHAL_VERBOSE("Bytes:(%zu)", bytes);
     is_perf_lock_acquired = AcquirePerfLock();
+
     if (!pal_stream_handle_) {
         ret = Open();
     }
@@ -2992,7 +3032,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
                 memset(palBuffer.buffer, 0, palBuffer.size);
                 local_bytes_read = palBuffer.size;
                 total_bytes_read_ += local_bytes_read;
-                ALOGE("%s: error, failed to read data from PAL", __func__);
+                AHAL_ERR("error, failed to read data from PAL");
                 ATRACE_END();
                 goto exit;
             } else if (size == 0) {
@@ -3010,7 +3050,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     if (!stream_started_) {
         ret = pal_stream_start(pal_stream_handle_);
         if (ret) {
-            ALOGE("%s:failed to start stream. ret=%d", __func__, ret);
+            AHAL_ERR("failed to start stream. ret=%d", ret);
             pal_stream_close(pal_stream_handle_);
             pal_stream_handle_ = NULL;
             goto exit;
@@ -3020,7 +3060,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
         if (volume_) {
             ret = pal_stream_set_volume(pal_stream_handle_, volume_);
             if (ret) {
-                ALOGE("Pal Stream volume Error (%x)", ret);
+                AHAL_ERR("Pal Stream volume Error (%x)", ret);
             }
         }
     }
@@ -3052,7 +3092,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     total_bytes_read_ += local_bytes_read;
 
 exit:
-    ALOGV("%s: Exit, bytes read %u", __func__, local_bytes_read);
+    AHAL_VERBOSE("Exit, bytes read %u", local_bytes_read);
 
     if (is_perf_lock_acquired)
         ReleasePerfLock();
@@ -3105,8 +3145,8 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     int noPalDevices = 0;
     int ret = 0;
 
-    ALOGD("%s: enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)"\
-          , __func__, handle, config->format, config->sample_rate, config->channel_mask,
+    AHAL_DBG("enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)"\
+          , handle, config->format, config->sample_rate, config->channel_mask,
           mAndroidInDevices.size(), flags);
     if (AudioExtn::audio_devices_cmp(mAndroidInDevices, audio_is_usb_in_device)) {
         if (!config->sample_rate) {
@@ -3122,7 +3162,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
             ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
                                 (void **)&device_cap_query,
                                 &payload_size, nullptr);
-            ALOGD("%s: usb fs=%d format=%d mask=%x", __func__,
+            AHAL_DBG("usb fs=%d format=%d mask=%x",
                 dynamic_media_config.sample_rate,
                 dynamic_media_config.format, dynamic_media_config.mask);
             delete device_cap_query;
@@ -3141,8 +3181,8 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     if (!config_.format)
         config_.format = AUDIO_FORMAT_PCM_16_BIT;
 
-    ALOGD("%s: local : handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)"\
-          , __func__, handle, config_.format, config_.sample_rate, config_.channel_mask,
+    AHAL_DBG("local : handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)"\
+          , handle, config_.format, config_.sample_rate, config_.channel_mask,
           AudioExtn::get_device_types(devices), flags);
 
 
@@ -3152,7 +3192,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     if(mAndroidInDevices.empty())
         mAndroidInDevices.insert(AUDIO_DEVICE_IN_DEFAULT);
 
-    ALOGD("%s: No of devices %zu", __func__, mAndroidInDevices.size());
+    AHAL_DBG("No of devices %zu", mAndroidInDevices.size());
     mPalInDeviceIds = new pal_device_id_t[mAndroidInDevices.size()];
     if (!mPalInDeviceIds) {
         goto error;
@@ -3160,7 +3200,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
 
     noPalDevices = getPalDeviceIds(devices, mPalInDeviceIds);
     if (noPalDevices != mAndroidInDevices.size()) {
-        ALOGE("%s: mismatched pal %d and hal devices %zu", __func__, noPalDevices, mAndroidInDevices.size());
+        AHAL_ERR("mismatched pal %d and hal devices %zu", noPalDevices, mAndroidInDevices.size());
         goto error;
     }
     mPalInDevice = new pal_device [mAndroidInDevices.size()];
@@ -3192,12 +3232,13 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     (void)FillHalFnPtrs();
     mInitialized = true;
 error:
+    AHAL_DBG("Exit");
     return;
 }
 
 StreamInPrimary::~StreamInPrimary() {
     if (pal_stream_handle_ && !is_st_session) {
-        ALOGD("%s: close stream, pal_stream_handle (%p)", __func__,
+        AHAL_DBG("close stream, pal_stream_handle (%p)",
              pal_stream_handle_);
         pal_stream_close(pal_stream_handle_);
         pal_stream_handle_ = NULL;
@@ -3213,7 +3254,7 @@ StreamPrimary::StreamPrimary(audio_io_handle_t handle,
 {
     memset(&streamAttributes_, 0, sizeof(streamAttributes_));
     memset(&address_, 0, sizeof(address_));
-    ALOGE("%s: handle: %d channel_mask: %d ", __func__, handle_, config_.channel_mask);
+    AHAL_ERR("handle: %d channel_mask: %d ", handle_, config_.channel_mask);
 }
 
 StreamPrimary::~StreamPrimary(void)

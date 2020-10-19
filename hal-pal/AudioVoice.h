@@ -83,6 +83,7 @@ public:
             bool use_device_mute;
             float volume;
             bool in_call;
+            uint32_t volume_steps;
     };
     voice_t voice_;
     audio_mode_t mode_;

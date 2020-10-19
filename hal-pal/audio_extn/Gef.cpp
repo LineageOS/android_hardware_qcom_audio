@@ -27,11 +27,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define LOG_TAG "audio_hw_generic_effect"
+#define LOG_TAG "AHAL: audio_hw_generic_effect"
 #define LOG_NDDEBUG 0
 
 #include "AudioDevice.h"
 #include "audio_extn.h"
+#include "AudioCommon.h"
 
 #include <errno.h>
 #include <math.h>
@@ -99,11 +100,11 @@ void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev)
     //: check error for dlopen
     gef_hal_handle.handle = dlopen(GEF_LIBRARY, RTLD_LAZY);
     if (gef_hal_handle.handle == NULL) {
-        ALOGE("%s: DLOPEN failed for %s with error %s",
-            __func__, GEF_LIBRARY, dlerror());
+        AHAL_ERR("DLOPEN failed for %s with error %s",
+                 GEF_LIBRARY, dlerror());
         goto ERROR_RETURN;
     } else {
-        ALOGV("%s: DLOPEN successful for %s", __func__, GEF_LIBRARY);
+        AHAL_VERBOSE("DLOPEN successful for %s", GEF_LIBRARY);
 
         //call dlerror to clear the error
         dlerror();
@@ -112,8 +113,8 @@ void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev)
         error = dlerror();
 
         if(error != NULL) {
-            ALOGE("%s: dlsym of %s failed with error %s",
-                 __func__, "gef_init", error);
+            AHAL_ERR("dlsym of %s failed with error %s",
+                     "gef_init", error);
             goto ERROR_RETURN;
         }
 
@@ -124,8 +125,8 @@ void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev)
         error = dlerror();
 
         if(error != NULL) {
-            ALOGE("%s: dlsym of %s failed with error %s",
-                 __func__, "gef_deinit", error);
+            AHAL_ERR("dlsym of %s failed with error %s",
+                     "gef_deinit", error);
             goto ERROR_RETURN;
         }
 
@@ -137,8 +138,8 @@ void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev)
         error = dlerror();
 
         if(error != NULL) {
-            ALOGE("%s: dlsym of %s failed with error %s",
-                 __func__, "gef_device_config_cb", error);
+            AHAL_ERR("dlsym of %s failed with error %s",
+                     "gef_device_config_cb", error);
             goto ERROR_RETURN;
         }
 
@@ -146,7 +147,7 @@ void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev)
     }
 
 ERROR_RETURN:
-    ALOGV("%s: Exit with error ", __func__);
+    AHAL_VERBOSE("Exit with error ");
     return;
 }
 
@@ -156,7 +157,7 @@ int audio_extn_gef_send_audio_cal(void* data, int length)
 {
     int ret = 0;
     if (!data) {
-        ALOGE("%s: GEF data is null", __func__);
+        AHAL_ERR("GEF data is null");
         return -EINVAL;
     }
 
@@ -164,11 +165,11 @@ int audio_extn_gef_send_audio_cal(void* data, int length)
     if (adevice) {
         ret = adevice->SetGEFParam(data, length);
     } else {
-        ALOGE("%s: unable to get audio device", __func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
-    ALOGV("%s: Exit with error %d", __func__, ret);
+    AHAL_VERBOSE("Exit with error %d", ret);
 
     return ret;
 }
@@ -178,7 +179,7 @@ int audio_extn_gef_get_audio_cal(void* data, int *length)
 {
     int ret = 0;
     if (!data) {
-        ALOGE("%s: GEF data is null", __func__);
+        AHAL_ERR("GEF data is null");
         return -EINVAL;
     }
 
@@ -186,11 +187,11 @@ int audio_extn_gef_get_audio_cal(void* data, int *length)
     if (adevice) {
         ret = adevice->GetGEFParam(data, length);
     } else {
-        ALOGE("%s: unable to get audio device",__func__);
+        AHAL_ERR("unable to get audio device");
         return -EINVAL;
     }
 
-    ALOGV("%s: Exit with error %d", __func__, ret);
+    AHAL_VERBOSE("Exit with error %d", ret);
 
     return ret;
 
@@ -199,7 +200,7 @@ int audio_extn_gef_get_audio_cal(void* data, int *length)
 //this will be called from GEF to store into acdb
 int audio_extn_gef_store_audio_cal(void* data __unused, int length __unused)
 {
-    ALOGE("%s: not supported by pal now.\n", __func__);
+    AHAL_ERR("not supported by pal now.\n");
 
     return -ENOSYS;
 }
@@ -208,7 +209,7 @@ int audio_extn_gef_store_audio_cal(void* data __unused, int length __unused)
 int audio_extn_gef_retrieve_audio_cal(void* data __unused,
     int* length __unused)
 {
-    ALOGE("%s: not supported by pal now.\n", __func__);
+    AHAL_ERR("not supported by pal now.\n");
 
     return -ENOSYS;
 }
@@ -217,7 +218,7 @@ int audio_extn_gef_retrieve_audio_cal(void* data __unused,
 void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
     audio_channel_mask_t channel_mask, int sample_rate)
 {
-    ALOGV("%s: Enter", __func__);
+    AHAL_VERBOSE("Enter");
 
     //call into GEF to share channel mask and device info
     if (gef_hal_handle.handle && gef_hal_handle.device_config_cb) {
@@ -225,14 +226,14 @@ void audio_extn_gef_notify_device_config(audio_devices_t audio_device,
             channel_mask, sample_rate);
     }
 
-    ALOGV("%s: Exit", __func__);
+    AHAL_VERBOSE("Exit");
 
     return;
 }
 
 void audio_extn_gef_deinit(std::shared_ptr<AudioDevice> adev __unused)
 {
-    ALOGV("%s: Enter", __func__);
+    AHAL_VERBOSE("Enter");
 
     if (gef_hal_handle.handle) {
         if (gef_hal_handle.handle && gef_hal_handle.deinit)
@@ -242,7 +243,7 @@ void audio_extn_gef_deinit(std::shared_ptr<AudioDevice> adev __unused)
 
     memset(&gef_hal_handle, 0, sizeof(gef_data));
 
-    ALOGV("%s: Exit", __func__);
+    AHAL_VERBOSE("Exit");
 }
 
 int audio_extn_get_pal_info(void *hal_data,

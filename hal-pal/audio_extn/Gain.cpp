@@ -27,10 +27,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define LOG_TAG "audio_extn"
+#define LOG_TAG "AHAL: Gain"
 #include "PalApi.h"
 #include "PalDefs.h"
 #include "audio_extn.h"
+#include "AudioCommon.h"
 
 extern "C" {
 
@@ -49,7 +50,7 @@ int audio_hw_get_gain_level_mapping(struct pal_amp_db_and_gain_table *mapping_tb
             &payload_size, nullptr);
 
     if (ret != 0) {
-        ALOGE("%s: fail to get PAL_PARAM_ID_GAIN_LVL_MAP %d", __func__, ret);
+        AHAL_ERR("fail to get PAL_PARAM_ID_GAIN_LVL_MAP %d", ret);
         gain_lvl_map.filled_size = 0;
     }
 
@@ -64,7 +65,7 @@ bool audio_hw_send_gain_dep_calibration(int level) {
 
     ret = pal_set_param(PAL_PARAM_ID_GAIN_LVL_CAL, (void*)&gain_lvl_cal, sizeof(pal_param_gain_lvl_cal_t));
     if (ret != 0) {
-        ALOGE("%s: fail to set PAL_PARAM_ID_GAIN_LVL_CAL %d", __func__, ret);
+        AHAL_ERR("fail to set PAL_PARAM_ID_GAIN_LVL_CAL %d",ret);
     }
 
     return (ret != 0) ? false: true;

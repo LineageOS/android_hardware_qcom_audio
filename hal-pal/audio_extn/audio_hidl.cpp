@@ -28,11 +28,11 @@
  */
 
 //#define LOG_NDEBUG 0
-#define LOG_TAG "audio_hw_hidl"
+#define LOG_TAG "AHAL: audio_hw_hidl"
 
 #include "audio_hidl.h"
 #include <cutils/properties.h>
-#include <log/log.h>
+#include "AudioCommon.h"
 #include <hidl/HidlTransportSupport.h>
 #include <hidl/LegacySupport.h>
 
@@ -51,7 +51,9 @@ int audio_extn_hidl_init() {
     if (!property_get_bool("vendor.audio.hal.ext.disabled", false)) {
         /* register audio HAL extension */
         bool fail = registerPassthroughServiceImplementation<IAudioHalExt>()!= OK;
-        ALOGW_IF(fail, "Could not register AHAL extension");
+        if (fail) {
+            AHAL_INFO("Could not register AHAL extension");
+        }
     }
 #endif
 

@@ -26,7 +26,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#define LOG_TAG "soundtrigger"
+#define LOG_TAG "AHAL: soundtrigger"
 /* #define LOG_NDEBUG 0 */
 #define LOG_NDDEBUG 0
 
@@ -37,7 +37,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include <log/log.h>
+#include "AudioCommon.h"
 #include <cutils/list.h>
 
 #include "AudioDevice.h"
@@ -170,7 +170,7 @@ typedef int (*sound_trigger_hw_call_back_t)(audio_event_type_t,
 do {\
     ptr = dlsym(handle, #symbol); \
     if (ptr == NULL) {\
-        ALOGW("%s: %s not found. %s", __func__, #symbol, dlerror());\
+        AHAL_INFO("%s not found. %s", #symbol, dlerror());\
         err = -ENODEV;\
     }\
 } while (0)
@@ -231,7 +231,7 @@ get_sound_trigger_info(int capture_handle)
 {
     struct sound_trigger_info  *st_ses_info = NULL;
     struct listnode *node;
-    ALOGV("%s: list empty %d capture_handle %d", __func__,
+    AHAL_VERBOSE("list empty %d capture_handle %d",
            list_empty(&st_dev->st_ses_list), capture_handle);
     list_for_each(node, &st_dev->st_ses_list) {
         st_ses_info = node_to_item(node, struct sound_trigger_info , list);
@@ -254,45 +254,45 @@ extern "C" int audio_hw_call_back(sound_trigger_event_type_t event,
     switch (event) {
     case ST_EVENT_SESSION_REGISTER:
         if (!config) {
-            ALOGE("%s: NULL config", __func__);
+            AHAL_ERR("NULL config");
             status = -EINVAL;
             break;
         }
         st_ses_info = (struct sound_trigger_info *)calloc(1,
             sizeof(struct sound_trigger_info ));
         if (!st_ses_info) {
-            ALOGE("%s: st_ses_info alloc failed", __func__);
+            AHAL_ERR("st_ses_info alloc failed");
             status = -ENOMEM;
             break;
         }
         memcpy(&st_ses_info->st_ses, &config->st_ses,
                sizeof(struct sound_trigger_session_info));
-        ALOGV("%s: add capture_handle %d st session opaque ptr %p", __func__,
+        AHAL_VERBOSE("add capture_handle %d st session opaque ptr %p",
               st_ses_info->st_ses.capture_handle, st_ses_info->st_ses.p_ses);
         list_add_tail(&st_dev->st_ses_list, &st_ses_info->list);
         break;
 
     case ST_EVENT_SESSION_DEREGISTER:
         if (!config) {
-            ALOGE("%s: NULL config", __func__);
+            AHAL_ERR("NULL config");
             status = -EINVAL;
             break;
         }
         st_ses_info = get_sound_trigger_info(config->st_ses.capture_handle);
         if (!st_ses_info) {
-            ALOGE("%s: st session opaque ptr %p not in the list!", __func__,
+            AHAL_ERR("st session opaque ptr %p not in the list!",
                   config->st_ses.p_ses);
             status = -EINVAL;
             break;
         }
-        ALOGV("%s: remove capture_handle %d st session opaque ptr %p", __func__,
+        AHAL_VERBOSE("remove capture_handle %d st session opaque ptr %p",
               st_ses_info->st_ses.capture_handle, st_ses_info->st_ses.p_ses);
         list_remove(&st_ses_info->list);
         free(st_ses_info);
         break;
 
     default:
-        ALOGW("%s: Unknown event %d", __func__, event);
+        AHAL_INFO("Unknown event %d", event);
         break;
     }
     pthread_mutex_unlock(&st_dev->lock);
@@ -306,15 +306,15 @@ void* audio_extn_sound_trigger_check_and_get_session(StreamInPrimary *in_stream)
     struct listnode *node = nullptr;
     void *handle = nullptr;
 
-    ALOGV("%s: Enter", __func__);
+    AHAL_VERBOSE("Enter");
     if (!st_dev || !in_stream) {
-        ALOGE("%s: st_dev %d, in_stream %d", __func__, !st_dev, !in_stream);
+        AHAL_ERR("st_dev %d, in_stream %d", !st_dev, !in_stream);
         goto exit;
     }
 
     pthread_mutex_lock(&st_dev->lock);
     in_stream->is_st_session = false;
-    ALOGV("%s: list %d capture_handle %d", __func__,
+    AHAL_VERBOSE("list %d capture_handle %d",
           list_empty(&st_dev->st_ses_list), in_stream->GetHandle());
     list_for_each(node, &st_dev->st_ses_list) {
         st_ses_info = node_to_item(node, struct sound_trigger_info , list);
@@ -322,7 +322,7 @@ void* audio_extn_sound_trigger_check_and_get_session(StreamInPrimary *in_stream)
             handle = st_ses_info->st_ses.p_ses;
             in_stream->is_st_session = true;
             in_stream->is_st_session_active = true;
-            ALOGD("%s: capture_handle %d is sound trigger", __func__,
+            AHAL_DBG("capture_handle %d is sound trigger",
                   in_stream->GetHandle());
             break;
         }
@@ -330,7 +330,7 @@ void* audio_extn_sound_trigger_check_and_get_session(StreamInPrimary *in_stream)
     pthread_mutex_unlock(&st_dev->lock);
 
 exit:
-    ALOGV("%s: Exit", __func__);
+    AHAL_VERBOSE("Exit");
 
     return handle;
 }
@@ -341,12 +341,12 @@ int audio_extn_sound_trigger_init(std::shared_ptr<AudioDevice> adev)
     char sound_trigger_lib[100];
     void *sthalPropApiVersion;
 
-    ALOGI("%s: Enter", __func__);
+    AHAL_INFO("Enter");
 
     st_dev = (struct sound_trigger_audio_device*)
         calloc(1, sizeof(struct sound_trigger_audio_device));
     if (!st_dev) {
-        ALOGE("%s: ERROR. sound trigger alloc failed", __func__);
+        AHAL_ERR("ERROR. sound trigger alloc failed");
         return -ENOMEM;
     }
 
@@ -354,11 +354,11 @@ int audio_extn_sound_trigger_init(std::shared_ptr<AudioDevice> adev)
     st_dev->lib_handle = dlopen(sound_trigger_lib, RTLD_NOW);
 
     if (st_dev->lib_handle == NULL) {
-        ALOGE("%s: error %s", __func__, dlerror());
+        AHAL_ERR("error %s", dlerror());
         status = -ENODEV;
         goto cleanup;
     }
-    ALOGI("%s: DLOPEN successful for %s", __func__, sound_trigger_lib);
+    AHAL_INFO("DLOPEN successful for %s", sound_trigger_lib);
 
     DLSYM(st_dev->lib_handle, sthalPropApiVersion,
           sthal_prop_api_version, status);
@@ -371,12 +371,12 @@ int audio_extn_sound_trigger_init(std::shared_ptr<AudioDevice> adev)
         }
         if (MAJOR_VERSION(st_dev->sthal_prop_api_version) !=
             MAJOR_VERSION(sthal_prop_api_version)) {
-            ALOGE("%s: Incompatible API versions ahal:0x%x != sthal:0x%x",
-                  __func__, STHAL_PROP_API_CURRENT_VERSION,
-                  st_dev->sthal_prop_api_version);
+            AHAL_ERR("Incompatible API versions ahal:0x%x != sthal:0x%x",
+                     STHAL_PROP_API_CURRENT_VERSION,
+                     st_dev->sthal_prop_api_version);
             goto cleanup;
         }
-        ALOGD("%s: sthal is using proprietary API version 0x%04x", __func__,
+        AHAL_DBG("sthal is using proprietary API version 0x%04x",
               st_dev->sthal_prop_api_version);
     }
 
@@ -397,7 +397,7 @@ cleanup:
 
 void audio_extn_sound_trigger_deinit(std::shared_ptr<AudioDevice> adev)
 {
-    ALOGI("%s: Enter", __func__);
+    AHAL_INFO("Enter");
     if (st_dev && (st_dev->adev == adev) && st_dev->lib_handle) {
         dlclose(st_dev->lib_handle);
         free(st_dev);
