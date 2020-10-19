@@ -3341,6 +3341,7 @@
         <ctl name="ADC2 MUX" value="INP2" />
         <ctl name="ADC2 ChMap" value="SWRM_TX2_CH1" />
         <ctl name="MBHC ChMap" value="SWRM_TX2_CH2" />
+        <ctl name="BCS Channel" value="CH5" />
     </path>
 
     <path name="amic3">
