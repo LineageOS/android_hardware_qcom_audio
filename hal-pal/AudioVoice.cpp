@@ -44,6 +44,10 @@
 #include "AudioVoice.h"
 #include "PalApi.h"
 
+#ifndef AUDIO_MODE_CALL_SCREEN
+#define AUDIO_MODE_CALL_SCREEN 4
+#endif
+
 int AudioVoice::SetMode(const audio_mode_t mode) {
     int ret = 0;
 
