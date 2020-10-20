@@ -3000,6 +3000,18 @@ int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_s
     return usecase;
 }
 
+int StreamInPrimary::SetMicMute(bool mute) {
+    int ret = 0;
+    ALOGD("%s Enter mute %d for input session", __func__, mute);
+    if (pal_stream_handle_) {
+        ALOGD("%s Enter if mute %d for input session", __func__, mute);
+        ret = pal_stream_set_mute(pal_stream_handle_, mute);
+        if (ret)
+            ALOGE("%s Error applying mute %d for input session", __func__, mute);
+    }
+    return ret;
+}
+
 ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     int ret = 0;
     int retry_count = MAX_READ_RETRY_COUNT;

@@ -518,6 +518,7 @@ public:
     int Open();
     int Start();
     int Stop();
+    int SetMicMute(bool mute);
     ssize_t Read(const void *buffer, size_t bytes);
     uint32_t GetBufferSize();
     pal_stream_type_t GetPalStreamType(audio_input_flags_t halStreamFlags,

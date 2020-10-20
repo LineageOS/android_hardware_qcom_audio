@@ -844,11 +844,19 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* strea
 
 int AudioDevice::SetMicMute(bool state) {
     int ret;
-
+    std::shared_ptr<StreamInPrimary> astream_in;
     mute_ = state;
+
+    ALOGD("%s: enter: %d", __func__, state);
     if (voice_)
         ret = voice_->SetMicMute(state);
-
+    for (int i = 0; i < stream_in_list_.size(); i++) {
+         astream_in = stream_in_list_[i];
+         if (astream_in) {
+             ALOGV("%s: Found existing stream associated with astream_in", __func__);
+             ret = astream_in->SetMicMute(state);
+         }
+    }
     return 0;
 }
 
