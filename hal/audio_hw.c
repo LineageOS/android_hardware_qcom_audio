@@ -3330,7 +3330,7 @@ int start_input_stream(struct stream_in *in)
 done_open:
     audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
-    ALOGV("%s: exit", __func__);
+    ALOGD("%s: exit", __func__);
     enable_gcov();
     return ret;
 
