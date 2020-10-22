@@ -433,4 +433,5 @@ int platform_set_power_mode_on_device(struct audio_device* adev, snd_device_t sn
 int platform_set_island_cfg_on_device(struct audio_device* adev, snd_device_t snd_device,
                                       bool enable);
 void platform_reset_island_power_status(void *platform, snd_device_t snd_device);
+void platform_is_volume_boost_supported_device(void *platform, struct listnode *devices);
 #endif // AUDIO_PLATFORM_API_H
