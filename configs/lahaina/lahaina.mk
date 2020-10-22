@@ -252,11 +252,6 @@ persist.vendor.audio.speaker.prot.enable=true\
 persist.vendor.audio.spv4.enable=true\
 persist.vendor.audio.avs.afe_api_version=9
 
-##bcl aka vbat monitor feature enable by default
-PRODUCT_PROPERTY_OVERRIDES += \
-persist.vendor.audio.vbat.enabled=true\
-persist.vendor.audio.bcl.enabled=true\
-
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.tunnel.encode=false
@@ -341,7 +336,7 @@ persist.bluetooth.a2dp_offload.disabled=false
 
 # A2DP offload DSP supported encoder list
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.bluetooth.a2dp_offload.cap=sbc-aac-aptx-aptxhd-ldac
+persist.bluetooth.a2dp_offload.cap=sbc-aac-aptx-aptxhd-ldac-lc3
 
 #enable software decoders for ALAC and APE
 PRODUCT_PROPERTY_OVERRIDES += \
