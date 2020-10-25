@@ -935,6 +935,36 @@ static void disable_asrc_mode(struct audio_device *adev)
     adev->asrc_mode_enabled = false;
 }
 
+static void check_and_configure_headphone(struct audio_device *adev,
+                                          struct audio_usecase *uc_info,
+                                              snd_device_t snd_device)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+    int new_backend_idx, usecase_backend_idx;
+    bool spkr_hph_single_be_native_concurrency;
+
+    new_backend_idx = platform_get_backend_index(snd_device);
+    spkr_hph_single_be_native_concurrency = platform_get_spkr_hph_single_be_native_concurrency_flag();
+    if ( spkr_hph_single_be_native_concurrency && (new_backend_idx == DEFAULT_CODEC_BACKEND)) {
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info)) {
+                usecase_backend_idx = platform_get_backend_index(usecase->out_snd_device);
+                if (((usecase_backend_idx == HEADPHONE_BACKEND) ||
+                    (usecase_backend_idx == HEADPHONE_44_1_BACKEND)) &&
+                    ((usecase->stream.out->sample_rate % OUTPUT_SAMPLING_RATE_44100) == 0)) {
+                    disable_audio_route(adev, usecase);
+                    disable_snd_device(adev, usecase->out_snd_device);
+                    usecase->stream.out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                    enable_audio_route(adev, usecase);
+                    enable_snd_device(adev, usecase->out_snd_device);
+                }
+            }
+        }
+    }
+}
+
 /*
  * - Enable ASRC mode for incoming mix path use case(Headphone backend)if Headphone
  *   44.1 or Native DSD backends are enabled for any of current use case.
@@ -2968,6 +2998,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     /* Enable new sound devices */
     if (out_snd_device != SND_DEVICE_NONE) {
         check_usecases_codec_backend(adev, usecase, out_snd_device);
+        check_and_configure_headphone(adev, usecase, out_snd_device);
         if (platform_check_codec_asrc_support(adev->platform))
             check_and_set_asrc_mode(adev, usecase, out_snd_device);
         enable_snd_device(adev, out_snd_device);

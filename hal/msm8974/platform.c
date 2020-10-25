@@ -282,6 +282,7 @@ typedef struct codec_backend_cfg {
 
 static native_audio_prop na_props = {0, 0, NATIVE_AUDIO_MODE_INVALID};
 static bool supports_true_32_bit = false;
+static bool spkr_hph_single_be_native_concurrency = false;
 
 static int max_be_dai_names = 0;
 static const struct be_dai_name_struct *be_dai_name_table;
@@ -5161,6 +5162,27 @@ int platform_get_native_support()
     return ret;
 }
 
+bool platform_get_spkr_hph_single_be_native_concurrency_flag()
+{
+    return spkr_hph_single_be_native_concurrency;
+}
+
+void spkr_hph_single_be_native_concurrency_params(struct str_parms *parms,
+                                    char *value, int len)
+{
+    int ret = 0;
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_SPKR_HPH_SINGLE_BE_NATIVE_CONCURRENCY,
+                           value, len);
+    if (ret >= 0) {
+        if (value && !strncmp(value, "true", sizeof("true")))
+            spkr_hph_single_be_native_concurrency = true;
+        else
+            spkr_hph_single_be_native_concurrency = false;
+        str_parms_del(parms, AUDIO_PARAMETER_SPKR_HPH_SINGLE_BE_NATIVE_CONCURRENCY);
+    }
+}
+
 void native_audio_get_params(struct str_parms *query,
                              struct str_parms *reply,
                              char *value, int len)
@@ -8447,6 +8469,7 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
 
     /* handle audio calibration parameters */
     set_audiocal(platform, parms, value, len);
+    spkr_hph_single_be_native_concurrency_params(parms, value, len);
     native_audio_set_params(platform, parms, value, len);
     audio_extn_spkr_prot_set_parameters(parms, value, len);
     audio_extn_usb_set_sidetone_gain(parms, value, len);

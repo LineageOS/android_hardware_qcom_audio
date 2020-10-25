@@ -407,6 +407,8 @@ enum {
 
 #define AUDIO_PARAMETER_KEY_TRUE_32_BIT "true_32_bit"
 
+#define AUDIO_PARAMETER_SPKR_HPH_SINGLE_BE_NATIVE_CONCURRENCY "spkr_hph_single_be_native_concurrency"
+
 #define AUDIO_MAX_DSP_CHANNELS 32
 
 #define ALL_SESSION_VSID                0xFFFFFFFF

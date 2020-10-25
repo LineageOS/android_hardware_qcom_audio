@@ -133,6 +133,10 @@
         <param key="true_32_bit" value="true"/>
         <!-- In the below value string, the value indicates sidetone gain in dB -->
         <param key="usb_sidetone_gain" value="35"/>
+        <!-- In the below value string, the value indicates whether the -->
+        <!-- target does not supports speaker and headphone working on  -->
+        <!-- different fractional and integer sampling rate             -->
+        <param key="spkr_hph_single_be_native_concurrency" value="true"/>
     </config_params>
     <gain_db_to_level_mapping>
         <gain_level_map db="-59" level="5"/>
