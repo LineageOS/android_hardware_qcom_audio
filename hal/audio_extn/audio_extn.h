@@ -161,6 +161,9 @@ typedef int (*fp_platform_get_default_app_type_v2_t)(void *, usecase_type_t);
 typedef int (*fp_platform_send_audio_calibration_t)(void *, struct audio_usecase *,
                                                    int);
 typedef int (*fp_platform_get_pcm_device_id_t)(audio_usecase_t, int);
+typedef int (*fp_platform_switch_voice_call_device_post_t)(void *platform,
+                                           snd_device_t out_snd_device,
+                                           snd_device_t in_snd_device);
 typedef const char *(*fp_platform_get_snd_device_name_t)(snd_device_t);
 typedef int (*fp_platform_spkr_prot_is_wsa_analog_mode_t)(void *);
 typedef int (*fp_platform_get_snd_device_t)(snd_device_t);
@@ -338,6 +341,7 @@ typedef int (*fp_check_a2dp_restore_t)(struct audio_device *,
 struct a2dp_offload_init_config {
     fp_platform_get_pcm_device_id_t fp_platform_get_pcm_device_id;
     fp_check_a2dp_restore_t fp_check_a2dp_restore_l;
+    fp_platform_switch_voice_call_device_post_t fp_platform_switch_voice_call_device_post;
 };
 typedef struct a2dp_offload_init_config a2dp_offload_init_config_t;
 // END: A2DP_OFFLOAD FEATURE ====================================================
