@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2014 The Android Open Source Project
@@ -1669,6 +1669,9 @@ int audio_extn_utils_send_app_type_cfg(struct audio_device *adev,
             num_devices = 1;
         }
         break;
+    case PCM_HFP_CALL:
+        rc = audio_extn_utils_send_app_type_cfg_hfp(adev,usecase);
+        return rc;
     default:
         ALOGI("%s: not a playback/capture path, no need to cfg app type", __func__);
         rc = 0;
@@ -2040,7 +2043,15 @@ void audio_extn_utils_send_audio_calibration(struct audio_device *adev,
     } else if (type == PCM_CAPTURE && usecase->stream.in != NULL) {
         platform_send_audio_calibration(adev->platform, usecase,
                          usecase->stream.in->app_type_cfg.app_type);
-    } else if ((type == PCM_HFP_CALL) || (type == PCM_CAPTURE) ||
+    } else if (type == PCM_HFP_CALL) {
+        /* when app type is default. the sample rate is not used to send cal */
+#ifdef ENABLE_HFP_CALIBRATION
+        platform_send_audio_calibration_hfp(adev->platform, usecase->in_snd_device);
+#else
+        platform_send_audio_calibration(adev->platform, usecase,
+                         platform_get_default_app_type_v2(adev->platform, usecase->type));
+#endif
+    } else if ((type == PCM_CAPTURE) ||
                (type == TRANSCODE_LOOPBACK_RX && usecase->stream.inout != NULL) ||
                (type == ICC_CALL) || (type == SYNTH_LOOPBACK)) {
         platform_send_audio_calibration(adev->platform, usecase,
