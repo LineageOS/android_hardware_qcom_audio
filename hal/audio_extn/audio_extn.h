@@ -1350,6 +1350,16 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #ifndef AUDIO_OUTPUT_FLAG_REAR_SEAT
 #define AUDIO_OUTPUT_FLAG_REAR_SEAT 0x2000000
 #endif
+#ifndef AUDIO_INPUT_FLAG_PRIMARY
+#define AUDIO_INPUT_FLAG_PRIMARY 0x100000
+#endif
+#ifndef AUDIO_INPUT_FLAG_FRONT_PASSENGER
+#define AUDIO_INPUT_FLAG_FRONT_PASSENGER 0x200000
+#endif
+#ifndef AUDIO_INPUT_FLAG_REAR_SEAT
+#define AUDIO_INPUT_FLAG_REAR_SEAT 0x400000
+#endif
+
 int audio_extn_auto_hal_init(struct audio_device *adev);
 void audio_extn_auto_hal_deinit(void);
 int audio_extn_auto_hal_create_audio_patch(struct audio_hw_device *dev,
@@ -1362,6 +1372,7 @@ int audio_extn_auto_hal_release_audio_patch(struct audio_hw_device *dev,
                                 audio_patch_handle_t handle);
 int audio_extn_auto_hal_get_car_audio_stream_from_address(const char *address);
 int audio_extn_auto_hal_open_output_stream(struct stream_out *out);
+int audio_extn_auto_hal_open_input_stream(struct stream_in *in);
 bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id);
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
                                 struct audio_port *config);
@@ -1377,6 +1388,7 @@ snd_device_t audio_extn_auto_hal_get_input_snd_device(struct audio_device *adev,
                                 audio_usecase_t uc_id);
 snd_device_t audio_extn_auto_hal_get_output_snd_device(struct audio_device *adev,
                                 audio_usecase_t uc_id);
+snd_device_t audio_extn_auto_hal_get_snd_device_for_car_audio_stream(int car_audio_stream);
 
 typedef streams_input_ctxt_t* (*fp_in_get_stream_t)(struct audio_device*, audio_io_handle_t);
 typedef streams_output_ctxt_t* (*fp_out_get_stream_t)(struct audio_device*, audio_io_handle_t);

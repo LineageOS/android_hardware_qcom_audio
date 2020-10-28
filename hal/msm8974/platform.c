@@ -524,6 +524,10 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
                                           REAR_SEAT_PCM_DEVICE},
     [USECASE_AUDIO_FM_TUNER_EXT] = {-1, -1},
     [USECASE_ICC_CALL] = {ICC_PCM_DEVICE, ICC_PCM_DEVICE},
+
+    [USECASE_AUDIO_RECORD_BUS] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER] = {FRONT_PASSENGER_PCM_DEVICE, FRONT_PASSENGER_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_BUS_REAR_SEAT] = {REAR_SEAT_PCM_DEVICE, REAR_SEAT_PCM_DEVICE},
 };
 
 /* Array to store sound devices */
@@ -779,6 +783,8 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_VOIP_HEADPHONES] = "voip-headphones",
     [SND_DEVICE_IN_VOICE_HEARING_AID] = "hearing-aid-mic",
     [SND_DEVICE_IN_BUS] = "bus-mic",
+    [SND_DEVICE_IN_BUS_PAX] = "bus-mic",
+    [SND_DEVICE_IN_BUS_RSE] = "bus-mic",
     [SND_DEVICE_IN_EC_REF_LOOPBACK] = "ec-ref-loopback",
     [SND_DEVICE_IN_HANDSET_DMIC_AND_EC_REF_LOOPBACK] = "handset-dmic-and-ec-ref-loopback",
     [SND_DEVICE_IN_HANDSET_QMIC_AND_EC_REF_LOOPBACK] = "handset-qmic-and-ec-ref-loopback",
@@ -1070,6 +1076,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT] = 4,
     [SND_DEVICE_IN_VOICE_HEARING_AID] = 44,
     [SND_DEVICE_IN_BUS] = 11,
+    [SND_DEVICE_IN_BUS_PAX] = 11,
+    [SND_DEVICE_IN_BUS_RSE] = 11,
     [SND_DEVICE_IN_CALL_PROXY] = 33,
     [SND_DEVICE_IN_ICC] = 46,
 };
@@ -1323,6 +1331,8 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     /* For legacy xml file parsing */
     {TO_NAME_INDEX(SND_DEVICE_IN_CAMCORDER_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_BUS)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_BUS_PAX)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_BUS_RSE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_EC_REF_LOOPBACK)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_DMIC_AND_EC_REF_LOOPBACK)},
     {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_QMIC_AND_EC_REF_LOOPBACK)},
@@ -1404,6 +1414,9 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_REAR_SEAT)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_BUS)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD_BUS_REAR_SEAT)},
 };
 
 static const struct name_to_index usecase_type_index[USECASE_TYPE_MAX] = {
@@ -2619,6 +2632,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_CAMCORDER_SELFIE_PORTRAIT] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_VOICE_HEARING_AID] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_BUS] = strdup("TERT_TDM_TX_0");
+    hw_interface_table[SND_DEVICE_IN_BUS_PAX] = strdup("QUAT_TDM_TX_0");
+    hw_interface_table[SND_DEVICE_IN_BUS_RSE] = strdup("QUIN_TDM_TX_0");
     hw_interface_table[SND_DEVICE_IN_CALL_PROXY] = strdup("CALL_PROXY_TX");
     hw_interface_table[SND_DEVICE_IN_ICC] = strdup("TERT_TDM_TX_0");
     hw_interface_table[SND_DEVICE_OUT_ICC] = strdup("TERT_TDM_RX_0");

@@ -164,6 +164,9 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_VOIP_TX),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_HW_AV_SYNC),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_DIRECT),
+    STRING_TO_ENUM(AUDIO_INPUT_FLAG_PRIMARY),
+    STRING_TO_ENUM(AUDIO_INPUT_FLAG_FRONT_PASSENGER),
+    STRING_TO_ENUM(AUDIO_INPUT_FLAG_REAR_SEAT),
 };
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
