@@ -139,6 +139,11 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
                                      PAL_PARAM_ID_TTY_MODE, params);
                 free(params);
                 params = nullptr;
+
+                /*need to device switch for hco and vco*/
+                if (tty_mode == PAL_TTY_VCO || tty_mode == PAL_TTY_HCO) {
+                    VoiceSetDevice(&voice_.session[i]);
+                }
             }
         }
     }
@@ -467,10 +472,17 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     streamAttributes.type = PAL_STREAM_VOICE_CALL;
     streamAttributes.info.voice_call_info.VSID = session->vsid;
     streamAttributes.info.voice_call_info.tty_mode = session->tty_mode;
+    /*device overrides for specific use cases*/
     if (mode_ == AUDIO_MODE_CALL_SCREEN) {
         ALOGD("%s: in call screen mode", __func__);
         palDevices[0].id = PAL_DEVICE_IN_PROXY;  //overwrite the device with proxy dev
         palDevices[1].id = PAL_DEVICE_OUT_PROXY;  //overwrite the device with proxy dev
+    }
+    if (streamAttributes.info.voice_call_info.tty_mode == PAL_TTY_HCO) {
+        palDevices[1].id = PAL_DEVICE_OUT_HANDSET;  //overwrite the device for HCO
+    }
+    if (streamAttributes.info.voice_call_info.tty_mode == PAL_TTY_VCO) {
+        palDevices[0].id = PAL_DEVICE_IN_HANDSET_MIC;  //overwrite the device for VCO
     }
     streamAttributes.direction = PAL_AUDIO_INPUT_OUTPUT;
     streamAttributes.in_media_config.sample_rate = 48000;
@@ -601,11 +613,17 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     palDevices[1].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
     palDevices[1].address.card_id = adevice->usb_card_id_;
     palDevices[1].address.device_num =adevice->usb_dev_num_;
-
+    /*device overwrites for usecases*/
     if (mode_ == AUDIO_MODE_CALL_SCREEN) {
         ALOGD("%s: in call screen mode", __func__);
         palDevices[0].id = PAL_DEVICE_IN_PROXY;  //overwrite the device with proxy dev
         palDevices[1].id = PAL_DEVICE_OUT_PROXY;  //overwrite the device with proxy dev
+    }
+    if (session->tty_mode == PAL_TTY_HCO) {
+        palDevices[1].id = PAL_DEVICE_OUT_HANDSET;  //overwrite the device for HCO
+    }
+    if (session->tty_mode == PAL_TTY_VCO) {
+        palDevices[0].id = PAL_DEVICE_IN_HANDSET_MIC;  //overwrite the device for VCO
     }
 
     if (session && session->pal_voice_handle) {
