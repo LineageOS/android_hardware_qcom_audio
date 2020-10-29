@@ -728,9 +728,18 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     }
     audio_extn_sound_trigger_init(adev_);
     AudioExtn::hfp_feature_init(property_get_bool("vendor.audio.feature.hfp.enable", false));
+    AudioExtn::audio_extn_kpi_optimize_feature_init(
+            property_get_bool("vendor.audio.feature.kpi_optimize.enable", false));
     /* no feature configurations yet */
     AudioExtn::battery_listener_feature_init(true);
     AudioExtn::battery_properties_listener_init(adev_on_battery_status_changed);
+    AudioExtn::audio_extn_perf_lock_init();
+    adev_->perf_lock_opts[0] = 0x40400000;
+    adev_->perf_lock_opts[1] = 0x1;
+    adev_->perf_lock_opts[2] = 0x40C00000;
+    adev_->perf_lock_opts[3] = 0x1;
+    adev_->perf_lock_opts_size = 4;
+
     audio_extn_hidl_init();
     voice_ = VoiceInit();
     mute_ = false;

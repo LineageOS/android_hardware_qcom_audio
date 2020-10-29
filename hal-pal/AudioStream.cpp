@@ -88,6 +88,24 @@ int StreamPrimary::GetUseCase()
     return usecase_;
 }
 
+bool StreamPrimary::AcquirePerfLock()
+{
+    if (!pal_stream_handle_ || !stream_started_) { // use-case is being setup
+        std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+        AudioExtn::audio_extn_perf_lock_acquire(&adevice->perf_lock_handle, 0,
+                adevice->perf_lock_opts, adevice->perf_lock_opts_size);
+        return true;
+    }
+
+    return false;
+}
+
+void StreamPrimary::ReleasePerfLock()
+{
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    AudioExtn::audio_extn_perf_lock_release(&adevice->perf_lock_handle);
+}
+
 #if 0
 static pal_stream_type_t GetPalStreamType(audio_output_flags_t flags) {
     std::ignore = flags;
@@ -2057,14 +2075,19 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
     struct pal_buffer palBuffer;
     int local_bytes_written = 0;
     uint32_t frames;
+    bool is_perf_lock_acquired = false;
 
     palBuffer.buffer = (void*)buffer;
     palBuffer.size = bytes;
     palBuffer.offset = 0;
 
     ALOGV("%s: handle_ %x Bytes:(%zu)", __func__, handle_, bytes);
+    is_perf_lock_acquired = AcquirePerfLock();
+
     if (!pal_stream_handle_) {
+        ATRACE_BEGIN("hal: pal_stream_open");
         ret = Open();
+        ATRACE_END();
         if (ret) {
             ALOGE("%s: failed to open stream.", __func__);
             return -EINVAL;
@@ -2080,12 +2103,14 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
             }
         }
 
+        ATRACE_BEGIN("hal: pal_stream_start");
         ret = pal_stream_start(pal_stream_handle_);
         if (ret) {
             ALOGE("%s:failed to start stream. ret=%d", __func__, ret);
             pal_stream_close(pal_stream_handle_);
             pal_stream_handle_ = NULL;
-            return -EINVAL;
+            ATRACE_END();
+            goto exit;
         }
 
         stream_started_ = true;
@@ -2098,6 +2123,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
             ret = StartOffloadVisualizer(handle_, pal_stream_handle_);
         }
 
+        ATRACE_END();
     }
     if (streamAttributes_.type == PAL_STREAM_COMPRESSED &&
                                       sendGaplessMetadata) {
@@ -2123,6 +2149,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
         sendGaplessMetadata = false;
     }
 
+    ATRACE_BEGIN("hal: pal_stream_write");
     if (halInputFormat != halOutputFormat && convertBuffer != NULL) {
         frames = bytes / (format_to_bitwidth_table[halInputFormat]/8);
         memcpy_by_audio_format(convertBuffer, halOutputFormat, buffer, halInputFormat,
@@ -2137,6 +2164,11 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
     }
     total_bytes_written_ += local_bytes_written;
     clock_gettime(CLOCK_MONOTONIC, &writeAt);
+    ATRACE_END();
+
+exit:
+    if (is_perf_lock_acquired)
+        ReleasePerfLock();
     return local_bytes_written;
 }
 
@@ -2935,12 +2967,15 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     ssize_t size = 0;
     struct pal_buffer palBuffer;
     uint32_t local_bytes_read = 0;
+    bool is_perf_lock_acquired = false;
+
     palBuffer.buffer = (void*)buffer;
     palBuffer.size = bytes;
     palBuffer.offset = 0;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     ALOGV("%s: Bytes:(%zu)", __func__, bytes);
+    is_perf_lock_acquired = AcquirePerfLock();
     if (!pal_stream_handle_) {
         ret = Open();
     }
@@ -2978,7 +3013,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
             ALOGE("%s:failed to start stream. ret=%d", __func__, ret);
             pal_stream_close(pal_stream_handle_);
             pal_stream_handle_ = NULL;
-            return -EINVAL;
+            goto exit;
         }
         stream_started_ = true;
         /* set cached volume if any, dont return failure back up */
@@ -3019,6 +3054,8 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
 exit:
     ALOGV("%s: Exit, bytes read %u", __func__, local_bytes_read);
 
+    if (is_perf_lock_acquired)
+        ReleasePerfLock();
     return local_bytes_read;
 }
 

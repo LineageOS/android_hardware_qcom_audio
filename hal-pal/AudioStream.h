@@ -421,6 +421,8 @@ protected:
     int usecase_;
     struct pal_volume_data *volume_; /* used to cache volume */
     std::map <audio_devices_t, pal_device_id_t> mAndroidDeviceMap;
+    bool AcquirePerfLock();
+    void ReleasePerfLock();
 };
 
 class StreamOutPrimary : public StreamPrimary {

@@ -47,6 +47,7 @@
 #define COMPRESS_VOIP_IO_BUF_SIZE_WB 640
 #define COMPRESS_VOIP_IO_BUF_SIZE_SWB 1280
 #define COMPRESS_VOIP_IO_BUF_SIZE_FB 1920
+#define MAX_PERF_LOCK_OPTS 20
 
 class AudioPatch{
     public:
@@ -124,6 +125,9 @@ public:
     std::mutex adev_init_mutex;
     uint32_t adev_init_ref_count = 0;
     hw_device_t *GetAudioDeviceCommon();
+    int perf_lock_handle;
+    int perf_lock_opts[MAX_PERF_LOCK_OPTS];
+    int perf_lock_opts_size;
 protected:
     AudioDevice(){}
     std::shared_ptr<AudioVoice> VoiceInit();
