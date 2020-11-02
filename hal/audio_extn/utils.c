@@ -2720,8 +2720,8 @@ int audio_extn_utils_pcm_get_dsp_presentation_pos(struct stream_out *out __unuse
 #endif
 
 #define MAX_SND_CARD 8
-#define RETRY_US 1000000
-#define RETRY_NUMBER 40
+#define RETRY_US 400000
+#define RETRY_NUMBER 100
 #define PLATFORM_INFO_XML_PATH          "audio_platform_info.xml"
 #define PLATFORM_INFO_XML_BASE_STRING   "audio_platform_info"
 
