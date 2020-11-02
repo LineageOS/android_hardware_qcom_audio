@@ -9861,7 +9861,7 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
     struct audio_device_config_param *adev_device_cfg_ptr = adev->device_cfg_params;
     int controller = -1;
     int stream = -1;
-
+    bool combo_in_use = false;
 
     /*BT devices backend is not configured from HAL hence skip*/
     if (snd_device == SND_DEVICE_OUT_BT_A2DP ||
@@ -9976,6 +9976,9 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                 uc = node_to_item(node, struct audio_usecase, list);
                 struct stream_out *curr_out =
                     (struct stream_out*) uc->stream.out;
+                if (check_hdset_combo_device(uc->out_snd_device) &&
+                        spkr_hph_single_be_native_concurrency)
+                    combo_in_use = true;
 
                 /*if native audio playback
                 * is active then it will take priority
@@ -9984,7 +9987,13 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
                     if (is_offload_usecase(uc->id) &&
                         (curr_out->sample_rate % OUTPUT_SAMPLING_RATE_44100 == 0)) {
                         ALOGD("%s:napb:native stream detected %d sampling rate", __func__, curr_out->sample_rate);
-                        sample_rate = curr_out->sample_rate;
+                        if (combo_in_use && spkr_hph_single_be_native_concurrency) {
+                            ALOGE("%s: native playback loses priority due to spkr_hph_single_be.\n",
+                                    __func__);
+                        } else {
+                            ALOGI("%s: native sample rate activates.\n", __func__);
+                            sample_rate = curr_out->sample_rate;
+                        }
                     }
                 }
 
@@ -10045,9 +10054,10 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
 
         /*set sample rate to 48khz if multiple sample rates are not supported in spkr and hdset*/
         if (is_hdset_combo_device(&usecase->device_list) &&
-            !my_data->is_multiple_sample_rate_combo_supported)
+            !my_data->is_multiple_sample_rate_combo_supported) {
             sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
             ALOGD("%s:becf: afe: set default Sample Rate(48k) for combo device",__func__);
+        }
     }
 
     if (backend_idx != platform_get_voice_call_backend(adev)
