@@ -46,6 +46,8 @@
         <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_SPEAKER_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_BUS" acdb_id="11"/>
+        <device name="SND_DEVICE_IN_BUS_PAX" acdb_id="11"/>
+        <device name="SND_DEVICE_IN_BUS_RSE" acdb_id="11"/>
         <device name="SND_DEVICE_IN_HEADSET_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_VOICE_HEADSET_MIC" acdb_id="95"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" acdb_id="95"/>
@@ -118,6 +120,9 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_MMAP" type="out" id="28" />
         <usecase name="USECASE_AUDIO_RECORD_MMAP" type="in" id="28" />
         <usecase name="USECASE_AUDIO_RECORD" type="in" id="0" />
+        <usecase name="USECASE_AUDIO_RECORD_BUS" type="in" id="0" />
+        <usecase name="USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER" type="in" id="55" />
+        <usecase name="USECASE_AUDIO_RECORD_BUS_REAR_SEAT" type="in" id="54" />
         <usecase name="USECASE_AUDIO_HFP_SCO" type="in" id="29" />
         <usecase name="USECASE_AUDIO_HFP_SCO" type="out" id="29" />
         <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="in" id="29" />
@@ -173,6 +178,9 @@
         <device name="SND_DEVICE_IN_HANDSET_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_SPEAKER_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_HEADSET_MIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_BUS" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_BUS_PAX" interface="QUAT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_BUS_RSE" interface="QUIN_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_VOICE_HEADSET_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP" interface="TERT_TDM_TX_0"/>
