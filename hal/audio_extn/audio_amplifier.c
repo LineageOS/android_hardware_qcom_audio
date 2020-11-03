@@ -151,6 +151,14 @@ int amplifier_in_set_parameters(struct str_parms *parms)
     return 0;
 }
 
+int amplifier_set_feedback(void* adev, uint32_t devices, bool enable)
+{
+    amp.adev = (struct audio_device*)adev;
+    if (amp.hw && amp.hw->set_feedback)
+        return amp.hw->set_feedback(amp.hw, amp.adev, devices, enable);
+    return 0;
+}
+
 int amplifier_close(void)
 {
     if (amp.hw)
