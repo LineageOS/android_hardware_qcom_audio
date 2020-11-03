@@ -37,6 +37,7 @@
 #include <log/log.h>
 #include <utils/Trace.h>
 #include <cutils/properties.h>
+#include <inttypes.h>
 
 #include <chrono>
 #include <thread>
@@ -114,12 +115,12 @@ std::shared_ptr<audio_hw_device_t> AudioDevice::device_ = nullptr;
 
 static int32_t pal_callback(pal_stream_handle_t *stream_handle,
                             uint32_t event_id, uint32_t *event_data,
-                            uint32_t event_size, void *cookie)
+                            uint32_t event_size, uint64_t cookie)
 {
     stream_callback_event_t event;
-    StreamOutPrimary *astream_out = static_cast<StreamOutPrimary *> (cookie);
+    StreamOutPrimary *astream_out = reinterpret_cast<StreamOutPrimary *> (cookie);
 
-    AHAL_VERBOSE("stream_handle (%p), event_id (%x), event_data (%p), cookie (%p)"
+    AHAL_VERBOSE("stream_handle (%p), event_id (%x), event_data (%p), cookie %" PRIu64
           "event_size (%d)", stream_handle, event_id, event_data,
            cookie, event_size);
 
@@ -1917,10 +1918,9 @@ int StreamOutPrimary::Open() {
     int ret = -EINVAL;
     uint8_t channels = 0;
     struct pal_channel_info ch_info = {0, {0}};
-    uint32_t inBufSize = 0;
     uint32_t outBufSize = 0;
-    uint32_t inBufCount = NO_OF_BUF;
     uint32_t outBufCount = NO_OF_BUF;
+    struct pal_buffer_config outBufCfg = {0, 0, 0};
 
     AHAL_DBG("Enter OutPrimary ");
 
@@ -1986,7 +1986,7 @@ int StreamOutPrimary::Open() {
                           0,
                           NULL,
                           &pal_callback,
-                          (void *)this,
+                          (uint64_t)this,
                           &pal_stream_handle_);
 
     AHAL_DBG("(%x:ret)",ret);
@@ -2060,10 +2060,10 @@ int StreamOutPrimary::Open() {
     fragment_size_ = outBufSize;
     fragments_ = outBufCount;
 
-    AHAL_DBG("fragment_size_ %d fragments_ %d",fragment_size_, fragments_);
-
-    ret = pal_stream_set_buffer_size(pal_stream_handle_, (size_t*)&inBufSize,
-            inBufCount, (size_t*)&outBufSize, outBufCount);
+    AHAL_DBG("fragment_size_ %d fragments_ %d", fragment_size_, fragments_);
+    outBufCfg.buf_size = fragment_size_;
+    outBufCfg.buf_count = fragments_;
+    ret = pal_stream_set_buffer_size(pal_stream_handle_, NULL, &outBufCfg);
     if (ret) {
         AHAL_ERR("Pal Stream set buffer size Error  (%x)", ret);
     }
@@ -2132,7 +2132,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
     uint32_t frames;
     bool is_perf_lock_acquired = false;
 
-    palBuffer.buffer = (void*)buffer;
+    palBuffer.buffer = (uint8_t*)buffer;
     palBuffer.size = bytes;
     palBuffer.offset = 0;
 
@@ -2209,7 +2209,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
         frames = bytes / (format_to_bitwidth_table[halInputFormat]/8);
         memcpy_by_audio_format(convertBuffer, halOutputFormat, buffer, halInputFormat,
                                frames);
-        palBuffer.buffer = convertBuffer;
+        palBuffer.buffer = (uint8_t *)convertBuffer;
         palBuffer.size = frames * (format_to_bitwidth_table[halOutputFormat]/8);
         local_bytes_written = pal_stream_write(pal_stream_handle_, &palBuffer);
         local_bytes_written = (local_bytes_written * (format_to_bitwidth_table[halInputFormat]/8)) /
@@ -2815,9 +2815,8 @@ int StreamInPrimary::Open() {
     uint8_t channels = 0;
     struct pal_channel_info ch_info = {0, {0}};
     uint32_t inBufSize = 0;
-    uint32_t outBufSize = 0;
     uint32_t inBufCount = NO_OF_BUF;
-    uint32_t outBufCount = NO_OF_BUF;
+    struct pal_buffer_config inBufCfg = {0, 0, 0};
     void *handle = nullptr;
 
     AHAL_DBG("Enter InPrimary");
@@ -2936,7 +2935,7 @@ int StreamInPrimary::Open() {
                          0,
                          NULL,
                          &pal_callback,
-                         (void *)this,
+                         (uint64_t)this,
                          &pal_stream_handle_);
 
     AHAL_DBG("(%x:ret)", ret);
@@ -2961,7 +2960,10 @@ set_buff_size:
     } else
         inBufSize = StreamInPrimary::GetBufferSize();
     if (!handle) {
-        ret = pal_stream_set_buffer_size(pal_stream_handle_,(size_t*)&inBufSize,inBufCount,(size_t*)&outBufSize,outBufCount);
+        inBufCfg.buf_size = inBufSize;
+        inBufCfg.buf_count = inBufCount;
+        ret = pal_stream_set_buffer_size(pal_stream_handle_, &inBufCfg, NULL);
+        inBufSize = inBufCfg.buf_size;
         if (ret) {
             AHAL_ERR("Pal Stream set buffer size Error  (%x)", ret);
         }
@@ -3053,7 +3055,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     uint32_t local_bytes_read = 0;
     bool is_perf_lock_acquired = false;
 
-    palBuffer.buffer = (void*)buffer;
+    palBuffer.buffer = (uint8_t *)buffer;
     palBuffer.size = bytes;
     palBuffer.offset = 0;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();

@@ -317,6 +317,7 @@ void *capture_thread_loop(void *arg)
     struct pal_device devices;
     struct pal_channel_info ch_info;
     uint32_t in_buff_size = AUDIO_CAPTURE_PERIOD_SIZE * AUDIO_CAPTURE_CHANNEL_COUNT * sizeof(int16_t);
+    struct pal_buffer_config in_buffer_cfg = {0, 0, 0};
     uint32_t in_buff_count = 1;
     struct pal_buffer in_buffer;
     ssize_t read_status = 0;
@@ -360,14 +361,15 @@ void *capture_thread_loop(void *arg)
                     0,
                     NULL,
                     NULL,
-                    NULL,
+                    0,
                     &in_stream_handle);
                 if (ret == 0 && in_stream_handle) {
+                    in_buffer_cfg.buf_size = in_buff_size;
+                    in_buffer_cfg.buf_count = in_buff_count;
                     ret = pal_stream_set_buffer_size(in_stream_handle,
-                        (size_t*)&in_buff_size,
-                        in_buff_count,
-                        NULL,
-                        0);
+                        &in_buffer_cfg,
+                        NULL);
+                    in_buff_size = in_buffer_cfg.buf_size;
                     if(ret != 0)
                     {
                         ALOGW("%s: pal_stream_set_buffer_size failed with err=%d", __func__, ret);

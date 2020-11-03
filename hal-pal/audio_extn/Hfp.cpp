@@ -256,7 +256,7 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
             0,
             NULL,
             NULL,
-            NULL,
+            0,
             &hfpmod.rx_stream_handle);
     if (ret != 0) {
         AHAL_ERR("HFP rx stream (BT SCO->Spkr) open failed, rc %d", ret);
@@ -296,7 +296,7 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
             0,
             NULL,
             NULL,
-            NULL,
+            0,
             &hfpmod.tx_stream_handle);
     if (ret != 0) {
         AHAL_ERR("HFP tx stream (Mic->BT SCO) open failed, rc %d", ret);

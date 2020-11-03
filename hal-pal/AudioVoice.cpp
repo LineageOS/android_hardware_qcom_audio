@@ -538,7 +538,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
                           0,
                           NULL,
                           NULL,//callback
-                          (void *)this,
+                          (uint64_t)this,
                           &session->pal_voice_handle);// Need to add this to the audio stream structure.
 
     AHAL_DBG("pal_stream_open() ret:%d", ret);
