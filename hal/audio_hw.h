@@ -248,6 +248,8 @@ enum {
     USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER,
     USECASE_AUDIO_RECORD_BUS_REAR_SEAT,
 
+    USECASE_AUDIO_PLAYBACK_SYNTHESIZER,
+
     /*Audio FM Tuner usecase*/
     USECASE_AUDIO_FM_TUNER_EXT,
     /*voip usecase with low latency path*/
@@ -558,6 +560,7 @@ typedef enum {
     TRANSCODE_LOOPBACK_TX,
     PCM_PASSTHROUGH,
     ICC_CALL,
+    SYNTH_LOOPBACK,
     USECASE_TYPE_MAX
 } usecase_type_t;
 

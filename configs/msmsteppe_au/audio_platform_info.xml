@@ -43,6 +43,7 @@
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_HFP" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_STEREO" acdb_id="94"/>
+        <device name="SND_DEVICE_OUT_ICC" acdb_id="16"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_SPEAKER_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_BUS" acdb_id="11"/>
@@ -59,6 +60,7 @@
         <device name="SND_DEVICE_IN_SPEAKER_DMIC" acdb_id="80"/>
         <device name="SND_DEVICE_IN_QUAD_MIC" acdb_id="47"/>
         <device name="SND_DEVICE_IN_HANDSET_QMIC" acdb_id="47"/>
+        <device name="SND_DEVICE_IN_ICC" acdb_id="46"/>
     </acdb_ids>
 
     <module_ids>
@@ -131,6 +133,8 @@
         <usecase name="USECASE_AUDIO_HFP_SCO_DOWNLINK" type="out" id="36" />
         <usecase name="USECASE_AUDIO_HFP_SCO_WB_DOWNLINK" type="in" id="36" />
         <usecase name="USECASE_AUDIO_HFP_SCO_WB_DOWNLINK" type="out" id="36" />
+        <usecase name="USECASE_ICC_CALL" type="in" id="33" />
+        <usecase name="USECASE_ICC_CALL" type="out" id="33" />
     </pcm_ids>
 
     <config_params>
@@ -175,6 +179,7 @@
         <device name="SND_DEVICE_OUT_BUS_PHN" interface="TERT_TDM_RX_2"/>
         <device name="SND_DEVICE_OUT_BUS_PAX" interface="QUAT_TDM_RX_0"/>
         <device name="SND_DEVICE_OUT_BUS_RSE" interface="QUAT_TDM_RX_1"/>
+        <device name="SND_DEVICE_OUT_ICC" interface="TERT_TDM_RX_0"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_SPEAKER_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_HEADSET_MIC" interface="TERT_TDM_TX_0"/>
@@ -190,6 +195,7 @@
         <device name="SND_DEVICE_IN_SPEAKER_DMIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_QUAD_MIC" interface="TERT_TDM_TX_0"/>
         <device name="SND_DEVICE_IN_HANDSET_QMIC" interface="TERT_TDM_TX_0"/>
+        <device name="SND_DEVICE_IN_ICC" interface="TERT_TDM_TX_0"/>
         <!-- multi-mic surround ECNS mixer path definition -->
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP_MMSECNS" backend="bt-sco-mmsecns" interface="TERT_TDM_TX_0"/>
     </backend_names>

@@ -426,6 +426,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_RECORD_BUS] = "audio-record",
     [USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER] = "front-passenger-record",
     [USECASE_AUDIO_RECORD_BUS_REAR_SEAT] = "rear-seat-record",
+    [USECASE_AUDIO_PLAYBACK_SYNTHESIZER] = "synth-loopback",
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -2725,7 +2726,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     if ((usecase->type == VOICE_CALL) ||
         (usecase->type == VOIP_CALL)  ||
         (usecase->type == PCM_HFP_CALL)||
-        (usecase->type == ICC_CALL)) {
+        (usecase->type == ICC_CALL) ||
+        (usecase->type == SYNTH_LOOPBACK)) {
         if(usecase->stream.out == NULL) {
             ALOGE("%s: stream.out is NULL", __func__);
             return -EINVAL;
