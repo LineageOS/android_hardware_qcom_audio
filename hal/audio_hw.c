@@ -961,6 +961,8 @@ static void check_and_configure_headphone(struct audio_device *adev,
                     disable_audio_route(adev, usecase);
                     disable_snd_device(adev, usecase->out_snd_device);
                     usecase->stream.out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                    platform_check_and_set_codec_backend_cfg(adev, usecase,
+                                                            usecase->out_snd_device);
                     enable_audio_route(adev, usecase);
                     enable_snd_device(adev, usecase->out_snd_device);
                 }
