@@ -50,6 +50,9 @@
         <usecase name="USECASE_VOICEMMODE2_CALL" type="out" id="35"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="27" />
         <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="27" />
+        <usecase name="USECASE_INCALL_REC_UPLINK" type="in" id="14" />
+        <usecase name="USECASE_INCALL_REC_DOWNLINK" type="in" id="14" />
+        <usecase name="USECASE_INCALL_REC_UPLINK_AND_DOWNLINK" type="in" id="14" />
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsa881x.0f"/>
