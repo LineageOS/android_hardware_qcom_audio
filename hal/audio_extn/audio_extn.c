@@ -4751,6 +4751,7 @@ void audio_extn_a2dp_init(void *adev)
         a2dp_offload_init_config_t a2dp_init_config;
         a2dp_init_config.fp_platform_get_pcm_device_id = platform_get_pcm_device_id;
         a2dp_init_config.fp_check_a2dp_restore_l = check_a2dp_restore_l;
+        a2dp_init_config.fp_platform_switch_voice_call_device_post = platform_switch_voice_call_device_post;
 
         a2dp_init(adev, a2dp_init_config);
     }
@@ -6086,6 +6087,9 @@ static auto_hal_get_car_audio_stream_from_address_t auto_hal_get_car_audio_strea
 typedef int (*auto_hal_open_output_stream_t)(struct stream_out*);
 static auto_hal_open_output_stream_t auto_hal_open_output_stream;
 
+typedef int (*auto_hal_open_input_stream_t)(struct stream_in*);
+static auto_hal_open_input_stream_t auto_hal_open_input_stream;
+
 typedef bool (*auto_hal_is_bus_device_usecase_t)(audio_usecase_t);
 static auto_hal_is_bus_device_usecase_t auto_hal_is_bus_device_usecase;
 
@@ -6117,6 +6121,10 @@ typedef snd_device_t (*auto_hal_get_output_snd_device_t)(struct audio_device*,
                                 audio_usecase_t);
 static auto_hal_get_output_snd_device_t auto_hal_get_output_snd_device;
 
+typedef snd_device_t (*auto_hal_get_snd_device_for_car_audio_stream_t)(int
+                                car_audio_stream);
+static auto_hal_get_snd_device_for_car_audio_stream_t auto_hal_get_snd_device_for_car_audio_stream;
+
 int auto_hal_feature_init(bool is_feature_enabled)
 {
     ALOGD("%s: Called with feature %s", __func__,
@@ -6146,6 +6154,9 @@ int auto_hal_feature_init(bool is_feature_enabled)
             !(auto_hal_open_output_stream =
                  (auto_hal_open_output_stream_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_open_output_stream")) ||
+            !(auto_hal_open_input_stream =
+                 (auto_hal_open_input_stream_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_open_input_stream")) ||
             !(auto_hal_is_bus_device_usecase =
                  (auto_hal_is_bus_device_usecase_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_is_bus_device_usecase")) ||
@@ -6169,7 +6180,10 @@ int auto_hal_feature_init(bool is_feature_enabled)
                             auto_hal_lib_handle, "auto_hal_get_input_snd_device")) ||
             !(auto_hal_get_output_snd_device =
                  (auto_hal_get_output_snd_device_t)dlsym(
-                            auto_hal_lib_handle, "auto_hal_get_output_snd_device"))) {
+                            auto_hal_lib_handle, "auto_hal_get_output_snd_device")) ||
+            !(auto_hal_get_snd_device_for_car_audio_stream =
+                 (auto_hal_get_snd_device_for_car_audio_stream_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_get_snd_device_for_car_audio_stream"))) {
             ALOGE("%s: dlsym failed", __func__);
             goto feature_disabled;
         }
@@ -6189,6 +6203,7 @@ feature_disabled:
     auto_hal_release_audio_patch = NULL;
     auto_hal_get_car_audio_stream_from_address = NULL;
     auto_hal_open_output_stream = NULL;
+    auto_hal_open_input_stream = NULL;
     auto_hal_is_bus_device_usecase = NULL;
     auto_hal_get_audio_port = NULL;
     auto_hal_set_audio_port_config = NULL;
@@ -6197,6 +6212,7 @@ feature_disabled:
     auto_hal_stop_hfp_downlink = NULL;
     auto_hal_get_input_snd_device = NULL;
     auto_hal_get_output_snd_device = NULL;
+    auto_hal_get_snd_device_for_car_audio_stream = NULL;
 
     ALOGW(":: %s: ---- Feature AUTO_HAL is disabled ----", __func__);
     return -ENOSYS;
@@ -6267,6 +6283,12 @@ int audio_extn_auto_hal_open_output_stream(struct stream_out *out)
                             auto_hal_open_output_stream(out): -ENOSYS);
 }
 
+int audio_extn_auto_hal_open_input_stream(struct stream_in *in)
+{
+    return ((auto_hal_open_input_stream) ?
+                            auto_hal_open_input_stream(in): -ENOSYS);
+}
+
 bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id)
 {
     return ((auto_hal_is_bus_device_usecase) ?
@@ -6321,7 +6343,97 @@ snd_device_t audio_extn_auto_hal_get_output_snd_device(struct audio_device *adev
     return ((auto_hal_get_output_snd_device) ?
                             auto_hal_get_output_snd_device(adev, uc_id): SND_DEVICE_NONE);
 }
+
+snd_device_t audio_extn_auto_hal_get_snd_device_for_car_audio_stream(int car_audio_stream)
+{
+    return ((auto_hal_get_snd_device_for_car_audio_stream) ?
+                            auto_hal_get_snd_device_for_car_audio_stream(car_audio_stream): SND_DEVICE_NONE);
+}
 // END: AUTO_HAL ===================================================================
+
+// START: Synth ======================================================================
+#ifdef __LP64__
+#define SYNTH_LIB_PATH "/vendor/lib64/libsynth.so"
+#else
+#define SYNTH_LIB_PATH "/vendor/lib/libsynth.so"
+#endif
+
+static void *synth_lib_handle = NULL;
+
+typedef void (*synth_init_t)(synth_init_config_t);
+static synth_init_t synth_init;
+
+typedef bool (*synth_is_active_t)(struct audio_device *adev);
+static synth_is_active_t synth_is_active;
+
+typedef void (*synth_set_parameters_t)(struct audio_device *adev,
+                                           struct str_parms *parms);
+static synth_set_parameters_t synth_set_parameters;
+
+int synth_feature_init(bool is_feature_enabled)
+{
+    ALOGD("%s: Called with feature %s", __func__,
+                  is_feature_enabled ? "Enabled" : "NOT Enabled");
+    if (is_feature_enabled) {
+        // dlopen lib
+        synth_lib_handle = dlopen(SYNTH_LIB_PATH, RTLD_NOW);
+
+        if (!synth_lib_handle) {
+            ALOGE("%s: dlopen failed", __func__);
+            goto feature_disabled;
+        }
+        if (!(synth_init = (synth_init_t)dlsym(
+                            synth_lib_handle, "synth_init")) ||
+            !(synth_is_active =
+                 (synth_is_active_t)dlsym(
+                            synth_lib_handle, "synth_is_active")) ||
+            !(synth_set_parameters =
+                 (synth_set_parameters_t)dlsym(
+                            synth_lib_handle, "synth_set_parameters"))) {
+            ALOGE("%s: dlsym failed", __func__);
+            goto feature_disabled;
+        }
+        synth_init_config_t init_config;
+        init_config.fp_platform_get_pcm_device_id = platform_get_pcm_device_id;
+        init_config.fp_get_usecase_from_list = get_usecase_from_list;
+        init_config.fp_select_devices = select_devices;
+        init_config.fp_disable_audio_route = disable_audio_route;
+        init_config.fp_disable_snd_device = disable_snd_device;
+
+        synth_init(init_config);
+        ALOGD("%s:: ---- Feature Synth is Enabled ----", __func__);
+        return 0;
+    }
+
+feature_disabled:
+    if (synth_lib_handle) {
+        dlclose(synth_lib_handle);
+        synth_lib_handle = NULL;
+    }
+
+    synth_init = NULL;
+    synth_is_active = NULL;
+    synth_set_parameters = NULL;
+
+    ALOGW(":: %s: ---- Feature Synth is disabled ----", __func__);
+    return -ENOSYS;
+}
+
+bool audio_extn_synth_is_active(struct audio_device *adev)
+{
+    return ((synth_is_active) ?
+                    synth_is_active(adev): false);
+}
+
+void audio_extn_synth_set_parameters(struct audio_device *adev,
+                                           struct str_parms *parms)
+{
+    ((synth_set_parameters) ?
+                    synth_set_parameters(adev, parms): NULL);
+}
+
+// END: Synth ========================================================================
+
 
 void audio_extn_feature_init()
 {
@@ -6444,6 +6556,9 @@ void audio_extn_feature_init()
     auto_hal_feature_init(
         property_get_bool("vendor.audio.feature.auto_hal.enable",
                            false));
+    synth_feature_init(
+        property_get_bool("vendor.audio.feature.synth.enable",
+                       false));
 }
 
 void audio_extn_set_parameters(struct audio_device *adev,
@@ -6477,6 +6592,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_ffv_set_parameters(adev, parms);
    audio_extn_ext_hw_plugin_set_parameters(adev->ext_hw_plugin, parms);
    audio_extn_icc_set_parameters(adev, parms);
+   audio_extn_synth_set_parameters(adev, parms);
 }
 
 void audio_extn_get_parameters(const struct audio_device *adev,

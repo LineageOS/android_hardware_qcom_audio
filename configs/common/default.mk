@@ -1,9 +1,5 @@
 # for HIDL related packages
-PRODUCT_PACKAGES += \
-    android.hardware.audio@2.0-service \
-    vendor.qti.hardware.audiohalext@1.0 \
-    vendor.qti.hardware.audiohalext@1.0-impl \
-    vendor.qti.hardware.audiohalext-utils
+PRODUCT_PACKAGES += android.hardware.audio@2.0-service
 
 # enable audio hidl hal 5.0
 PRODUCT_PACKAGES += \
@@ -27,3 +23,6 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     android.hardware.soundtrigger@2.2-impl \
 
+# enable sound trigger hidl hal 2.3
+PRODUCT_PACKAGES += \
+    android.hardware.soundtrigger@2.3-impl \

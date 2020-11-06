@@ -309,6 +309,35 @@ int auto_hal_get_car_audio_stream_from_address(const char *address)
     return (0x1 << bus_num);
 }
 
+int auto_hal_open_input_stream(struct stream_in *in)
+{
+    int ret = 0;
+
+    switch(in->car_audio_stream) {
+    case CAR_AUDIO_STREAM_IN_PRIMARY:
+        in->usecase = USECASE_AUDIO_RECORD_BUS;
+        if (in->flags == AUDIO_INPUT_FLAG_NONE)
+            in->flags |= AUDIO_INPUT_FLAG_PRIMARY;
+        break;
+    case CAR_AUDIO_STREAM_IN_FRONT_PASSENGER:
+        in->usecase = USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER;
+        if (in->flags == AUDIO_INPUT_FLAG_NONE)
+            in->flags |= AUDIO_INPUT_FLAG_FRONT_PASSENGER;
+        break;
+    case CAR_AUDIO_STREAM_IN_REAR_SEAT:
+        in->usecase = USECASE_AUDIO_RECORD_BUS_REAR_SEAT;
+        if (in->flags == AUDIO_INPUT_FLAG_NONE)
+            in->flags |= AUDIO_INPUT_FLAG_REAR_SEAT;
+        break;
+    default:
+        ALOGE("%s: Car audio stream 0x%x not supported", __func__,
+            in->car_audio_stream);
+        ret = -EINVAL;
+    }
+
+    return ret;
+}
+
 int auto_hal_open_output_stream(struct stream_out *out)
 {
     int ret = 0;
@@ -401,11 +430,11 @@ bool auto_hal_is_bus_device_usecase(audio_usecase_t uc_id)
     return false;
 }
 
-snd_device_t auto_hal_get_snd_device_for_car_audio_stream(struct stream_out *out)
+snd_device_t auto_hal_get_snd_device_for_car_audio_stream(int car_audio_stream)
 {
     snd_device_t snd_device = SND_DEVICE_NONE;
 
-    switch(out->car_audio_stream) {
+    switch(car_audio_stream) {
     case CAR_AUDIO_STREAM_MEDIA:
         snd_device = SND_DEVICE_OUT_BUS_MEDIA;
         break;
@@ -424,9 +453,18 @@ snd_device_t auto_hal_get_snd_device_for_car_audio_stream(struct stream_out *out
     case CAR_AUDIO_STREAM_REAR_SEAT:
         snd_device = SND_DEVICE_OUT_BUS_RSE;
         break;
+    case CAR_AUDIO_STREAM_IN_PRIMARY:
+        snd_device = SND_DEVICE_IN_BUS;
+        break;
+    case CAR_AUDIO_STREAM_IN_FRONT_PASSENGER:
+        snd_device = SND_DEVICE_IN_BUS_PAX;
+        break;
+    case CAR_AUDIO_STREAM_IN_REAR_SEAT:
+        snd_device = SND_DEVICE_IN_BUS_RSE;
+        break;
     default:
-        ALOGE("%s: Unknown car audio stream (%x)",
-            __func__, out->car_audio_stream);
+        ALOGE("%s: Unknown car audio stream (%#x)",
+            __func__, car_audio_stream);
     }
     return snd_device;
 }
@@ -737,6 +775,9 @@ snd_device_t auto_hal_get_input_snd_device(struct audio_device *adev,
         case USECASE_ICC_CALL:
             snd_device = SND_DEVICE_IN_ICC;
             break;
+        case USECASE_AUDIO_PLAYBACK_SYNTHESIZER:
+            snd_device = SND_DEVICE_IN_SYNTH_MIC;
+            break;
         default:
             ALOGE("%s: Usecase (%d) not supported", __func__, uc_id);
             return -EINVAL;
@@ -831,6 +872,9 @@ snd_device_t auto_hal_get_output_snd_device(struct audio_device *adev,
             break;
         case USECASE_ICC_CALL:
             snd_device = SND_DEVICE_OUT_ICC;
+            break;
+        case USECASE_AUDIO_PLAYBACK_SYNTHESIZER:
+            snd_device = SND_DEVICE_OUT_SYNTH_SPKR;
             break;
         default:
             ALOGE("%s: Usecase (%d) not supported", __func__, uc_id);

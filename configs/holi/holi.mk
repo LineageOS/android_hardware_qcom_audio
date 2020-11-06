@@ -44,7 +44,7 @@ AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_USB_TUNNEL := true
 AUDIO_FEATURE_ENABLED_A2DP_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_3D_AUDIO := true
-AUDIO_FEATURE_ENABLED_AHAL_EXT := true
+AUDIO_FEATURE_ENABLED_AHAL_EXT := false
 AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
 DOLBY_ENABLE := false
 endif
@@ -127,8 +127,6 @@ vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_mixer_pa
     vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_usbc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_usbc.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrdsku1.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_configs_stock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs_stock.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
@@ -170,8 +168,6 @@ vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_mixer_pa
     vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_usbc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_usbc.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_qrdsku1.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_configs.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_configs_stock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_configs_stock.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_tuning_mixer.txt
 
 # Audio configuration xml's common to Holi family
@@ -191,10 +187,6 @@ $(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
-
-# Reduce client buffer size for fast audio output tracks
-PRODUCT_PROPERTY_OVERRIDES += \
-    af.fast_track_multiplier=1
 
 # Low latency audio buffer size in frames
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -246,17 +238,9 @@ persist.vendor.audio.ras.enabled=false
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.buffer.size.kb=32
 
-#Enable offload audio video playback by default
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.video=true
-
 #Enable audio track offload by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.track.enable=true
-
-#Enable music through deep buffer
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.deep_buffer.media=true
 
 #enable voice path for PCM VoIP by default
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -333,18 +317,6 @@ vendor.audio.use.sw.mpegh.decoder=true
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
-
-#audio becoming noisy intent broadcast delay
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.sys.noisy.broadcast.delay=600
-
-#offload pausetime out duration to 3 secs to inline with other outputs
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.sys.offload.pstimeout.secs=3
-
-#Set AudioFlinger client heap size
-PRODUCT_PROPERTY_OVERRIDES += \
-ro.af.client_heap_size_kbyte=7168
 
 #Set HAL buffer size to samples equal to 3 ms
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -463,10 +435,7 @@ PRODUCT_PACKAGES += \
     android.hardware.audio.common@4.0-util \
     android.hardware.audio@4.0-impl \
     android.hardware.audio.effect@4.0 \
-    android.hardware.audio.effect@4.0-impl \
-    vendor.qti.hardware.audiohalext@1.0 \
-    vendor.qti.hardware.audiohalext@1.0-impl \
-    vendor.qti.hardware.audiohalext-utils
+    android.hardware.audio.effect@4.0-impl
 
 # enable audio hidl hal 5.0
 PRODUCT_PACKAGES += \
