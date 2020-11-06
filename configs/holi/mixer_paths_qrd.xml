@@ -2713,6 +2713,11 @@
         <path name="audio-ull-playback" />
     </path>
 
+    <path name="audio-ull-playback speaker-and-usb-headphones">
+        <path name="audio-ull-playback usb-headphones" />
+        <path name="audio-ull-playback" />
+    </path>
+
     <path name="mmap-playback">
         <ctl name="RX_CDC_DMA_RX_1 Audio Mixer MultiMedia16" value="1" />
     </path>
