@@ -50,9 +50,13 @@
 #define MA_QDSP_SET_VOL         "maxxaudio_qdsp_set_volume"
 #define MA_QDSP_SET_VOLT        "maxxaudio_qdsp_set_volume_table"
 #define MA_QDSP_SET_PARAM       "maxxaudio_qdsp_set_parameter"
+#define MA_QDSP_SET_COMMAND     "maxxaudio_qdsp_set_command"
+#define MA_QDSP_GET_COMMAND     "maxxaudio_qdsp_get_command"
 
 #define SUPPORT_DEV "18d1:5033" // Blackbird usbid
 #define SUPPORTED_USB 0x01
+
+#define WAVES_COMMAND_SIZE 10240
 
 typedef unsigned int effective_scope_flag_t;
 const effective_scope_flag_t EFFECTIVE_SCOPE_RTC = 1 << 0;   /* RTC  */
@@ -100,7 +104,7 @@ typedef struct ma_audio_cal_version {
 
 typedef struct ma_audio_cal_common_settings {
     unsigned int app_type;
-    unsigned int device;
+    struct listnode devices;
 } ma_audio_cal_common_settings_t;
 
 struct ma_audio_cal_settings {
@@ -145,6 +149,16 @@ typedef bool (*ma_set_param_t)(ma_audio_cal_handle_t,
                                const struct ma_audio_cal_settings *,
                                unsigned int, double);
 
+typedef bool (*ma_set_cmd_t)(ma_audio_cal_handle_t handle,
+                             const struct ma_audio_cal_settings *,
+                             const char*);
+
+typedef bool (*ma_get_cmd_t)(ma_audio_cal_handle_t handle,
+                             const struct ma_audio_cal_settings *,
+                             const char *,
+                             char *,
+                             uint32_t);
+
 struct ma_platform_data {
     void *waves_handle;
     void *platform;
@@ -158,6 +172,8 @@ struct ma_platform_data {
     ma_set_volume_t          ma_set_volume;
     ma_set_volume_table_t    ma_set_volume_table;
     ma_set_param_t           ma_set_param;
+    ma_set_cmd_t             ma_set_cmd;
+    ma_get_cmd_t             ma_get_cmd;
     bool speaker_lr_swap;
     bool orientation_used;
     int dispaly_orientation;
@@ -167,6 +183,9 @@ ma_audio_cal_handle_t g_ma_audio_cal_handle = NULL;
 static uint16_t g_supported_dev = 0;
 static struct ma_state ma_cur_state_table[STREAM_MAX_TYPES];
 static struct ma_platform_data *my_data = NULL;
+static char ma_command_data[WAVES_COMMAND_SIZE];
+static char ma_reply_data[WAVES_COMMAND_SIZE];
+
 // --- external function dependency ---
 fp_platform_set_parameters_t fp_platform_set_parameters;
 fp_audio_extn_get_snd_card_split_t fp_audio_extn_get_snd_card_split;
@@ -237,16 +256,16 @@ static inline bool valid_usecase(struct audio_usecase *usecase)
          (usecase->id == USECASE_AUDIO_PLAYBACK_LOW_LATENCY) ||
          (usecase->id == USECASE_AUDIO_PLAYBACK_OFFLOAD)) &&
         /* support devices */
-        ((usecase->devices & AUDIO_DEVICE_OUT_SPEAKER) ||
-         (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
-         (audio_is_usb_out_device(usecase->devices) &&
+        (compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_SPEAKER) ||
+         compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_SPEAKER_SAFE) ||
+         (is_usb_out_device_type(&usecase->device_list) &&
           ma_supported_usb())))
         /* TODO: enable A2DP when it is ready */
 
         return true;
 
     ALOGV("%s: not support type %d usecase %d device %d",
-           __func__, usecase->type, usecase->id, usecase->devices);
+           __func__, usecase->type, usecase->id, get_device_types(&usecase->device_list));
 
     return false;
 }
@@ -268,13 +287,14 @@ static void ma_cal_init(struct ma_audio_cal_settings *ma_cal)
     ma_cal->version.major = AUDIO_CAL_SETTINGS_VERSION_MAJOR_DEFAULT;
     ma_cal->version.minor = AUDIO_CAL_SETTINGS_VERSION_MINOR_DEFAULT;
     ma_cal->common.app_type = APP_TYPE_DEFAULT;
-    ma_cal->common.device = DEVICE_DEFAULT;
+    list_init(&ma_cal->common.devices);
+    update_device_list(&ma_cal->common.devices, DEVICE_DEFAULT,
+                       "", true);
     ma_cal->effect_scope_flag = EFFECTIVE_SCOPE_ALL;
 }
 
 static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd)
 {
-    int i = 0;
     bool ret = false;
     struct listnode *node;
     struct audio_usecase *usecase;
@@ -286,10 +306,10 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
         usecase = node_to_item(node, struct audio_usecase, list);
         if (usecase->stream.out && valid_usecase(usecase)) {
             ma_cal.common.app_type = usecase->stream.out->app_type_cfg.app_type;
-            ma_cal.common.device = usecase->stream.out->devices;
+            assign_devices(&ma_cal.common.devices, &usecase->stream.out->device_list);
             ALOGV("%s: send usecase(%d) app_type(%d) device(%d)",
                       __func__, usecase->id, ma_cal.common.app_type,
-                      ma_cal.common.device);
+                      get_device_types(&ma_cal.common.devices));
 
             switch (cmd) {
                 case MA_CMD_VOL:
@@ -304,7 +324,8 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
 
                 case MA_CMD_SWAP_ENABLE:
                     /* lr swap only enable for speaker path */
-                    if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
+                    if (compare_device_type(&ma_cal.common.devices,
+                                            AUDIO_DEVICE_OUT_SPEAKER)) {
                         ret = ma_set_lr_swap_l(&ma_cal, true);
                         if (ret)
                             ALOGV("ma_set_lr_swap_l enable returned with success.");
@@ -322,7 +343,8 @@ static bool check_and_send_all_audio_cal(struct audio_device *adev, ma_cmd_t cmd
                     break;
 
                 case MA_CMD_ROTATE_ENABLE:
-                    if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
+                    if (compare_device_type(&ma_cal.common.devices,
+                                            AUDIO_DEVICE_OUT_SPEAKER)) {
                         ret = ma_set_orientation_l(&ma_cal, my_data->dispaly_orientation);
                         if (ret)
                             ALOGV("ma_set_orientation_l %d returned with success.",
@@ -472,71 +494,78 @@ void ma_init(void *platform, maxx_audio_init_config_t init_config)
 
     my_data->waves_handle = dlopen(lib_path, RTLD_NOW);
     if (my_data->waves_handle == NULL) {
-         ALOGE("%s: DLOPEN failed for %s, %s", __func__, LIB_MA_PARAM, dlerror());
-         goto error;
+        ALOGE("%s: DLOPEN failed for %s, %s", __func__, LIB_MA_PARAM, dlerror());
+        goto error;
     } else {
-         ALOGV("%s: DLOPEN successful for %s", __func__, LIB_MA_PARAM);
+        ALOGV("%s: DLOPEN successful for %s", __func__, LIB_MA_PARAM);
 
-         my_data->ma_param_init = (ma_param_init_t)dlsym(my_data->waves_handle,
-                                   MA_QDSP_PARAM_INIT);
-         if (!my_data->ma_param_init) {
-             ALOGE("%s: dlsym error %s for ma_param_init", __func__, dlerror());
-             goto error;
-         }
+        my_data->ma_param_init = (ma_param_init_t)dlsym(my_data->waves_handle, MA_QDSP_PARAM_INIT);
+        if (!my_data->ma_param_init) {
+            ALOGE("%s: dlsym error %s for ma_param_init", __func__, dlerror());
+            goto error;
+        }
 
-         my_data->ma_param_deinit = (ma_param_deinit_t)dlsym(
-                                     my_data->waves_handle, MA_QDSP_PARAM_DEINIT);
-         if (!my_data->ma_param_deinit) {
-             ALOGE("%s: dlsym error %s for ma_param_deinit", __func__, dlerror());
-             goto error;
-         }
+        my_data->ma_param_deinit = (ma_param_deinit_t)dlsym(my_data->waves_handle,
+                                                            MA_QDSP_PARAM_DEINIT);
+        if (!my_data->ma_param_deinit) {
+            ALOGE("%s: dlsym error %s for ma_param_deinit", __func__, dlerror());
+            goto error;
+        }
 
         my_data->ma_is_feature_used = (ma_is_feature_used_t)dlsym(my_data->waves_handle,
-                                    MA_QDSP_IS_FEATURE_USED);
+                                                                  MA_QDSP_IS_FEATURE_USED);
         if (!my_data->ma_is_feature_used) {
             ALOGV("%s: dlsym error %s for ma_is_feature_used", __func__, dlerror());
         }
 
         my_data->ma_set_orientation = (ma_set_orientation_t)dlsym(my_data->waves_handle,
-                                        MA_QDSP_SET_ORIENTATION);
+                                                                  MA_QDSP_SET_ORIENTATION);
         if (!my_data->ma_set_orientation) {
             ALOGV("%s: dlsym error %s for ma_set_orientation", __func__, dlerror());
         }
 
-         my_data->ma_set_lr_swap = (ma_set_lr_swap_t)dlsym(my_data->waves_handle,
-                                    MA_QDSP_SET_LR_SWAP);
-         if (!my_data->ma_set_lr_swap) {
-             ALOGE("%s: dlsym error %s for ma_set_lr_swap", __func__, dlerror());
-             goto error;
-         }
+        my_data->ma_set_lr_swap = (ma_set_lr_swap_t)dlsym(my_data->waves_handle,
+                                                          MA_QDSP_SET_LR_SWAP);
+        if (!my_data->ma_set_lr_swap) {
+            ALOGE("%s: dlsym error %s for ma_set_lr_swap", __func__, dlerror());
+            goto error;
+        }
 
-         my_data->ma_set_sound_mode = (ma_set_sound_mode_t)dlsym(
-                                       my_data->waves_handle, MA_QDSP_SET_MODE);
-         if (!my_data->ma_set_sound_mode) {
-             ALOGE("%s: dlsym error %s for ma_set_sound_mode", __func__, dlerror());
-             goto error;
-         }
+        my_data->ma_set_sound_mode = (ma_set_sound_mode_t)dlsym(my_data->waves_handle,
+                                                                MA_QDSP_SET_MODE);
+        if (!my_data->ma_set_sound_mode) {
+            ALOGE("%s: dlsym error %s for ma_set_sound_mode", __func__, dlerror());
+            goto error;
+        }
 
-         my_data->ma_set_volume = (ma_set_volume_t)dlsym(my_data->waves_handle,
-                                   MA_QDSP_SET_VOL);
-         if (!my_data->ma_set_volume) {
-             ALOGE("%s: dlsym error %s for ma_set_volume", __func__, dlerror());
-             goto error;
-         }
+        my_data->ma_set_volume = (ma_set_volume_t)dlsym(my_data->waves_handle, MA_QDSP_SET_VOL);
+        if (!my_data->ma_set_volume) {
+            ALOGE("%s: dlsym error %s for ma_set_volume", __func__, dlerror());
+            goto error;
+        }
 
-         my_data->ma_set_volume_table = (ma_set_volume_table_t)dlsym(
-                                         my_data->waves_handle, MA_QDSP_SET_VOLT);
-         if (!my_data->ma_set_volume_table) {
-             ALOGE("%s: dlsym error %s for ma_set_volume_table", __func__, dlerror());
-             goto error;
-         }
+        my_data->ma_set_volume_table = (ma_set_volume_table_t)dlsym(my_data->waves_handle,
+                                                                    MA_QDSP_SET_VOLT);
+        if (!my_data->ma_set_volume_table) {
+            ALOGE("%s: dlsym error %s for ma_set_volume_table", __func__, dlerror());
+            goto error;
+        }
 
-         my_data->ma_set_param = (ma_set_param_t)dlsym(
-                                  my_data->waves_handle, MA_QDSP_SET_PARAM);
-         if (!my_data->ma_set_param) {
-             ALOGE("%s: dlsym error %s for ma_set_param", __func__, dlerror());
-             goto error;
-         }
+        my_data->ma_set_param = (ma_set_param_t)dlsym(my_data->waves_handle, MA_QDSP_SET_PARAM);
+        if (!my_data->ma_set_param) {
+            ALOGE("%s: dlsym error %s for ma_set_param", __func__, dlerror());
+            goto error;
+        }
+
+        my_data->ma_set_cmd = (ma_set_cmd_t)dlsym(my_data->waves_handle, MA_QDSP_SET_COMMAND);
+        if (!my_data->ma_set_cmd) {
+            ALOGE("%s: dlsym error %s for ma_set_cmd", __func__, dlerror());
+        }
+
+        my_data->ma_get_cmd = (ma_get_cmd_t)dlsym(my_data->waves_handle, MA_QDSP_GET_COMMAND);
+        if (!my_data->ma_get_cmd) {
+            ALOGE("%s: dlsym error %s for ma_get_cmd", __func__, dlerror());
+        }
     }
 
     /* get preset table */
@@ -675,7 +704,6 @@ bool ma_set_state(struct audio_device *adev, int stream_type,
 
 void ma_set_device(struct audio_usecase *usecase)
 {
-    int i = 0;
     struct ma_audio_cal_settings ma_cal;
 
     if (!my_data) {
@@ -692,16 +720,17 @@ void ma_set_device(struct audio_usecase *usecase)
 
     /* update audio_cal and send it */
     ma_cal.common.app_type = usecase->stream.out->app_type_cfg.app_type;
-    ma_cal.common.device = usecase->stream.out->devices;
+    assign_devices(&ma_cal.common.devices, &usecase->stream.out->device_list);
     ALOGV("%s: send usecase(%d) app_type(%d) device(%d)",
               __func__, usecase->id, ma_cal.common.app_type,
-              ma_cal.common.device);
+              get_device_types(&ma_cal.common.devices));
 
     pthread_mutex_lock(&my_data->lock);
 
     if (is_active()) {
 
-        if (ma_cal.common.device & AUDIO_DEVICE_OUT_SPEAKER) {
+        if (compare_device_type(&ma_cal.common.devices,
+                                AUDIO_DEVICE_OUT_SPEAKER)) {
             if (my_data->orientation_used)
                 ma_set_rotation_l(usecase->stream.out->dev,
                                   my_data->dispaly_orientation);
@@ -726,8 +755,101 @@ void ma_set_device(struct audio_usecase *usecase)
     pthread_mutex_unlock(&my_data->lock);
 }
 
-void ma_set_parameters(struct audio_device *adev,
-                                  struct str_parms *parms)
+static bool ma_set_command(struct ma_audio_cal_settings *audio_cal_settings, char *cmd_data)
+{
+    if (my_data->ma_set_cmd)
+        return my_data->ma_set_cmd(g_ma_audio_cal_handle, audio_cal_settings, cmd_data);
+    return false;
+}
+
+static bool ma_get_command(struct ma_audio_cal_settings *audio_cal_settings, char *cmd_data,
+                           char *reply_data, uint32_t reply_size)
+{
+    if (my_data->ma_get_cmd)
+        return my_data->ma_get_cmd(g_ma_audio_cal_handle, audio_cal_settings, cmd_data, reply_data,
+                                   reply_size);
+    return false;
+}
+
+static bool ma_fill_apptype_and_device_from_params(struct str_parms *parms, uint32_t *app_type,
+                                                   struct listnode *devices)
+{
+    int ret;
+    char value[128];
+
+    ret = str_parms_get_str(parms, "cal_apptype", value, sizeof(value));
+
+    if (ret >= 0) {
+        *app_type = (uint32_t)atoi(value);
+        ret = str_parms_get_str(parms, "cal_devid", value, sizeof(value));
+        if (ret >= 0) {
+            update_device_list(devices, (uint32_t)atoi(value), "", true);
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool ma_add_apptype_and_device_to_params(struct str_parms *parms, uint32_t app_type,
+                                                struct listnode *devices)
+{
+    if (0 <= str_parms_add_int(parms, "cal_apptype", app_type)) {
+        if (0 <= str_parms_add_int(parms, "cal_devid", get_device_types(devices))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool ma_get_command_parameters(struct str_parms *query, struct str_parms *reply)
+{
+    struct ma_audio_cal_settings ma_cal;
+    int ret;
+
+    ret = str_parms_get_str(query, "waves_data", ma_command_data, sizeof(ma_command_data));
+    if (ret >= 0) {
+        ma_cal_init(&ma_cal);
+        if (ma_fill_apptype_and_device_from_params(query, &ma_cal.common.app_type,
+                &ma_cal.common.devices)) {
+            ma_add_apptype_and_device_to_params(reply, ma_cal.common.app_type,
+                                                &ma_cal.common.devices);
+            ALOGV("%s: before - command=%s", __func__, (char *)ma_command_data);
+            if (ma_get_command(&ma_cal, ma_command_data, ma_reply_data, sizeof(ma_reply_data))) {
+                str_parms_add_str(reply, "waves_data", ma_reply_data);
+                ALOGV("%s: after - command=%s", __func__, (char *)ma_reply_data);
+                return true;
+            } else {
+                str_parms_add_str(reply, "waves_data", "");
+            }
+        }
+    }
+    return false;
+}
+
+static bool ma_set_command_parameters(struct str_parms *parms)
+{
+    struct ma_audio_cal_settings ma_cal;
+    int ret;
+
+    ret = str_parms_get_str(parms, "waves_data", ma_command_data, sizeof(ma_command_data));
+    if (ret >= 0) {
+        ma_cal_init(&ma_cal);
+        if (ma_fill_apptype_and_device_from_params(parms, &ma_cal.common.app_type,
+                &ma_cal.common.devices)) {
+            return ma_set_command(&ma_cal, ma_command_data);
+        }
+    }
+    return false;
+}
+
+void ma_get_parameters(struct audio_device *adev, struct str_parms *query,
+                       struct str_parms *reply)
+{
+    (void)adev;
+    ma_get_command_parameters(query, reply);
+}
+
+void ma_set_parameters(struct audio_device *adev, struct str_parms *parms)
 {
     int ret;
     int val;
@@ -786,6 +908,8 @@ void ma_set_parameters(struct audio_device *adev,
             }
         }
     }
+
+    ma_set_command_parameters(parms);
 }
 
 bool ma_supported_usb()

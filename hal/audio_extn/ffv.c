@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -61,21 +61,9 @@
 #define AUDIO_PARAMETER_FFV_EC_REF_DEVICE "ffv_ec_ref_dev"
 #define AUDIO_PARAMETER_FFV_CHANNEL_INDEX "ffv_channel_index"
 
-#if LINUX_ENABLED
-#define FFV_CONFIG_FILE_PATH "/etc/BF_1out.cfg"
-#ifdef __LP64__
-#define FFV_LIB "/usr/lib64/libffv.so"
-#else
-#define FFV_LIB "/usr/lib/libffv.so"
-#endif
-#else
-#define FFV_CONFIG_FILE_PATH "/vendor/etc/BF_1out.cfg"
-#ifdef __LP64__
-#define FFV_LIB "/vendor/lib64/libffv.so"
-#else
-#define FFV_LIB "/vendor/lib/libffv.so"
-#endif
-#endif
+
+#define FFV_CONFIG_FILE_NAME "BF_1out.cfg"
+#define FFV_LIB_NAME "libffv.so"
 
 #define FFV_SAMPLING_RATE_16000 16000
 #define FFV_EC_REF_LOOPBACK_DEVICE_MONO "ec-ref-loopback-mono"
@@ -200,18 +188,46 @@ static struct pcm_config ffv_pcm_config = {
     .format = PCM_FORMAT_S16_LE,
 };
 
+void audio_get_lib_path(char* lib_path, int path_size)
+{
+#ifdef LINUX_ENABLED
+#ifdef __LP64__
+    /* libs are stored in /usr/lib64 */
+    snprintf(lib_path, path_size, "%s", "/usr/lib64");
+#else
+    /* libs are stored in /usr/lib */
+    snprintf(lib_path, path_size, "%s", "/usr/lib");
+#endif
+#else
+#ifdef __LP64__
+    /* libs are stored in /vendor/lib64 */
+    snprintf(lib_path, path_size, "%s", "/vendor/lib64");
+#else
+    /* libs are stored in /vendor/lib */
+    snprintf(lib_path, path_size, "%s", "/vendor/lib");
+#endif
+#endif
+}
+
 static int32_t ffv_init_lib()
 {
     int status = 0;
+    char lib_path[VENDOR_CONFIG_PATH_MAX_LENGTH];
+    char lib_file[VENDOR_CONFIG_FILE_MAX_LENGTH];
 
+    /* Get path for lib in vendor */
+    audio_get_lib_path(lib_path, sizeof(lib_path));
+
+    /* Get path for ffv_lib_file */
+    snprintf(lib_file, sizeof(lib_file), "%s/%s", lib_path, FFV_LIB_NAME);
     if (ffvmod.ffv_lib_handle) {
         ALOGE("%s: FFV library is already initialized", __func__);
         return 0;
     }
 
-    ffvmod.ffv_lib_handle = dlopen(FFV_LIB, RTLD_NOW);
+    ffvmod.ffv_lib_handle = dlopen(lib_file, RTLD_NOW);
     if (!ffvmod.ffv_lib_handle) {
-        ALOGE("%s: Unable to open %s, error %s", __func__, FFV_LIB,
+        ALOGE("%s: Unable to open %s, error %s", __func__, lib_file,
             dlerror());
         status = -ENOENT;
         goto exit;
@@ -365,13 +381,13 @@ bool audio_extn_ffv_get_enabled()
 bool  audio_extn_ffv_check_usecase(struct stream_in *in) {
     int ret = false;
     int channel_count = audio_channel_count_from_in_mask(in->channel_mask);
-    audio_devices_t devices = in->device;
     audio_source_t source = in->source;
 
     if ((audio_extn_ffv_get_enabled()) &&
             (channel_count == 1) &&
             (AUDIO_SOURCE_MIC == source) &&
-            ((AUDIO_DEVICE_IN_BUILTIN_MIC == devices) || (AUDIO_DEVICE_IN_BACK_MIC == devices)) &&
+            (is_single_device_type_equal(&in->device_list, AUDIO_DEVICE_IN_BUILTIN_MIC) ||
+             is_single_device_type_equal(&in->device_list, AUDIO_DEVICE_IN_BACK_MIC)) &&
             (in->format == AUDIO_FORMAT_PCM_16_BIT) &&
             (in->sample_rate == FFV_SAMPLING_RATE_16000)) {
         in->config.channels = channel_count;
@@ -438,7 +454,9 @@ int32_t audio_extn_ffv_stream_init(struct stream_in *in, int key, char* lic)
     int num_tx_in_ch, num_out_ch, num_ec_ref_ch;
     int frame_len;
     int sample_rate;
-    const char *config_file_path = FFV_CONFIG_FILE_PATH;
+    const char *config_file_path;
+    char vendor_config_path[VENDOR_CONFIG_PATH_MAX_LENGTH];
+    char platform_info_xml_path_file[VENDOR_CONFIG_FILE_MAX_LENGTH];
     int total_mem_size;
     FfvStatusType status_type;
     const char *sm_buffer = "DISABLE_KEYWORD_DETECTION";
@@ -447,6 +465,11 @@ int32_t audio_extn_ffv_stream_init(struct stream_in *in, int key, char* lic)
     int param_size = 0;
     int param_id;
 
+    audio_get_vendor_config_path(vendor_config_path, sizeof(vendor_config_path));
+    /* Get path for ffv_config_file_name in vendor */
+    snprintf(platform_info_xml_path_file, sizeof(platform_info_xml_path_file),
+            "%s/%s", vendor_config_path, FFV_CONFIG_FILE_NAME);
+    config_file_path = platform_info_xml_path_file;
     if (!audio_extn_ffv_get_enabled()) {
         ALOGE("Rejecting FFV -- init is called without enabling FFV");
         goto fail;

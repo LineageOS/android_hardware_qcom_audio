@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, 2020, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -450,7 +450,7 @@ int compress_voip_start_output_stream(struct stream_out *out)
         goto error;
     }
 
-    if (out->devices & AUDIO_DEVICE_OUT_ALL_SCO) {
+    if (is_sco_out_device_type(&out->device_list)) {
          if (!adev->bt_sco_on) {
              ALOGE("%s: SCO profile is not ready, return error", __func__);
              ret = -EAGAIN;
@@ -466,7 +466,7 @@ int compress_voip_start_output_stream(struct stream_out *out)
     uc_info = get_usecase_from_list(adev, USECASE_COMPRESS_VOIP_CALL);
     if (uc_info) {
         uc_info->stream.out = out;
-        uc_info->devices = out->devices;
+        assign_devices(&uc_info->device_list, &out->device_list);
     } else {
         ret = -EINVAL;
         ALOGE("%s: exit(%d): failed to get use case info", __func__, ret);
@@ -492,7 +492,7 @@ int compress_voip_start_input_stream(struct stream_in *in)
         goto error;
     }
 
-    if (audio_is_bluetooth_sco_device(in->device) && !adev->bt_sco_on) {
+    if (is_sco_in_device_type(&in->device_list) && !adev->bt_sco_on) {
         ret = -EIO;
         ALOGE("%s SCO is not ready return error %d", __func__,ret);
         goto error;
@@ -741,6 +741,7 @@ static int voip_start_call(struct audio_device *adev,
             uc_info->stream.out = adev->primary_output;
         uc_info->in_snd_device = SND_DEVICE_NONE;
         uc_info->out_snd_device = SND_DEVICE_NONE;
+        list_init(&uc_info->device_list);
 
         list_add_tail(&adev->usecase_list, &uc_info->list);
 
@@ -767,7 +768,7 @@ static int voip_start_call(struct audio_device *adev,
               __func__, adev->snd_card, pcm_dev_tx_id);
         voip_data.pcm_tx = pcm_open(adev->snd_card,
                                     pcm_dev_tx_id,
-                                    PCM_IN, voip_config);
+                                    PCM_IN|PCM_MONOTONIC, voip_config);
         if (voip_data.pcm_tx && !pcm_is_ready(voip_data.pcm_tx)) {
             ALOGE("%s: %s", __func__, pcm_get_error(voip_data.pcm_tx));
             pcm_close(voip_data.pcm_tx);

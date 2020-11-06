@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -66,7 +66,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
       defined (PLATFORM_QCS605) || defined (PLATFORM_MSMNILE) || \
       defined (PLATFORM_KONA) || defined (PLATFORM_MSMSTEPPE) || \
       defined (PLATFORM_QCS405) || defined (PLATFORM_TRINKET) || \
-      defined (PLATFORM_LITO) || defined(PLATFORM_ATOLL)
+      defined (PLATFORM_LITO) || defined(PLATFORM_ATOLL) || \
+      defined (PLATFORM_BENGAL) || defined (PLATFORM_LAHAINA)
 #define HFP_RX_VOLUME     "SLIMBUS_7 LOOPBACK Volume"
 #else
 #define HFP_RX_VOLUME     "Internal HFP RX Volume"
@@ -305,7 +306,8 @@ static int32_t start_hfp(struct audio_device *adev,
     uc_info->id = hfpmod.ucid;
     uc_info->type = PCM_HFP_CALL;
     uc_info->stream.out = adev->primary_output;
-    uc_info->devices = adev->primary_output->devices;
+    list_init(&uc_info->device_list);
+    assign_devices(&uc_info->device_list, &adev->primary_output->device_list);
     uc_info->in_snd_device = SND_DEVICE_NONE;
     uc_info->out_snd_device = SND_DEVICE_NONE;
 
@@ -415,6 +417,8 @@ static int32_t stop_hfp(struct audio_device *adev)
 {
     int32_t ret = 0;
     struct audio_usecase *uc_info;
+    struct listnode *node;
+    struct audio_device_info *item = NULL;
 
     ALOGD("%s: enter", __func__);
     hfpmod.is_hfp_running = false;
@@ -451,7 +455,7 @@ static int32_t stop_hfp(struct audio_device *adev)
     }
 
     /* 2. Disable echo reference while stopping hfp */
-    fp_platform_set_echo_reference(adev, false, uc_info->devices);
+    fp_platform_set_echo_reference(adev, false, &uc_info->device_list);
 
     /* 3. Get and set stream specific mixer controls */
     fp_disable_audio_route(adev, uc_info);
@@ -541,7 +545,7 @@ void hfp_set_parameters(struct audio_device *adev, struct str_parms *parms)
     float vol;
     char value[32]={0};
 
-    ALOGD("%s: enter", __func__);
+    ALOGV("%s: enter", __func__);
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_ENABLE, value,
                             sizeof(value));

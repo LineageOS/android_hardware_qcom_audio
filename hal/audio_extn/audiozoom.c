@@ -203,7 +203,7 @@ static int audiozoom_set_microphone_field_dimension_zoom(
         qdsp_audiozoom.zoom_param_id == 0)
         return -ENOSYS;
 
-    str_parms_add_int(parms, "cal_devid", in->device);
+    str_parms_add_int(parms, "cal_devid", get_device_types(&in->device_list));
     str_parms_add_int(parms, "cal_apptype", in->app_type_cfg.app_type);
     str_parms_add_int(parms, "cal_topoid", qdsp_audiozoom.topo_id);
     str_parms_add_int(parms, "cal_moduleid", qdsp_audiozoom.module_id);

@@ -1,5 +1,5 @@
 /*
- *  (C) 2014 DTS, Inc.
+ *  (C) 2014-2020 DTS, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@
 #include "audio_hw.h"
 #include "platform.h"
 #include "platform_api.h"
+#include <unistd.h>
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -56,11 +57,8 @@ struct dts_eagle_param_desc_alsa {
 
 static struct dts_eagle_param_desc_alsa *fade_in_data = NULL;
 static struct dts_eagle_param_desc_alsa *fade_out_data = NULL;
-static int32_t mDevices = 0;
-static int32_t mCurrDevice = 0;
-static const char* DTS_EAGLE_STR = DTS_EAGLE_KEY;
 
-static int do_DTS_Eagle_params_stream(struct stream_out *out, struct dts_eagle_param_desc_alsa *t, bool get) {
+static int do_DTS_Eagle_params_stream(const struct stream_out *out, struct dts_eagle_param_desc_alsa *t, bool get) {
     char mixer_string[128];
     char mixer_str_query[128];
     struct mixer_ctl *ctl;
@@ -219,9 +217,13 @@ void audio_extn_dts_eagle_send_lic() {
 }
 
 void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_parms *parms) {
-    int ret, val;
+    int ret;
     char value[32] = { 0 }, prop[PROPERTY_VALUE_MAX];
-
+    char *kv_pairs = str_parms_to_str(parms);
+    if (parms == NULL || kv_pairs == NULL) {
+        ALOGE("DTS_EAGLE_HAL (%s):parms is null",__func__);
+        return;
+    }
     ALOGV("DTS_EAGLE_HAL (%s): enter", __func__);
 
     property_get("vendor.audio.use.dts_eagle", prop, "0");
@@ -315,9 +317,9 @@ void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_p
         }
 
         if (dts_found && count > 1 && size != (int)(count * sizeof(int))) {
-            ALOGE("DTS_EAGLE_HAL (%s): size/count mismatch (size = %i bytes, count = %i integers / %u bytes).", __func__, size, count, count*sizeof(int));
+            ALOGE("DTS_EAGLE_HAL (%s): size/count mismatch (size = %i bytes, count = %i integers / %zu bytes).", __func__, size, count, count*sizeof(int));
         } else if (dts_found) {
-            ALOGI("DTS_EAGLE_HAL (%s): param detected: %s", __func__, str_parms_to_str(parms));
+            ALOGI("DTS_EAGLE_HAL (%s): param detected: %s", __func__, kv_pairs);
             if (!(*t))
                 *t = (struct dts_eagle_param_desc_alsa*)malloc(sizeof(struct dts_eagle_param_desc_alsa) + size);
             if (*t) {
@@ -339,7 +341,7 @@ void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_p
                 ALOGE("DTS_EAGLE_HAL (%s): mem alloc for dsp structure failed.", __func__);
             }
         } else {
-            ALOGE("DTS_EAGLE_HAL (%s): param detected but failed parse: %s", __func__, str_parms_to_str(parms));
+            ALOGE("DTS_EAGLE_HAL (%s): param detected but failed parse: %s", __func__, kv_pairs);
         }
         free(data);
 
@@ -351,10 +353,15 @@ void audio_extn_dts_eagle_set_parameters(struct audio_device *adev, struct str_p
 
 int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
                   struct str_parms *query, struct str_parms *reply) {
-    int ret, val;
+    int ret;
     char value[32] = { 0 }, prop[PROPERTY_VALUE_MAX];
     char params[PARAM_GET_MAX_SIZE];
-
+    char *kv_pairs_query = str_parms_to_str(query);
+    char *kv_pairs_reply = NULL;
+    if(query == NULL || reply == NULL || kv_pairs_query == NULL) {
+        ALOGE("DTS_EAGLE_HAL (%s): query or reply is null", __func__);
+        return -1;
+    }
     ALOGV("DTS_EAGLE_HAL (%s): enter", __func__);
 
     property_get("vendor.audio.use.dts_eagle", prop, "0");
@@ -396,7 +403,7 @@ int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
         }
 
         if (dts_found) {
-            ALOGI("DTS_EAGLE_HAL (%s): param (get) detected: %s", __func__, str_parms_to_str(query));
+            ALOGI("DTS_EAGLE_HAL (%s): param (get) detected: %s", __func__, kv_pairs_query);
             struct dts_eagle_param_desc_alsa *t = (struct dts_eagle_param_desc_alsa *)params;
             if (t) {
                 char buf[chars_4_int*count];
@@ -425,7 +432,8 @@ int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
                     str_parms_add_str(reply, "id", value);
                     str_parms_add_int(reply, "device", dev);
                     str_parms_add_int(reply, "offset", offset);
-                    ALOGV("DTS_EAGLE_HAL (%s): reply: %s", __func__, str_parms_to_str(reply));
+                    kv_pairs_reply = str_parms_to_str(reply);
+                    ALOGV_IF(kv_pairs_reply!= NULL, "DTS_EAGLE_HAL (%s): reply: %s", __func__, kv_pairs_reply);
                 } else {
                     ALOGE("DTS_EAGLE_HAL (%s): failed getting params from kernel with error %i", __func__, ret);
                     return -1;
@@ -435,7 +443,7 @@ int audio_extn_dts_eagle_get_parameters(const struct audio_device *adev,
                 return -1;
             }
         } else {
-            ALOGE("DTS_EAGLE_HAL (%s): param (get) detected but failed parse: %s", __func__, str_parms_to_str(query));
+            ALOGE("DTS_EAGLE_HAL (%s): param (get) detected but failed parse: %s", __func__, kv_pairs_query);
             return -1;
         }
     }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.    -->
+<!-- Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.    -->
 <!--                                                                        -->
 <!-- Redistribution and use in source and binary forms, with or without     -->
 <!-- modification, are permitted provided that the following conditions are -->
@@ -72,6 +72,7 @@
     <ctl name="MultiMedia8 Mixer TERT_TDM_TX_0" value="0" />
     <ctl name="MultiMedia8 Mixer SLIM_7_TX" value="0" />
     <ctl name="MultiMedia10 Mixer SLIM_0_TX" value="0" />
+    <ctl name="MultiMedia10 Mixer SLIM_1_TX" value="0" />
     <ctl name="MultiMedia10 Mixer SLIM_7_TX" value="0" />
     <ctl name="MultiMedia10 Mixer AFE_PCM_TX" value="0" />
     <ctl name="DISPLAY_PORT Mixer MultiMedia1" value="0" />
@@ -297,6 +298,8 @@
     <path name="echo-reference">
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="TERT_TDM_RX_2" />
         <ctl name="EC Reference Channels" value="One" />
+        <ctl name="EC Reference Bit Format" value="S16_LE" />
+        <ctl name="EC Reference SampleRate" value="48000" />
     </path>
 
     <path name="echo-reference headphones">
@@ -604,10 +607,6 @@
     <path name="compress-offload-playback">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia4" value="1" />
-        <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
-        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia4" value="1" />
-        <ctl name="QUIN_TDM_RX_0 Channels" value="Two" />
-        <ctl name="QUIN_TDM_RX_0 Audio Mixer MultiMedia4" value="1" />
     </path>
 
     <path name="compress-offload-playback speaker-protected">
@@ -711,10 +710,6 @@
     <path name="compress-offload-playback2">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia7" value="1" />
-        <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
-        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia7" value="1" />
-        <ctl name="QUIN_TDM_RX_0 Channels" value="Two" />
-        <ctl name="QUIN_TDM_RX_0 Audio Mixer MultiMedia7" value="1" />
     </path>
 
     <path name="compress-offload-playback2 display-port">
@@ -1305,10 +1300,6 @@
     <path name="media-playback">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
-        <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
-        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
-        <ctl name="QUIN_TDM_RX_0 Channels" value="Two" />
-        <ctl name="QUIN_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
     </path>
 
     <path name="sys-notification-playback">
@@ -1326,9 +1317,14 @@
         <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia10" value="1" />
     </path>
 
+    <path name="front-passenger-playback">
+        <ctl name="QUAT_TDM_RX_0 Channels" value="Eight" />
+        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia23" value="1" />
+    </path>
+
     <path name="rear-seat-playback">
-        <ctl name="QUAT_TDM_RX_0 Channels" value="Six" />
-        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia22" value="1" />
+        <ctl name="QUIN_TDM_RX_0 Channels" value="Sixteen" />
+        <ctl name="QUIN_TDM_RX_0 Audio Mixer MultiMedia22" value="1" />
     </path>
 
     <path name="audio-record">
@@ -1600,12 +1596,6 @@
         <path name="incall-rec-uplink-and-downlink-compress" />
     </path>
 
-    <path name="hfp-sco">
-        <ctl name="AUX_PCM_RX Audio Mixer MultiMedia6" value="1" />
-        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
-        <ctl name="MultiMedia6 Mixer TERT_TDM_TX_0" value="1" />
-    </path>
-
     <path name="icc-call">
         <ctl name="SEC_TDM_RX_0 SampleRate" value="KHZ_16" />
         <ctl name="SEC_TDM_RX_0 Channels" value="Four" />
@@ -1624,11 +1614,26 @@
     <path name="hfp-sco headphones">
     </path>
 
+    <path name="hfp-sco-wb headphones">
+        <path name="hfp-sco headphones" />
+    </path>
+
     <path name="hfp-sco headset">
         <path name="hfp-sco headphones" />
     </path>
 
+    <path name="hfp-sco">
+        <ctl name="AUX_PCM_RX Audio Mixer MultiMedia6" value="1" />
+        <ctl name="MultiMedia6 Mixer TERT_TDM_TX_0" value="1" />
+    </path>
+
     <path name="hfp-sco bt-sco">
+        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
+        <path name="hfp-sco" />
+    </path>
+
+    <path name="hfp-sco bt-sco-mmsecns">
+        <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
         <path name="hfp-sco" />
     </path>
 
@@ -1638,11 +1643,13 @@
     </path>
 
     <path name="hfp-sco-wb bt-sco-wb">
+        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
         <path name="hfp-sco-wb" />
     </path>
 
-    <path name="hfp-sco-wb headphones">
-        <path name="hfp-sco headphones" />
+    <path name="hfp-sco-wb bt-sco-mmsecns">
+        <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
+        <path name="hfp-sco-wb" />
     </path>
 
 
@@ -2142,6 +2149,10 @@
     </path>
 
     <path name="voice-speaker-mic-hfp">
+        <path name="speaker-mic" />
+    </path>
+
+    <path name="voice-speaker-mic-hfp-mmsecns">
         <path name="speaker-mic" />
     </path>
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -173,6 +173,7 @@ int platform_set_effect_config_data(snd_device_t snd_device,
 int platform_get_effect_config_data(snd_device_t snd_device,
                                       struct audio_effect_config *effect_config,
                                       effect_type_t effect_type);
+int platform_set_fluence_mmsecns_config(struct audio_fluence_mmsecns_config fluence_mmsecns_config);
 int platform_get_snd_device_bit_width(snd_device_t snd_device);
 int platform_set_acdb_metainfo_key(void *platform, char *name, int key);
 void platform_release_acdb_metainfo_key(void *platform);
@@ -203,10 +204,12 @@ void platform_set_speaker_gain_in_combo(struct audio_device *adev,
 int platform_set_mic_mute(void *platform, bool state);
 int platform_get_sample_rate(void *platform, uint32_t *rate);
 int platform_set_device_mute(void *platform, bool state, char *dir);
-snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *out);
+snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *out,
+                                            usecase_type_t uc_type);
 snd_device_t platform_get_input_snd_device(void *platform,
                                            struct stream_in *in,
-                                           audio_devices_t out_device);
+                                           struct listnode *out_devices,
+                                           usecase_type_t uc_type);
 int platform_set_hdmi_channels(void *platform, int channel_count);
 int platform_edid_get_max_channels(void *platform);
 void platform_add_operator_specific_device(snd_device_t snd_device,
@@ -233,7 +236,8 @@ int platform_stop_incall_music_usecase(void *platform);
 int platform_update_lch(void *platform, struct voice_session *session,
                         enum voice_lch_mode lch_mode);
 /* returns the latency for a usecase in Us */
-int64_t platform_render_latency(audio_usecase_t usecase);
+int64_t platform_render_latency(struct stream_out *out);
+int64_t platform_capture_latency(struct stream_in *in);
 int platform_update_usecase_from_source(int source, audio_usecase_t usecase);
 
 bool platform_listen_device_needs_event(snd_device_t snd_device);
@@ -267,7 +271,8 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);
 int platform_get_usecase_index(const char * usecase);
 int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
-void platform_set_echo_reference(struct audio_device *adev, bool enable, audio_devices_t out_device);
+void platform_set_echo_reference(struct audio_device *adev, bool enable,
+                                 struct listnode *out_devices);
 int platform_check_and_set_swap_lr_channels(struct audio_device *adev, bool swap_channels);
 int platform_set_swap_channels(struct audio_device *adev, bool swap_channels);
 void platform_get_device_to_be_id_map(int **be_id_map, int *length);
@@ -300,6 +305,7 @@ int platform_set_device_params(struct stream_out *out, int param, int value);
 int platform_set_audio_device_interface(const char * device_name, const char *intf_name,
                                         const char * codec_type);
 void platform_set_gsm_mode(void *platform, bool enable);
+void platform_set_tx_lpi_mode(void *platform, bool enable);
 bool platform_can_enable_spkr_prot_on_device(snd_device_t snd_device);
 int platform_get_spkr_prot_acdb_id(snd_device_t snd_device);
 int platform_get_spkr_prot_snd_device(snd_device_t snd_device);
@@ -310,6 +316,7 @@ int platform_split_snd_device(void *platform,
                               int *num_devices,
                               snd_device_t *new_snd_devices);
 
+bool platform_check_all_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 bool platform_check_backends_match(snd_device_t snd_device1, snd_device_t snd_device2);
 int platform_set_sidetone(struct audio_device *adev,
                           snd_device_t out_snd_device,
@@ -374,7 +381,7 @@ int platform_get_active_microphones(void *platform, unsigned int channels,
                                     size_t *mic_count);
 
 int platform_get_license_by_product(void *platform, const char* product_name, int *product_id, char* product_license);
-int platform_get_haptics_pcm_device_id();
+bool platform_get_eccarstate(void *platform);
 int platform_set_qtime(void *platform, int audio_pcm_device_id,
                        int haptic_pcm_device_id);
 int platform_get_delay(void *platform, int pcm_device_id);
@@ -412,4 +419,18 @@ int platform_set_channel_allocation_v2(void *platform, int channel_alloc,
 int platform_set_hdmi_channels_v2(void *platform, int channel_count,
                                   int controller, int stream);
 int platform_get_display_port_ctl_index(int controller, int stream);
+bool platform_is_call_proxy_snd_device(snd_device_t snd_device);
+void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms);
+
+int platform_get_audio_source_index(const char *audio_source_name);
+bool platform_check_and_update_island_power_status(void *platform,
+                                                   struct audio_usecase* usecase,
+                                                    snd_device_t snd_device);
+bool platform_get_power_mode_on_device(void *platform, snd_device_t snd_device);
+bool platform_get_island_cfg_on_device(void *platform, snd_device_t snd_device);
+int platform_set_power_mode_on_device(struct audio_device* adev, snd_device_t snd_device,
+                                      bool enable);
+int platform_set_island_cfg_on_device(struct audio_device* adev, snd_device_t snd_device,
+                                      bool enable);
+void platform_reset_island_power_status(void *platform, snd_device_t snd_device);
 #endif // AUDIO_PLATFORM_API_H

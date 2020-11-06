@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -41,15 +41,19 @@
 #include <stdlib.h>
 #include <cutils/str_parms.h>
 #include <cutils/list.h>
+#include <cutils/hashmap.h>
 #include <hardware/audio.h>
 #include <tinyalsa/asoundlib.h>
 #include <tinycompress/tinycompress.h>
 
 #include <audio_route/audio_route.h>
 #include <audio_utils/ErrorLog.h>
+#include <audio_utils/Statistics.h>
+#include <audio_utils/clock.h>
 #include "audio_defs.h"
 #include "voice.h"
 #include "audio_hw_extn_api.h"
+#include "device_utils.h"
 
 #if LINUX_ENABLED
 #if defined(__LP64__)
@@ -121,6 +125,13 @@ struct audio_effect_config {
     uint32_t param_value;
 };
 
+struct audio_fluence_mmsecns_config {
+    uint32_t topology_id;
+    uint32_t module_id;
+    uint32_t instance_id;
+    uint32_t param_id;
+};
+
 #define MAX_MIXER_PATH_LEN 64
 
 typedef enum card_status_t {
@@ -150,6 +161,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_ULL,
     USECASE_AUDIO_PLAYBACK_MMAP,
     USECASE_AUDIO_PLAYBACK_WITH_HAPTICS,
+    USECASE_AUDIO_PLAYBACK_HAPTICS,
     USECASE_AUDIO_PLAYBACK_HIFI,
     USECASE_AUDIO_PLAYBACK_TTS,
 
@@ -204,6 +216,7 @@ enum {
 
     USECASE_AUDIO_PLAYBACK_AFE_PROXY,
     USECASE_AUDIO_RECORD_AFE_PROXY,
+    USECASE_AUDIO_RECORD_AFE_PROXY2,
     USECASE_AUDIO_DSM_FEEDBACK,
 
     USECASE_AUDIO_PLAYBACK_SILENCE,
@@ -229,10 +242,16 @@ enum {
     USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
     USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
     USECASE_AUDIO_PLAYBACK_PHONE,
+    USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER,
     USECASE_AUDIO_PLAYBACK_REAR_SEAT,
 
     /*Audio FM Tuner usecase*/
     USECASE_AUDIO_FM_TUNER_EXT,
+    /*voip usecase with low latency path*/
+    USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY,
+
+    /*In Car Communication Usecase*/
+    USECASE_ICC_CALL,
     AUDIO_USECASE_MAX
 };
 
@@ -301,18 +320,22 @@ typedef enum render_mode {
     RENDER_MODE_AUDIO_STC_MASTER,
 } render_mode_t;
 
-/* This defines the physical car streams supported in audio HAL,
- * limited by the available frontend PCM driver.
- * Max number of physical streams supported is currently 16 and is
+/* This defines the physical car audio streams supported in
+ * audio HAL, limited by the available frontend PCM devices.
+ * Max number of physical streams supported is 32 and is
  * represented by stream bit flag.
+ *     Primary zone: bit 0 - 7
+ *     Front passenger zone: bit 8 - 15
+ *     Rear seat zone: bit 16 - 23
  */
-#define MAX_CAR_AUDIO_STREAMS    16
+#define MAX_CAR_AUDIO_STREAMS    32
 enum {
     CAR_AUDIO_STREAM_MEDIA            = 0x1,
     CAR_AUDIO_STREAM_SYS_NOTIFICATION = 0x2,
     CAR_AUDIO_STREAM_NAV_GUIDANCE     = 0x4,
     CAR_AUDIO_STREAM_PHONE            = 0x8,
-    CAR_AUDIO_STREAM_REAR_SEAT        = 0x100,
+    CAR_AUDIO_STREAM_FRONT_PASSENGER  = 0x100,
+    CAR_AUDIO_STREAM_REAR_SEAT        = 0x10000,
 };
 
 struct stream_app_type_cfg {
@@ -326,9 +349,10 @@ struct stream_config {
     unsigned int sample_rate;
     audio_channel_mask_t channel_mask;
     audio_format_t format;
-    audio_devices_t devices;
+    struct listnode device_list;
     unsigned int bit_width;
 };
+
 struct stream_inout {
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by playback thread */
@@ -343,13 +367,18 @@ struct stream_inout {
     stream_callback_t client_callback;
     void *client_cookie;
 };
+
 struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by playback thread */
-    pthread_mutex_t compr_mute_lock; /* acquire before setting compress volume */
-    pthread_mutex_t position_query_lock; /* acquire before updating/getting position of track offload*/
     pthread_cond_t  cond;
+    /* stream_out->lock is of large granularity, and can only be held before device lock
+     * latch is a supplemetary lock to protect certain fields of out stream and
+     * it can be held after device lock
+     */
+    pthread_mutex_t latch_lock;
+    pthread_mutex_t position_query_lock; /* sychronize frame written */
     struct pcm_config config;
     struct compr_config compr_config;
     struct pcm *pcm;
@@ -359,7 +388,7 @@ struct stream_out {
     unsigned int sample_rate;
     audio_channel_mask_t channel_mask;
     audio_format_t format;
-    audio_devices_t devices;
+    struct listnode device_list;
     audio_output_flags_t flags;
     char profile[MAX_STREAM_PROFILE_STR_LEN];
     audio_usecase_t usecase;
@@ -435,7 +464,6 @@ struct stream_out {
     error_log_t *error_log;
     bool pspd_coeff_sent;
 
-    char address[AUDIO_DEVICE_MAX_ADDRESS_LEN];
     int car_audio_stream;
 
     union {
@@ -445,6 +473,16 @@ struct stream_out {
             int stream;
         } cs;
     } extconn;
+
+    size_t kernel_buffer_size;  // cached value of the alsa buffer size, const after open().
+
+    // last out_get_presentation_position() cached info.
+    bool         last_fifo_valid;
+    unsigned int last_fifo_frames_remaining;
+    int64_t      last_fifo_time_ns;
+
+    simple_stats_t fifo_underruns;  // TODO: keep a list of the last N fifo underrun times.
+    simple_stats_t start_latency_ms;
 };
 
 struct stream_in {
@@ -456,7 +494,7 @@ struct stream_in {
     int standby;
     int source;
     int pcm_device_id;
-    audio_devices_t device;
+    struct listnode device_list;
     audio_channel_mask_t channel_mask;
     audio_usecase_t usecase;
     bool enable_aec;
@@ -498,6 +536,8 @@ struct stream_in {
     int64_t frames_muted; /* total frames muted, not cleared when entering standby */
 
     error_log_t *error_log;
+
+    simple_stats_t start_latency_ms;
 };
 
 typedef enum {
@@ -509,8 +549,26 @@ typedef enum {
     TRANSCODE_LOOPBACK_RX,
     TRANSCODE_LOOPBACK_TX,
     PCM_PASSTHROUGH,
+    ICC_CALL,
     USECASE_TYPE_MAX
 } usecase_type_t;
+
+typedef enum {
+    PATCH_NONE = -1,
+    PATCH_PLAYBACK,
+    PATCH_CAPTURE,
+    PATCH_DEVICE_LOOPBACK
+} patch_type_t;
+
+struct audio_patch_info {
+    struct audio_patch *patch;
+    patch_type_t patch_type;
+};
+
+struct audio_stream_info {
+    struct audio_stream *stream;
+    audio_patch_handle_t patch_handle;
+};
 
 union stream_ptr {
     struct stream_in *in;
@@ -522,7 +580,7 @@ struct audio_usecase {
     struct listnode list;
     audio_usecase_t id;
     usecase_type_t  type;
-    audio_devices_t devices;
+    struct listnode device_list;
     snd_device_t out_snd_device;
     snd_device_t in_snd_device;
     struct stream_app_type_cfg out_app_type_cfg;
@@ -586,6 +644,7 @@ struct audio_device {
     pthread_mutex_t cal_lock;
     struct mixer *mixer;
     audio_mode_t mode;
+    audio_mode_t prev_mode;
     audio_devices_t out_device;
     struct stream_out *primary_output;
     struct stream_out *voice_tx_output;
@@ -689,17 +748,17 @@ struct audio_device {
     int camera_orientation; /* CAMERA_BACK_LANDSCAPE ... CAMERA_FRONT_PORTRAIT */
     bool adm_routing_changed;
     struct listnode audio_patch_record_list;
-    unsigned int audio_patch_index;
+    Hashmap *patch_map;
+    Hashmap *io_streams_map;
+    bool a2dp_started;
+    bool ha_proxy_enable;
 };
 
 struct audio_patch_record {
     struct listnode list;
     audio_patch_handle_t handle;
     audio_usecase_t usecase;
-    audio_io_handle_t input_io_handle;
-    audio_io_handle_t output_io_handle;
-    struct audio_port_config source;
-    struct audio_port_config sink;
+    struct audio_patch patch;
 };
 
 int select_devices(struct audio_device *adev,
@@ -730,7 +789,7 @@ int pcm_ioctl(struct pcm *pcm, int request, ...);
 audio_usecase_t get_usecase_id_from_usecase_type(const struct audio_device *adev,
                                                  usecase_type_t type);
 
-int check_a2dp_restore(struct audio_device *adev, struct stream_out *out, bool restore);
+int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool restore);
 
 int adev_open_output_stream(struct audio_hw_device *dev,
                             audio_io_handle_t handle,
@@ -738,7 +797,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                             audio_output_flags_t flags,
                             struct audio_config *config,
                             struct audio_stream_out **stream_out,
-                            const char *address __unused);
+                            const char *address);
 void adev_close_output_stream(struct audio_hw_device *dev __unused,
                               struct audio_stream_out *stream);
 
@@ -766,6 +825,29 @@ static inline bool is_loopback_input_device(audio_devices_t device) {
     else
         return false;
 }
+
+static inline bool audio_is_virtual_input_source(audio_source_t source) {
+    bool result = false;
+    switch(source) {
+        case AUDIO_SOURCE_VOICE_UPLINK :
+        case AUDIO_SOURCE_VOICE_DOWNLINK :
+        case AUDIO_SOURCE_VOICE_CALL :
+        case AUDIO_SOURCE_FM_TUNER :
+            result = true;
+            break;
+        default:
+            break;
+    }
+    return result;
+}
+
+int route_output_stream(struct stream_out *stream,
+                        struct listnode *devices);
+int route_input_stream(struct stream_in *stream,
+                       struct listnode *devices,
+                       audio_source_t source);
+
+audio_patch_handle_t generate_patch_handle();
 
 /*
  * NOTE: when multiple mutexes have to be acquired, always take the

@@ -504,6 +504,10 @@
         <path name="headphones" />
     </path>
 
+    <path name="headphones-hifi-filter">
+        <path name="headphones" />
+    </path>
+
     <path name="hph-highquality-mode">
         <ctl name="RX_HPH_PWR_MODE" value="LOHIFI" />
         <ctl name="RX HPH Mode" value="CLS_H_LOHIFI" />
@@ -571,6 +575,11 @@
         <path name="speaker" />
     </path>
 
+    <path name="speaker-and-headphones-hifi-filter">
+        <path name="headphones" />
+        <path name="speaker" />
+    </path>
+
     <path name="speaker-safe-and-headphones">
         <path name="headphones" />
         <path name="speaker-safe" />
@@ -590,6 +599,12 @@
     </path>
 
     <path name="display-port">
+    </path>
+
+    <path name="call-proxy">
+    </path>
+
+    <path name="call-proxy-in">
     </path>
 
     <path name="speaker-and-usb-headphones">
@@ -641,17 +656,17 @@
 
     <!-- Dual MIC devices -->
     <path name="handset-dmic-endfire">
-        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC3" />
+        <ctl name="TX DMIC MUX1" value="DMIC1" />
+        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
+        <ctl name="TX DMIC MUX2" value="DMIC3" />
     </path>
 
     <path name="speaker-dmic-endfire">
-        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC2" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC1" />
+        <ctl name="TX DMIC MUX1" value="DMIC2" />
+        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
+        <ctl name="TX DMIC MUX2" value="DMIC1" />
     </path>
 
     <path name="dmic-endfire">
@@ -765,21 +780,21 @@
     </path>
 
     <path name="three-mic">
-        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
-        <ctl name="TX DMIC MUX3" value="DMIC1" />
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC3" />
-        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC2" />
-    </path>
-
-    <path name="speaker-tmic">
-        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
-        <ctl name="TX DMIC MUX3" value="DMIC2" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
         <ctl name="TX DMIC MUX1" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="TX DMIC MUX2" value="DMIC3" />
+        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
+        <ctl name="TX DMIC MUX3" value="DMIC2" />
+    </path>
+
+    <path name="speaker-tmic">
+        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
+        <ctl name="TX DMIC MUX1" value="DMIC2" />
+        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
+        <ctl name="TX DMIC MUX2" value="DMIC1" />
+        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
+        <ctl name="TX DMIC MUX3" value="DMIC3" />
     </path>
 
     <path name="voice-speaker-tmic">
@@ -787,14 +802,14 @@
     </path>
 
     <path name="speaker-qmic">
-         <ctl name="TX_AIF1_CAP Mixer DEC4" value="1" />
-         <ctl name="TX DMIC MUX4" value="DMIC2" />
          <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-         <ctl name="TX DMIC MUX1" value="DMIC1" />
+         <ctl name="TX DMIC MUX1" value="DMIC2" />
          <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-         <ctl name="TX DMIC MUX2" value="DMIC3" />
+         <ctl name="TX DMIC MUX2" value="DMIC1" />
          <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
-         <ctl name="TX DMIC MUX3" value="DMIC5" />
+         <ctl name="TX DMIC MUX3" value="DMIC3" />
+         <ctl name="TX_AIF1_CAP Mixer DEC4" value="1" />
+         <ctl name="TX DMIC MUX4" value="DMIC5" />
     </path>
 
     <path name="voice-speaker-qmic">
@@ -802,7 +817,8 @@
     </path>
 
     <path name="quad-mic">
-         <path name="speaker-qmic" />
+        <path name="speaker-qmic" />
+        <ctl name="TX_DEC4 Volume" value="96" />
     </path>
 
     <path name="unprocessed-quad-mic">

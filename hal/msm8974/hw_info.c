@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -54,6 +54,7 @@ struct hardware_info {
     snd_device_t  *snd_devices;
     bool is_wsa_combo_suppported;
     bool is_stereo_spkr;
+    bool use_mono_spkr_for_qmic;
 };
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
@@ -520,7 +521,22 @@ static void update_hardware_info_kona(
           struct hardware_info *hw_info,
           const char *snd_card_name)
 {
-    if (!strncmp(snd_card_name, "kona-mtp-snd-card",
+    if (!strncmp(snd_card_name, "lito-lagoonmtp-snd-card",
+                 sizeof("lito-lagoonmtp-snd-card"))) {
+        strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lito-lagoonqrd-snd-card",
+                 sizeof("lito-lagoonqrd-snd-card"))) {
+        strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
+    } else if (!strncmp(snd_card_name, "bengal-idp-snd-card",
+                 sizeof("bengal-idp-snd-card"))) {
+        strlcpy(hw_info->name, "bengal", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
+    } else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
+                 sizeof("bengal-scubaidp-snd-card"))) {
+        strlcpy(hw_info->name, "bengal", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
+    } else if (!strncmp(snd_card_name, "kona-mtp-snd-card",
                  sizeof("kona-mtp-snd-card"))) {
         strlcpy(hw_info->name, "kona", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "lito-mtp-snd-card",
@@ -544,8 +560,67 @@ static void update_hardware_info_kona(
                  sizeof("lito-qrd-snd-card"))) {
         strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
         hw_info->is_stereo_spkr = false;
+    } else if (!strncmp(snd_card_name, "bengal-qrd-snd-card",
+                 sizeof("bengal-qrd-snd-card"))) {
+        strlcpy(hw_info->name, "bengal", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
     } else {
         ALOGW("%s: Not a kona device", __func__);
+    }
+}
+
+static void update_hardware_info_holi(
+          struct hardware_info *hw_info,
+          const char *snd_card_name)
+{
+    if (!strncmp(snd_card_name, "holi-mtp-snd-card",
+                 sizeof("holi-mtp-snd-card")) ||
+        !strncmp(snd_card_name, "holi-qrd-snd-card",
+                 sizeof("holi-qrd-snd-card")) ||
+        !strncmp(snd_card_name, "holi-usbc-snd-card",
+                 sizeof("holi-usbc-snd-card")) ||
+        !strncmp(snd_card_name, "holi-qrdsku1-snd-card",
+                 sizeof("holi-qrdsku1-snd-card")) ||
+        !strncmp(snd_card_name, "holi-mtpsku1-snd-card",
+                 sizeof("holi-mtpsku1-snd-card"))) {
+        strlcpy(hw_info->name, "holi", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
+    } else {
+        ALOGW("%s: Not a holi device", __func__);
+    }
+}
+
+static void update_hardware_info_lahaina(
+          struct hardware_info *hw_info,
+          const char *snd_card_name)
+{
+    if (!strncmp(snd_card_name, "lahaina-mtp-snd-card",
+                 sizeof("lahaina-mtp-snd-card"))) {
+        strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+        hw_info->use_mono_spkr_for_qmic = true;
+    } else if (!strncmp(snd_card_name, "lahaina-qrd-snd-card",
+                 sizeof("lahaina-qrd-snd-card"))) {
+        strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = true;
+    } else if (!strncmp(snd_card_name, "lahaina-cdp-snd-card",
+                 sizeof("lahaina-cdp-snd-card"))) {
+        strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-hdk-snd-card",
+                 sizeof("lahaina-hdk-snd-card"))) {
+        strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
+    } else if (!strncmp(snd_card_name, "lahaina-shimaidp-snd-card",
+                 sizeof("lahaina-shimaidp-snd-card"))) {
+        strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-shimaidps-snd-card",
+                 sizeof("lahaina-shimaidps-snd-card"))) {
+        strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-shimaqrd-snd-card",
+                 sizeof("lahaina-shimaqrd-snd-card"))) {
+        strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
+    } else {
+        ALOGW("%s: Not a lahaina device", __func__);
     }
 }
 
@@ -759,6 +834,56 @@ static void update_hardware_info_sdm439(struct hardware_info *hw_info, const cha
     }
 }
 
+static void update_hardware_info_msm8937(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "msm8937-snd-card-mtp")) {
+        strlcpy(hw_info->name, "msm8937", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8937-tasha-snd-card")) {
+        strlcpy(hw_info->name, "msm8937", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8937-tashalite-snd-card")) {
+        strlcpy(hw_info->name, "msm8937", sizeof(hw_info->name));
+    }
+}
+
+static void update_hardware_info_msm8953(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "msm8953-snd-card-mtp")) {
+        strlcpy(hw_info->name, "msm8953", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8953-sku3-tasha-snd-card")) {
+        strlcpy(hw_info->name, "msm8953", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8953-tasha-snd-card")) {
+        strlcpy(hw_info->name, "msm8953", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8953-tashalite-snd-card")) {
+        strlcpy(hw_info->name, "msm8953", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8953-sku4-snd-card")) {
+        hw_info->is_stereo_spkr = false;
+        strlcpy(hw_info->name, "msm8953", sizeof(hw_info->name));
+    }
+}
+
+static void update_hardware_info_msm8952(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "msm8952-snd-card")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-snd-card-mtp")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-tomtom-snd-card")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-tasha-snd-card")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-tashalite-snd-card")) {
+       strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    }  else if (!strcmp(snd_card_name, "msm8952-skum-snd-card")) {
+        strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-sku1-snd-card")) {
+        strlcpy(hw_info->name, "msm8937", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-sku2-snd-card")) {
+        strlcpy(hw_info->name, "msm8937", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8952-sku3-tasha-snd-card")) {
+       strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    }
+}
+
 void *hw_info_init(const char *snd_card_name)
 {
     struct hardware_info *hw_info;
@@ -772,6 +897,7 @@ void *hw_info_init(const char *snd_card_name)
     hw_info->snd_devices = NULL;
     hw_info->num_snd_devices = 0;
     hw_info->is_stereo_spkr = true;
+    hw_info->use_mono_spkr_for_qmic = false;
     hw_info->is_wsa_combo_suppported = false;
     strlcpy(hw_info->dev_extn, "", sizeof(hw_info->dev_extn));
     strlcpy(hw_info->type, "", sizeof(hw_info->type));
@@ -822,12 +948,27 @@ void *hw_info_init(const char *snd_card_name)
         ALOGV("SDA845 - variant soundcard");
         update_hardware_info_sda845(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "kona") || strstr(snd_card_name, "lito")
-               || strstr(snd_card_name, "atoll")) {
+               || strstr(snd_card_name, "atoll") || strstr(snd_card_name, "bengal")) {
         ALOGV("KONA - variant soundcard");
         update_hardware_info_kona(hw_info, snd_card_name);
+    } else if(strstr(snd_card_name, "lahaina") || strstr(snd_card_name, "shima")) {
+        ALOGV("LAHAINA - variant soundcard");
+        update_hardware_info_lahaina(hw_info, snd_card_name);
+    } else if(strstr(snd_card_name, "holi")) {
+        ALOGV("HOLI - variant soundcard");
+        update_hardware_info_holi(hw_info, snd_card_name);
     } else if(strstr(snd_card_name, "sdm439")) {
         ALOGV("SDM439 - variant soundcard");
         update_hardware_info_sdm439(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "msm8937")) {
+        ALOGV("MSM8937 - variant soundcard");
+        update_hardware_info_msm8937(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "msm8953")) {
+        ALOGV("MSM8953 - variant soundcard");
+        update_hardware_info_msm8953(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "msm8952")) {
+        ALOGV("MSM8952 - variant soundcard");
+        update_hardware_info_msm8952(hw_info, snd_card_name);
     } else {
         ALOGE("%s: Unsupported target %s:",__func__, snd_card_name);
         free(hw_info);
@@ -901,4 +1042,11 @@ bool hw_info_is_stereo_spkr(void *hw_info)
     struct hardware_info *my_data = (struct hardware_info*) hw_info;
 
     return my_data->is_stereo_spkr;
+}
+
+bool hw_info_use_mono_spkr_for_qmic(void *hw_info)
+{
+   struct hardware_info *my_data = (struct hardware_info*) hw_info;
+
+   return my_data->use_mono_spkr_for_qmic;
 }

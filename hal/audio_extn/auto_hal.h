@@ -29,6 +29,9 @@
 #define MAX_VOLUME_VALUE_MB 600
 #define STEP_VALUE_MB 100
 
+#define MIN_VOLUME_GAIN 0.0f
+#define MAX_VOLUME_GAIN 1.0f
+
 typedef struct auto_hal_module {
     struct audio_device *adev;
     card_status_t card_status;
@@ -61,5 +64,6 @@ static const audio_usecase_t bus_device_usecases[] = {
     USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
     USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
     USECASE_AUDIO_PLAYBACK_PHONE,
+    USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER,
     USECASE_AUDIO_PLAYBACK_REAR_SEAT,
 };

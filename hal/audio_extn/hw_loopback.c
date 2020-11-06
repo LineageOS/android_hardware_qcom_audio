@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -496,7 +496,9 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     uc_info_rx->id = USECASE_AUDIO_TRANSCODE_LOOPBACK_RX;
     uc_info_rx->type = audio_loopback_mod->uc_type_rx;
     uc_info_rx->stream.inout = &active_loopback_patch->patch_stream;
-    uc_info_rx->devices = active_loopback_patch->patch_stream.out_config.devices;
+    list_init(&uc_info_rx->device_list);
+    assign_devices(&uc_info_rx->device_list,
+                   &active_loopback_patch->patch_stream.out_config.device_list);
     uc_info_rx->in_snd_device = SND_DEVICE_NONE;
     uc_info_rx->out_snd_device = SND_DEVICE_NONE;
 
@@ -504,7 +506,9 @@ int create_loopback_session(loopback_patch_t *active_loopback_patch)
     uc_info_tx->id = USECASE_AUDIO_TRANSCODE_LOOPBACK_TX;
     uc_info_tx->type = audio_loopback_mod->uc_type_tx;
     uc_info_tx->stream.inout = &active_loopback_patch->patch_stream;
-    uc_info_tx->devices = active_loopback_patch->patch_stream.in_config.devices;
+    list_init(&uc_info_tx->device_list);
+    assign_devices(&uc_info_tx->device_list,
+                   &active_loopback_patch->patch_stream.in_config.device_list);
     uc_info_tx->in_snd_device = SND_DEVICE_NONE;
     uc_info_tx->out_snd_device = SND_DEVICE_NONE;
 
@@ -678,7 +682,7 @@ void update_patch_stream_config(struct stream_config *stream_cfg ,
     stream_cfg->sample_rate = port_cfg->sample_rate;
     stream_cfg->channel_mask = port_cfg->channel_mask;
     stream_cfg->format = port_cfg->format;
-    stream_cfg->devices = port_cfg->ext.device.type;
+    reassign_device_list(&stream_cfg->device_list, port_cfg->ext.device.type, "");
     stream_cfg->bit_width = format_to_bitwidth(port_cfg->format);
 }
 /* API to create audio patch */

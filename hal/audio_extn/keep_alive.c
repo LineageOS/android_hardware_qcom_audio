@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -72,7 +72,7 @@ typedef struct {
     ka_mode_t prev_mode;
     bool done;
     void * userdata;
-    audio_devices_t active_devices;
+    struct listnode active_devices;
 } keep_alive_t;
 
 struct keep_alive_cmd {
@@ -128,7 +128,7 @@ void keep_alive_init(struct audio_device *adev)
     }
     ka.done = false;
     ka.prev_mode = KEEP_ALIVE_OUT_NONE;
-    ka.active_devices = AUDIO_DEVICE_NONE;
+    list_init(&ka.active_devices);
 
     pthread_mutex_init(&ka.lock, (const pthread_mutexattr_t *) NULL);
     pthread_cond_init(&ka.cond, (const pthread_condattr_t *) NULL);
@@ -164,38 +164,38 @@ void keep_alive_deinit()
     ALOGV("%s deinit done", __func__);
 }
 
-audio_devices_t get_device_id_from_mode(ka_mode_t ka_mode)
+void get_device_id_from_mode(ka_mode_t ka_mode,
+                             struct listnode *out_devices)
 {
     struct audio_device * adev = (struct audio_device *)ka.userdata;
-    audio_devices_t out_device = AUDIO_DEVICE_NONE;
+
     switch (ka_mode)
     {
         case KEEP_ALIVE_OUT_PRIMARY:
             if (adev->primary_output) {
-                if (adev->primary_output->devices & AUDIO_DEVICE_OUT_ALL)
-                    out_device = adev->primary_output->devices & AUDIO_DEVICE_OUT_ALL;
+                if (is_audio_out_device_type(&adev->primary_output->device_list))
+                    assign_output_devices(out_devices, &adev->primary_output->device_list);
                 else
-                    out_device = AUDIO_DEVICE_OUT_SPEAKER;
+                    reassign_device_list(out_devices, AUDIO_DEVICE_OUT_SPEAKER, "");
             }
             else {
-                out_device = AUDIO_DEVICE_OUT_SPEAKER;
+                reassign_device_list(out_devices, AUDIO_DEVICE_OUT_SPEAKER, "");
             }
             break;
 
         case KEEP_ALIVE_OUT_HDMI:
-            out_device = AUDIO_DEVICE_OUT_AUX_DIGITAL;
+            reassign_device_list(out_devices, AUDIO_DEVICE_OUT_AUX_DIGITAL, "");
             break;
-
+        case KEEP_ALIVE_OUT_NONE:
         default:
-            out_device = AUDIO_DEVICE_NONE;
+            break;
     }
-    return out_device;
 }
 
 void keep_alive_start(ka_mode_t ka_mode)
 {
     struct audio_device * adev = (struct audio_device *)ka.userdata;
-    audio_devices_t out_devices = AUDIO_DEVICE_NONE;
+    struct listnode out_devices;
 
     pthread_mutex_lock(&ka.lock);
     ALOGV("%s: mode %x", __func__, ka_mode);
@@ -204,27 +204,32 @@ void keep_alive_start(ka_mode_t ka_mode)
         goto exit;
     }
 
-    out_devices = get_device_id_from_mode(ka_mode);
-    if ((out_devices == ka.active_devices) && (ka.state == STATE_ACTIVE)) {
-        ALOGV(" %s : Already feeding silence to device %x",__func__, out_devices);
+    list_init(&out_devices);
+    get_device_id_from_mode(ka_mode, &out_devices);
+    if (compare_devices(&out_devices, &ka.active_devices) &&
+            (ka.state == STATE_ACTIVE)) {
+        ALOGV(" %s : Already feeding silence to device %x",__func__,
+              get_device_types(&out_devices));
         ka.prev_mode |= ka_mode;
         goto exit;
     }
-    ALOGV(" %s : active devices %x, new device %x",__func__, ka.active_devices, out_devices);
+    ALOGV(" %s : active devices %x, new device %x",__func__,
+           get_device_types(&ka.active_devices), get_device_types(&out_devices));
 
-    if (out_devices == AUDIO_DEVICE_NONE)
+    if (list_empty(&out_devices))
         goto exit;
 
     if (audio_extn_passthru_is_active()) {
-        ka.active_devices &= ~AUDIO_DEVICE_OUT_AUX_DIGITAL;
-        if(ka.active_devices == AUDIO_DEVICE_NONE)
+        update_device_list(&ka.active_devices, AUDIO_DEVICE_OUT_AUX_DIGITAL,
+                           "", false);
+        if (list_empty(&ka.active_devices))
             goto exit;
     }
 
-    ka.active_devices |= out_devices;
+    append_devices(&ka.active_devices, &out_devices);
     ka.prev_mode |= ka_mode;
     if (ka.state == STATE_ACTIVE) {
-        ka.out->devices = ka.active_devices;
+        assign_devices(&ka.out->device_list, &ka.active_devices);
         select_devices(adev, USECASE_AUDIO_PLAYBACK_SILENCE);
     } else if (ka.state == STATE_IDLE) {
         keep_alive_start_l();
@@ -263,7 +268,8 @@ static int keep_alive_start_l()
     }
 
     ka.out->flags = 0;
-    ka.out->devices = ka.active_devices;
+    list_init(&ka.out->device_list);
+    assign_devices(&ka.out->device_list, &ka.active_devices);
     ka.out->dev = adev;
     ka.out->format = AUDIO_FORMAT_PCM_16_BIT;
     ka.out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
@@ -274,6 +280,7 @@ static int keep_alive_start_l()
     usecase->stream.out = ka.out;
     usecase->type = PCM_PLAYBACK;
     usecase->id = USECASE_AUDIO_PLAYBACK_SILENCE;
+    list_init(&usecase->device_list);
     usecase->out_snd_device = SND_DEVICE_NONE;
     usecase->in_snd_device = SND_DEVICE_NONE;
 
@@ -304,29 +311,32 @@ exit:
 void keep_alive_stop(ka_mode_t ka_mode)
 {
     struct audio_device * adev = (struct audio_device *)ka.userdata;
-    audio_devices_t out_devices;
+    struct listnode out_devices;
     if (ka.state == STATE_DISABLED)
         return;
 
     pthread_mutex_lock(&ka.lock);
 
     ALOGV("%s: mode %x", __func__, ka_mode);
+    list_init(&out_devices);
     if (ka_mode && (ka.state != STATE_ACTIVE)) {
+        get_device_id_from_mode(ka_mode, &out_devices);
         ALOGV(" %s : Can't stop, keep_alive",__func__);
-        ALOGV(" %s : keep_alive is not running on device %x",__func__, get_device_id_from_mode(ka_mode));
+        ALOGV(" %s : keep_alive is not running on device %x",__func__,
+                get_device_types(&out_devices));
         ka.prev_mode |= ka_mode;
         goto exit;
     }
-    out_devices = get_device_id_from_mode(ka_mode);
+    get_device_id_from_mode(ka_mode, &out_devices);
     if (ka.prev_mode & ka_mode) {
         ka.prev_mode &= ~ka_mode;
-        ka.active_devices = get_device_id_from_mode(ka.prev_mode);
+        get_device_id_from_mode(ka.prev_mode, &ka.active_devices);
     }
 
-    if (ka.active_devices == AUDIO_DEVICE_NONE) {
+    if (list_empty(&ka.active_devices)) {
         keep_alive_cleanup();
-    } else if (ka.out->devices != ka.active_devices){
-        ka.out->devices = ka.active_devices;
+    } else if (!compare_devices(&ka.out->device_list, &ka.active_devices)) {
+        assign_devices(&ka.out->device_list, &ka.active_devices);
         select_devices(adev, USECASE_AUDIO_PLAYBACK_SILENCE);
     }
 exit:
@@ -362,7 +372,7 @@ static int keep_alive_cleanup()
     }
     pcm_close(ka.pcm);
     ka.pcm = NULL;
-    ka.active_devices = KEEP_ALIVE_OUT_NONE;
+    clear_devices(&ka.active_devices);
     return 0;
 }
 

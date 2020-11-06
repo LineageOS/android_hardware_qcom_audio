@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -224,7 +224,11 @@ static int enum_sndcards()
             (strncasecmp(card_id, "apq", 3) != 0) &&
             (strncasecmp(card_id, "sa", 2) != 0) &&
             (strncasecmp(card_id, "kona", 4) != 0) &&
+            (strncasecmp(card_id, "holi", 4) != 0) &&
+            (strncasecmp(card_id, "shima", 5) != 0) &&
+            (strncasecmp(card_id, "lahaina", 7) != 0) &&
             (strncasecmp(card_id, "atoll", 5) != 0) &&
+            (strncasecmp(card_id, "bengal", 6) != 0) &&
             (strncasecmp(card_id, "lito", 4) != 0)) {
             ALOGW("Skip over non-ADSP snd card %s", card_id);
             continue;

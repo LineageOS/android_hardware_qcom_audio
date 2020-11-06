@@ -3,9 +3,14 @@
 #AUDIO_FEATURE_FLAGS
 BOARD_USES_ALSA_AUDIO := true
 TARGET_USES_AOSP_FOR_AUDIO := false
+AUDIO_FEATURE_QSSI_COMPLIANCE := true
 
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
+ifeq ($(TARGET_FWK_SUPPORTS_FULL_VALUEADDS),true)
 USE_CUSTOM_AUDIO_POLICY := 1
+else
+USE_CUSTOM_AUDIO_POLICY := 0
+endif
 AUDIO_FEATURE_ENABLED_COMPRESS_VOIP := false
 AUDIO_FEATURE_ENABLED_EXTN_FORMATS := true
 AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER := true
@@ -42,10 +47,6 @@ ifneq ($(strip $(TARGET_USES_RRO)), true)
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 endif
 
-# Reduce client buffer size for fast audio output tracks
-PRODUCT_PROPERTY_OVERRIDES += \
-    af.fast_track_multiplier=1
-
 # Low latency audio buffer size in frames
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.audio_hal.period_size=192
@@ -58,17 +59,9 @@ vendor.audio.tunnel.encode=false
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.buffer.size.kb=32
 
-#Enable offload audio video playback by default
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.offload.video=true
-
 #Enable audio track offload by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.track.enable=true
-
-#Enable music through deep buffer
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.deep_buffer.media=true
 
 #enable voice path for PCM VoIP by default
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -104,6 +97,19 @@ vendor.audio.use.sw.ape.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
 
+ifneq ($(GENERIC_ODM_IMAGE),true)
+# Reduce client buffer size for fast audio output tracks
+PRODUCT_PROPERTY_OVERRIDES += \
+af.fast_track_multiplier=1
+
+#Enable offload audio video playback by default
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.video=true
+
+#Enable music through deep buffer
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.deep_buffer.media=true
+
 #audio becoming noisy intent broadcast delay
 PRODUCT_PRODUCT_PROPERTIES += \
 audio.sys.noisy.broadcast.delay=500
@@ -128,6 +134,13 @@ audio.sys.offload.pstimeout.secs=3
 PRODUCT_PROPERTY_OVERRIDES += \
 ro.af.client_heap_size_kbyte=7168
 
+#enable deep buffer
+PRODUCT_PROPERTY_OVERRIDES += \
+media.stagefright.audio.deep=false
+
+endif
+#guard for non GENERIC_ODM_IMAGE
+
 # Enable AAudio MMAP/NOIRQ data path.
 # 2 is AAUDIO_POLICY_AUTO so it will try MMAP then fallback to Legacy path.
 PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_policy=2
@@ -138,10 +151,6 @@ PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
 #enable mirror-link feature
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.enable.mirrorlink=false
-
-#enable deep buffer
-PRODUCT_PROPERTY_OVERRIDES += \
-media.stagefright.audio.deep=false
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \
@@ -158,6 +167,13 @@ PRODUCT_PACKAGES += \
     android.hardware.audio.common@5.0 \
     android.hardware.audio.common@5.0-util \
     android.hardware.audio.effect@5.0 \
+
+# enable audio hidl hal 6.0
+PRODUCT_PACKAGES += \
+    android.hardware.audio@6.0 \
+    android.hardware.audio.common@6.0 \
+    android.hardware.audio.common@6.0-util \
+    android.hardware.audio.effect@6.0 \
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \

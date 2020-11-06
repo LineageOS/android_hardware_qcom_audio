@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -37,6 +37,7 @@
 #include <pthread.h>
 #include <log/log.h>
 #include <unistd.h>
+#include <cutils/properties.h>
 #include "audio_hw.h"
 #include "audio_extn.h"
 #include "platform.h"
@@ -53,9 +54,8 @@
 #define MINOR_VERSION(ver) ((ver) & 0x00ff)
 
 /* Proprietary interface version used for compatibility with STHAL */
-#define STHAL_PROP_API_VERSION_1_0 MAKE_HAL_VERSION(1, 0)
-#define STHAL_PROP_API_VERSION_1_1 MAKE_HAL_VERSION(1, 1)
-#define STHAL_PROP_API_CURRENT_VERSION STHAL_PROP_API_VERSION_1_1
+#define STHAL_PROP_API_VERSION_2_0 MAKE_HAL_VERSION(2, 0)
+#define STHAL_PROP_API_CURRENT_VERSION STHAL_PROP_API_VERSION_2_0
 
 #define ST_EVENT_CONFIG_MAX_STR_VALUE 32
 #define ST_DEVICE_HANDSET_MIC 1
@@ -86,7 +86,8 @@ typedef enum {
     AUDIO_EVENT_BATTERY_STATUS_CHANGED,
     AUDIO_EVENT_GET_PARAM,
     AUDIO_EVENT_UPDATE_ECHO_REF,
-    AUDIO_EVENT_SCREEN_STATUS_CHANGED
+    AUDIO_EVENT_SCREEN_STATUS_CHANGED,
+    AUDIO_EVENT_ROUTE_INIT_DONE
 } audio_event_type_t;
 
 typedef enum {
@@ -129,7 +130,7 @@ struct sound_trigger_event_info {
 typedef struct sound_trigger_event_info sound_trigger_event_info_t;
 
 struct sound_trigger_device_info {
-    int device;
+    struct listnode devices;
 };
 
 struct sound_trigger_get_param_data {
@@ -148,6 +149,7 @@ struct audio_event_info {
         struct audio_hal_usecase usecase;
         bool audio_ec_ref_enabled;
         struct sound_trigger_get_param_data st_get_param_data;
+        struct audio_route *audio_route;
     } u;
     struct sound_trigger_device_info device_info;
 };
@@ -187,6 +189,8 @@ do {\
 #define SVA_PARAM_CHANNEL_INDEX "st_channel_index"
 #define MAX_STR_LENGTH_FFV_PARAMS 30
 #define MAX_FFV_SESSION_ID 100
+
+#define ST_DEVICE SND_DEVICE_IN_HANDSET_MIC
 /*
  * Current proprietary API version used by AHAL. Queried by STHAL
  * for compatibility check with AHAL
@@ -207,6 +211,7 @@ struct sound_trigger_audio_device {
     pthread_mutex_t lock;
     unsigned int sthal_prop_api_version;
     bool st_ec_ref_enabled;
+    bool shared_mixer;
 };
 
 static struct sound_trigger_audio_device *st_dev;
@@ -255,7 +260,8 @@ static int populate_usecase(struct audio_hal_usecase *usecase,
         break;
 
     case PCM_CAPTURE:
-        if (uc_info->id == USECASE_AUDIO_RECORD_VOIP)
+        if (uc_info->stream.in != NULL &&
+             uc_info->stream.in->source == AUDIO_SOURCE_VOICE_COMMUNICATION)
             usecase->type = USECASE_TYPE_VOIP_CALL;
         else
             usecase->type = USECASE_TYPE_PCM_CAPTURE;
@@ -475,14 +481,7 @@ void audio_extn_sound_trigger_check_and_get_session(struct stream_in *in)
 
 bool is_same_as_st_device(snd_device_t snd_device)
 {
-    if (snd_device == SND_DEVICE_IN_HANDSET_MIC_AEC ||
-        snd_device == SND_DEVICE_IN_HANDSET_MIC ||
-        snd_device == SND_DEVICE_IN_HANDSET_MIC_AEC_NS ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC ||
-        snd_device == SND_DEVICE_IN_VOICE_SPEAKER_MIC ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC_AEC ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC_AEC_NS ||
-        snd_device == SND_DEVICE_IN_SPEAKER_MIC_NS) {
+    if (platform_check_all_backends_match(ST_DEVICE, snd_device)) {
         ALOGD("audio HAL using same device %d as ST", snd_device);
         return true;
     }
@@ -497,6 +496,9 @@ bool audio_extn_sound_trigger_check_ec_ref_enable()
         ALOGE("%s: st_dev NULL", __func__);
         return ret;
     }
+
+    if (st_dev->shared_mixer)
+        return ret;
 
     pthread_mutex_lock(&st_dev->lock);
     if (st_dev->st_ec_ref_enabled) {
@@ -519,6 +521,9 @@ void audio_extn_sound_trigger_update_ec_ref_status(bool on)
         return;
     }
 
+    if (st_dev->shared_mixer)
+        return;
+
     ev_info.u.audio_ec_ref_enabled = on;
     st_dev->st_callback(AUDIO_EVENT_UPDATE_ECHO_REF, &ev_info);
     ALOGD("%s: update audio echo ref status %s",__func__,
@@ -530,20 +535,40 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
 {
     bool raise_event = false;
     int device_type = -1;
+    struct audio_event_info ev_info;
+
+    ev_info.u.usecase.type = -1;
 
     if (!st_dev)
        return;
+
+    list_init(&ev_info.device_info.devices);
 
     if (snd_device >= SND_DEVICE_OUT_BEGIN &&
         snd_device < SND_DEVICE_OUT_END)
         device_type = PCM_PLAYBACK;
     else if (snd_device >= SND_DEVICE_IN_BEGIN &&
-        snd_device < SND_DEVICE_IN_END)
+        snd_device < SND_DEVICE_IN_END) {
         device_type = PCM_CAPTURE;
-    else {
+        if (is_same_as_st_device(snd_device))
+            update_device_list(&ev_info.device_info.devices, ST_DEVICE_HANDSET_MIC, "", true);
+    } else {
         ALOGE("%s: invalid device 0x%x, for event %d",
                            __func__, snd_device, event);
         return;
+    }
+
+    struct stream_in *active_input = adev_get_active_input(st_dev->adev);
+    audio_source_t  source = (active_input == NULL) ?
+                               AUDIO_SOURCE_DEFAULT : active_input->source;
+    if (st_dev->adev->mode == AUDIO_MODE_IN_CALL) {
+        ev_info.u.usecase.type = USECASE_TYPE_VOICE_CALL;
+    } else if ((st_dev->adev->mode == AUDIO_MODE_IN_COMMUNICATION ||
+                source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
+               active_input) {
+        ev_info.u.usecase.type  = USECASE_TYPE_VOIP_CALL;
+    } else if (device_type == PCM_CAPTURE) {
+        ev_info.u.usecase.type  = USECASE_TYPE_PCM_CAPTURE;
     }
 
     raise_event = platform_sound_trigger_device_needs_event(snd_device);
@@ -552,10 +577,10 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
     if (raise_event && (device_type == PCM_CAPTURE)) {
         switch(event) {
         case ST_EVENT_SND_DEVICE_FREE:
-            st_dev->st_callback(AUDIO_EVENT_CAPTURE_DEVICE_INACTIVE, NULL);
+            st_dev->st_callback(AUDIO_EVENT_CAPTURE_DEVICE_INACTIVE, &ev_info);
             break;
         case ST_EVENT_SND_DEVICE_BUSY:
-            st_dev->st_callback(AUDIO_EVENT_CAPTURE_DEVICE_ACTIVE, NULL);
+            st_dev->st_callback(AUDIO_EVENT_CAPTURE_DEVICE_ACTIVE, &ev_info);
             break;
         default:
             ALOGW("%s:invalid event %d for device 0x%x",
@@ -571,7 +596,7 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
     struct audio_event_info ev_info;
     audio_event_type_t ev;
     /*Initialize to invalid device*/
-    ev_info.device_info.device = -1;
+    list_init(&ev_info.device_info.devices);
 
     if (!st_dev)
        return;
@@ -581,27 +606,22 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
         return;
     }
 
-    if ((st_dev->sthal_prop_api_version < STHAL_PROP_API_VERSION_1_0) &&
-        (uc_info->type != PCM_PLAYBACK))
-        return;
-
     if ((uc_info->in_snd_device >= SND_DEVICE_IN_BEGIN &&
         uc_info->in_snd_device < SND_DEVICE_IN_END)) {
         if (is_same_as_st_device(uc_info->in_snd_device))
-            ev_info.device_info.device = ST_DEVICE_HANDSET_MIC;
-    } else {
-        ALOGE("%s: invalid input device 0x%x, for event %d",
-                    __func__, uc_info->in_snd_device, event);
+            update_device_list(&ev_info.device_info.devices, ST_DEVICE_HANDSET_MIC, "", true);
     }
+
     raise_event = platform_sound_trigger_usecase_needs_event(uc_info->id);
     ALOGD("%s: uc_info->id %d of type %d for Event %d, with Raise=%d",
         __func__, uc_info->id, uc_info->type, event, raise_event);
     if (raise_event) {
         if (uc_info->type == PCM_PLAYBACK) {
             if (uc_info->stream.out)
-                ev_info.device_info.device = uc_info->stream.out->devices;
+                assign_devices(&ev_info.device_info.devices, &uc_info->stream.out->device_list);
             else
-                ev_info.device_info.device = AUDIO_DEVICE_OUT_SPEAKER;
+                reassign_device_list(&ev_info.device_info.devices,
+                                     AUDIO_DEVICE_OUT_SPEAKER, "");
             switch(event) {
             case ST_EVENT_STREAM_FREE:
                 st_dev->st_callback(AUDIO_EVENT_PLAYBACK_STREAM_INACTIVE, &ev_info);
@@ -629,9 +649,9 @@ void audio_extn_sound_trigger_update_stream_status(struct audio_usecase *uc_info
 
 void audio_extn_sound_trigger_update_battery_status(bool charging)
 {
-    struct audio_event_info ev_info;
+    struct audio_event_info ev_info = {{0}, {0}};
 
-    if (!st_dev || st_dev->sthal_prop_api_version < STHAL_PROP_API_VERSION_1_0)
+    if (!st_dev)
         return;
 
     ev_info.u.value = charging;
@@ -741,8 +761,15 @@ void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev __u
     audio_event_info_t event;
     int ret;
     char value[32], paramstr[MAX_STR_LENGTH_FFV_PARAMS];
+    char *kv_pairs = NULL;
 
-    ALOGD("%s input string<%s>", __func__, str_parms_to_str(query));
+    if (query == NULL || reply == NULL) {
+        ALOGD("%s: query is null or reply is null",__func__);
+        return;
+    }
+
+    kv_pairs = str_parms_to_str(query);
+    ALOGD("%s input string<%s>", __func__, kv_pairs);
 
     ret = str_parms_get_str(query, "SVA_EXEC_MODE_STATUS", value,
                                                   sizeof(value));
@@ -751,7 +778,7 @@ void audio_extn_sound_trigger_get_parameters(const struct audio_device *adev __u
         str_parms_add_int(reply, "SVA_EXEC_MODE_STATUS", event.u.value);
     }
 
-    ret = extract_sm_handle(str_parms_to_str(query), paramstr);
+    ret = extract_sm_handle(kv_pairs, paramstr);
 
     if ((ret >= 0) && !strncmp(paramstr, SVA_PARAM_DIRECTION_OF_ARRIVAL,
             MAX_STR_LENGTH_FFV_PARAMS)) {
@@ -773,6 +800,7 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
     int status = 0;
     char sound_trigger_lib[100];
     void *sthal_prop_api_version;
+    audio_event_info_t event = {{0}, {0}};
 
     ALOGI("%s: Enter", __func__);
 
@@ -820,9 +848,15 @@ int audio_extn_sound_trigger_init(struct audio_device *adev)
 
     st_dev->adev = adev;
     st_dev->st_ec_ref_enabled = false;
+    st_dev->shared_mixer =
+        property_get_bool("persist.vendor.audio.shared_mixer.enabled", false);
     list_init(&st_dev->st_ses_list);
     audio_extn_snd_mon_register_listener(st_dev, stdev_snd_mon_cb);
-
+    if (st_dev->shared_mixer) {
+        event.u.audio_route = adev->audio_route;
+        st_dev->st_callback(AUDIO_EVENT_ROUTE_INIT_DONE, &event);
+        ALOGD("%s: send the audio route instance to sthal",  __func__);
+    }
     return 0;
 
 cleanup:
