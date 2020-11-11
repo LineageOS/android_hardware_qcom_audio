@@ -44,6 +44,7 @@
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_HFP" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_STEREO" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_ICC" acdb_id="16"/>
+        <device name="SND_DEVICE_OUT_SYNTH_SPKR" acdb_id="134"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_SPEAKER_MIC" acdb_id="11"/>
         <device name="SND_DEVICE_IN_BUS" acdb_id="11"/>
@@ -61,6 +62,7 @@
         <device name="SND_DEVICE_IN_QUAD_MIC" acdb_id="47"/>
         <device name="SND_DEVICE_IN_HANDSET_QMIC" acdb_id="47"/>
         <device name="SND_DEVICE_IN_ICC" acdb_id="46"/>
+        <device name="SND_DEVICE_IN_SYNTH_MIC" acdb_id="11"/>
     </acdb_ids>
 
     <module_ids>
@@ -135,6 +137,8 @@
         <usecase name="USECASE_AUDIO_HFP_SCO_WB_DOWNLINK" type="out" id="36" />
         <usecase name="USECASE_ICC_CALL" type="in" id="33" />
         <usecase name="USECASE_ICC_CALL" type="out" id="33" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_SYNTHESIZER" type="in" id="33" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_SYNTHESIZER" type="out" id="33" />
     </pcm_ids>
 
     <config_params>
