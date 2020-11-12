@@ -33,12 +33,21 @@
 #include "platform.h"
 #include "platform_api.h"
 #include "audio_extn.h"
+#ifndef LINUX_ENABLED
+#include <hardware_legacy/power.h>
+#else
+#define acquire_wake_lock(a, b) (0)
+#define release_wake_lock(a) (0)
+#define PARTIAL_WAKE_LOCK 1
+#endif
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
 #define LOG_MASK HAL_MOD_FILE_VOICE
 #include <log_utils.h>
 #endif
+
+#define TRANSIT_WAKE_LOCK_NAME "audiohal_transit_wake_lock"
 
 struct pcm_config pcm_config_voice_call = {
     .channels = 1,
@@ -240,6 +249,13 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
           voice_loopback_tx = NULL;
        }
     }
+
+    if (voice_update_pcm_config(adev)) {
+        ret = release_wake_lock(TRANSIT_WAKE_LOCK_NAME);
+        if (ret)
+            ALOGE("%s: failed to release voicecall wake lock. ret: %d",__func__, ret);
+    }
+
     /* 2. Get and set stream specific mixer controls */
     disable_audio_route(adev, uc_info);
 
@@ -381,6 +397,12 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
              ret = -EIO;
              goto error_start_voice;
         }
+    }
+
+    if (voice_update_pcm_config(adev)) {
+        ret = acquire_wake_lock(PARTIAL_WAKE_LOCK, TRANSIT_WAKE_LOCK_NAME);
+        if (ret)
+            ALOGE("%s: acquiring wake lock failed for voice call ret: %d",__func__, ret);
     }
 
     if (adev->mic_break_enabled)

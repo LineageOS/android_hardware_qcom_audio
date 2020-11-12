@@ -111,7 +111,9 @@ endif
 
 LOCAL_CFLAGS += -Wno-macro-redefined
 
-LOCAL_HEADER_LIBRARIES := libhardware_headers
+LOCAL_HEADER_LIBRARIES := \
+    libhardware_headers \
+    libhardware_legacy_headers
 
 LOCAL_SRC_FILES := \
     audio_hw.c \
@@ -143,7 +145,8 @@ LOCAL_SHARED_LIBRARIES := \
     libexpat \
     libhidlbase \
     libprocessgroup \
-    libutils
+    libutils \
+    libhardware_legacy
 
 LOCAL_C_INCLUDES += \
     external/tinyalsa/include \
@@ -151,6 +154,7 @@ LOCAL_C_INCLUDES += \
     system/media/audio_utils/include \
     external/expat/lib \
     vendor/qcom/opensource/core-utils/fwk-detect \
+    $(TOP)/hardware/libhardware_legacy/include/hardware_legacy \
     $(call include-path-for, audio-route) \
     $(call include-path-for, audio-effects) \
     $(LOCAL_PATH)/$(AUDIO_PLATFORM) \
