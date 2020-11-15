@@ -233,7 +233,7 @@ LOCAL_SRC_FILES += audio_perf.cpp
 
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 
-LOCAL_HEADER_LIBRARIES += generated_kernel_headers
+LOCAL_HEADER_LIBRARIES += audio_headers generated_kernel_headers
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
@@ -248,5 +248,10 @@ LOCAL_PROPRIETARY_MODULE := true
 LOCAL_CFLAGS += -Werror
 
 include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := audio_headers
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/audio_extn
+include $(BUILD_HEADER_LIBRARY)
 
 endif
