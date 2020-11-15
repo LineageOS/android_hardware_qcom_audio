@@ -38,7 +38,7 @@ LOCAL_SHARED_LIBRARIES  := libutils liblog
 LOCAL_SRC_FILES         := src/aenc_svr.c
 LOCAL_SRC_FILES         += src/omx_evrc_aenc.cpp
 
-LOCAL_HEADER_LIBRARIES  := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES  := generated_kernel_headers media_headers
 
 include $(BUILD_SHARED_LIBRARY)
 
