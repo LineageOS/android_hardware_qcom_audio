@@ -53,6 +53,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES := audio_kernel_headers
   LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
 endif
+LOCAL_HEADER_LIBRARIES += media_headers
 
 include $(BUILD_SHARED_LIBRARY)
 
