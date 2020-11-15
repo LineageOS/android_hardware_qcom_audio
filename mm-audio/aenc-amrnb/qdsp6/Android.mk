@@ -25,7 +25,6 @@ libOmxAmrEnc-def += -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-self-assign 
 include $(CLEAR_VARS)
 
 libOmxAmrEnc-inc       := $(LOCAL_PATH)/inc
-libOmxAmrEnc-inc       += $(TARGET_OUT_HEADERS)/mm-core/omxcore
 
 LOCAL_MODULE             := libOmxAmrEnc
 LOCAL_MODULE_TAGS        := optional
@@ -38,7 +37,7 @@ LOCAL_SHARED_LIBRARIES  := libutils liblog
 LOCAL_SRC_FILES         := src/aenc_svr.c
 LOCAL_SRC_FILES         += src/omx_amr_aenc.cpp
 
-LOCAL_HEADER_LIBRARIES  := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES  := generated_kernel_headers media_headers
 
 include $(BUILD_SHARED_LIBRARY)
 
