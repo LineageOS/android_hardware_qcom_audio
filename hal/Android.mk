@@ -36,7 +36,7 @@ LOCAL_SRC_FILES := \
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c
 
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers audio_headers
 
 ifeq ($(strip $(AUDIO_USE_LL_AS_PRIMARY_OUTPUT)),true)
     LOCAL_CFLAGS += -DUSE_LL_AS_PRIMARY_OUTPUT
@@ -194,9 +194,6 @@ endif
 
 LOCAL_CLANG_CFLAGS += -Wno-unused-variable -Wno-unused-function -Wno-missing-field-initializers
 
-LOCAL_COPY_HEADERS_TO   := mm-audio
-LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
-
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_MODULE_RELATIVE_PATH := hw
@@ -208,5 +205,10 @@ LOCAL_VENDOR_MODULE := true
 LOCAL_CFLAGS += -Werror
 
 include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := audio_headers
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/audio_extn
+include $(BUILD_HEADER_LIBRARY)
 
 endif
