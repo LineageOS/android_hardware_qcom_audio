@@ -258,7 +258,7 @@ LOCAL_C_INCLUDES += \
         $(LOCAL_PATH)/audio_extn \
         $(LOCAL_PATH)/voice_extn
 
-LOCAL_HEADER_LIBRARIES += generated_kernel_headers
+LOCAL_HEADER_LIBRARIES += audio_headers generated_kernel_headers
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LISTEN)),true)
     LOCAL_CFLAGS += -DAUDIO_LISTEN_ENABLED
@@ -297,9 +297,6 @@ endif
 
 LOCAL_CFLAGS += -Wall -Wno-unused-parameter
 
-LOCAL_COPY_HEADERS_TO   := mm-audio
-LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
-
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
     LOCAL_CFLAGS += -DSND_MONITOR_ENABLED
     LOCAL_SRC_FILES += audio_extn/sndmonitor.c
@@ -316,5 +313,10 @@ LOCAL_VENDOR_MODULE := true
 LOCAL_CFLAGS += -Werror
 
 include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := audio_headers
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/audio_extn
+include $(BUILD_HEADER_LIBRARY)
 
 endif
