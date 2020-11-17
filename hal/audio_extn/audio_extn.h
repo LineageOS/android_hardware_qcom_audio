@@ -327,6 +327,7 @@ bool audio_extn_a2dp_source_is_ready();
 bool audio_extn_a2dp_source_is_suspended();
 int audio_extn_a2dp_start_capture();
 int audio_extn_a2dp_stop_capture();
+bool audio_extn_a2dp_set_source_backend_cfg();
 int audio_extn_sco_start_configuration();
 void audio_extn_sco_reset_configuration();
 
@@ -336,7 +337,7 @@ typedef int (*fp_check_a2dp_restore_t)(struct audio_device *,
                                        struct stream_out *, bool);
 struct a2dp_offload_init_config {
     fp_platform_get_pcm_device_id_t fp_platform_get_pcm_device_id;
-    fp_check_a2dp_restore_t fp_check_a2dp_restore;
+    fp_check_a2dp_restore_t fp_check_a2dp_restore_l;
 };
 typedef struct a2dp_offload_init_config a2dp_offload_init_config_t;
 // END: A2DP_OFFLOAD FEATURE ====================================================
