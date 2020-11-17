@@ -4641,6 +4641,9 @@ static a2dp_start_capture_t a2dp_start_capture;
 typedef int (*a2dp_stop_capture_t)();
 static a2dp_stop_capture_t a2dp_stop_capture;
 
+typedef bool (*a2dp_set_source_backend_cfg_t)();
+static a2dp_set_source_backend_cfg_t a2dp_set_source_backend_cfg;
+
 typedef int (*sco_start_configuration_t)();
 static sco_start_configuration_t sco_start_configuration;
 
@@ -4695,7 +4698,10 @@ int a2dp_offload_feature_init(bool is_feature_enabled)
             !(a2dp_start_capture =
                  (a2dp_start_capture_t)dlsym(a2dp_lib_handle, "a2dp_start_capture")) ||
             !(a2dp_stop_capture =
-                 (a2dp_stop_capture_t)dlsym(a2dp_lib_handle, "a2dp_stop_capture"))) {
+                 (a2dp_stop_capture_t)dlsym(a2dp_lib_handle, "a2dp_stop_capture")) ||
+            !(a2dp_set_source_backend_cfg =
+                 (a2dp_set_source_backend_cfg_t)dlsym(
+                                     a2dp_lib_handle, "a2dp_set_source_backend_cfg"))) {
             ALOGE("%s: dlsym failed", __func__);
             goto feature_disabled;
         }
@@ -4733,6 +4739,7 @@ feature_disabled:
     a2dp_source_is_suspended = NULL;
     a2dp_start_capture = NULL;
     a2dp_stop_capture = NULL;
+    a2dp_set_source_backend_cfg = NULL;
 
     ALOGW(":: %s: ---- Feature A2DP_OFFLOAD is disabled ----", __func__);
     return -ENOSYS;
@@ -4743,7 +4750,7 @@ void audio_extn_a2dp_init(void *adev)
     if (a2dp_init) {
         a2dp_offload_init_config_t a2dp_init_config;
         a2dp_init_config.fp_platform_get_pcm_device_id = platform_get_pcm_device_id;
-        a2dp_init_config.fp_check_a2dp_restore = check_a2dp_restore;
+        a2dp_init_config.fp_check_a2dp_restore_l = check_a2dp_restore_l;
 
         a2dp_init(adev, a2dp_init_config);
     }
@@ -4829,6 +4836,12 @@ int audio_extn_a2dp_start_capture()
 int audio_extn_a2dp_stop_capture()
 {
     return (a2dp_stop_capture ? a2dp_stop_capture() : 0);
+}
+
+bool audio_extn_a2dp_set_source_backend_cfg()
+{
+    return (a2dp_set_source_backend_cfg ?
+                a2dp_set_source_backend_cfg() : false);
 }
 
 int audio_extn_sco_start_configuration()
@@ -6332,8 +6345,6 @@ void audio_extn_feature_init()
 void audio_extn_set_parameters(struct audio_device *adev,
                                struct str_parms *parms)
 {
-   bool a2dp_reconfig = false;
-
    audio_extn_set_aanc_noise_level(adev, parms);
    audio_extn_set_anc_parameters(adev, parms);
    audio_extn_set_fluence_parameters(adev, parms);
@@ -6342,9 +6353,7 @@ void audio_extn_set_parameters(struct audio_device *adev,
    audio_extn_sound_trigger_set_parameters(adev, parms);
    audio_extn_listen_set_parameters(adev, parms);
    audio_extn_ssr_set_parameters(adev, parms);
-   audio_extn_hfp_set_parameters(adev, parms);
    audio_extn_dts_eagle_set_parameters(adev, parms);
-   audio_extn_a2dp_set_parameters(parms, &a2dp_reconfig);
    audio_extn_ddp_set_parameters(adev, parms);
    audio_extn_ds2_set_parameters(adev, parms);
    audio_extn_customstereo_set_parameters(adev, parms);

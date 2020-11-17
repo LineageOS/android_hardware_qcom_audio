@@ -160,6 +160,10 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_TIMESTAMP),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_COMPRESS),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_PASSTHROUGH),
+    STRING_TO_ENUM(AUDIO_INPUT_FLAG_MMAP_NOIRQ),
+    STRING_TO_ENUM(AUDIO_INPUT_FLAG_VOIP_TX),
+    STRING_TO_ENUM(AUDIO_INPUT_FLAG_HW_AV_SYNC),
+    STRING_TO_ENUM(AUDIO_INPUT_FLAG_DIRECT),
 };
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
@@ -243,6 +247,7 @@ static uint32_t string_to_enum(const struct string_to_enum *table, size_t size,
             return table[i].value;
         }
     }
+    ALOGE("%s cound not find %s", __func__, name);
     return 0;
 }
 
