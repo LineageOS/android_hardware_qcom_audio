@@ -527,6 +527,9 @@ static void update_hardware_info_kona(
                  sizeof("lito-lagoonqrd-snd-card"))) {
         strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
         hw_info->is_stereo_spkr = false;
+    } else if (!strncmp(snd_card_name, "lito-orchidmtp-snd-card",
+                 sizeof("lito-orchidmtp-snd-card"))) {
+        strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "bengal-idp-snd-card",
                  sizeof("bengal-idp-snd-card"))) {
         strlcpy(hw_info->name, "bengal", sizeof(hw_info->name));

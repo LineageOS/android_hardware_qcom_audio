@@ -59,6 +59,9 @@
         <usecase name="USECASE_QCHAT_CALL" type="out" id="42"/>
         <usecase name="USECASE_AUDIO_EC_REF_LOOPBACK" type="in" id="14"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_SILENCE" type="out" id="14"/>
+        <usecase name="USECASE_INCALL_REC_UPLINK" type="in" id="14" />
+        <usecase name="USECASE_INCALL_REC_DOWNLINK" type="in" id="14" />
+        <usecase name="USECASE_INCALL_REC_UPLINK_AND_DOWNLINK" type="in" id="14" />
     </pcm_ids>
     <config_params>
         <param key="native_audio_mode" value="src"/>
