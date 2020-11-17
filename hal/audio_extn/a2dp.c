@@ -255,7 +255,7 @@ typedef enum {
 
 // --- external function dependency ---
 fp_platform_get_pcm_device_id_t fp_platform_get_pcm_device_id;
-fp_check_a2dp_restore_t fp_check_a2dp_restore;
+fp_check_a2dp_restore_t fp_check_a2dp_restore_l;
 
 /* PCM config for ABR Feedback hostless front end */
 static struct pcm_config pcm_config_abr = {
@@ -1301,6 +1301,14 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
     is_configured = true;
 fail:
     return is_configured;
+}
+
+bool a2dp_set_source_backend_cfg()
+{
+    if (a2dp.a2dp_source_started && !a2dp.a2dp_source_suspended)
+        return a2dp_set_backend_cfg(SOURCE);
+
+    return false;
 }
 
 bool configure_aac_dec_format(audio_aac_dec_config_t *aac_bt_cfg)
@@ -2809,141 +2817,138 @@ int a2dp_stop_capture()
 
 int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
 {
-     int ret = 0, val, status = 0;
-     char value[32]={0};
-     struct audio_usecase *uc_info;
-     struct listnode *node;
+    int ret = 0, val, status = 0;
+    char value[32] = {0};
+    struct audio_usecase *uc_info;
+    struct listnode *node;
 
-     if (a2dp.is_a2dp_offload_supported == false) {
+    if (a2dp.is_a2dp_offload_supported == false) {
         ALOGV("no supported encoders identified,ignoring a2dp setparam");
         status = -EINVAL;
         goto param_handled;
-     }
+    }
 
-     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value,
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT, value,
                             sizeof(value));
-     if (ret >= 0) {
-         val = atoi(value);
-         if (audio_is_a2dp_out_device(val)) {
-             ALOGV("Received device connect request for A2DP source");
-             open_a2dp_source();
-         }
-         goto param_handled;
-     }
+    if (ret >= 0) {
+        val = atoi(value);
+        if (audio_is_a2dp_out_device(val)) {
+            ALOGV("Received device connect request for A2DP source");
+            open_a2dp_source();
+        }
+        goto param_handled;
+    }
 
-     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value,
-                         sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value,
+                            sizeof(value));
 
-     if (ret >= 0) {
-         val = atoi(value);
-         if (audio_is_a2dp_out_device(val)) {
-             ALOGV("Received source device dis- connect request");
-             close_a2dp_output();
-             reset_a2dp_enc_config_params();
-             reset_a2dp_source_dec_config_params();
-             a2dp_reset_backend_cfg(SOURCE);
-         } else if (audio_is_a2dp_in_device(val)) {
-             ALOGV("Received sink device dis- connect request");
-             close_a2dp_input();
-             reset_a2dp_sink_dec_config_params();
-             a2dp_reset_backend_cfg(SINK);
-         }
-         goto param_handled;
-     }
+    if (ret >= 0) {
+        val = atoi(value);
+        if (audio_is_a2dp_out_device(val)) {
+            ALOGV("Received source device dis- connect request");
+            close_a2dp_output();
+            reset_a2dp_enc_config_params();
+            reset_a2dp_source_dec_config_params();
+            a2dp_reset_backend_cfg(SOURCE);
+        } else if (audio_is_a2dp_in_device(val)) {
+            ALOGV("Received sink device dis- connect request");
+            close_a2dp_input();
+            reset_a2dp_sink_dec_config_params();
+            a2dp_reset_backend_cfg(SINK);
+        }
+        goto param_handled;
+    }
 #ifndef LINUX_ENABLED
-     ret = str_parms_get_str(parms, "TwsChannelConfig", value, sizeof(value));
-     if (ret>=0) {
-         ALOGD("Setting tws channel mode to %s",value);
-         if (!(strncmp(value,"mono",strlen(value))))
+    ret = str_parms_get_str(parms, "TwsChannelConfig", value, sizeof(value));
+    if (ret >= 0) {
+        ALOGD("Setting tws channel mode to %s",value);
+        if (!(strncmp(value, "mono", strlen(value))))
             a2dp.is_tws_mono_mode_on = true;
-         else if (!(strncmp(value,"dual-mono",strlen(value))))
+        else if (!(strncmp(value, "dual-mono", strlen(value))))
             a2dp.is_tws_mono_mode_on = false;
-         audio_a2dp_update_tws_channel_mode();
-     goto param_handled;
-     }
+        audio_a2dp_update_tws_channel_mode();
+        goto param_handled;
+    }
 #endif
-     ret = str_parms_get_str(parms, "A2dpSuspended", value, sizeof(value));
-     if (ret >= 0) {
-         if (a2dp.bt_lib_source_handle) {
-             if ((!strncmp(value,"true",sizeof(value)))) {
-                if (a2dp.a2dp_source_suspended) {
-                    ALOGD("%s: A2DP is already suspended", __func__);
-                    goto param_handled;
+    ret = str_parms_get_str(parms, "A2dpSuspended", value, sizeof(value));
+    if (ret >= 0) {
+        if (a2dp.bt_lib_source_handle == NULL)
+            goto param_handled;
+
+        if ((!strncmp(value, "true", sizeof(value)))) {
+            if (a2dp.a2dp_source_suspended) {
+                ALOGD("%s: A2DP is already suspended", __func__);
+                goto param_handled;
+            }
+            ALOGD("Setting a2dp to suspend state");
+            a2dp.a2dp_source_suspended = true;
+            if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED)
+                goto param_handled;
+            list_for_each(node, &a2dp.adev->usecase_list) {
+                uc_info = node_to_item(node, struct audio_usecase, list);
+                if (uc_info->type == PCM_PLAYBACK &&
+                    (uc_info->out_snd_device == SND_DEVICE_OUT_BT_A2DP ||
+                     uc_info->out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP ||
+                     uc_info->out_snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP)) {
+                    fp_check_a2dp_restore_l(a2dp.adev, uc_info->stream.out, false);
                 }
-                ALOGD("Setting a2dp to suspend state");
-                a2dp.a2dp_source_suspended = true;
-                if (a2dp.bt_state_source == A2DP_STATE_DISCONNECTED)
-                    goto param_handled;
-                list_for_each(node, &a2dp.adev->usecase_list) {
-                    uc_info = node_to_item(node, struct audio_usecase, list);
-                    if (uc_info->type == PCM_PLAYBACK &&
-                        (uc_info->out_snd_device == SND_DEVICE_OUT_BT_A2DP ||
-                         uc_info->out_snd_device == SND_DEVICE_OUT_SPEAKER_AND_BT_A2DP ||
-                         uc_info->out_snd_device == SND_DEVICE_OUT_SPEAKER_SAFE_AND_BT_A2DP)) {
-                        pthread_mutex_unlock(&a2dp.adev->lock);
-                        fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, false);
-                        pthread_mutex_lock(&a2dp.adev->lock);
+            }
+            if (!a2dp.swb_configured)
+                reset_codec_config();
+            if (a2dp.audio_source_suspend)
+                a2dp.audio_source_suspend();
+        } else if (a2dp.a2dp_source_suspended == true) {
+            ALOGD("Resetting a2dp suspend state");
+            struct audio_usecase *uc_info;
+            struct listnode *node;
+            if (a2dp.clear_source_a2dpsuspend_flag)
+                a2dp.clear_source_a2dpsuspend_flag();
+            a2dp.a2dp_source_suspended = false;
+            /*
+             * It is possible that before suspend,a2dp sessions can be active
+             * for example during music + voice activation concurrency
+             * a2dp suspend will be called & BT will change to sco mode
+             * though music is paused as a part of voice activation
+             * compress session close happens only after pause timeout(10secs)
+             * so if resume request comes before pause timeout as a2dp session
+             * is already active IPC start will not be called from APM/audio_hw
+             * Fix is to call a2dp start for IPC library post suspend
+             * based on number of active session count
+             */
+            if (a2dp.a2dp_source_total_active_session_requests > 0) {
+                ALOGD(" Calling IPC lib start post suspend state");
+                if (a2dp.audio_source_start) {
+                    ret =  a2dp.audio_source_start();
+                    if (ret != 0) {
+                        ALOGE("BT controller start failed");
+                        a2dp.a2dp_source_started = false;
                     }
                 }
-                if (!a2dp.swb_configured)
-                    reset_codec_config();
-                if (a2dp.audio_source_suspend)
-                   a2dp.audio_source_suspend();
-            } else if (a2dp.a2dp_source_suspended == true) {
-                ALOGD("Resetting a2dp suspend state");
-                struct audio_usecase *uc_info;
-                struct listnode *node;
-                if (a2dp.clear_source_a2dpsuspend_flag)
-                    a2dp.clear_source_a2dpsuspend_flag();
-                a2dp.a2dp_source_suspended = false;
-                /*
-                 * It is possible that before suspend,a2dp sessions can be active
-                 * for example during music + voice activation concurrency
-                 * a2dp suspend will be called & BT will change to sco mode
-                 * though music is paused as a part of voice activation
-                 * compress session close happens only after pause timeout(10secs)
-                 * so if resume request comes before pause timeout as a2dp session
-                 * is already active IPC start will not be called from APM/audio_hw
-                 * Fix is to call a2dp start for IPC library post suspend
-                 * based on number of active session count
-                 */
-                if (a2dp.a2dp_source_total_active_session_requests > 0) {
-                    ALOGD(" Calling IPC lib start post suspend state");
-                    if (a2dp.audio_source_start) {
-                        ret =  a2dp.audio_source_start();
-                        if (ret != 0) {
-                            ALOGE("BT controller start failed");
-                            a2dp.a2dp_source_started = false;
-                        }
-                    }
-                }
-                list_for_each(node, &a2dp.adev->usecase_list) {
-                    uc_info = node_to_item(node, struct audio_usecase, list);
-                    if (uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
-                        is_a2dp_out_device_type(&uc_info->stream.out->device_list)) {
-                        pthread_mutex_unlock(&a2dp.adev->lock);
-                        fp_check_a2dp_restore(a2dp.adev, uc_info->stream.out, true);
-                        pthread_mutex_lock(&a2dp.adev->lock);
-                    }
+            }
+            list_for_each(node, &a2dp.adev->usecase_list) {
+                uc_info = node_to_item(node, struct audio_usecase, list);
+                if (uc_info->stream.out && uc_info->type == PCM_PLAYBACK &&
+                    is_a2dp_out_device_type(&uc_info->stream.out->device_list)) {
+                    fp_check_a2dp_restore_l(a2dp.adev, uc_info->stream.out, true);
                 }
             }
         }
         goto param_handled;
-     }
+    }
 
-     ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value,
-                         sizeof(value));
-     if (ret >= 0) {
-         if (a2dp.is_a2dp_offload_supported &&
-                a2dp.bt_state_source != A2DP_STATE_DISCONNECTED) {
-             *reconfig = true;
-         }
-         goto param_handled;
-     }
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value,
+                            sizeof(value));
+    if (ret >= 0) {
+        if (a2dp.is_a2dp_offload_supported &&
+            a2dp.bt_state_source != A2DP_STATE_DISCONNECTED) {
+            *reconfig = true;
+        }
+        goto param_handled;
+    }
 
 param_handled:
-     ALOGV("end of a2dp setparam");
-     return status;
+    ALOGV("end of a2dp setparam");
+    return status;
 }
 
 void a2dp_set_handoff_mode(bool is_on)
@@ -3014,7 +3019,7 @@ void a2dp_init(void *adev,
   // init function pointers
   fp_platform_get_pcm_device_id =
               init_config.fp_platform_get_pcm_device_id;
-  fp_check_a2dp_restore = init_config.fp_check_a2dp_restore;
+  fp_check_a2dp_restore_l = init_config.fp_check_a2dp_restore_l;
 
   reset_a2dp_enc_config_params();
   reset_a2dp_source_dec_config_params();
