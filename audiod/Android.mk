@@ -15,7 +15,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libmedia \
         liblog
 
-LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
 
 LOCAL_MODULE:= audiod
 
