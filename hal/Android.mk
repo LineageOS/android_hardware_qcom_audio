@@ -50,7 +50,7 @@ LOCAL_SRC_FILES := \
 
 LOCAL_SRC_FILES += audio_extn/audio_extn.c \
                    audio_extn/utils.c
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers audio_headers
 LOCAL_CFLAGS += -DUSE_VENDOR_EXTN
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HDMI_EDID)),true)
@@ -305,9 +305,6 @@ endif
 
 LOCAL_CFLAGS += -Werror
 
-LOCAL_COPY_HEADERS_TO   := mm-audio
-LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
-
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SND_MONITOR)), true)
     LOCAL_CFLAGS += -DSND_MONITOR_ENABLED
     LOCAL_SRC_FILES += audio_extn/sndmonitor.c
@@ -322,5 +319,10 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_VENDOR_MODULE := true
 
 include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := audio_headers
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/audio_extn
+include $(BUILD_HEADER_LIBRARY)
 
 endif
