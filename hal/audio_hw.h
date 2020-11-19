@@ -362,13 +362,18 @@ struct stream_inout {
     stream_callback_t client_callback;
     void *client_cookie;
 };
+
 struct stream_out {
     struct audio_stream_out stream;
     pthread_mutex_t lock; /* see note below on mutex acquisition order */
     pthread_mutex_t pre_lock; /* acquire before lock to avoid DOS by playback thread */
-    pthread_mutex_t compr_mute_lock; /* acquire before setting compress volume */
-    pthread_mutex_t position_query_lock; /* acquire before updating/getting position of track offload*/
     pthread_cond_t  cond;
+    /* stream_out->lock is of large granularity, and can only be held before device lock
+     * latch is a supplemetary lock to protect certain fields of out stream and
+     * it can be held after device lock
+     */
+    pthread_mutex_t latch_lock;
+    pthread_mutex_t position_query_lock; /* sychronize frame written */
     struct pcm_config config;
     struct compr_config compr_config;
     struct pcm *pcm;
@@ -778,7 +783,7 @@ int pcm_ioctl(struct pcm *pcm, int request, ...);
 audio_usecase_t get_usecase_id_from_usecase_type(const struct audio_device *adev,
                                                  usecase_type_t type);
 
-int check_a2dp_restore(struct audio_device *adev, struct stream_out *out, bool restore);
+int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool restore);
 
 int adev_open_output_stream(struct audio_hw_device *dev,
                             audio_io_handle_t handle,
