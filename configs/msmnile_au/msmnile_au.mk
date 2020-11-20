@@ -472,8 +472,8 @@ PRODUCT_PACKAGES_DEBUG += \
 
 # for HIDL related audiocontrol packages
 PRODUCT_PACKAGES += \
-    vendor.qti.hardware.automotive.audiocontrol@1.0-service \
-    android.hardware.automotive.audiocontrol@1.0
+    android.hardware.automotive.audiocontrol@2.0-service \
+    android.hardware.automotive.audiocontrol@2.0
 
 ifeq ($(ENABLE_HYP),true)
 PRODUCT_PROPERTY_OVERRIDES += \
