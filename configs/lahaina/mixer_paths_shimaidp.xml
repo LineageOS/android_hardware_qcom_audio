@@ -391,14 +391,15 @@
     <ctl name="TX DEC7 MUX" value="SWR_MIC" />
     <ctl name="TX DMIC MUX7" value="ZERO" />
     <ctl name="TX SMIC MUX7" value="ZERO" />
-    <ctl name="ADC1 ChMap" value="ZERO" />
-    <ctl name="ADC2 ChMap" value="ZERO" />
-    <ctl name="ADC3 ChMap" value="ZERO" />
-    <ctl name="ADC4 ChMap" value="ZERO" />
     <ctl name="HDR12 MUX" value="NO_HDR12" />
     <ctl name="HDR34 MUX" value="NO_HDR34" />
-    <ctl name="MBHC ChMap" value="ZERO" />
     <ctl name="BCS Channel" value="CH6" />
+    <ctl name="MBHC ChMap" value="SWRM_TX2_CH3" />
+    <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1" />
+    <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
+    <ctl name="ADC3 ChMap" value="SWRM_TX2_CH1" />
+    <ctl name="ADC4 ChMap" value="SWRM_TX2_CH2" />
+
 
     <!-- Volume controls -->
     <ctl name="WSA_RX0 Digital Volume" value="84" />
@@ -2579,8 +2580,8 @@
         <ctl name="TX DEC1 MUX" value="SWR_MIC" />
         <ctl name="TX SMIC MUX1" value="SWR_MIC0" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="ADC1_MIXER Switch" value="1" />
         <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1" />
+        <ctl name="ADC1_MIXER Switch" value="1" />
     </path>
 
     <path name="amic2">
@@ -2589,9 +2590,9 @@
         <ctl name="TX_CDC_DMA_TX_4 Channels" value="One" />
         <ctl name="DEC0_BCS Switch" value="1" />
         <ctl name="TX_AIF2_CAP Mixer DEC0" value="1" />
+        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP2" />
-        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="MBHC ChMap" value="SWRM_TX2_CH3" />
         <ctl name="BCS Channel" value="CH6" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
@@ -2601,9 +2602,9 @@
         <ctl name="TX DEC1 MUX" value="SWR_MIC" />
         <ctl name="TX SMIC MUX1" value="SWR_MIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
+        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP3" />
-        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
     </path>
 
@@ -2611,9 +2612,9 @@
         <ctl name="TX DEC1 MUX" value="SWR_MIC" />
         <ctl name="TX SMIC MUX1" value="SWR_MIC4" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
+        <ctl name="ADC3 ChMap" value="SWRM_TX2_CH1" />
         <ctl name="ADC3_MIXER Switch" value="1" />
         <ctl name="ADC3 MUX" value="INP4" />
-        <ctl name="ADC3 ChMap" value="SWRM_TX2_CH1" />
         <ctl name="HDR34 MUX" value="NO_HDR34" />
     </path>
 
@@ -2621,9 +2622,9 @@
         <ctl name="TX DEC1 MUX" value="SWR_MIC" />
         <ctl name="TX SMIC MUX1" value="SWR_MIC5" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
+        <ctl name="ADC4 ChMap" value="SWRM_TX2_CH2" />
         <ctl name="ADC4_MIXER Switch" value="1" />
         <ctl name="ADC4 MUX" value="INP5" />
-        <ctl name="ADC4 ChMap" value="SWRM_TX2_CH2" />
     </path>
 
     <path name="speaker">
@@ -3028,11 +3029,11 @@
         <ctl name="TX SMIC MUX2" value="SWR_MIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="ADC1_MIXER Switch" value="1" />
         <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1" />
+        <ctl name="ADC1_MIXER Switch" value="1" />
+        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP3" />
-        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
     </path>
 
@@ -3041,16 +3042,16 @@
         <ctl name="TX DEC1 MUX" value="SWR_MIC" />
         <ctl name="TX DEC2 MUX" value="SWR_MIC" />
         <ctl name="TX SMIC MUX1" value="SWR_MIC1" />
-        <ctl name="TX SMIC MUX2" value="SWR_MIC9" />
+        <ctl name="TX SMIC MUX2" value="SWR_MIC5" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
+        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP3" />
-        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
+        <ctl name="ADC4 ChMap" value="SWRM_TX2_CH2" />
         <ctl name="ADC4_MIXER Switch" value="1" />
         <ctl name="ADC4 MUX" value="INP5" />
-        <ctl name="ADC4 ChMap" value="SWRM_TX3_CH2" />
     </path>
 
     <path name="dmic-endfire">
@@ -3123,14 +3124,14 @@
         <ctl name="TX DEC1 MUX" value="SWR_MIC" />
         <ctl name="TX DEC2 MUX" value="SWR_MIC" />
         <ctl name="TX SMIC MUX1" value="SWR_MIC0" />
-        <ctl name="TX SMIC MUX2" value="SWR_MIC9" />
+        <ctl name="TX SMIC MUX2" value="SWR_MIC5" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="ADC1_MIXER Switch" value="1" />
         <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1" />
+        <ctl name="ADC1_MIXER Switch" value="1" />
+        <ctl name="ADC4 ChMap" value="SWRM_TX2_CH2" />
         <ctl name="ADC4_MIXER Switch" value="1" />
         <ctl name="ADC4 MUX" value="INP5" />
-        <ctl name="ADC4 ChMap" value="SWRM_TX3_CH2" />
     </path>
 
     <path name="dmic-broadside">
@@ -3151,16 +3152,16 @@
         <ctl name="TX DEC1 MUX" value="SWR_MIC" />
         <ctl name="TX DEC2 MUX" value="SWR_MIC" />
         <ctl name="TX DEC3 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX1" value="SWR_MIC9" />
+        <ctl name="TX SMIC MUX1" value="SWR_MIC5" />
         <ctl name="TX SMIC MUX2" value="SWR_MIC0" />
-        <ctl name="TX SMIC MUX3" value="SWR_MIC8" />
+        <ctl name="TX SMIC MUX3" value="SWR_MIC4" />
         <ctl name="ADC4 MUX" value="INP5" />
         <ctl name="ADC3 MUX" value="INP4" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
         <ctl name="HDR34 MUX" value="NO_HDR34" />
         <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1" />
-        <ctl name="ADC3 ChMap" value="SWRM_TX3_CH1" />
-        <ctl name="ADC4 ChMap" value="SWRM_TX3_CH2" />
+        <ctl name="ADC3 ChMap" value="SWRM_TX2_CH1" />
+        <ctl name="ADC4 ChMap" value="SWRM_TX2_CH2" />
         <ctl name="ADC1_MIXER Switch" value="1" />
         <ctl name="ADC3_MIXER Switch" value="1" />
         <ctl name="ADC4_MIXER Switch" value="1" />
@@ -3185,9 +3186,9 @@
         <ctl name="TX DEC2 MUX" value="SWR_MIC" />
         <ctl name="TX DEC3 MUX" value="SWR_MIC" />
         <ctl name="TX DEC4 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX1" value="SWR_MIC9" />
+        <ctl name="TX SMIC MUX1" value="SWR_MIC5" />
         <ctl name="TX SMIC MUX2" value="SWR_MIC0" />
-        <ctl name="TX SMIC MUX3" value="SWR_MIC8" />
+        <ctl name="TX SMIC MUX3" value="SWR_MIC4" />
         <ctl name="TX SMIC MUX4" value="SWR_MIC1" />
         <ctl name="ADC2 MUX" value="INP3" />
         <ctl name="ADC3 MUX" value="INP4" />
@@ -3196,8 +3197,8 @@
         <ctl name="HDR34 MUX" value="NO_HDR34" />
         <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1" />
         <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
-        <ctl name="ADC3 ChMap" value="SWRM_TX3_CH1" />
-        <ctl name="ADC4 ChMap" value="SWRM_TX3_CH2" />
+        <ctl name="ADC3 ChMap" value="SWRM_TX2_CH1" />
+        <ctl name="ADC4 ChMap" value="SWRM_TX2_CH2" />
         <ctl name="ADC1_MIXER Switch" value="1" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC3_MIXER Switch" value="1" />
@@ -3276,9 +3277,9 @@
         <ctl name="TX SMIC MUX6" value="SWR_MIC1" />
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
         <ctl name="TX_AIF1_CAP Mixer DEC6" value="1" />
+        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP2" />
-        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
     </path>
 
