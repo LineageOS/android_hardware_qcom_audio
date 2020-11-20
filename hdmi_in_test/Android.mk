@@ -18,7 +18,8 @@ LOCAL_CPPFLAGS += --coverage -fprofile-arcs -ftest-coverage
 LOCAL_STATIC_LIBRARIES += libprofile_rt
 endif
 
-ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter kona lahaina holi taro,$(TARGET_BOARD_PLATFORM)),)
+
 LOCAL_SANITIZE := integer_overflow
 endif
 include $(BUILD_EXECUTABLE)
