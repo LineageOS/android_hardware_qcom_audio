@@ -360,7 +360,8 @@ vendor.audio.feature.vbat.enable=false \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=false \
-vendor.audio.feature.auto_hal.enable=true
+vendor.audio.feature.auto_hal.enable=true \
+vendor.audio.feature.synth.enable=true
 else
 # Non-Generic ODM varient related
 PRODUCT_ODM_PROPERTIES += \
@@ -406,7 +407,8 @@ vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=false \
-vendor.audio.feature.auto_hal.enable=true
+vendor.audio.feature.auto_hal.enable=true \
+vendor.audio.feature.synth.enable=true
 endif
 
 # for HIDL related packages

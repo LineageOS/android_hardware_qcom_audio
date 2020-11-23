@@ -287,6 +287,12 @@
     <ctl name="SEC_TDM_RX_0 Audio Mixer MultiMedia9" value="0" />
     <ctl name="MultiMedia9 Mixer TERT_TDM_TX_0" value="0" />
 
+    <path name="synth-loopback">
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia9" value="1" />
+        <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
+        <ctl name="MultiMedia9 Mixer TERT_TDM_TX_0" value="1" />
+    </path>
     <!-- These are audio route (FE to BE) specific mixer settings -->
 
     <!-- EC Reference -->
