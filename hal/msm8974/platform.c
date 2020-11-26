@@ -100,7 +100,12 @@
 #define TOSTRING_(x) #x
 #define TOSTRING(x) TOSTRING_(x)
 
+#ifdef DAEMON_SUPPORT_AUTO
+#define LIB_ACDB_LOADER "libacdbloaderclient.so"
+#else
 #define LIB_ACDB_LOADER "libacdbloader.so"
+#endif
+
 #define CVD_VERSION_MIXER_CTL "CVD Version"
 
 #define FLAC_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)

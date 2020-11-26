@@ -493,6 +493,10 @@ LOCAL_CFLAGS += \
     -Wno-unused-function \
     -Wno-unused-variable
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT)), true)
+  LOCAL_CFLAGS += -DDAEMON_SUPPORT_AUTO
+endif
+
 LOCAL_SHARED_LIBRARIES := \
     libaudioroute \
     libaudioutils \
