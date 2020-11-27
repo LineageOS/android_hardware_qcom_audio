@@ -74,6 +74,8 @@
 #define PLATFORM_INFO_XML_PATH_TDM_NAME  "audio_platform_info_tdm.xml"
 #define PLATFORM_INFO_XML_PATH_SHIMA_IDP "audio_platform_info_shimaidp.xml"
 #define PLATFORM_INFO_XML_PATH_SHIMA_QRD "audio_platform_info_shimaqrd.xml"
+#define PLATFORM_INFO_XML_PATH_YUPIK_IDP "audio_platform_info_yupikidp.xml"
+#define PLATFORM_INFO_XML_PATH_YUPIK_QRD "audio_platform_info_yupikqrd.xml"
 #define PLATFORM_INFO_XML_PATH_SCUBA_IDP "audio_platform_info_scubaidp.xml"
 #define PLATFORM_INFO_XML_PATH_SCUBA_QRD "audio_platform_info_scubaqrd.xml"
 
@@ -1815,6 +1817,10 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("lahaina-shimaidps-snd-card")) ||
          !strncmp(snd_card_name, "lahaina-shimaqrd-snd-card",
                    sizeof("lahaina-shimaqrd-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-yupikidp-snd-card",
+                   sizeof("lahaina-yupikidp-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-yupikqrd-snd-card",
+                   sizeof("lahaina-yupikqrd-snd-card")) ||
          !strncmp(snd_card_name, "kona-qrd-snd-card",
                    sizeof("kona-qrd-snd-card")) ||
          !strncmp(snd_card_name, "lito-mtp-snd-card",
@@ -3483,6 +3489,14 @@ void *platform_init(struct audio_device *adev)
                sizeof("lahaina-shimaqrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SHIMA_QRD),
             my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "lahaina-yupikidp-snd-card",
+               sizeof("lahaina-yupikidp-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_YUPIK_IDP),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "lahaina-yupikqrd-snd-card",
+               sizeof("lahaina-yupikqrd-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_YUPIK_QRD),
+            my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
                sizeof("bengal-scubaidp-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SCUBA_IDP),
@@ -3820,6 +3834,7 @@ acdb_init_fail:
         if (!strncmp(snd_card_name, "sm6150", strlen("sm6150")) ||
             !strncmp(snd_card_name, "kona", strlen("kona")) ||
             !strncmp(snd_card_name, "shima", strlen("shima")) ||
+            !strncmp(snd_card_name, "yupik", strlen("yupik")) ||
             !strncmp(snd_card_name, "lahaina", strlen("lahaina")) ||
             !strncmp(snd_card_name, "lito", strlen("lito")) ||
             !strncmp(snd_card_name, "atoll", strlen("atoll")) ||
