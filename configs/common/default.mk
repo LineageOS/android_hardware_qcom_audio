@@ -1,9 +1,5 @@
 # for HIDL related packages
-PRODUCT_PACKAGES += \
-    android.hardware.audio@2.0-service \
-    vendor.qti.hardware.audiohalext@1.0 \
-    vendor.qti.hardware.audiohalext@1.0-impl \
-    vendor.qti.hardware.audiohalext-utils
+PRODUCT_PACKAGES += android.hardware.audio@2.0-service
 
 # enable audio hidl hal 5.0
 PRODUCT_PACKAGES += \

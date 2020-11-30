@@ -1246,10 +1246,15 @@ int enable_audio_route(struct audio_device *adev,
     if (audio_extn_is_maxx_audio_enabled())
         audio_extn_ma_set_device(usecase);
     audio_extn_utils_send_audio_calibration(adev, usecase);
-    if ((usecase->type == PCM_PLAYBACK) && is_offload_usecase(usecase->id)) {
-        out = usecase->stream.out;
-        if (out && out->compr)
+    if ((usecase->type == PCM_PLAYBACK) &&
+            ((out = usecase->stream.out) != NULL)) {
+        if (!is_offload_usecase(out->usecase)) {
+            pthread_mutex_lock(&out->latch_lock);
+            out->muted = false;
+            pthread_mutex_unlock(&out->latch_lock);
+        } else if (out->compr) {
             audio_extn_utils_compress_set_clk_rec_mode(usecase);
+        }
     }
 
     if (usecase->type == PCM_CAPTURE) {
