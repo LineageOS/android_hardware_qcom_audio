@@ -17,7 +17,6 @@ LOCAL_SRC_FILES := \
     AudioDevice.cpp \
     AudioVoice.cpp \
     audio_extn/soundtrigger.cpp \
-    audio_extn/audio_hidl.cpp \
     audio_extn/Gain.cpp \
     audio_extn/AudioExtn.cpp \
     ../hal/audio_extn/battery_listener.cpp
@@ -47,11 +46,6 @@ LOCAL_C_INCLUDES += \
     $(call include-path-for, audio-effects) \
     $(LOCAL_PATH)/audio_extn \
     $(LOCAL_PATH)/../hal/audio_extn
-
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AHAL_EXT)),true)
-    LOCAL_CFLAGS += -DAHAL_EXT_ENABLED
-    LOCAL_SHARED_LIBRARIES += vendor.qti.hardware.audiohalext@1.0
-endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GEF_SUPPORT)),true)
     LOCAL_CFLAGS += -DAUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED

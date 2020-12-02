@@ -51,7 +51,6 @@
 #include "PalDefs.h"
 
 #include "audio_extn.h"
-#include "audio_hidl.h"
 #include "battery_listener.h"
 
 card_status_t AudioDevice::sndCardState = CARD_STATUS_ONLINE;
@@ -747,7 +746,6 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     adev_->perf_lock_opts[3] = 0x1;
     adev_->perf_lock_opts_size = 4;
 
-    audio_extn_hidl_init();
     voice_ = VoiceInit();
     mute_ = false;
     current_rotation = PAL_SPEAKER_ROTATION_LR;
