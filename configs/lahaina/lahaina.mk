@@ -105,6 +105,7 @@ AUDIO_AGM += libagm_compress_plugin
 AUDIO_PAL := libar-pal
 AUDIO_PAL += lib_bt_bundle
 AUDIO_PAL += lib_bt_aptx
+AUDIO_PAL += lib_bt_ble
 AUDIO_PAL += catf
 #PAL Service
 AUDIO_PAL += libpalclient

@@ -1236,10 +1236,23 @@ int AudioDevice::SetParameters(const char *kvpairs) {
 
         AHAL_INFO("Setting tws channel mode to %s", value);
         if (!(strncmp(value, "mono", strlen(value))))
-           param_bt_a2dp.is_tws_mono_mode_on = true;
+            param_bt_a2dp.is_tws_mono_mode_on = true;
         else if (!(strncmp(value,"dual-mono",strlen(value))))
             param_bt_a2dp.is_tws_mono_mode_on = false;
         ret = pal_set_param(PAL_PARAM_ID_BT_A2DP_TWS_CONFIG, (void *)&param_bt_a2dp,
+                            sizeof(pal_param_bta2dp_t));
+    }
+
+    ret = str_parms_get_str(parms, "LEAMono", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_bta2dp_t param_bt_a2dp;
+
+        AHAL_INFO("Setting LC3 channel mode to %s", value);
+        if (!(strncmp(value, "true", strlen(value))))
+            param_bt_a2dp.is_lc3_mono_mode_on = true;
+        else
+            param_bt_a2dp.is_lc3_mono_mode_on = false;
+        ret = pal_set_param(PAL_PARAM_ID_BT_A2DP_LC3_CONFIG, (void *)&param_bt_a2dp,
                             sizeof(pal_param_bta2dp_t));
     }
 
