@@ -285,6 +285,9 @@ int AudioVoice::GetMatchingTxDevices(const std::set<audio_devices_t>& rx_devices
             case AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
                 tx_devices.insert(AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET);
                 break;
+            case AUDIO_DEVICE_OUT_HEARING_AID:
+                tx_devices.insert(AUDIO_DEVICE_IN_BUILTIN_MIC);
+                break;
             default:
                 tx_devices.insert(AUDIO_DEVICE_NONE);
                 AHAL_ERR("unsupported Device Id of %d", rx_dev);
