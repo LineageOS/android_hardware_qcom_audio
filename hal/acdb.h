@@ -24,7 +24,13 @@
 #include <linux/msm_audio_calibration.h>
 
 #define MAX_CVD_VERSION_STRING_SIZE 100
+
+#ifdef DAEMON_SUPPORT_AUTO
+#define LIB_ACDB_LOADER "libacdbloaderclient.so"
+#else
 #define LIB_ACDB_LOADER "libacdbloader.so"
+#endif
+
 #define CVD_VERSION_MIXER_CTL "CVD Version"
 #define ACDB_METAINFO_KEY_MODULE_NAME_LEN 100
 

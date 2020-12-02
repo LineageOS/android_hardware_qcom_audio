@@ -45,12 +45,12 @@
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_STEREO" acdb_id="94"/>
         <device name="SND_DEVICE_OUT_ICC" acdb_id="16"/>
         <device name="SND_DEVICE_OUT_SYNTH_SPKR" acdb_id="134"/>
-        <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="11"/>
-        <device name="SND_DEVICE_IN_SPEAKER_MIC" acdb_id="11"/>
-        <device name="SND_DEVICE_IN_BUS" acdb_id="11"/>
-        <device name="SND_DEVICE_IN_BUS_PAX" acdb_id="11"/>
-        <device name="SND_DEVICE_IN_BUS_RSE" acdb_id="11"/>
-        <device name="SND_DEVICE_IN_HEADSET_MIC" acdb_id="11"/>
+        <device name="SND_DEVICE_IN_HANDSET_MIC" acdb_id="47"/>
+        <device name="SND_DEVICE_IN_SPEAKER_MIC" acdb_id="47"/>
+        <device name="SND_DEVICE_IN_BUS" acdb_id="47"/>
+        <device name="SND_DEVICE_IN_BUS_PAX" acdb_id="47"/>
+        <device name="SND_DEVICE_IN_BUS_RSE" acdb_id="47"/>
+        <device name="SND_DEVICE_IN_HEADSET_MIC" acdb_id="47"/>
         <device name="SND_DEVICE_IN_VOICE_HEADSET_MIC" acdb_id="95"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" acdb_id="95"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP" acdb_id="95"/>
@@ -62,7 +62,7 @@
         <device name="SND_DEVICE_IN_QUAD_MIC" acdb_id="47"/>
         <device name="SND_DEVICE_IN_HANDSET_QMIC" acdb_id="47"/>
         <device name="SND_DEVICE_IN_ICC" acdb_id="46"/>
-        <device name="SND_DEVICE_IN_SYNTH_MIC" acdb_id="11"/>
+        <device name="SND_DEVICE_IN_SYNTH_MIC" acdb_id="47"/>
     </acdb_ids>
 
     <module_ids>

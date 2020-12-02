@@ -40,6 +40,9 @@ USE_XML_AUDIO_POLICY_CONF := 1
 AUDIO_FEATURE_ENABLED_DLKM := true
 BOARD_SUPPORTS_SOUND_TRIGGER := true
 AUDIO_FEATURE_ENABLED_INSTANCE_ID := true
+ifeq ($(TARGET_HAS_GENERIC_KERNEL_HEADERS), true)
+AUDIO_FEATURE_ENABLED_GKI := true
+endif
 AUDIO_USE_DEEP_AS_PRIMARY_OUTPUT := false
 AUDIO_FEATURE_ENABLED_VBAT_MONITOR := true
 AUDIO_FEATURE_ENABLED_NT_PAUSE_TIMEOUT := true
@@ -76,6 +79,7 @@ AUDIO_FEATURE_ENABLED_EXT_HW_PLUGIN := true
 AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL := true
 ifneq ($(ENABLE_HYP),true)
 AUDIO_FEATURE_ENABLED_AUTO_AUDIOD := true
+AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT := true
 endif
 AUDIO_FEATURE_ENABLED_FM_TUNER_EXT := true
 AUDIO_FEATURE_ENABLED_ICC := true
@@ -451,8 +455,8 @@ PRODUCT_PACKAGES_DEBUG += \
 
 # for HIDL related audiocontrol packages
 PRODUCT_PACKAGES += \
-    vendor.qti.hardware.automotive.audiocontrol@1.0-service \
-    android.hardware.automotive.audiocontrol@1.0
+    android.hardware.automotive.audiocontrol@2.0-service \
+    android.hardware.automotive.audiocontrol@2.0
 
 ifeq ($(ENABLE_HYP),true)
 PRODUCT_PROPERTY_OVERRIDES += \
