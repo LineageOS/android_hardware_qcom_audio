@@ -7,14 +7,14 @@ AUDIO_USE_STUB_HAL := true
 endif
 endif
 ##mixer xml generation
-BASE_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/common/base
-OVERLAY_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/shima_overlay
-TARGET_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina
-SCRIPT := vendor/qcom/opensource/audio-hal/primary-hal/configs/common/mixer_xml_utils.py
+#BASE_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/common/base
+#OVERLAY_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/shima_overlay
+#TARGET_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina
+#SCRIPT := vendor/qcom/opensource/audio-hal/primary-hal/configs/common/mixer_xml_utils.py
 
-$(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/mixer_paths_base.xml --overlay $(OVERLAY_PATH)/mixer_paths_shimaidp_overlay.xml $(OVERLAY_PATH)/mixer_paths_shimaidps_overlay.xml $(OVERLAY_PATH)/mixer_paths_shimaqrd_overlay.xml --out_dir $(TARGET_PATH) --out mixer_paths_shimaidp.xml mixer_paths_shimaidps.xml mixer_paths_shimaqrd.xml )
+#$(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/mixer_paths_base.xml --overlay $(OVERLAY_PATH)/mixer_paths_shimaidp_overlay.xml $(OVERLAY_PATH)/mixer_paths_shimaidps_overlay.xml $(OVERLAY_PATH)/mixer_paths_shimaqrd_overlay.xml --out_dir $(TARGET_PATH) --out mixer_paths_shimaidp.xml mixer_paths_shimaidps.xml mixer_paths_shimaqrd.xml )
 
-$(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/sound_trigger_mixer_paths_base.xml --overlay $(OVERLAY_PATH)/sound_trigger_mixer_paths_shimaidp_overlay.xml $(OVERLAY_PATH)/sound_trigger_mixer_paths_shimaidps_overlay.xml $(OVERLAY_PATH)/sound_trigger_mixer_paths_shimaqrd_overlay.xml --out_dir $(TARGET_PATH) --out sound_trigger_mixer_paths_shimaidp.xml sound_trigger_mixer_paths_shimaidps.xml sound_trigger_mixer_paths_shimaqrd.xml )
+#$(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/sound_trigger_mixer_paths_base.xml --overlay $(OVERLAY_PATH)/sound_trigger_mixer_paths_shimaidp_overlay.xml $(OVERLAY_PATH)/sound_trigger_mixer_paths_shimaidps_overlay.xml $(OVERLAY_PATH)/sound_trigger_mixer_paths_shimaqrd_overlay.xml --out_dir $(TARGET_PATH) --out sound_trigger_mixer_paths_shimaidp.xml sound_trigger_mixer_paths_shimaidps.xml sound_trigger_mixer_paths_shimaqrd.xml )
 ##
 ifneq ($(AUDIO_USE_STUB_HAL), true)
 BOARD_USES_ALSA_AUDIO := true
@@ -254,6 +254,11 @@ PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.speaker.prot.enable=true\
 persist.vendor.audio.spv4.enable=true\
 persist.vendor.audio.avs.afe_api_version=9
+
+##bcl aka vbat monitor feature enable by default
+PRODUCT_PROPERTY_OVERRIDES += \
+persist.vendor.audio.vbat.enabled=true\
+persist.vendor.audio.bcl.enabled=true\
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \
