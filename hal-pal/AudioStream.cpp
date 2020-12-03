@@ -52,6 +52,8 @@
 
 #define MAX_READ_RETRY_COUNT 25
 
+#define AFE_PROXY_RECORD_PERIOD_SIZE  768
+
 void StreamOutPrimary::GetStreamHandle(audio_stream_out** stream) {
   *stream = (audio_stream_out*)stream_.get();
 }
@@ -1006,10 +1008,30 @@ static uint32_t astream_in_get_input_frames_lost(
 static void in_update_sink_metadata(
                                 struct audio_stream_in *stream,
                                 const struct sink_metadata *sink_metadata) {
-    std::ignore = stream;
-    std::ignore = sink_metadata;
+    if (stream == NULL
+            || sink_metadata == NULL
+            || sink_metadata->tracks == NULL) {
+        AHAL_ERR("%s: stream or sink_metadata is NULL", __func__);
+        return;
+    }
+    audio_devices_t device = sink_metadata->tracks->dest_device;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    int ret = 0;
 
-    AHAL_VERBOSE("sink meta data update not  supported in pal");
+
+    AHAL_DBG("%s: sink device %d", __func__, device);
+
+    if (device == AUDIO_DEVICE_OUT_HEARING_AID) {
+        std::set<audio_devices_t> device_types;
+        device_types.insert(device);
+        if (adevice && adevice->voice_) {
+            ret = adevice->voice_->RouteStream(device_types);
+            AHAL_DBG("%s voice RouteStream ret = %d", __func__, ret);
+        }
+        else {
+            AHAL_ERR("%s: voice handle does not exist", __func__);
+        }
+    }
 }
 
 static int astream_in_get_active_microphones(
@@ -1241,7 +1263,10 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
             palStreamType = PAL_STREAM_ULTRA_LOW_LATENCY;
             break;
         case AUDIO_INPUT_FLAG_NONE:
-            palStreamType = PAL_STREAM_DEEP_BUFFER;
+            if (isDeviceAvailable(PAL_DEVICE_IN_TELEPHONY_RX))
+                palStreamType = PAL_STREAM_PROXY;
+            else
+                palStreamType = PAL_STREAM_DEEP_BUFFER;
             break;
         default:
             /*
@@ -2896,9 +2921,12 @@ int StreamInPrimary::Open() {
                     (PAL_STREAM_FLAG_MMAP);
     }
 
-    if (streamAttributes_.type == PAL_STREAM_PROXY &&
-            (isDeviceAvailable(PAL_DEVICE_IN_PROXY)))
-        streamAttributes_.info.opt_stream_info.tx_proxy_type = PAL_STREAM_PROXY_TX_WFD;
+    if (streamAttributes_.type == PAL_STREAM_PROXY) {
+        if (isDeviceAvailable(PAL_DEVICE_IN_PROXY))
+            streamAttributes_.info.opt_stream_info.tx_proxy_type = PAL_STREAM_PROXY_TX_WFD;
+        else if (isDeviceAvailable(PAL_DEVICE_IN_TELEPHONY_RX))
+            streamAttributes_.info.opt_stream_info.tx_proxy_type = PAL_STREAM_PROXY_TX_TELEPHONY_RX;
+    }
 
     AHAL_DBG("(%x:ret)", ret);
 
@@ -2971,10 +2999,15 @@ uint32_t StreamInPrimary::GetBufferSize() {
                     audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_PROXY) {
-        return config_.frame_count *
-            audio_bytes_per_frame(
-                    audio_channel_count_from_in_mask(config_.channel_mask),
-                    config_.format);
+        if (isDeviceAvailable(PAL_DEVICE_IN_TELEPHONY_RX)) {
+            audio_stream_in* stream_in;
+            GetStreamHandle(&stream_in);
+            return AFE_PROXY_RECORD_PERIOD_SIZE * audio_stream_in_frame_size(stream_in);
+        } else
+            return config_.frame_count *
+                audio_bytes_per_frame(
+                        audio_channel_count_from_in_mask(config_.channel_mask),
+                        config_.format);
     } else {
         return BUF_SIZE_CAPTURE * NO_OF_BUF;
     }

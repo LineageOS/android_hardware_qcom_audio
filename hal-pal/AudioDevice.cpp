@@ -1358,6 +1358,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_PROXY, PAL_DEVICE_OUT_PROXY));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_USB_HEADSET, PAL_DEVICE_OUT_USB_HEADSET));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_DEFAULT, PAL_DEVICE_OUT_SPEAKER));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_HEARING_AID, PAL_DEVICE_OUT_HEARING_AID));
 
     /* go through all in devices and pushback */
 
@@ -1369,8 +1370,8 @@ void AudioDevice::FillAndroidDeviceMap() {
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_WIRED_HEADSET, PAL_DEVICE_IN_WIRED_HEADSET));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_AUX_DIGITAL, PAL_DEVICE_IN_AUX_DIGITAL));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_HDMI, PAL_DEVICE_IN_HDMI));
-    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_VOICE_CALL, PAL_DEVICE_IN_HANDSET_MIC));
-    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_TELEPHONY_RX, PAL_DEVICE_IN_TELEPHONY_RX);
+    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_VOICE_CALL, PAL_DEVICE_IN_HANDSET_MIC));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_TELEPHONY_RX, PAL_DEVICE_IN_TELEPHONY_RX));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_REMOTE_SUBMIX, PAL_DEVICE_IN_REMOTE_SUBMIX);
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET, PAL_DEVICE_IN_ANLG_DOCK_HEADSET);
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET, PAL_DEVICE_IN_DGTL_DOCK_HEADSET);
