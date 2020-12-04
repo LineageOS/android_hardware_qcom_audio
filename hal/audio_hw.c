@@ -3240,13 +3240,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                                             channel_count,
                                             is_low_latency);
         in->config.period_size = buffer_size / frame_size;
-        if ((in->source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&
-               (in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) &&
-               (voice_extn_compress_voip_is_format_supported(in->format)) &&
-               (in->config.rate == 8000 || in->config.rate == 16000) &&
-               (audio_channel_count_from_in_mask(in->channel_mask) == 1)) {
-            voice_extn_compress_voip_open_input_stream(in);
-        }
     }
 
     *stream_in = &in->stream;
