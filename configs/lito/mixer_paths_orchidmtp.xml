@@ -211,6 +211,9 @@
     <ctl name="VoiceMMode1_Tx Mixer USB_AUDIO_TX_MMode1" value="0" />
     <!-- Multimode Voice1 Display-Port -->
     <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode1" value="0" />
+    <!-- Multimode Voice1 proxy-Port -->
+    <ctl name="PROXY_RX_Voice Mixer VoiceMMode1" value="0" />
+    <ctl name="VoiceMMode1_Tx Mixer PROXY_TX_MMode1" value="0" />
     <!-- Miltimode Voice1 end-->
 
     <!-- Multimode Voice2 -->
@@ -228,6 +231,9 @@
     <ctl name="VoiceMMode2_Tx Mixer USB_AUDIO_TX_MMode2" value="0" />
     <!-- Multimode Voice2 Display-Port -->
     <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode2" value="0" />
+    <!-- Multimode Voice2 proxy-Port -->
+    <ctl name="PROXY_RX_Voice Mixer VoiceMMode2" value="0" />
+    <ctl name="VoiceMMode2_Tx Mixer PROXY_TX_MMode2" value="0" />
     <!-- Multimode Voice2 end-->
 
     <!-- Voice external ec. reference -->
@@ -301,6 +307,8 @@
     <ctl name="WSA_RX_0_VI_FB_RCH_MUX" value="ZERO" />
     <ctl name="SpkrLeft COMP Switch" value="0" />
     <ctl name="SpkrRight COMP Switch" value="0" />
+    <ctl name="SpkrLeft BOOST Switch" value="0" />
+    <ctl name="SpkrRight BOOST Switch" value="0" />
     <ctl name="SpkrLeft VISENSE Switch" value="0" />
     <ctl name="SpkrRight VISENSE Switch" value="0" />
     <ctl name="SpkrLeft SWR DAC_Port Switch" value="0" />
@@ -493,6 +501,34 @@
         <ctl name="EC Reference Channels" value="Two"/>
     </path>
 
+    <path name="echo-reference bt-sco">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_7_RX" />
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
+    <path name="echo-reference bt-sco-wb">
+        <path name="echo-reference bt-sco" />
+    </path>
+
+    <path name="echo-reference bt-sco-swb">
+        <path name="echo-reference bt-sco" />
+    </path>
+
+    <path name="echo-reference-voip-low-latency">
+        <ctl name="AUDIO_REF_EC_UL8 MUX" value="WSA_CDC_DMA_RX_0" />
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
+    <path name="echo-reference-voip-low-latency handset">
+        <ctl name="AUDIO_REF_EC_UL8 MUX" value="WSA_CDC_DMA_RX_0" />
+        <ctl name="EC Reference Channels" value="One"/>
+    </path>
+
+    <path name="echo-reference-voip-low-latency headphones">
+        <ctl name="AUDIO_REF_EC_UL8 MUX" value="WSA_CDC_DMA_RX_0" />
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
     <path name="echo-reference-voip">
         <ctl name="AUDIO_REF_EC_UL10 MUX" value="WSA_CDC_DMA_RX_0" />
         <ctl name="EC Reference Channels" value="Two"/>
@@ -506,6 +542,19 @@
     <path name="echo-reference-voip headphones">
         <ctl name="AUDIO_REF_EC_UL10 MUX" value="RX_CDC_DMA_RX_0" />
         <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
+    <path name="echo-reference-voip bt-sco">
+        <ctl name="AUDIO_REF_EC_UL10 MUX" value="SLIM_7_RX" />
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
+    <path name="echo-reference-voip bt-sco-wb">
+        <path name="echo-reference-voip bt-sco" />
+    </path>
+
+    <path name="echo-reference-voip bt-sco-swb">
+        <path name="echo-reference-voip bt-sco" />
     </path>
 
     <path name="deep-buffer-playback">
@@ -2103,6 +2152,10 @@
         <path name="incall-rec-uplink" />
     </path>
 
+    <path name="incall-rec-uplink call-proxy-in">
+        <path name="incall-rec-uplink" />
+    </path>
+
     <path name="incall-rec-uplink-compress">
         <ctl name="MultiMedia8 Mixer VOC_REC_UL" value="1" />
     </path>
@@ -2152,6 +2205,10 @@
     </path>
 
     <path name="incall-rec-downlink afe-proxy">
+        <path name="incall-rec-downlink" />
+    </path>
+
+    <path name="incall-rec-downlink call-proxy-in">
         <path name="incall-rec-downlink" />
     </path>
 
@@ -2209,6 +2266,10 @@
     </path>
 
     <path name="incall-rec-uplink-and-downlink afe-proxy">
+        <path name="incall-rec-uplink-and-downlink" />
+    </path>
+
+    <path name="incall-rec-uplink-and-downlink call-proxy-in">
         <path name="incall-rec-uplink-and-downlink" />
     </path>
 
@@ -2313,6 +2374,16 @@
         <ctl name="VoiceMMode1_Tx Mixer TX_CDC_DMA_TX_3_MMode1" value="1" />
     </path>
 
+    <path name="voicemmode1-call call-proxy">
+        <ctl name="PROXY_RX_Voice Mixer VoiceMMode1" value="1" />
+        <ctl name="VoiceMMode1_Tx Mixer PROXY_TX_MMode1" value="1" />
+    </path>
+
+    <path name="voicemmode1-call hearing-aid">
+        <ctl name="PROXY_RX_Voice Mixer VoiceMMode1" value="1" />
+        <ctl name="VoiceMMode1_Tx Mixer TX_CDC_DMA_TX_3_MMode1" value="1" />
+    </path>
+
     <path name="voicemmode1-call headphones">
         <ctl name="RX_CDC_DMA_RX_0_Voice Mixer VoiceMMode1" value="1" />
         <ctl name="VoiceMMode1_Tx Mixer TX_CDC_DMA_TX_3_MMode1" value="1" />
@@ -2377,6 +2448,11 @@
         <ctl name="VoiceMMode2_Tx Mixer TX_CDC_DMA_TX_3_MMode2" value="1" />
     </path>
 
+    <path name="voicemmode2-call hearing-aid">
+        <ctl name="PROXY_RX_Voice Mixer VoiceMMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer TX_CDC_DMA_TX_3_MMode2" value="1" />
+    </path>
+
     <path name="voicemmode2-call headphones">
         <ctl name="RX_CDC_DMA_RX_0_Voice Mixer VoiceMMode2" value="1" />
         <ctl name="VoiceMMode2_Tx Mixer TX_CDC_DMA_TX_3_MMode2" value="1" />
@@ -2434,6 +2510,11 @@
     <path name="voicemmode2-call display-port">
         <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode2" value="1" />
         <ctl name="VoiceMMode2_Tx Mixer TX_CDC_DMA_TX_3_MMode2" value="1" />
+    </path>
+
+    <path name="voicemmode2-call call-proxy">
+        <ctl name="PROXY_RX_Voice Mixer VoiceMMode2" value="1" />
+        <ctl name="VoiceMMode2_Tx Mixer PROXY_TX_MMode2" value="1" />
     </path>
 
     <!-- VoIP Rx settings -->
@@ -2502,6 +2583,10 @@
     </path>
 
     <!-- VoIP Tx settings -->
+    <path name="audio-record-voip-low-latency">
+        <ctl name="MultiMedia8 Mixer TX_CDC_DMA_TX_3" value="1" />
+    </path>
+
     <path name="audio-record-voip">
         <ctl name="MultiMedia10 Mixer TX_CDC_DMA_TX_3" value="1" />
     </path>
@@ -2663,11 +2748,11 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="dmic2" />
+        <path name="dmic5" />
     </path>
 
     <path name="speaker-mic-liquid">
-        <path name="dmic2" />
+        <path name="dmic5" />
     </path>
 
     <path name="speaker-mic-sbc">
@@ -2724,7 +2809,7 @@
     </path>
 
     <path name="handset-mic">
-        <path name="dmic3" />
+        <path name="dmic2" />
     </path>
 
     <path name="headphones">
@@ -2953,7 +3038,7 @@
     <path name="handset-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC2" />
+        <ctl name="TX DMIC MUX1" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
         <ctl name="TX DMIC MUX2" value="DMIC3" />
     </path>
@@ -2961,9 +3046,9 @@
     <path name="speaker-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC2" />
+        <ctl name="TX DMIC MUX1" value="DMIC4" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC3" />
+        <ctl name="TX DMIC MUX2" value="DMIC1" />
     </path>
 
     <path name="dmic-endfire">
@@ -3004,6 +3089,10 @@
         <path name="dmic-endfire" />
     </path>
 
+    <path name="hearing-aid-mic">
+        <path name="voice-speaker-mic"/>
+    </path>
+
     <path name="handset-stereo-dmic-ef-liquid">
         <path name="handset-dmic-endfire" />
     </path>
@@ -3030,9 +3119,9 @@
     <path name="speaker-dmic-broadside">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC1" />
+        <ctl name="TX DMIC MUX1" value="DMIC4" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC2" />
+        <ctl name="TX DMIC MUX2" value="DMIC1" />
     </path>
 
     <path name="dmic-broadside">
@@ -3048,19 +3137,19 @@
     <path name="three-mic">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Three" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC1" />
+        <ctl name="TX DMIC MUX1" value="DMIC3" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC2" />
+        <ctl name="TX DMIC MUX2" value="DMIC0" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
-        <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX DMIC MUX3" value="DMIC2" />
     </path>
 
     <path name="speaker-tmic">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Three" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC1" />
+        <ctl name="TX DMIC MUX1" value="DMIC4" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC2" />
+        <ctl name="TX DMIC MUX2" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
         <ctl name="TX DMIC MUX3" value="DMIC3" />
     </path>
@@ -3073,9 +3162,9 @@
     <path name="speaker-qmic">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Four" />
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC1" />
+        <ctl name="TX DMIC MUX1" value="DMIC4" />
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC2" />
+        <ctl name="TX DMIC MUX2" value="DMIC1" />
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
         <ctl name="TX DMIC MUX3" value="DMIC3" />
         <ctl name="TX_AIF1_CAP Mixer DEC4" value="1" />
@@ -3150,7 +3239,6 @@
     </path>
 
     <path name="voice-tty-hco-headset-mic">
-
         <ctl name="TX DEC6 MUX" value="SWR_MIC" />
         <ctl name="TX SMIC MUX6" value="ADC1" />
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="One" />
@@ -3396,6 +3484,11 @@
 
     <path name="audio-ull-playback speaker-safe-and-bt-a2dp">
         <path name="audio-ull-playback bt-a2dp" />
+        <path name="audio-ull-playback" />
+    </path>
+
+    <path name="audio-ull-playback speaker-and-usb-headphones">
+        <path name="audio-ull-playback usb-headphones" />
         <path name="audio-ull-playback" />
     </path>
 

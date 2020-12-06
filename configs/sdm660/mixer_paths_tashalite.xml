@@ -389,6 +389,7 @@
     <!-- HFP end -->
     <!-- echo reference -->
     <ctl name="AUDIO_REF_EC_UL1 MUX" value="None" />
+    <ctl name="EC Reference Channels" value="Zero"/>
     <!-- usb headset -->
     <ctl name="AFE_PCM_RX Audio Mixer MultiMedia1" value="0" />
     <ctl name="AFE_PCM_RX Audio Mixer MultiMedia2" value="0" />
@@ -588,6 +589,16 @@
     <ctl name="SLIM7_RX ADM Channels" value="Zero" />
     <!-- split a2dp end-->
 
+    <!-- VoIP over audio -->
+    <ctl name="MultiMedia10 Mixer SLIM_0_TX" value="0" />
+    <ctl name="MultiMedia10 Mixer SLIM_7_TX" value="0" />
+    <ctl name="MultiMedia10 Mixer USB_AUDIO_TX" value="0" />
+    <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia10" value="0" />
+    <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia10" value="0" />
+    <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia10" value="0" />
+    <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia10" value="0" />
+    <!-- VoIP over audio -->
+
     <!-- ADSP testfwk -->
     <ctl name="SLIMBUS_DL_HL Switch" value="0" />
     <ctl name="SLIMBUS6_DL_HL Switch" value="0" />
@@ -606,6 +617,7 @@
         <ctl name="RX MIX TX1 MUX" value="RX_MIX_VBAT7" />
         <ctl name="SLIM_1_TX Channels" value="One" />
         <ctl name="VOC_EXT_EC MUX" value="SLIM_1_TX" />
+        <ctl name="EC Reference Channels" value="One"/>
    </path>
 
     <path name="echo-reference speaker-vbat-mono-2">
@@ -614,6 +626,7 @@
         <ctl name="RX MIX TX2 MUX" value="RX_MIX_VBAT8" />
         <ctl name="SLIM_1_TX Channels" value="One" />
         <ctl name="VOC_EXT_EC MUX" value="SLIM_1_TX" />
+        <ctl name="EC Reference Channels" value="One"/>
    </path>
 
    <path name="echo-reference speaker-vbat">
@@ -625,18 +638,45 @@
         <ctl name="RX MIX TX2 MUX" value="RX_MIX_VBAT8" />
         <ctl name="SLIM_1_TX Channels" value="Two" />
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_1_TX" />
+        <ctl name="EC Reference Channels" value="Two"/>
     </path>
 
     <path name="echo-reference">
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_RX" />
+        <ctl name="EC Reference Channels" value="Two"/>
     </path>
 
     <path name="echo-reference headphones">
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_6_RX" />
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
+    <path name="echo-reference headset">
+         <path name="echo-reference headphones" />
     </path>
 
     <path name="echo-reference headphones-44.1">
         <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_1_TX" />
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
+    <path name="echo-reference-voip">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_RX" />
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
+    <path name="echo-reference-voip headphones">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_6_RX" />
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
+    <path name="echo-reference-voip headset">
+         <path name="echo-reference-voip headphones" />
+    </path>
+
+    <path name="echo-reference-voip headphones-44.1">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="SLIM_1_TX" />
+        <ctl name="EC Reference Channels" value="Two"/>
     </path>
 
     <path name="deep-buffer-playback">
@@ -2151,6 +2191,61 @@
     <path name="listen-voice-wakeup-8">
         <ctl name="LSM8 MUX" value="SLIMBUS_5_TX" />
         <ctl name="SLIMBUS_5_TX LSM Function" value="AUDIO" />
+    </path>
+
+    <!-- VoIP Rx settings -->
+    <path name="audio-playback-voip">
+        <ctl name="SLIMBUS_0_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip headphones">
+        <ctl name="SLIMBUS_6_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip bt-sco">
+        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip bt-sco-wb">
+        <path name="audio-playback-voip bt-sco" />
+    </path>
+
+    <path name="audio-playback-voip usb-headphones">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip usb-headset">
+        <ctl name="USB_AUDIO_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip afe-proxy">
+        <ctl name="AFE_PCM_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip display-port">
+        <ctl name="DISPLAY_PORT Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="audio-playback-voip speaker-and-display-port">
+        <path name="audio-playback-voip display-port" />
+        <path name="audio-playback-voip" />
+    </path>
+
+    <!-- VoIP Tx settings -->
+    <path name="audio-record-voip">
+        <ctl name="MultiMedia10 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="audio-record-voip bt-sco">
+        <ctl name="MultiMedia10 Mixer SLIM_7_TX" value="1" />
+    </path>
+
+    <path name="audio-record-voip bt-sco-wb">
+        <path name="audio-record-voip bt-sco" />
+    </path>
+
+    <path name="audio-record-voip usb-headset-mic">
+        <ctl name="MultiMedia10 Mixer USB_AUDIO_TX" value="1" />
     </path>
 
    <path name="spkr-rx-calib">

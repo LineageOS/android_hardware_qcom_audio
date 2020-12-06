@@ -43,6 +43,7 @@
         <device name="SND_DEVICE_IN_HDMI_MIC" acdb_id="4"/>
         <device name="SND_DEVICE_IN_HANDSET_TMIC_FLUENCE_PRO" acdb_id="125"/>
         <device name="SND_DEVICE_IN_HANDSET_TMIC" acdb_id="125"/>
+        <device name="SND_DEVICE_IN_HEADSET_MIC_FLUENCE" acdb_id="8"/>
     </acdb_ids>
     <bit_width_configs>
         <device name="SND_DEVICE_OUT_SPEAKER" bit_width="24"/>
@@ -86,6 +87,8 @@
         <usecase name="USECASE_INCALL_REC_UPLINK_AND_DOWNLINK" type="in" id="27" />
         <usecase name="USECASE_INCALL_MUSIC_UPLINK" type="out" id="27" />
         <usecase name="USECASE_INCALL_MUSIC_UPLINK2" type="out" id="27" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="16" />
+        <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="16" />
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsatz.13"/>
