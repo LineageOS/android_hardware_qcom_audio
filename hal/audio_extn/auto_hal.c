@@ -841,6 +841,8 @@ snd_device_t auto_hal_get_output_snd_device(struct audio_device *adev,
             snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
             break;
         case USECASE_AUDIO_PLAYBACK_MEDIA:
+            snd_device = SND_DEVICE_OUT_BUS_MEDIA;
+            break;
         case USECASE_AUDIO_PLAYBACK_OFFLOAD:
         case USECASE_AUDIO_PLAYBACK_OFFLOAD2:
         case USECASE_AUDIO_PLAYBACK_OFFLOAD3:
@@ -854,6 +856,33 @@ snd_device_t auto_hal_get_output_snd_device(struct audio_device *adev,
         case USECASE_AUDIO_PLAYBACK_MMAP:
         case USECASE_AUDIO_PLAYBACK_VOIP:
             snd_device = SND_DEVICE_OUT_BUS_MEDIA;
+            /* Override the snd_device based on the bus address if available */
+            if (usecase->stream.out->car_audio_stream) {
+                switch (usecase->stream.out->car_audio_stream) {
+                    case CAR_AUDIO_STREAM_MEDIA:
+                        snd_device = SND_DEVICE_OUT_BUS_MEDIA;
+                        break;
+                    case CAR_AUDIO_STREAM_SYS_NOTIFICATION:
+                        snd_device = SND_DEVICE_OUT_BUS_SYS;
+                        break;
+                    case CAR_AUDIO_STREAM_NAV_GUIDANCE:
+                        snd_device = SND_DEVICE_OUT_BUS_NAV;
+                        break;
+                    case CAR_AUDIO_STREAM_PHONE:
+                        snd_device = SND_DEVICE_OUT_BUS_PHN;
+                        break;
+                    case CAR_AUDIO_STREAM_FRONT_PASSENGER:
+                        snd_device = SND_DEVICE_OUT_BUS_PAX;
+                        break;
+                    case CAR_AUDIO_STREAM_REAR_SEAT:
+                        snd_device = SND_DEVICE_OUT_BUS_RSE;
+                        break;
+                    default:
+                        ALOGE("%s: Car audio stream %x not supported", __func__,
+                        usecase->stream.out->car_audio_stream);
+                        return -EINVAL;
+                }
+            }
             break;
         case USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION:
             snd_device = SND_DEVICE_OUT_BUS_SYS;
