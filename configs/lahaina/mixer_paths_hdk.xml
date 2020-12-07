@@ -407,7 +407,7 @@
     <ctl name="BCS Channel" value="CH6" />
 
     <!-- Volume controls -->
-    <ctl name="WSA_RX0 Digital Volume" value="78" />
+    <ctl name="WSA_RX0 Digital Volume" value="84" />
     <ctl name="WSA_RX1 Digital Volume" value="84" />
     <ctl name="RX_RX0 Digital Volume" value="84" />
     <ctl name="RX_RX1 Digital Volume" value="84" />
