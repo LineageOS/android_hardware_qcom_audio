@@ -1308,27 +1308,27 @@
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
     </path>
 
-    <path name="sys-notification-playback">
+    <path name="sys-notification-playback sys-bus-out">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia5" value="1" />
     </path>
 
-    <path name="nav-guidance-playback">
+    <path name="nav-guidance-playback nav-bus-out">
         <ctl name="TERT_TDM_RX_1 Channels" value="One" />
         <ctl name="TERT_TDM_RX_1 Audio Mixer MultiMedia2" value="1" />
     </path>
 
-    <path name="phone-playback">
+    <path name="phone-playback phone-bus-out">
         <ctl name="TERT_TDM_RX_2 Channels" value="One" />
         <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia10" value="1" />
     </path>
 
-    <path name="front-passenger-playback">
+    <path name="front-passenger-playback pax-bus-out">
         <ctl name="QUAT_TDM_RX_0 Channels" value="Eight" />
         <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia23" value="1" />
     </path>
 
-    <path name="rear-seat-playback">
+    <path name="rear-seat-playback rse-bus-out">
         <ctl name="QUIN_TDM_RX_0 Channels" value="Sixteen" />
         <ctl name="QUIN_TDM_RX_0 Audio Mixer MultiMedia22" value="1" />
     </path>
@@ -2722,6 +2722,26 @@
 
     <path name="mmap-playback">
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback sys-bus-out">
+        <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback nav-bus-out">
+        <ctl name="TERT_TDM_RX_1 Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback phone-bus-out">
+        <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback pax-bus-out">
+        <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia16" value="1" />
+    </path>
+
+    <path name="mmap-playback rse-bus-out">
+        <ctl name="QUIN_TDM_RX_0 Audio Mixer MultiMedia16" value="1" />
     </path>
 
     <path name="mmap-playback headphones">
