@@ -322,6 +322,8 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
 static int32_t stop_hfp()
 {
     int32_t ret = 0;
+
+    AHAL_DBG("HFP stop enter");
     if (hfpmod.rx_stream_handle) {
         pal_stream_stop(hfpmod.rx_stream_handle);
         pal_stream_close(hfpmod.rx_stream_handle);
@@ -344,7 +346,7 @@ static int32_t stop_hfp()
     pal_param_device_connection_t param_device_connection;
 
     param_device_connection.id = PAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
-    param_device_connection.connection_state = true;
+    param_device_connection.connection_state = false;
     ret =  pal_set_param(PAL_PARAM_ID_DEVICE_CONNECTION,
                         (void*)&param_device_connection,
                         sizeof(pal_param_device_connection_t));
@@ -353,7 +355,7 @@ static int32_t stop_hfp()
     }
 
     param_device_connection.id = PAL_DEVICE_OUT_BLUETOOTH_SCO;
-    param_device_connection.connection_state = true;
+    param_device_connection.connection_state = false;
     ret =  pal_set_param(PAL_PARAM_ID_DEVICE_CONNECTION,
                         (void*)&param_device_connection,
                         sizeof(pal_param_device_connection_t));
@@ -361,6 +363,7 @@ static int32_t stop_hfp()
         AHAL_ERR("Set PAL_PARAM_ID_DEVICE_DISCONNECTION for %d failed", param_device_connection.id);
     }
 
+    AHAL_DBG("HFP stop end");
     return ret;
 }
 
