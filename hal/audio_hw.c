@@ -1212,6 +1212,12 @@ static void check_and_route_playback_usecases(struct audio_device *adev,
             usecase = node_to_item(node, struct audio_usecase, list);
             if (switch_device[usecase->id] ) {
                 enable_audio_route(adev, usecase);
+                if (usecase->stream.out && usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
+                    struct stream_out *out = usecase->stream.out;
+                    audio_extn_utils_send_app_type_gain(out->dev,
+                                                        out->app_type_cfg.app_type,
+                                                        &out->app_type_cfg.gain[0]);
+                }
             }
         }
     }
@@ -2988,16 +2994,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
         lock_output_stream(out);
 
-        // The usb driver needs to be closed after usb device disconnection
-        // otherwise audio is no longer played on the new usb devices.
-        // By forcing the stream in standby, the usb stack refcount drops to 0
-        // and the driver is closed.
         if (val == AUDIO_DEVICE_NONE &&
                 audio_is_usb_out_device(out->devices)) {
-            if (out->usecase == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
-                ALOGD("%s() putting the usb device in standby after disconnection", __func__);
-                out_standby_l(&out->stream.common);
-            }
             val = AUDIO_DEVICE_OUT_SPEAKER;
             forced_speaker_fallback = true;
         }
