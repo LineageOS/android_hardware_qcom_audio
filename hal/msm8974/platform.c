@@ -3485,10 +3485,12 @@ void *platform_init(struct audio_device *adev)
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "bengal-scubaidp-snd-card",
                sizeof("bengal-scubaidp-snd-card"))) {
-        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_IDP, my_data, PLATFORM);
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SCUBA_IDP),
+            my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "bengal-scubaqrd-snd-card",
                sizeof("bengal-scubaqrd-snd-card"))) {
-        platform_info_init(PLATFORM_INFO_XML_PATH_SCUBA_QRD, my_data, PLATFORM);
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SCUBA_QRD),
+            my_data, PLATFORM);
     } else if (my_data->is_internal_codec) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_INTCODEC_NAME),
             my_data, PLATFORM);
