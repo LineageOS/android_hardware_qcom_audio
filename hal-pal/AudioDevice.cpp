@@ -743,6 +743,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     }
     audio_extn_sound_trigger_init(adev_);
     AudioExtn::hfp_feature_init(property_get_bool("vendor.audio.feature.hfp.enable", false));
+    AudioExtn::audio_extn_fm_init();
     AudioExtn::audio_extn_kpi_optimize_feature_init(
             property_get_bool("vendor.audio.feature.kpi_optimize.enable", false));
     /* no feature configurations yet */
@@ -924,8 +925,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         AHAL_ERR("Error in VoiceSetParameters %d", ret);
 
     parms = str_parms_create_str(kvpairs);
-    ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
+    AudioExtn::audio_extn_set_parameters(adev_, parms);
 
+    ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
     if (ret >= 0) {
         pal_param_screen_state_t param_screen_st;
         if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
@@ -1204,8 +1206,6 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                             sizeof(pal_param_btsco_t));
      }
 
-    AudioExtn::audio_extn_hfp_set_parameters(adev_, parms);
-
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value, sizeof(value));
     if (ret >= 0) {
         pal_param_bta2dp_t param_bt_a2dp;
@@ -1261,11 +1261,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
 }
 
 int AudioDevice::SetVoiceVolume(float volume) {
-    int ret = 0;
-
-    ret = voice_->SetVoiceVolume(volume);
-
-    return ret;
+    return voice_->SetVoiceVolume(volume);
 }
 
 char* AudioDevice::GetParameters(const char *keys) {
