@@ -56,6 +56,7 @@ def write_xml_root_to_file_v2(file_path, super_root):
 
 
 def xml_to_map(xml_node, root_key=None, map=None, node_level=0):
+    """Given xml node, generate map(dict)"""
     if not map:
         map = dict()
     if not root_key:
@@ -67,6 +68,16 @@ def xml_to_map(xml_node, root_key=None, map=None, node_level=0):
     for sub_node in xml_node:
         xml_to_map(sub_node, current_key, map, node_level + 1)
     return map
+
+
+def get_mixer_map(super_root):
+    for node in super_root:
+        mixer = node
+    mixer_map = dict()
+    for node in mixer:
+        node_key = gen_xml_string(node)
+        mixer_map[node_key] = node
+    return mixer_map
 
 
 def get_key_for_node_only(xml_node, level):
@@ -118,11 +129,12 @@ def open_xml_root(filename):
 
 
 def gen_xml_string(xml_node, level=0):
+    """Generate xml string for a given xml node with good indentation"""
     s = '<' + xml_node.tag + ' '
     if xml_node.attrib:
         for at_name in ATTRIBUTE_ORDER:
-            at_value = xml_node.attrib.get(at_name, "ZEBRAA")
-            if at_value != "ZEBRAA":
+            at_value = xml_node.attrib.get(at_name, "ZEBRAAAA")
+            if at_value != "ZEBRAAAA":
                 s += at_name + '=\"' + at_value + '\" '
     space_str = ''
     for i in range(level):
@@ -214,19 +226,14 @@ def _mixer_extract_base(mixer_child, root_key, base_map, node_level):
 def mixer_extract_overlay(super_base, super_mixer):
     for child in super_mixer:
         mixer = child
-    base_map = xml_to_map(super_base, map=None)
-    # print_map(base_map)
-    level = 0
-    current_key = get_key_for_node_only(
-        super_mixer, level) + '->' + get_key_for_node_only(mixer, level + 1)
-    level += 1
+    base_map = get_mixer_map(super_base)
     new_mixer = get_copy_xml_node(mixer)
     super_root = get_copy_xml_node(super_mixer)
     super_root.append(new_mixer)
     for xml_child in mixer:
-        if not _mixer_extract_overlay(xml_child, current_key, base_map,
-                                      level + 1):
-            # print(xml_child.tag, xml_child.attrib)
+        xml_child_key = gen_xml_string(xml_child)
+        node_elem=base_map.get(xml_child_key, False)
+        if not isinstance(node_elem,ET.Element):
             child_copy = copy_full_node(xml_child)
             new_mixer.append(child_copy)
     return super_root
@@ -243,12 +250,13 @@ def _mixer_extract_overlay(mixer_child, root_key, base_map, node_level):
             return False
     return True
 
+
 def seperate_ctl_path(super_root):
     for child in super_root:
-        mixer=child
-    path_nodes=list()
+        mixer = child
+    path_nodes = list()
     for child in mixer:
-        if child.tag=='path':
+        if child.tag == 'path':
             path_nodes.append(child)
     for path_node in path_nodes:
         mixer.remove(path_node)
@@ -256,12 +264,13 @@ def seperate_ctl_path(super_root):
         mixer.append(path_node)
     return super_root
 
+
 def mixer_combine(super_base, super_overlay):
     super_base = copy_full_node(super_base)
     super_overlay = copy_full_node(super_overlay)
 
-    super_base=seperate_ctl_path(super_base)
-    super_overlay=seperate_ctl_path(super_overlay)
+    super_base = seperate_ctl_path(super_base)
+    super_overlay = seperate_ctl_path(super_overlay)
 
     for child in super_base:
         base = child
@@ -285,6 +294,7 @@ def mixer_combine(super_base, super_overlay):
     for i in range(overlay_ctl_len, len(overlay)):
         base.append(overlay[i])
     super_base = override_tag(super_base)
+    super_base = sort_tag_depend(super_base)
     return super_base
 
 
@@ -312,6 +322,72 @@ def override_tag(super_combined):
     for child in child_nodes:
         mixer.remove(child)
     return super_combined
+
+
+def sort_tag_depend(super_root):
+    for node in super_root:
+        mixer = node
+    dep_map = dict()
+    sub_node_list = list()
+    start_flag = True
+    start = 0
+    path_start = 0
+    all_nodes_map = dict()
+    for sub_node in mixer:
+        start += 1
+        sub_node_list.append(sub_node)
+        if sub_node.tag == "ctl":
+            continue
+        if start_flag:
+            path_start = start
+            start_flag = False
+        key = sub_node.tag+":"+"name=" + \
+            sub_node.attrib.get("name", str(None)) + "id=" + \
+            sub_node.attrib.get("id", str(None))
+        dep_list = list()
+        all_nodes_map[key] = sub_node
+        for child in sub_node:
+            if child.tag == "ctl":
+                continue
+            dep_list.append(child)
+        if len(dep_list) != 0:
+            dep_map[key] = dep_list
+        else:
+            dep_map[key] = True
+    # print("path_start:"+str(path_start))
+    ctl_list = sub_node_list[0:path_start]
+    path_list = sub_node_list[path_start:]
+    new_path_list = _sort_tag_depend(
+        all_nodes_map, path_list, dep_map, new_path_list=None)
+    full_list = ctl_list+new_path_list
+    mixer.clear()
+    for node in full_list:
+        mixer.append(node)
+    return super_root
+
+
+def _sort_tag_depend(all_nodes_map, path_list, dep_map, new_path_list=None):
+    if new_path_list is None:
+        new_path_list = list()
+
+    for sub_node in path_list:
+        key = sub_node.tag+":"+"name=" + \
+            sub_node.attrib.get("name", str(None))+"id=" + \
+            sub_node.attrib.get("id", str(None))
+        res = dep_map.get(key, False)
+        req_node = all_nodes_map.get(key, 0)
+        if req_node == 0:
+            print(gen_xml_string(sub_node))
+            print("Error in ordering the mixer tags")
+        if res == True:
+            new_path_list.append(req_node)
+        elif res == False:
+            continue
+        else:
+            _sort_tag_depend(all_nodes_map, res, dep_map, new_path_list)
+            new_path_list.append(req_node)
+        dep_map[key] = False
+    return new_path_list
 
 
 def is_xmls_good(files):
@@ -527,6 +603,24 @@ def check_mixer_equivalent(root1, root2):
     return flag
 
 
+def checker_v3(node1, node2):
+    for node in node1:
+        mixer1 = node
+    for node in node2:
+        mixer2 = node
+    map2 = dict()
+    for sub_node in mixer2:
+        key = gen_xml_string(sub_node)
+        map2[key] = True
+    flag = True
+    for sub_node in mixer1:
+        key = gen_xml_string(sub_node)
+        if not map2.get(key, False):
+            print(key)
+            flag = False
+    return flag
+
+
 def check(args):
     if args.file:
         if not os.path.isfile(args.file):
@@ -535,10 +629,10 @@ def check(args):
         return
     f1 = open_xml_root(args.file1)
     f2 = open_xml_root(args.file2)
-    if check_mixer_equivalent(f1, f2):
+    if checker_v3(f1, f2):
         print('file1 <= file2')
     print("=======================================================")
-    if check_mixer_equivalent(f2, f1):
+    if checker_v3(f2, f1):
         print('file2 <= file1')
     return
 

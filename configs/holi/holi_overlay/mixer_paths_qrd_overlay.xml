@@ -248,6 +248,9 @@
     <path name="handset-mic">
         <path name="amic3"/>
     </path>
+    <path name="headphones-44.1">
+        <path name="headphones"/>
+    </path>
     <path name="hph-highquality-mode">
         <ctl name="RX_HPH_PWR_MODE" value="LOHIFI"/>
         <ctl name="RX HPH Mode" value="CLS_H_LOHIFI"/>
@@ -290,6 +293,10 @@
     </path>
     <path name="speaker-dmic-broadside">
         <path name="speaker-dmic-endfire"/>
+    </path>
+    <path name="voice-tty-full-headset-mic">
+        <path name="amic2"/>
+        <ctl name="ADC2 Volume" value="0"/>
     </path>
     <path name="voice-tty-hco-headset-mic">
         <path name="voice-tty-full-headset-mic"/>
