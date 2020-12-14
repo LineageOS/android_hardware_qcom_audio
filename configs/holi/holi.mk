@@ -6,7 +6,16 @@ ifeq ($(TARGET_USES_QMAA),true)
 AUDIO_USE_STUB_HAL := true
 endif
 endif
+##mixer xml generation
+#BASE_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/common/base
+#OVERLAY_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/holi_overlay
+#TARGET_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/holi
+#SCRIPT := vendor/qcom/opensource/audio-hal/primary-hal/configs/common/mixer_xml_utils.py
 
+#$(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/mixer_paths_base.xml --overlay $(OVERLAY_PATH)/mixer_paths_overlay.xml $(OVERLAY_PATH)/mixer_paths_qrd_overlay.xml $(OVERLAY_PATH)/mixer_paths_usbc_overlay.xml --out_dir $(TARGET_PATH) --out mixer_paths.xml mixer_paths_qrd.xml mixer_paths_usbc.xml )
+
+#$(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/sound_trigger_mixer_paths_base.xml --overlay $(OVERLAY_PATH)/sound_trigger_mixer_paths_overlay.xml $(OVERLAY_PATH)/sound_trigger_mixer_paths_qrd_overlay.xml $(OVERLAY_PATH)/sound_trigger_mixer_paths_usbc_overlay.xml --out_dir $(TARGET_PATH) --out sound_trigger_mixer_paths.xml sound_trigger_mixer_paths_qrd.xml sound_trigger_mixer_paths_usbc.xml )
+##
 ifneq ($(AUDIO_USE_STUB_HAL), true)
 BOARD_USES_ALSA_AUDIO := true
 TARGET_USES_AOSP_FOR_AUDIO := false
