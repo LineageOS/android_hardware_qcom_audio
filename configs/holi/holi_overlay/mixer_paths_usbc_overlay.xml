@@ -144,6 +144,19 @@
     <path name="spkr-rx-calib">
         <ctl name="RX_CDC_DMA_RX_1_DL_HL Switch" value="1"/>
     </path>
+    <path name="amic2">
+        <ctl name="TX DEC0 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX0" value="SWR_MIC1"/>
+        <ctl name="TX_CDC_DMA_TX_4 Channels" value="One"/>
+        <ctl name="TX_AIF2_CAP Mixer DEC0" value="1"/>
+        <ctl name="DEC0_BCS Switch" value="1"/>
+        <ctl name="ADC2_MIXER Switch" value="1"/>
+        <ctl name="ADC2 MUX" value="INP2"/>
+        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2"/>
+        <ctl name="MBHC ChMap" value="SWRM_TX2_CH3"/>
+        <ctl name="BCS Channel" value="CH6"/>
+        <ctl name="HDR12 MUX" value="NO_HDR12"/>
+    </path>
     <path name="speaker">
         <ctl name="RX_CDC_DMA_RX_1 Channels" value="One"/>
         <ctl name="RX_MACRO RX2 MUX" value="AIF2_PB"/>

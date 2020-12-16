@@ -458,6 +458,7 @@
     <ctl name="RX INT2_1 VBAT RX AUX VBAT Enable" value="0"/>
     <ctl name="MultiMedia16 Mixer SLIM_8_TX" value="0"/>
     <ctl name="RX_CDC_DMA_RX_1 Audio Mixer MultiMedia31" value="0"/>
+    <path name="speaker-and-haptics"/>
     <path name="gsm-mode">
         <ctl name="GSM mode Enable" value="ON"/>
     </path>

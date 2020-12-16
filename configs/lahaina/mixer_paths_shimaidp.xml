@@ -498,6 +498,7 @@
     <ctl name="TX3 MODE" value="ADC_LP" />
 
     <!-- These are audio route (FE to BE) specific mixer settings -->
+    <path name="speaker-and-haptics"/>
     <path name="gsm-mode">
         <ctl name="GSM mode Enable" value="ON" />
     </path>
