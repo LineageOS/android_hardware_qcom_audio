@@ -424,7 +424,7 @@ void *capture_thread_loop(void *arg)
         pthread_mutex_lock(&lock);
 
         if (read_status > 0) {
-            ALOGD("%s: pal_stream_read success no_of_bytes_read = %zu",
+            ALOGD("%s: pal_stream_read success no_of_bytes_read = %ld",
                     __func__, read_status );
 
             struct listnode *out_node;
@@ -444,7 +444,7 @@ void *capture_thread_loop(void *arg)
                 }
             }
         } else {
-            ALOGW("%s: pal_stream_read failed with read status %zu",
+            ALOGW("%s: pal_stream_read failed with read status %ld",
                 __func__, read_status);
         }
     }
