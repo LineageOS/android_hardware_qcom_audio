@@ -1249,7 +1249,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     str_parms_destroy(parms);
 
     AHAL_DBG("exit: %s", kvpairs);
-    return ret;
+    return 0;
 }
 
 int AudioDevice::SetVoiceVolume(float volume) {
@@ -1313,6 +1313,8 @@ char* AudioDevice::GetParameters(const char *keys) {
     }
 
     AudioExtn::audio_extn_get_parameters(adev_, query, reply);
+    if (voice_)
+        voice_->VoiceGetParameters(query, reply);
 exit:
     str = str_parms_to_str(reply);
     str_parms_destroy(query);
