@@ -3029,7 +3029,11 @@ int audio_extn_utils_get_bit_width_from_string(const char *id_string)
 int audio_extn_utils_get_sample_rate_from_string(const char *id_string)
 {
     int i;
-    const mixer_config_lookup mixer_samplerate_config[] = {{"KHZ_32", 32000},
+    const mixer_config_lookup mixer_samplerate_config[] = {{"KHZ_8", 8000},
+                                                           {"KHZ_11P025", 11025},
+                                                           {"KHZ_16", 16000},
+                                                           {"KHZ_22P05", 22050},
+                                                           {"KHZ_32", 32000},
                                                            {"KHZ_48", 48000},
                                                            {"KHZ_96", 96000},
                                                            {"KHZ_144", 144000},
