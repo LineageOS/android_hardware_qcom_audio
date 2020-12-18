@@ -74,7 +74,6 @@
 #define PLATFORM_INFO_XML_PATH_TDM_NAME  "audio_platform_info_tdm.xml"
 #define PLATFORM_INFO_XML_PATH_SHIMA_IDP "audio_platform_info_shimaidp.xml"
 #define PLATFORM_INFO_XML_PATH_SHIMA_QRD "audio_platform_info_shimaqrd.xml"
-#define PLATFORM_INFO_XML_PATH_YUPIK_IDP "audio_platform_info_yupikidp.xml"
 #define PLATFORM_INFO_XML_PATH_YUPIK_QRD "audio_platform_info_yupikqrd.xml"
 #define PLATFORM_INFO_XML_PATH_SCUBA_IDP "audio_platform_info_scubaidp.xml"
 #define PLATFORM_INFO_XML_PATH_SCUBA_QRD "audio_platform_info_scubaqrd.xml"
@@ -3488,10 +3487,6 @@ void *platform_init(struct audio_device *adev)
     } else if (!strncmp(snd_card_name, "lahaina-shimaqrd-snd-card",
                sizeof("lahaina-shimaqrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SHIMA_QRD),
-            my_data, PLATFORM);
-    } else if (!strncmp(snd_card_name, "lahaina-yupikidp-snd-card",
-               sizeof("lahaina-yupikidp-snd-card"))) {
-        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_YUPIK_IDP),
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "lahaina-yupikqrd-snd-card",
                sizeof("lahaina-yupikqrd-snd-card"))) {
