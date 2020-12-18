@@ -276,7 +276,7 @@
     <ctl name="ADC2_MIXER Switch" value="0"/>
     <ctl name="ADC3_MIXER Switch" value="0"/>
     <ctl name="ADC4_MIXER Switch" value="0"/>
-    <ctl name="ADC2 MUX" value="ZERO"/>
+    <ctl name="ADC2 MUX" value="INP2"/>
     <ctl name="DEC0_BCS Switch" value="0"/>
     <ctl name="TX_AIF1_CAP Mixer DEC0" value="0"/>
     <ctl name="TX_AIF1_CAP Mixer DEC1" value="0"/>
@@ -321,11 +321,11 @@
     <ctl name="HDR12 MUX" value="NO_HDR12"/>
     <ctl name="HDR34 MUX" value="NO_HDR34"/>
     <ctl name="BCS Channel" value="CH6"/>
-    <ctl name="MBHC ChMap" value="SWRM_TX2_CH3"/>
-    <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1"/>
-    <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2"/>
-    <ctl name="ADC3 ChMap" value="SWRM_TX2_CH1"/>
-    <ctl name="ADC4 ChMap" value="SWRM_TX2_CH2"/>
+    <ctl name="MBHC ChMap" value="ZERO"/>
+    <ctl name="ADC1 ChMap" value="ZERO"/>
+    <ctl name="ADC2 ChMap" value="ZERO"/>
+    <ctl name="ADC3 ChMap" value="ZERO"/>
+    <ctl name="ADC4 ChMap" value="ZERO"/>
     <ctl name="WSA_RX0 Digital Volume" value="84"/>
     <ctl name="WSA_RX1 Digital Volume" value="84"/>
     <ctl name="RX_RX0 Digital Volume" value="84"/>
@@ -412,8 +412,8 @@
     <ctl name="HPH_R Switch" value="0"/>
     <ctl name="DSD_L Switch" value="0"/>
     <ctl name="DSD_R Switch" value="0"/>
-    <ctl name="ADC3 MUX" value="ZERO"/>
-    <ctl name="ADC4 MUX" value="ZERO"/>
+    <ctl name="ADC3 MUX" value="INP4"/>
+    <ctl name="ADC4 MUX" value="INP5"/>
     <ctl name="SWR_MIC0 HIFI PortMap" value="ZERO"/>
     <ctl name="SWR_MIC1 HIFI PortMap" value="ZERO"/>
     <ctl name="SWR_MIC2 HIFI PortMap" value="ZERO"/>

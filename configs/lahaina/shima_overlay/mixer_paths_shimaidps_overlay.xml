@@ -34,11 +34,6 @@
     <ctl name="TX DEC5 MUX" value="MSM_DMIC"/>
     <ctl name="TX DEC6 MUX" value="MSM_DMIC"/>
     <ctl name="TX DEC7 MUX" value="MSM_DMIC"/>
-    <ctl name="ADC1 ChMap" value="ZERO"/>
-    <ctl name="ADC2 ChMap" value="ZERO"/>
-    <ctl name="ADC3 ChMap" value="ZERO"/>
-    <ctl name="ADC4 ChMap" value="ZERO"/>
-    <ctl name="MBHC ChMap" value="ZERO"/>
     <path name="compress-offload-playback headphones-dsd">
         <ctl name="RX_CDC_DMA_RX_5 Audio Mixer MultiMedia4" value="1"/>
     </path>

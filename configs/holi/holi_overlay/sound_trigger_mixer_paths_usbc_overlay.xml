@@ -28,7 +28,6 @@
 <mixer>
     <ctl name="VA DEC0 MUX" value="MSM_DMIC"/>
     <ctl name="VA DEC1 MUX" value="MSM_DMIC"/>
-    <ctl name="ADC2 MUX" value="ZERO"/>
     <path name="listen-voice-wakeup-1 port">
         <ctl name="LSM1 Port" value="VA_CDC_DMA_TX_0"/>
         <ctl name="LPI Enable" value="1"/>
