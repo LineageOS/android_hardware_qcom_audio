@@ -392,7 +392,7 @@ public:
     uint32_t        GetSampleRate();
     uint32_t        GetBufferSize();
     audio_format_t  GetFormat();
-    uint32_t        GetChannelMask();
+    audio_channel_mask_t GetChannelMask();
     int getPalDeviceIds(const std::set<audio_devices_t> &halDeviceIds, pal_device_id_t* palOutDeviceIds);
     audio_io_handle_t GetHandle();
     int             GetUseCase();
