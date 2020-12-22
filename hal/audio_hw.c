@@ -3827,7 +3827,7 @@ int start_output_stream(struct stream_out *out)
             if (is_speaker_active || is_speaker_safe_active) {
                 a2dp_combo = true;
             } else {
-                if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
+                if (!is_offload_usecase(out->usecase)) {
                     ALOGE("%s: A2DP profile is not ready, return error", __func__);
                     ret = -EAGAIN;
                     goto error_config;
@@ -4979,7 +4979,7 @@ int route_output_stream(struct stream_out *out,
                 platform_set_swap_channels(adev, true);
                 audio_extn_perf_lock_release(&adev->perf_lock_handle);
             }
-            if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+            if (is_offload_usecase(out->usecase) &&
                  (!is_a2dp_out_device_type(&out->device_list) || audio_extn_a2dp_source_is_ready())) {
                 pthread_mutex_lock(&out->latch_lock);
                 if (out->a2dp_compress_mute) {
@@ -5852,7 +5852,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
         (audio_extn_a2dp_source_is_suspended())) {
         if (!(compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_SPEAKER) ||
               compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_SPEAKER_SAFE))) {
-            if (!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) {
+            if (!is_offload_usecase(out->usecase)) {
                 ret = -EIO;
                 goto exit;
             }
@@ -8905,7 +8905,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 pthread_mutex_unlock(&usecase->stream.out->latch_lock);
                 audio_extn_a2dp_set_handoff_mode(false);
                 break;
-            } else if (usecase->stream.out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+            } else if (is_offload_usecase(usecase->stream.out->usecase)) {
                 pthread_mutex_lock(&usecase->stream.out->latch_lock);
                 if (usecase->stream.out->a2dp_compress_mute) {
                     pthread_mutex_unlock(&usecase->stream.out->latch_lock);
@@ -10368,7 +10368,7 @@ int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool
             ALOGD("%s: restoring A2dp and unmuting stream", __func__);
             if (uc_info->out_snd_device != SND_DEVICE_OUT_BT_A2DP)
                 select_devices(adev, uc_info->id);
-            if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+            if (is_offload_usecase(out->usecase) &&
                 (uc_info->out_snd_device == SND_DEVICE_OUT_BT_A2DP)) {
                 if (out->a2dp_compress_mute) {
                     out->a2dp_compress_mute = false;
@@ -10380,7 +10380,7 @@ int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool
         pthread_mutex_unlock(&out->latch_lock);
     } else {
         pthread_mutex_lock(&out->latch_lock);
-        if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
+        if (is_offload_usecase(out->usecase)) {
             // mute compress stream if suspended
             if (!out->a2dp_compress_mute && !out->standby) {
                 ALOGD("%s: selecting speaker and muting stream", __func__);
