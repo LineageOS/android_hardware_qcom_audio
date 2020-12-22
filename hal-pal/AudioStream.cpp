@@ -614,8 +614,7 @@ static int out_get_render_position(const struct audio_stream_out *stream,
         }
     }
 
-    //Temporary fix for Compressed offload SSR
-    return -EINVAL;
+    return 0;
 }
 
 static int astream_out_set_parameters(struct audio_stream *stream,
@@ -1478,13 +1477,18 @@ int StreamOutPrimary::Pause() {
     int ret = 0;
 
     AHAL_DBG("Enter" );
+
+    if (!pal_stream_handle_ || !stream_started_) {
+        AHAL_DBG("Stream not started yet");
+        return -1;
+    }
+
     if (pal_stream_handle_) {
         ret = pal_stream_pause(pal_stream_handle_);
     }
     if (ret)
         ret =  -EINVAL;
-    else
-    {
+    else {
         stream_paused_ = true;
     }
 
@@ -1496,6 +1500,12 @@ int StreamOutPrimary::Resume() {
     int ret = 0;
 
     AHAL_DBG("Enter" );
+
+    if (!pal_stream_handle_ || !stream_started_) {
+        AHAL_DBG("Stream not started yet");
+        return -1;
+    }
+
     if (pal_stream_handle_) {
         ret = pal_stream_resume(pal_stream_handle_);
     }
