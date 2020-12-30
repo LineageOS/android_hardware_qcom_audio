@@ -894,6 +894,21 @@ static bool is_supported_format(audio_format_t format)
     return false;
 }
 
+static bool is_supported_conc_usecase_for_power_mode_call(struct audio_device *adev)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
+            ALOGD("%s: FM usecase is active, not setting power mode", __func__);
+            return false;
+        }
+    }
+
+    return true;
+}
 static inline bool is_mmap_usecase(audio_usecase_t uc_id)
 {
     return (uc_id == USECASE_AUDIO_RECORD_AFE_PROXY) ||
@@ -1801,6 +1816,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
      */
     if (uc_info->type == VOICE_CALL &&
         voice_extn_is_voice_power_mode_supported() &&
+        is_supported_conc_usecase_for_power_mode_call(adev) &&
         platform_check_and_update_island_power_status(adev->platform,
                                              uc_info,
                                              snd_device)) {
@@ -1958,6 +1974,7 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
 
     if (uc_info->type == VOICE_CALL &&
         voice_extn_is_voice_power_mode_supported() &&
+        is_supported_conc_usecase_for_power_mode_call(adev) &&
         platform_check_and_update_island_power_status(adev->platform,
                                              uc_info,
                                              snd_device)) {
