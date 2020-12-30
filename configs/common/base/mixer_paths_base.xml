@@ -158,10 +158,10 @@
     <ctl name="TX LPI Enable" value="0"/>
     <ctl name="WSA_AIF_VI Mixer WSA_SPKR_VI_1" value="0"/>
     <ctl name="WSA_AIF_VI Mixer WSA_SPKR_VI_2" value="0"/>
-    <ctl name="WSA_CDC_DMA_RX_0 Format" value="UNPACKED"/>
-    <ctl name="WSA_CDC_DMA_TX_0 Format" value="UNPACKED"/>
-    <ctl name="RX_CDC_DMA_RX_0 Format" value="UNPACKED"/>
-    <ctl name="TX_CDC_DMA_TX_3 Format" value="UNPACKED"/>
+    <ctl name="WSA_CDC_DMA_RX_0 Format" value="S16_LE"/>
+    <ctl name="WSA_CDC_DMA_TX_0 Format" value="S16_LE"/>
+    <ctl name="RX_CDC_DMA_RX_0 Format" value="S16_LE"/>
+    <ctl name="TX_CDC_DMA_TX_3 Format" value="S16_LE"/>
     <ctl name="WSA_CDC_DMA_TX_0 SampleRate" value="KHZ_48"/>
     <ctl name="HFP_SLIM7_UL_HL Switch" value="0"/>
     <ctl name="WSA_CDC_DMA_RX_0 Port Mixer SLIM_7_TX" value="0"/>
@@ -439,7 +439,7 @@
     <ctl name="RX_CDC_DMA_RX_1 Audio Mixer MultiMedia15" value="0"/>
     <ctl name="RX_CDC_DMA_RX_1 Audio Mixer MultiMedia16" value="0"/>
     <ctl name="RX_CDC_DMA_RX_1 Channels" value="One"/>
-    <ctl name="RX_CDC_DMA_RX_1 Format" value="UNPACKED"/>
+    <ctl name="RX_CDC_DMA_RX_1 Format" value="S16_LE"/>
     <ctl name="RX_CDC_DMA_RX_1 Port Mixer SLIM_7_TX" value="0"/>
     <ctl name="SLIMBUS_8 LOOPBACK Volume" value="0"/>
     <ctl name="RX_CDC_DMA_RX_1 Port Mixer SLIM_8_TX" value="0"/>
