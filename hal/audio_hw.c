@@ -8781,18 +8781,21 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     /* notify adev and input/output streams on the snd card status */
     adev_snd_mon_cb((void *)adev, parms);
 
-    list_for_each(node, &adev->active_outputs_list) {
-        streams_output_ctxt_t *out_ctxt = node_to_item(node,
-                                            streams_output_ctxt_t,
-                                            list);
-        out_snd_mon_cb((void *)out_ctxt->output, parms);
-    }
+    ret = str_parms_get_str(parms, "SND_CARD_STATUS", value, sizeof(value));
+    if (ret >= 0) {
+        list_for_each(node, &adev->active_outputs_list) {
+            streams_output_ctxt_t *out_ctxt = node_to_item(node,
+                                                streams_output_ctxt_t,
+                                                list);
+            out_snd_mon_cb((void *)out_ctxt->output, parms);
+        }
 
-    list_for_each(node, &adev->active_inputs_list) {
-        streams_input_ctxt_t *in_ctxt = node_to_item(node,
-                                            streams_input_ctxt_t,
-                                            list);
-        in_snd_mon_cb((void *)in_ctxt->input, parms);
+        list_for_each(node, &adev->active_inputs_list) {
+            streams_input_ctxt_t *in_ctxt = node_to_item(node,
+                                                streams_input_ctxt_t,
+                                                list);
+            in_snd_mon_cb((void *)in_ctxt->input, parms);
+        }
     }
 
     pthread_mutex_lock(&adev->lock);
