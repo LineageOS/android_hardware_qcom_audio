@@ -81,4 +81,15 @@
         <ctl name="VA DMIC MUX2" value="DMIC3"/>
         <ctl name="VA DMIC MUX3" value="DMIC4"/>
     </path>
+    <path name="listen-ape-headset-mic">
+        <ctl name="VA_AIF1_CAP Mixer DEC0" value="1"/>
+        <ctl name="VA DEC0 MUX" value="SWR_MIC"/>
+        <ctl name="VA SMIC MUX0" value="SWR_MIC1"/>
+        <ctl name="ADC2_MIXER Switch" value="1"/>
+        <ctl name="VA_DEC0 MODE" value="ADC_LOW_PWR"/>
+        <ctl name="ADC2 MUX" value="INP2"/>
+        <ctl name="HDR12 MUX" value="NO_HDR12"/>
+        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2"/>
+        <ctl name="ADC2_BCS Disable" value="1"/>
+    </path>
 </mixer>

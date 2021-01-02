@@ -226,6 +226,7 @@ static int enum_sndcards()
             (strncasecmp(card_id, "kona", 4) != 0) &&
             (strncasecmp(card_id, "holi", 4) != 0) &&
             (strncasecmp(card_id, "shima", 5) != 0) &&
+            (strncasecmp(card_id, "yupik", 5) != 0) &&
             (strncasecmp(card_id, "lahaina", 7) != 0) &&
             (strncasecmp(card_id, "atoll", 5) != 0) &&
             (strncasecmp(card_id, "bengal", 6) != 0) &&

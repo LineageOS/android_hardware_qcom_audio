@@ -48,6 +48,13 @@
     <path name="incall-rec-downlink">
         <ctl name="MultiMedia9 Mixer VOC_REC_DL" value="1"/>
     </path>
+    <path name="amic1">
+        <ctl name="TX DEC1 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX1" value="SWR_MIC0"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
+        <ctl name="ADC1_MIXER Switch" value="1"/>
+        <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1"/>
+    </path>
     <path name="amic2">
         <ctl name="TX DEC0 MUX" value="SWR_MIC"/>
         <ctl name="TX SMIC MUX0" value="SWR_MIC1"/>
@@ -59,6 +66,15 @@
         <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2"/>
         <ctl name="MBHC ChMap" value="SWRM_TX1_CH3"/>
         <ctl name="BCS Channel" value="CH2"/>
+        <ctl name="HDR12 MUX" value="NO_HDR12"/>
+    </path>
+    <path name="amic3">
+        <ctl name="TX DEC1 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX1" value="SWR_MIC1"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
+        <ctl name="ADC2_MIXER Switch" value="1"/>
+        <ctl name="ADC2 MUX" value="INP3"/>
+        <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2"/>
         <ctl name="HDR12 MUX" value="NO_HDR12"/>
     </path>
     <path name="amic4">
@@ -141,6 +157,10 @@
         <ctl name="HPHR_COMP Switch" value="1"/>
         <ctl name="HPHL_RDAC Switch" value="1"/>
         <ctl name="HPHR_RDAC Switch" value="1"/>
+    </path>
+    <path name="headset-mic">
+        <path name="amic2"/>
+        <ctl name="TX_DEC0 Volume" value="84"/>
     </path>
     <path name="handset-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two"/>
