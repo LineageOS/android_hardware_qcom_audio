@@ -7662,20 +7662,25 @@ static int in_get_mmap_position(const struct audio_stream_in *stream,
     if (position == NULL) {
         return -EINVAL;
     }
+    lock_input_stream(in);
     if (in->usecase != USECASE_AUDIO_RECORD_MMAP) {
+        pthread_mutex_unlock(&in->lock);
         return -ENOSYS;
     }
     if (in->pcm == NULL) {
+        pthread_mutex_unlock(&in->lock);
         return -ENOSYS;
     }
     struct timespec ts = { 0, 0 };
     int ret = pcm_mmap_get_hw_ptr(in->pcm, (unsigned int *)&position->position_frames, &ts);
     if (ret < 0) {
         ALOGE("%s: %s", __func__, pcm_get_error(in->pcm));
+        pthread_mutex_unlock(&in->lock);
         return ret;
     }
     position->time_nanoseconds = ts.tv_sec*1000000000LL + ts.tv_nsec
             + in->mmap_time_offset_nanos;
+    pthread_mutex_unlock(&in->lock);
     return 0;
 }
 
