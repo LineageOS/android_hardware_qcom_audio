@@ -1870,6 +1870,7 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("msm8953-sku4-snd-card")) ||
          !strncmp(snd_card_name, "lito-lagoonmtp-snd-card",
                    sizeof("lito-lagoonmtp-snd-card")) ||
+         strstr(snd_card_name, "sdm429w") ||
          !strncmp(snd_card_name, "lito-lagoonqrd-snd-card",
                    sizeof("lito-lagoonqrd-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
@@ -3500,7 +3501,7 @@ void *platform_init(struct audio_device *adev)
                sizeof("bengal-scubaqrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SCUBA_QRD),
             my_data, PLATFORM);
-    } else if (my_data->is_internal_codec) {
+    } else if (my_data->is_internal_codec && (strstr(snd_card_name, "sdm429w") == NULL)) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_INTCODEC_NAME),
             my_data, PLATFORM);
     } else {
