@@ -333,7 +333,6 @@ vendor.audio.feature.maxx_audio.enable=false \
 vendor.audio.feature.ras.enable=false \
 vendor.audio.feature.record_play_concurency.enable=false \
 vendor.audio.feature.src_trkn.enable=true \
-vendor.audio.feature.spkr_prot.enable=true \
 vendor.audio.feature.ssrec.enable=true \
 vendor.audio.feature.usb_offload.enable=false \
 vendor.audio.feature.usb_offload_burst_mode.enable=false \
@@ -343,7 +342,13 @@ vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=true \
 vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=true
-
+ifeq ($(TARGET_SUPPORTS_WEARABLES),true)
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.feature.spkr_prot.enable=false
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.feature.spkr_prot.enable=true
+endif
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
