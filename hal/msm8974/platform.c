@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1808,6 +1808,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("lahaina-cdp-snd-card")) ||
          !strncmp(snd_card_name, "lahaina-hdk-snd-card",
                    sizeof("lahaina-hdk-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-hhg-snd-card",
+                   sizeof("lahaina-hhg-snd-card")) ||
          !strncmp(snd_card_name, "kona-mtp-snd-card",
                    sizeof("kona-mtp-snd-card")) ||
          !strncmp(snd_card_name, "lahaina-shimaidp-snd-card",
