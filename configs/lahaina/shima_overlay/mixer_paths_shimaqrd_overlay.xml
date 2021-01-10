@@ -27,9 +27,6 @@
 <!--- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                             -->
 <mixer>
     <ctl name="VI_FEED_TX Channels" value="One"/>
-    <ctl name="ADC2 MUX" value="INP2"/>
-    <ctl name="ADC3 MUX" value="INP4"/>
-    <ctl name="ADC4 MUX" value="INP5"/>
     <ctl name="TX DEC0 MUX" value="MSM_DMIC"/>
     <ctl name="TX DEC1 MUX" value="MSM_DMIC"/>
     <ctl name="TX DEC2 MUX" value="MSM_DMIC"/>
@@ -38,11 +35,6 @@
     <ctl name="TX DEC5 MUX" value="MSM_DMIC"/>
     <ctl name="TX DEC6 MUX" value="MSM_DMIC"/>
     <ctl name="TX DEC7 MUX" value="MSM_DMIC"/>
-    <ctl name="ADC1 ChMap" value="ZERO"/>
-    <ctl name="ADC2 ChMap" value="ZERO"/>
-    <ctl name="ADC3 ChMap" value="ZERO"/>
-    <ctl name="ADC4 ChMap" value="ZERO"/>
-    <ctl name="MBHC ChMap" value="ZERO"/>
     <ctl name="TX_DEC0 Volume" value="96"/>
     <ctl name="TX_DEC1 Volume" value="96"/>
     <ctl name="TX_DEC2 Volume" value="96"/>
