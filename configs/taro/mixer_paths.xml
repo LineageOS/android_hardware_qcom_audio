@@ -175,6 +175,16 @@
     <ctl name="ADC2_BCS Disable" value="0" />
     <ctl name="ADC3 MUX" value="INP4" />
     <ctl name="ADC4 MUX" value="INP5" />
+    <ctl name="VA_AMIC1_MIXER Switch" value="0" />
+    <ctl name="VA_AMIC2_MIXER Switch" value="0" />
+    <ctl name="VA_AMIC3_MIXER Switch" value="0" />
+    <ctl name="VA_AMIC4_MIXER Switch" value="0" />
+    <ctl name="VA_AMIC5_MIXER Switch" value="0" />
+    <ctl name="AMIC1_MIXER Switch" value="0" />
+    <ctl name="AMIC2_MIXER Switch" value="0" />
+    <ctl name="AMIC3_MIXER Switch" value="0" />
+    <ctl name="AMIC4_MIXER Switch" value="0" />
+    <ctl name="AMIC5_MIXER Switch" value="0" />
 
     <ctl name="TX_AIF1_CAP Mixer DEC0" value="0" />
     <ctl name="TX_AIF1_CAP Mixer DEC1" value="0" />
@@ -1923,6 +1933,7 @@
         <ctl name="BCS Channel" value="CH10" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
         <ctl name="ADC2_MIXER Switch" value="1" />
+        <ctl name="AMIC2_MIXER Switch" value="1" />
     </path>
 
     <path name="dmic1">
@@ -2460,6 +2471,7 @@
          <ctl name="HDR12 MUX" value="NO_HDR12" />
          <ctl name="ADC2_BCS Disable" value="1" />
          <ctl name="ADC2_MIXER Switch" value="1" />
+         <ctl name="VA_AMIC2_MIXER Switch" value="1" />
     </path>
 
 
@@ -2671,6 +2683,7 @@
         <ctl name="BCS Channel" value="CH10" />
         <ctl name="HDR12 MUX" value="NO_HDR12" />
         <ctl name="ADC2_MIXER Switch" value="1" />
+        <ctl name="AMIC2_MIXER Switch" value="1" />
     </path>
 
     <path name="voice-tty-vco-handset-mic">
