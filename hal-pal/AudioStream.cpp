@@ -3094,9 +3094,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
                 AHAL_ERR("error, failed to read data from PAL");
                 ATRACE_END();
                 goto exit;
-            } else if (size == 0) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
-            } else {
+            } else if (size > 0) {
                 break;
             }
         }
