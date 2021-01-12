@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -9509,6 +9509,12 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             goto err_open;
         }
         ALOGV("%s: car_audio_stream 0x%x", __func__, in->car_audio_stream);
+        ret = audio_extn_auto_hal_open_input_stream(in);
+        if (ret) {
+            ALOGE("%s: Failed to open input stream for bus device", __func__);
+            ret = -EINVAL;
+            goto err_open;
+        }
     }
 
     if (in->source == AUDIO_SOURCE_FM_TUNER) {
@@ -9713,14 +9719,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
                     }
                 }
             }
-        }
-        if (compare_device_type(&in->device_list, AUDIO_DEVICE_IN_BUS)) {
-           ret = audio_extn_auto_hal_open_input_stream(in);
-           if (ret) {
-               ALOGE("%s: Failed to open input stream for bus device", __func__);
-               ret = -EINVAL;
-               goto err_open;
-           }
         }
     }
     if (audio_extn_ssr_get_stream() != in)
