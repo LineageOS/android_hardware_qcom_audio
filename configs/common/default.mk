@@ -27,3 +27,8 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     android.hardware.soundtrigger@2.2-impl \
 
+PRODUCT_PACKAGES += \
+    IDP_acdb_cal.acdb \
+    IDP_workspaceFileXml.qwsp \
+    QRD_acdb_cal.acdb \
+    QRD_workspaceFileXml.qwsp \
