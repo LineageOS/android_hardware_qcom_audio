@@ -836,6 +836,10 @@ static void update_hardware_info_sdm439(struct hardware_info *hw_info, const cha
         strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
     } else if (!strcmp(snd_card_name, "sdm439-snd-card-mtp")) {
         strlcpy(hw_info->name, "msm8952", sizeof(hw_info->name));
+    /* Wearbles LW and LAW uses different sound card name on sdm429w
+       so use strstr instead of strcmp  to make it generic */
+    } else if (strstr(snd_card_name, "sdm429w")) {
+        strlcpy(hw_info->name, "sdm429w", sizeof(hw_info->name));
     } else {
         ALOGW("%s: Not an SDM439 device", __func__);
     }
@@ -965,7 +969,7 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "holi")) {
         ALOGV("HOLI - variant soundcard");
         update_hardware_info_holi(hw_info, snd_card_name);
-    } else if(strstr(snd_card_name, "sdm439")) {
+    } else if(strstr(snd_card_name, "sdm439") || strstr(snd_card_name, "sdm429w")) {
         ALOGV("SDM439 - variant soundcard");
         update_hardware_info_sdm439(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "msm8937")) {

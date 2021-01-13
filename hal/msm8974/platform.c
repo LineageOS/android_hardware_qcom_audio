@@ -74,7 +74,6 @@
 #define PLATFORM_INFO_XML_PATH_TDM_NAME  "audio_platform_info_tdm.xml"
 #define PLATFORM_INFO_XML_PATH_SHIMA_IDP "audio_platform_info_shimaidp.xml"
 #define PLATFORM_INFO_XML_PATH_SHIMA_QRD "audio_platform_info_shimaqrd.xml"
-#define PLATFORM_INFO_XML_PATH_YUPIK_IDP "audio_platform_info_yupikidp.xml"
 #define PLATFORM_INFO_XML_PATH_YUPIK_QRD "audio_platform_info_yupikqrd.xml"
 #define PLATFORM_INFO_XML_PATH_SCUBA_IDP "audio_platform_info_scubaidp.xml"
 #define PLATFORM_INFO_XML_PATH_SCUBA_QRD "audio_platform_info_scubaqrd.xml"
@@ -1871,6 +1870,7 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("msm8953-sku4-snd-card")) ||
          !strncmp(snd_card_name, "lito-lagoonmtp-snd-card",
                    sizeof("lito-lagoonmtp-snd-card")) ||
+         strstr(snd_card_name, "sdm429w") ||
          !strncmp(snd_card_name, "lito-lagoonqrd-snd-card",
                    sizeof("lito-lagoonqrd-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
@@ -3489,10 +3489,6 @@ void *platform_init(struct audio_device *adev)
                sizeof("lahaina-shimaqrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SHIMA_QRD),
             my_data, PLATFORM);
-    } else if (!strncmp(snd_card_name, "lahaina-yupikidp-snd-card",
-               sizeof("lahaina-yupikidp-snd-card"))) {
-        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_YUPIK_IDP),
-            my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "lahaina-yupikqrd-snd-card",
                sizeof("lahaina-yupikqrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_YUPIK_QRD),
@@ -3505,7 +3501,7 @@ void *platform_init(struct audio_device *adev)
                sizeof("bengal-scubaqrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_SCUBA_QRD),
             my_data, PLATFORM);
-    } else if (my_data->is_internal_codec) {
+    } else if (my_data->is_internal_codec && (strstr(snd_card_name, "sdm429w") == NULL)) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_INTCODEC_NAME),
             my_data, PLATFORM);
     } else {

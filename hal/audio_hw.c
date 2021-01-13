@@ -894,6 +894,21 @@ static bool is_supported_format(audio_format_t format)
     return false;
 }
 
+static bool is_supported_conc_usecase_for_power_mode_call(struct audio_device *adev)
+{
+    struct listnode *node;
+    struct audio_usecase *usecase;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->id == USECASE_AUDIO_PLAYBACK_FM) {
+            ALOGD("%s: FM usecase is active, not setting power mode", __func__);
+            return false;
+        }
+    }
+
+    return true;
+}
 static inline bool is_mmap_usecase(audio_usecase_t uc_id)
 {
     return (uc_id == USECASE_AUDIO_RECORD_AFE_PROXY) ||
@@ -904,25 +919,6 @@ static inline bool is_mmap_usecase(audio_usecase_t uc_id)
 static inline bool is_valid_volume(float left, float right)
 {
     return ((left >= 0.0f && right >= 0.0f) ? true : false);
-}
-
-static int enable_audio_route_for_voice_usecases(struct audio_device *adev,
-                                                 struct audio_usecase *uc_info)
-{
-    struct listnode *node;
-    struct audio_usecase *usecase;
-
-    if (uc_info == NULL)
-        return -EINVAL;
-
-    /* Re-route all voice usecases on the shared backend other than the
-       specified usecase to new snd devices */
-    list_for_each(node, &adev->usecase_list) {
-        usecase = node_to_item(node, struct audio_usecase, list);
-        if ((usecase->type == VOICE_CALL) && (usecase != uc_info))
-            enable_audio_route(adev, usecase);
-    }
-    return 0;
 }
 
 static void enable_asrc_mode(struct audio_device *adev)
@@ -1820,6 +1816,7 @@ static void check_usecases_codec_backend(struct audio_device *adev,
      */
     if (uc_info->type == VOICE_CALL &&
         voice_extn_is_voice_power_mode_supported() &&
+        is_supported_conc_usecase_for_power_mode_call(adev) &&
         platform_check_and_update_island_power_status(adev->platform,
                                              uc_info,
                                              snd_device)) {
@@ -1925,24 +1922,22 @@ static void check_usecases_codec_backend(struct audio_device *adev,
             /* Update the out_snd_device only before enabling the audio route */
             if (switch_device[usecase->id]) {
                 usecase->out_snd_device = derive_snd_device[usecase->id];
-                if (usecase->type != VOICE_CALL) {
-                    ALOGD("%s:becf: enabling usecase (%s) on (%s)", __func__,
-                         use_case_table[usecase->id],
-                         platform_get_snd_device_name(usecase->out_snd_device));
-                    /* Update voc calibration before enabling VoIP route */
-                    if (usecase->type == VOIP_CALL)
-                        status = platform_switch_voice_call_device_post(adev->platform,
-                                                           usecase->out_snd_device,
-                                                           platform_get_input_snd_device(
-                                                               adev->platform, NULL,
-                                                               &uc_info->device_list,
-                                                               usecase->type));
-                    enable_audio_route(adev, usecase);
-                    if (usecase->stream.out && usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
-                        out_set_voip_volume(&usecase->stream.out->stream,
-                                            usecase->stream.out->volume_l,
-                                            usecase->stream.out->volume_r);
-                    }
+                ALOGD("%s:becf: enabling usecase (%s) on (%s)", __func__,
+                     use_case_table[usecase->id],
+                     platform_get_snd_device_name(usecase->out_snd_device));
+                /* Update voc calibration before enabling Voice/VoIP route */
+                if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL)
+                    status = platform_switch_voice_call_device_post(adev->platform,
+                                                       usecase->out_snd_device,
+                                                       platform_get_input_snd_device(
+                                                           adev->platform, NULL,
+                                                           &uc_info->device_list,
+                                                           usecase->type));
+                enable_audio_route(adev, usecase);
+                if (usecase->stream.out && usecase->id == USECASE_AUDIO_PLAYBACK_VOIP) {
+                    out_set_voip_volume(&usecase->stream.out->stream,
+                                        usecase->stream.out->volume_l,
+                                        usecase->stream.out->volume_r);
                 }
             }
         }
@@ -1979,6 +1974,7 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
 
     if (uc_info->type == VOICE_CALL &&
         voice_extn_is_voice_power_mode_supported() &&
+        is_supported_conc_usecase_for_power_mode_call(adev) &&
         platform_check_and_update_island_power_status(adev->platform,
                                              uc_info,
                                              snd_device)) {
@@ -2055,19 +2051,17 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
             /* Update the in_snd_device only before enabling the audio route */
             if (switch_device[usecase->id] ) {
                 usecase->in_snd_device = snd_device;
-                if (usecase->type != VOICE_CALL) {
-                    /* Update voc calibration before enabling VoIP route */
-                    if (usecase->type == VOIP_CALL) {
-                        snd_device_t voip_snd_device;
-                        voip_snd_device = platform_get_output_snd_device(adev->platform,
-                                                                         uc_info->stream.out,
-                                                                         usecase->type);
-                        status = platform_switch_voice_call_device_post(adev->platform,
-                                                                        voip_snd_device,
-                                                                        usecase->in_snd_device);
-                    }
-                    enable_audio_route(adev, usecase);
+                    /* Update voc calibration before enabling Voice/VoIP route */
+                if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
+                    snd_device_t voip_snd_device;
+                    voip_snd_device = platform_get_output_snd_device(adev->platform,
+                                                                     usecase->stream.out,
+                                                                     usecase->type);
+                    status = platform_switch_voice_call_device_post(adev->platform,
+                                                                    voip_snd_device,
+                                                                    usecase->in_snd_device);
                 }
+                enable_audio_route(adev, usecase);
             }
         }
     }
@@ -3024,12 +3018,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         enable_snd_device(adev, in_snd_device);
     }
 
-    if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL) {
+    if (usecase->type == VOICE_CALL || usecase->type == VOIP_CALL)
         status = platform_switch_voice_call_device_post(adev->platform,
                                                         out_snd_device,
                                                         in_snd_device);
-        enable_audio_route_for_voice_usecases(adev, usecase);
-    }
 
     usecase->in_snd_device = in_snd_device;
     usecase->out_snd_device = out_snd_device;
@@ -3427,10 +3419,12 @@ static int send_offload_cmd_l(struct stream_out* out, int command)
     return 0;
 }
 
-/* must be called with out->lock and latch lock */
+/* must be called with out->lock */
 static void stop_compressed_output_l(struct stream_out *out)
 {
+    pthread_mutex_lock(&out->latch_lock);
     out->offload_state = OFFLOAD_STATE_IDLE;
+    pthread_mutex_unlock(&out->latch_lock);
     out->playback_started = 0;
     out->send_new_metadata = 1;
     if (out->compr != NULL) {
@@ -3688,11 +3682,9 @@ static int create_offload_callback_thread(struct stream_out *out)
 static int destroy_offload_callback_thread(struct stream_out *out)
 {
     lock_output_stream(out);
-    pthread_mutex_lock(&out->latch_lock);
     stop_compressed_output_l(out);
     send_offload_cmd_l(out, OFFLOAD_CMD_EXIT);
 
-    pthread_mutex_unlock(&out->latch_lock);
     pthread_mutex_unlock(&out->lock);
     pthread_join(out->offload_thread, (void **) NULL);
     pthread_cond_destroy(&out->offload_cond);
@@ -4590,9 +4582,7 @@ static int out_standby(struct audio_stream *stream)
             adev->adm_deregister_stream(adev->adm_data, out->handle);
 
         if (is_offload_usecase(out->usecase)) {
-            pthread_mutex_lock(&out->latch_lock);
             stop_compressed_output_l(out);
-            pthread_mutex_unlock(&out->latch_lock);
         }
 
         pthread_mutex_lock(&adev->lock);
@@ -4667,9 +4657,7 @@ static int out_on_error(struct audio_stream *stream)
     // is needed e.g. when SSR happens within compress_open
     // since the stream is active, offload_callback_thread is also active.
     if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
-        pthread_mutex_lock(&out->latch_lock);
         stop_compressed_output_l(out);
-        pthread_mutex_unlock(&out->latch_lock);
     }
     pthread_mutex_unlock(&out->lock);
 
@@ -4708,9 +4696,7 @@ int out_standby_l(struct audio_stream *stream)
             adev->adm_deregister_stream(adev->adm_data, out->handle);
 
         if (is_offload_usecase(out->usecase)) {
-            pthread_mutex_lock(&out->latch_lock);
             stop_compressed_output_l(out);
-            pthread_mutex_unlock(&out->latch_lock);
         }
 
         out->standby = true;
@@ -6554,12 +6540,13 @@ static int out_flush(struct audio_stream_out* stream)
         lock_output_stream(out);
         pthread_mutex_lock(&out->latch_lock);
         if (out->offload_state == OFFLOAD_STATE_PAUSED) {
+            pthread_mutex_unlock(&out->latch_lock);
             stop_compressed_output_l(out);
         } else {
             ALOGW("%s called in invalid state %d", __func__, out->offload_state);
+            pthread_mutex_unlock(&out->latch_lock);
         }
         out->written = 0;
-        pthread_mutex_unlock(&out->latch_lock);
         pthread_mutex_unlock(&out->lock);
         ALOGD("copl(%p):out of compress flush", out);
         return 0;
@@ -8789,18 +8776,21 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     /* notify adev and input/output streams on the snd card status */
     adev_snd_mon_cb((void *)adev, parms);
 
-    list_for_each(node, &adev->active_outputs_list) {
-        streams_output_ctxt_t *out_ctxt = node_to_item(node,
-                                            streams_output_ctxt_t,
-                                            list);
-        out_snd_mon_cb((void *)out_ctxt->output, parms);
-    }
+    ret = str_parms_get_str(parms, "SND_CARD_STATUS", value, sizeof(value));
+    if (ret >= 0) {
+        list_for_each(node, &adev->active_outputs_list) {
+            streams_output_ctxt_t *out_ctxt = node_to_item(node,
+                                                streams_output_ctxt_t,
+                                                list);
+            out_snd_mon_cb((void *)out_ctxt->output, parms);
+        }
 
-    list_for_each(node, &adev->active_inputs_list) {
-        streams_input_ctxt_t *in_ctxt = node_to_item(node,
-                                            streams_input_ctxt_t,
-                                            list);
-        in_snd_mon_cb((void *)in_ctxt->input, parms);
+        list_for_each(node, &adev->active_inputs_list) {
+            streams_input_ctxt_t *in_ctxt = node_to_item(node,
+                                                streams_input_ctxt_t,
+                                                list);
+            in_snd_mon_cb((void *)in_ctxt->input, parms);
+        }
     }
 
     pthread_mutex_lock(&adev->lock);
