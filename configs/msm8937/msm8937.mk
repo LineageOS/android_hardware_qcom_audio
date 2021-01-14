@@ -286,9 +286,18 @@ ro.af.client_heap_size_kbyte=7168
 
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.hw.binder.size_kbyte=1024
+
+ifeq ($(AUDIO_FEATURE_ENABLED_SPLIT_A2DP), true)
+#Enable split a2dp
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.feature.a2dp_offload.enable=true \
+ro.bluetooth.a2dp_offload.supported=true
+else
 #Disable split a2dp
 PRODUCT_PROPERTY_OVERRIDES += \
-persist.vendor.bt.enable.splita2dp=false
+vendor.audio.feature.a2dp_offload.enable=false \
+ro.bluetooth.a2dp_offload.supported=false
+endif
 
 #enable headset calibration
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -300,7 +309,6 @@ vendor.audio.spkr_prot.tx.sampling_rate=48000
 
 #add dynamic feature flags here
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.feature.a2dp_offload.enable=false \
 vendor.audio.feature.afe_proxy.enable=true \
 vendor.audio.feature.anc_headset.enable=true \
 vendor.audio.feature.battery_listener.enable=false \
