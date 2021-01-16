@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -3785,20 +3785,17 @@ static int stop_output_stream(struct stream_out *out)
             ALOGE("%s: audio_extn_ip_hdlr_intf_close failed %d",__func__, ret);
     }
 
-    /* 1) media + voip output routing to handset must route media back to
-          speaker when voip stops.
-       2) trigger voip input to reroute when voip output changes to
-          hearing aid. */
+    /* trigger voip input to reroute when voip output changes to hearing aid */
     if (has_voip_usecase ||
             compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
         struct listnode *node;
         struct audio_usecase *usecase;
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if ((usecase->type == PCM_CAPTURE &&
+            if (usecase->type == PCM_PLAYBACK || usecase == uc_info ||
+                (usecase->type == PCM_CAPTURE &&
                      usecase->id != USECASE_AUDIO_RECORD_VOIP &&
-                          usecase->id != USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)
-                || usecase == uc_info)
+                          usecase->id != USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY))
                 continue;
 
             ALOGD("%s: select_devices at usecase(%d: %s) after removing the usecase(%d: %s)",
