@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -283,7 +283,7 @@ int platform_get_supported_copp_sampling_rate(uint32_t stream_sr);
 int platform_set_channel_map(void *platform, int ch_count, char *ch_map,
                              int snd_id, int be_idx);
 int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask,
-                                   int snd_id, uint8_t *input_channel_map);
+                                   int snd_id, int be_idx, uint8_t *input_channel_map);
 int platform_set_stream_pan_scale_params(void *platform,
                                          int snd_id,
                                          struct mix_matrix_params mm_params);

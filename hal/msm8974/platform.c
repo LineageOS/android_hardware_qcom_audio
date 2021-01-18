@@ -10802,14 +10802,14 @@ end:
 }
 
 int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel_mask,
-                                               int snd_id, uint8_t *input_channel_map)
+                                    int snd_id, int be_idx, uint8_t *input_channel_map)
 {
     int ret = 0, i = 0;
     int channels = audio_channel_count_from_out_mask(channel_mask);
 
     char channel_map[AUDIO_CHANNEL_COUNT_MAX];
     memset(channel_map, 0, sizeof(channel_map));
-    if (*input_channel_map) {
+    if ((input_channel_map != NULL) && *input_channel_map) {
         for (i = 0; i < channels; i++) {
              ALOGV("%s:: Channel Map channel_map[%d] - %d", __func__, i, *input_channel_map);
              channel_map[i] = *input_channel_map;
@@ -10935,7 +10935,7 @@ int platform_set_stream_channel_map(void *platform, audio_channel_mask_t channel
                 return -1;
         }
     }
-    ret = platform_set_channel_map(platform, channels, channel_map, snd_id, -1);
+    ret = platform_set_channel_map(platform, channels, channel_map, snd_id, be_idx);
     return ret;
 }
 
@@ -11486,7 +11486,9 @@ int platform_set_edid_channels_configuration_v2(void *platform, int channels,
                 platform_set_channel_map(platform, adev_device_cfg_ptr->dev_cfg_params.channels,
                                      (char *)adev_device_cfg_ptr->dev_cfg_params.channel_map, -1, be_idx);
             } else {
-                platform_set_channel_map(platform, channels, info->channel_map, -1, be_idx);
+                platform_set_stream_channel_map(platform,
+                        audio_channel_out_mask_from_count(channels),
+                        -1, be_idx, NULL);
             }
 
             if (adev_device_cfg_ptr->use_client_dev_cfg) {

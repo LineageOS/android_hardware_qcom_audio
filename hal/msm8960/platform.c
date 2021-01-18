@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019, 2021 The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -1202,14 +1202,16 @@ int platform_get_edid_info(void *platform __unused)
 }
 
 int platform_set_channel_map(void *platform __unused, int ch_count __unused,
-                             char *ch_map __unused, int snd_id __unused)
+                             char *ch_map __unused, int snd_id __unused,
+                             int be_idx __unused)
 {
     return -ENOSYS;
 }
 
 int platform_set_stream_channel_map(void *platform __unused,
                                     audio_channel_mask_t channel_mask __unused,
-                                    int snd_id __unused
+                                    int snd_id __unused,
+                                    int be_idx __unused,
                                     uint8_t *input_channel_map __unused)
 {
     return -ENOSYS;
