@@ -125,6 +125,10 @@ PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
 PRODUCT_PACKAGES += ftm_test_config_lahaina-qrd-snd-card
 PRODUCT_PACKAGES += audioadsprpcd
 PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
+PRODUCT_PACKAGES += IDP_acdb_cal.acdb
+PRODUCT_PACKAGES += IDP_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += QRD_acdb_cal.acdb
+PRODUCT_PACKAGES += QRD_workspaceFileXml.qwsp
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
