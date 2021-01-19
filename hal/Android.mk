@@ -394,6 +394,10 @@ LOCAL_MODULE_OWNER := qti
 
 LOCAL_VENDOR_MODULE := true
 
+ifneq ($(filter lahaina taro,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_VINTF_FRAGMENTS := ../configs/common/manifest_non_qmaa.xml
+endif
+
 ifneq ($(filter kona lahaina holi taro,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_SANITIZE := integer_overflow
 endif
