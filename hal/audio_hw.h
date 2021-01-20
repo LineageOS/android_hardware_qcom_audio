@@ -442,7 +442,7 @@ struct stream_out {
     qahwi_stream_out_t qahwi_out;
 
     bool is_iec61937_info_available;
-    bool a2dp_compress_mute;
+    bool a2dp_muted;
     float volume_l;
     float volume_r;
     bool apply_volume;
