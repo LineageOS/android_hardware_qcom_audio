@@ -1605,17 +1605,18 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
     struct pal_device* deviceIdConfigs;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    AHAL_DBG("enter ");
-
     if (!mInitialized){
         AHAL_ERR("Not initialized, returning error");
         ret = -EINVAL;
         goto done;
     }
 
-    AHAL_DBG("mAndroidOutDevices %d, mNoOfOutDevices %zu, new_devices %d, num new_devices: %zu",
+    AHAL_INFO("enter: usecase(%d: %s) devices 0x%x, num devices %zu",
+            this->GetUseCase(), use_case_table[this->GetUseCase()],
+            AudioExtn::get_device_types(new_devices), new_devices.size());
+    AHAL_DBG("mAndroidOutDevices %d, mNoOfOutDevices %zu",
              AudioExtn::get_device_types(mAndroidOutDevices),
-             mAndroidOutDevices.size(), AudioExtn::get_device_types(new_devices), new_devices.size());
+             mAndroidOutDevices.size());
 
     /* If its the same device as what was already routed to, dont bother */
     if (!AudioExtn::audio_devices_empty(new_devices) && mAndroidOutDevices != new_devices) {
