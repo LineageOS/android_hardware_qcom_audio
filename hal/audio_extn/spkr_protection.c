@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -2491,6 +2491,8 @@ exit:
         list_remove(&uc_info_tx->list);
         uc_info_tx->in_snd_device = in_snd_device;
         uc_info_tx->out_snd_device = SND_DEVICE_NONE;
+        audio_route_reset_and_update_path(adev->audio_route,
+           device_name);
         fp_disable_snd_device(adev, in_snd_device);
         fp_disable_audio_route(adev, uc_info_tx);
         free(uc_info_tx);
