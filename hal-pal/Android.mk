@@ -44,7 +44,7 @@ LOCAL_SRC_FILES := \
     audio_extn/AudioExtn.cpp \
     ../hal/audio_extn/battery_listener.cpp
 
-LOCAL_HEADER_LIBRARIES := libhardware_headers
+LOCAL_HEADER_LIBRARIES := libhardware_headers qti_audio_kernel_uapi
 LOCAL_STATIC_LIBRARIES := libhealthhalutils
 
 LOCAL_SHARED_LIBRARIES := \
