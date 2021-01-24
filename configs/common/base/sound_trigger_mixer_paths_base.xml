@@ -103,10 +103,10 @@
     <ctl name="TX1 MODE" value="ADC_LP"/>
     <ctl name="TX2 MODE" value="ADC_LP"/>
     <ctl name="TX3 MODE" value="ADC_LP"/>
-    <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1"/>
-    <ctl name="ADC2 ChMap" value="SWRM_TX1_CH2"/>
-    <ctl name="ADC3 ChMap" value="SWRM_TX3_CH1"/>
-    <ctl name="ADC4 ChMap" value="SWRM_TX3_CH2"/>
+    <ctl name="ADC1 ChMap" value="ZERO"/>
+    <ctl name="ADC2 ChMap" value="ZERO"/>
+    <ctl name="ADC3 ChMap" value="ZERO"/>
+    <ctl name="ADC4 ChMap" value="ZERO"/>
     <path name="listen-voice-wakeup-1">
         <ctl name="LSM1 Mixer VA_CDC_DMA_TX_0" value="1"/>
     </path>

@@ -146,26 +146,23 @@ endif
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
-ifeq ($(AUDIO_FEATURE_ENABLED_SPLIT_A2DP), true)
-ifeq ($(TARGET_SUPPORTS_WEARABLES), true)
-   PRODUCT_COPY_FILES += \
-   $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
-else
-   PRODUCT_COPY_FILES += \
-   $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
-endif
-endif
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
 endif
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration_common.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/r_submix_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usb_audio_policy_configuration.xml
+endif
+ifeq ($(TARGET_SUPPORTS_WEARABLES), true)
+   PRODUCT_COPY_FILES += \
+   $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
+else
+   PRODUCT_COPY_FILES += \
+   $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration_common.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
 endif
 
 # Reduce client buffer size for fast audio output tracks
@@ -333,7 +330,6 @@ vendor.audio.feature.maxx_audio.enable=false \
 vendor.audio.feature.ras.enable=false \
 vendor.audio.feature.record_play_concurency.enable=false \
 vendor.audio.feature.src_trkn.enable=true \
-vendor.audio.feature.spkr_prot.enable=true \
 vendor.audio.feature.ssrec.enable=true \
 vendor.audio.feature.usb_offload.enable=false \
 vendor.audio.feature.usb_offload_burst_mode.enable=false \
@@ -343,7 +339,13 @@ vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=true \
 vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=true
-
+ifeq ($(TARGET_SUPPORTS_WEARABLES),true)
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.feature.spkr_prot.enable=false
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.feature.spkr_prot.enable=true
+endif
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \

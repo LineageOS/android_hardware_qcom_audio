@@ -34,11 +34,6 @@
     <ctl name="VA DEC5 MUX" value="MSM_DMIC"/>
     <ctl name="VA DEC6 MUX" value="MSM_DMIC"/>
     <ctl name="VA DEC7 MUX" value="MSM_DMIC"/>
-    <ctl name="ADC2 MUX" value="ZERO"/>
-    <ctl name="ADC1 ChMap" value="ZERO"/>
-    <ctl name="ADC2 ChMap" value="ZERO"/>
-    <ctl name="ADC3 ChMap" value="ZERO"/>
-    <ctl name="ADC4 ChMap" value="ZERO"/>
     <path name="listen-ape-handset-mic">
         <ctl name="VA_CDC_DMA_TX_0 Channels" value="One"/>
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1"/>

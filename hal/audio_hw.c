@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -3785,20 +3785,17 @@ static int stop_output_stream(struct stream_out *out)
             ALOGE("%s: audio_extn_ip_hdlr_intf_close failed %d",__func__, ret);
     }
 
-    /* 1) media + voip output routing to handset must route media back to
-          speaker when voip stops.
-       2) trigger voip input to reroute when voip output changes to
-          hearing aid. */
+    /* trigger voip input to reroute when voip output changes to hearing aid */
     if (has_voip_usecase ||
             compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
         struct listnode *node;
         struct audio_usecase *usecase;
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if ((usecase->type == PCM_CAPTURE &&
+            if (usecase->type == PCM_PLAYBACK || usecase == uc_info ||
+                (usecase->type == PCM_CAPTURE &&
                      usecase->id != USECASE_AUDIO_RECORD_VOIP &&
-                          usecase->id != USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)
-                || usecase == uc_info)
+                          usecase->id != USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY))
                 continue;
 
             ALOGD("%s: select_devices at usecase(%d: %s) after removing the usecase(%d: %s)",
@@ -9615,6 +9612,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         in->config.format = pcm_format_from_audio_format(config->format);
         in->af_period_multiplier = af_period_multiplier;
     } else if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
+               (!voice_extn_is_compress_voip_supported()) &&
                in->flags & AUDIO_INPUT_FLAG_VOIP_TX &&
                (config->sample_rate == 8000 ||
                 config->sample_rate == 16000 ||
@@ -10446,9 +10444,11 @@ static void adev_snd_mon_cb(void *cookie, struct str_parms *parms)
 int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool restore)
 {
     struct audio_usecase *uc_info;
+    struct audio_usecase *usecase;
     float left_p;
     float right_p;
     struct listnode devices;
+    struct listnode *node;
 
     uc_info = get_usecase_from_list(adev, out->usecase);
     if (uc_info == NULL) {
@@ -10484,9 +10484,17 @@ int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool
         pthread_mutex_lock(&out->latch_lock);
         // mute stream and switch to speaker if suspended
         if (!out->a2dp_muted && !out->standby) {
-            ALOGD("%s: selecting speaker and muting stream", __func__);
             assign_devices(&devices, &out->device_list);
             reassign_device_list(&out->device_list, AUDIO_DEVICE_OUT_SPEAKER, "");
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                if ((usecase != uc_info) &&
+                        platform_check_backends_match(SND_DEVICE_OUT_SPEAKER,
+                                                      usecase->out_snd_device)) {
+                    assign_devices(&out->device_list, &usecase->stream.out->device_list);
+                    break;
+                }
+            }
             left_p = out->volume_l;
             right_p = out->volume_r;
             out->a2dp_muted = true;
@@ -10505,6 +10513,8 @@ int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool
                 usleep(latency * 1000);
             }
             select_devices(adev, out->usecase);
+            ALOGD("%s: switched to device:%s and mute stream",
+                   __func__, platform_get_snd_device_name(uc_info->out_snd_device));
             if (is_offload_usecase(out->usecase)) {
                 if (out->offload_state == OFFLOAD_STATE_PLAYING)
                     compress_resume(out->compr);

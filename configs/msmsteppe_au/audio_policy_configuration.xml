@@ -393,15 +393,15 @@
                 <route type="mix" sink="Media Bus"
                        sources="media,direct_pcm,compressed_offload,voip_rx,mmap_no_irq_out"/>
                 <route type="mix" sink="Sys Notification Bus"
-                       sources="sys_notification"/>
+                       sources="sys_notification,mmap_no_irq_out"/>
                 <route type="mix" sink="Nav Guidance Bus"
-                       sources="nav_guidance"/>
+                       sources="nav_guidance,mmap_no_irq_out"/>
                 <route type="mix" sink="Phone Bus"
-                       sources="phone"/>
+                       sources="phone,mmap_no_irq_out"/>
                 <route type="mix" sink="Front Passenger Bus"
-                       sources="front_passenger"/>
+                       sources="front_passenger,mmap_no_irq_out"/>
                 <route type="mix" sink="Rear Seat Bus"
-                       sources="rear_seat"/>
+                       sources="rear_seat,mmap_no_irq_out"/>
                 <route type="mix" sink="Earpiece"
                        sources="primary output,raw,deep_buffer,direct_pcm,compressed_offload,voip_rx,mmap_no_irq_out"/>
                 <route type="mix" sink="Speaker"

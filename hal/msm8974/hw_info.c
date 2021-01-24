@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -528,6 +528,9 @@ static void update_hardware_info_kona(
                  sizeof("lito-lagoonqrd-snd-card"))) {
         strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
         hw_info->is_stereo_spkr = false;
+    } else if (!strncmp(snd_card_name, "lito-orchidmtp-snd-card",
+                 sizeof("lito-orchidmtp-snd-card"))) {
+        strlcpy(hw_info->name, "lito", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "bengal-idp-snd-card",
                  sizeof("bengal-idp-snd-card"))) {
         strlcpy(hw_info->name, "bengal", sizeof(hw_info->name));
@@ -609,6 +612,10 @@ static void update_hardware_info_lahaina(
                  sizeof("lahaina-hdk-snd-card"))) {
         strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
         hw_info->is_stereo_spkr = false;
+    } else if (!strncmp(snd_card_name, "lahaina-hhg-snd-card",
+                 sizeof("lahaina-hhg-snd-card"))) {
+        strlcpy(hw_info->name, "lahaina", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = true;
     } else if (!strncmp(snd_card_name, "lahaina-shimaidp-snd-card",
                  sizeof("lahaina-shimaidp-snd-card"))) {
         strlcpy(hw_info->name, "shima", sizeof(hw_info->name));
