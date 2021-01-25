@@ -948,7 +948,8 @@ static void check_and_configure_headphone(struct audio_device *adev,
 
     new_backend_idx = platform_get_backend_index(snd_device);
     spkr_hph_single_be_native_concurrency = platform_get_spkr_hph_single_be_native_concurrency_flag();
-    if ( spkr_hph_single_be_native_concurrency && (new_backend_idx == DEFAULT_CODEC_BACKEND)) {
+    if ((spkr_hph_single_be_native_concurrency && (new_backend_idx == DEFAULT_CODEC_BACKEND)) ||
+            uc_info->id == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
             if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info)) {
@@ -961,8 +962,8 @@ static void check_and_configure_headphone(struct audio_device *adev,
                     usecase->stream.out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
                     platform_check_and_set_codec_backend_cfg(adev, usecase,
                                                             usecase->out_snd_device);
-                    enable_audio_route(adev, usecase);
                     enable_snd_device(adev, usecase->out_snd_device);
+                    enable_audio_route(adev, usecase);
                 }
             }
         }
