@@ -53,8 +53,8 @@ static int msim_voice_extn_set_parameters(struct audio_device *adev __unused,
     return -ENOSYS;
 }
 
-static int msim_voice_extn_is_call_state_active(struct audio_device *adev,
-                                               bool *is_call_active)
+static int msim_voice_extn_is_call_state_active(struct audio_device *adev __unused,
+                                               bool *is_call_active __unused)
 {
     return -ENOSYS;
 }
