@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -2983,6 +2983,30 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
     enable_audio_route(adev, usecase);
 
+    if (uc_id == USECASE_AUDIO_PLAYBACK_VOIP) {
+        struct stream_in *voip_in = get_voice_communication_input(adev);
+        struct audio_usecase *voip_in_usecase = NULL;
+        voip_in_usecase = get_usecase_from_list(adev, USECASE_AUDIO_RECORD_VOIP);
+        if (voip_in != NULL &&
+            voip_in_usecase != NULL &&
+            !(out_snd_device == AUDIO_DEVICE_OUT_SPEAKER ||
+              out_snd_device == AUDIO_DEVICE_OUT_SPEAKER_SAFE) &&
+            (voip_in_usecase->in_snd_device ==
+            platform_get_input_snd_device(adev->platform, voip_in,
+                    &usecase->stream.out->device_list,usecase->type))) {
+            /*
+             * if VOIP TX is enabled before VOIP RX, needs to re-route the TX path
+             * for enabling echo-reference-voip with correct port
+             */
+            ALOGD("%s: VOIP TX is enabled before VOIP RX,needs to re-route the TX path",__func__);
+            disable_audio_route(adev, voip_in_usecase);
+            disable_snd_device(adev, voip_in_usecase->in_snd_device);
+            enable_snd_device(adev, voip_in_usecase->in_snd_device);
+            enable_audio_route(adev, voip_in_usecase);
+        }
+    }
+
+
     audio_extn_qdsp_set_device(usecase);
 
     /* If input stream is already running then effect needs to be
@@ -3347,10 +3371,12 @@ static int send_offload_cmd_l(struct stream_out* out, int command)
     return 0;
 }
 
-/* must be called with out->lock and latch lock */
+/* must be called with out->lock */
 static void stop_compressed_output_l(struct stream_out *out)
 {
+    pthread_mutex_lock(&out->latch_lock);
     out->offload_state = OFFLOAD_STATE_IDLE;
+    pthread_mutex_unlock(&out->latch_lock);
     out->playback_started = 0;
     out->send_new_metadata = 1;
     if (out->compr != NULL) {
@@ -3608,11 +3634,9 @@ static int create_offload_callback_thread(struct stream_out *out)
 static int destroy_offload_callback_thread(struct stream_out *out)
 {
     lock_output_stream(out);
-    pthread_mutex_lock(&out->latch_lock);
     stop_compressed_output_l(out);
     send_offload_cmd_l(out, OFFLOAD_CMD_EXIT);
 
-    pthread_mutex_unlock(&out->latch_lock);
     pthread_mutex_unlock(&out->lock);
     pthread_join(out->offload_thread, (void **) NULL);
     pthread_cond_destroy(&out->offload_cond);
@@ -4507,9 +4531,7 @@ static int out_standby(struct audio_stream *stream)
             adev->adm_deregister_stream(adev->adm_data, out->handle);
 
         if (is_offload_usecase(out->usecase)) {
-            pthread_mutex_lock(&out->latch_lock);
             stop_compressed_output_l(out);
-            pthread_mutex_unlock(&out->latch_lock);
         }
 
         pthread_mutex_lock(&adev->lock);
@@ -4584,9 +4606,7 @@ static int out_on_error(struct audio_stream *stream)
     // is needed e.g. when SSR happens within compress_open
     // since the stream is active, offload_callback_thread is also active.
     if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
-        pthread_mutex_lock(&out->latch_lock);
         stop_compressed_output_l(out);
-        pthread_mutex_unlock(&out->latch_lock);
     }
     pthread_mutex_unlock(&out->lock);
 
@@ -4625,9 +4645,7 @@ int out_standby_l(struct audio_stream *stream)
             adev->adm_deregister_stream(adev->adm_data, out->handle);
 
         if (is_offload_usecase(out->usecase)) {
-            pthread_mutex_lock(&out->latch_lock);
             stop_compressed_output_l(out);
-            pthread_mutex_unlock(&out->latch_lock);
         }
 
         out->standby = true;
@@ -6470,12 +6488,13 @@ static int out_flush(struct audio_stream_out* stream)
         lock_output_stream(out);
         pthread_mutex_lock(&out->latch_lock);
         if (out->offload_state == OFFLOAD_STATE_PAUSED) {
+            pthread_mutex_unlock(&out->latch_lock);
             stop_compressed_output_l(out);
         } else {
             ALOGW("%s called in invalid state %d", __func__, out->offload_state);
+            pthread_mutex_unlock(&out->latch_lock);
         }
         out->written = 0;
-        pthread_mutex_unlock(&out->latch_lock);
         pthread_mutex_unlock(&out->lock);
         ALOGD("copl(%p):out of compress flush", out);
         return 0;
