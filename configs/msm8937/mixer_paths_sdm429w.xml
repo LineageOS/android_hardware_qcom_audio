@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!--
-    Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+    Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are
@@ -590,6 +590,16 @@
     <path name="compress-offload-playback2 speaker-and-headphones">
         <path name="compress-offload-playback2" />
     </path>
+
+    <path name="compress-offload-playback2 bt-a2dp">
+        <ctl name="INTERNAL_A2DP_RX Audio Mixer MultiMedia7" value="1" />
+    </path>
+
+    <path name="compress-offload-playback2 speaker-and-bt-a2dp">
+        <path name="compress-offload-playback2 bt-a2dp" />
+        <path name="compress-offload-playback2" />
+    </path>
+
 
     <path name="compress-offload-playback transmission-fm">
         <ctl name="INTERNAL_FM_RX Audio Mixer MultiMedia4" value="1" />
