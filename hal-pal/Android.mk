@@ -20,6 +20,7 @@ LOCAL_SRC_FILES := \
     audio_extn/Gain.cpp \
     audio_extn/AudioExtn.cpp \
     ../hal/audio_extn/battery_listener.cpp
+
 LOCAL_STATIC_LIBRARIES := \
     libhealthhalutils
 
@@ -36,7 +37,7 @@ LOCAL_SHARED_LIBRARIES := \
     libar-pal \
     android.hardware.health@1.0 \
     android.hardware.health@2.0 \
-    android.hardware.power@1.2 \
+    android.hardware.power@1.2
 
 LOCAL_C_INCLUDES += \
     system/media/audio_utils/include \
@@ -47,6 +48,14 @@ LOCAL_C_INCLUDES += \
     $(LOCAL_PATH)/audio_extn \
     $(LOCAL_PATH)/../hal/audio_extn
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PAL_HIDL)),true)
+  LOCAL_SHARED_LIBRARIES += \
+    vendor.qti.hardware.pal@1.0-impl \
+    vendor.qti.hardware.pal@1.0
+
+  LOCAL_CFLAGS += -DPAL_HIDL_ENABLED
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GEF_SUPPORT)),true)
     LOCAL_CFLAGS += -DAUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
@@ -54,6 +63,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
 endif
     LOCAL_SRC_FILES += audio_extn/Gef.cpp
 endif
+
 
 LOCAL_CFLAGS += -D_GNU_SOURCE
 LOCAL_CFLAGS += -Wall -Werror

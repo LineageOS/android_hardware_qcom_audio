@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -66,6 +66,8 @@ public:
     static void battery_properties_listener_init(battery_status_change_fn_t fn);
     static void battery_properties_listener_deinit();
     static bool battery_properties_is_charging();
+
+    static int audio_extn_hidl_init();
 
     //HFP
     static int hfp_feature_init(bool is_feature_enabled);

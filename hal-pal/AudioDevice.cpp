@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -51,6 +51,7 @@
 #include "PalApi.h"
 #include "PalDefs.h"
 
+#include <audio_extn/AudioExtn.h>
 #include "audio_extn.h"
 #include "battery_listener.h"
 
@@ -61,6 +62,7 @@ AudioDevice::~AudioDevice() {
     audio_extn_sound_trigger_deinit(adev_);
     pal_deinit();
 }
+
 
 std::shared_ptr<AudioDevice> AudioDevice::GetInstance() {
     if (!adev_) {
@@ -667,6 +669,12 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     if (ret) {
         AHAL_ERR("pal register callback failed ret=(%d)", ret);
     }
+    /*
+     *Once PAL init is sucessfull, register the PAL service
+     *from HAL process context
+     */
+    ALOGE("Register Pal service");
+    AudioExtn::audio_extn_hidl_init();
 
     adev_->device_.get()->common.tag = HARDWARE_DEVICE_TAG;
     adev_->device_.get()->common.version =
