@@ -85,6 +85,7 @@ AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := true
 
 AUDIO_FEATURE_ENABLED_PAL_HIDL := true
 ##AUDIO_FEATURE_FLAGS
+
 #AGM
 AUDIO_AGM := libagmclient
 AUDIO_AGM += libagmservice
@@ -105,6 +106,10 @@ AUDIO_PAL := libar-pal
 AUDIO_PAL += lib_bt_bundle
 AUDIO_PAL += lib_bt_aptx
 AUDIO_PAL += catf
+#PAL Service
+AUDIO_PAL += libpalclient
+AUDIO_PAL += vendor.qti.hardware.pal@1.0-impl
+
 
 BOARD_SUPPORTS_OPENSOURCE_STHAL := true
 
