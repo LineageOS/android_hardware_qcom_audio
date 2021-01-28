@@ -85,7 +85,26 @@ AUDIO_FEATURE_ENABLED_USB_BURST_MODE := true
 AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := true
 ##AUDIO_FEATURE_FLAGS
+#AGM
+AUDIO_AGM := libagmclient
+AUDIO_AGM += libagmservice
+AUDIO_AGM += vendor.qti.hardware.AGMIPC@1.0-impl
+AUDIO_AGM += vendor.qti.hardware.AGMIPC@1.0-service
+AUDIO_AGM += vendor.qti.hardware.AGMIPC@1.0-service.rc
+AUDIO_AGM += libagm
+AUDIO_AGM += agmplay
+AUDIO_AGM += agmcap
+AUDIO_AGM += libagmmixer
+AUDIO_AGM += agmcompressplay
+AUDIO_AGM += libagm_mixer_plugin
+AUDIO_AGM += libagm_pcm_plugin
+AUDIO_AGM += libagm_compress_plugin
 
+#PAL Module
+AUDIO_PAL := libar-pal
+AUDIO_PAL += lib_bt_bundle
+AUDIO_PAL += catf
+AUDIO_PAL += lib_bt_aptx
 BOARD_SUPPORTS_OPENSOURCE_STHAL := true
 
 AUDIO_HARDWARE := audio.a2dp.default
@@ -107,22 +126,22 @@ PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
 
 ifeq ($(AUDIO_FEATURE_ENABLED_DLKM),true)
 BOARD_VENDOR_KERNEL_MODULES += \
-    $(KERNEL_MODULES_OUT)/audio_apr.ko \
+    $(KERNEL_MODULES_OUT)/audio_spf_core.ko \
+    $(KERNEL_MODULES_OUT)/audio_pkt.ko \
+    $(KERNEL_MODULES_OUT)/audio_gpr.ko \
+    $(KERNEL_MODULES_OUT)/audio_prm.ko \
+    $(KERNEL_MODULES_OUT)/audio_audpkt_ion.ko \
     $(KERNEL_MODULES_OUT)/audio_q6_pdr.ko \
     $(KERNEL_MODULES_OUT)/audio_q6_notifier.ko \
     $(KERNEL_MODULES_OUT)/audio_adsp_loader.ko \
-    $(KERNEL_MODULES_OUT)/audio_q6.ko \
-    $(KERNEL_MODULES_OUT)/audio_usf.ko \
     $(KERNEL_MODULES_OUT)/audio_pinctrl_lpi.ko \
     $(KERNEL_MODULES_OUT)/audio_swr.ko \
     $(KERNEL_MODULES_OUT)/audio_wcd_core.ko \
     $(KERNEL_MODULES_OUT)/audio_swr_ctrl.ko \
     $(KERNEL_MODULES_OUT)/audio_wsa881x_analog.ko \
-    $(KERNEL_MODULES_OUT)/audio_platform.ko \
     $(KERNEL_MODULES_OUT)/audio_stub.ko \
     $(KERNEL_MODULES_OUT)/audio_wcd9xxx.ko \
     $(KERNEL_MODULES_OUT)/audio_mbhc.ko \
-    $(KERNEL_MODULES_OUT)/audio_native.ko \
     $(KERNEL_MODULES_OUT)/audio_wcd937x.ko \
     $(KERNEL_MODULES_OUT)/audio_wcd937x_slave.ko \
     $(KERNEL_MODULES_OUT)/audio_rouleur.ko \
@@ -132,35 +151,38 @@ BOARD_VENDOR_KERNEL_MODULES += \
     $(KERNEL_MODULES_OUT)/audio_va_macro.ko \
     $(KERNEL_MODULES_OUT)/audio_rx_macro.ko \
     $(KERNEL_MODULES_OUT)/audio_tx_macro.ko \
-    $(KERNEL_MODULES_OUT)/audio_machine_bengal.ko \
+    $(KERNEL_MODULES_OUT)/audio_machine_bengal.ko\
     $(KERNEL_MODULES_OUT)/audio_snd_event.ko
 endif
 
 #Audio DLKM
-AUDIO_DLKM := audio_apr.ko
+AUDIO_DLKM := audio_spf_core.ko
+AUDIO_DLKM += audio_pkt.ko
+AUDIO_DLKM += audio_gpr.ko
+AUDIO_DLKM += audio_prm.ko
+AUDIO_DLKM += audio_audpkt_ion.ko
 AUDIO_DLKM += audio_q6_pdr.ko
 AUDIO_DLKM += audio_q6_notifier.ko
 AUDIO_DLKM += audio_adsp_loader.ko
-AUDIO_DLKM += audio_q6.ko
-AUDIO_DLKM += audio_usf.ko
 AUDIO_DLKM += audio_pinctrl_lpi.ko
 AUDIO_DLKM += audio_swr.ko
 AUDIO_DLKM += audio_wcd_core.ko
 AUDIO_DLKM += audio_swr_ctrl.ko
 AUDIO_DLKM += audio_wsa881x_analog.ko
-AUDIO_DLKM += audio_platform.ko
 AUDIO_DLKM += audio_stub.ko
 AUDIO_DLKM += audio_wcd9xxx.ko
 AUDIO_DLKM += audio_mbhc.ko
-AUDIO_DLKM += audio_native.ko
 AUDIO_DLKM += audio_wcd937x.ko
 AUDIO_DLKM += audio_wcd937x_slave.ko
+AUDIO_DLKM += audio_rouleur.ko
+AUDIO_DLKM += audio_rouleur_slave.ko
 AUDIO_DLKM += audio_bolero_cdc.ko
 AUDIO_DLKM += audio_va_macro.ko
 AUDIO_DLKM += audio_rx_macro.ko
 AUDIO_DLKM += audio_tx_macro.ko
 AUDIO_DLKM += audio_machine_bengal.ko
 AUDIO_DLKM += audio_snd_event.ko
+AUDIO_DLKM += audio_pm2250_spmi.ko
 
 PRODUCT_PACKAGES += $(AUDIO_DLKM)
 
@@ -168,6 +190,8 @@ ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
 endif
+PRODUCT_PACKAGES += $(AUDIO_AGM)
+PRODUCT_PACKAGES += $(AUDIO_PAL)
 
 PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/bengal/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
@@ -190,7 +214,9 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/bengal/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/bengal/audio_configs_stock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs_stock.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
-    frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
+    frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml \
+    vendor/qcom/opensource/pal/configs/bengal/resourcemanager_scubaidp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_scubaidp.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/bengal/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
@@ -476,3 +502,27 @@ PRODUCT_PACKAGES_ENG += \
 
 PRODUCT_PACKAGES_DEBUG += \
     AudioSettings
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DEV_ARBI)),true)
+PRODUCT_PACKAGES_DEBUG += \
+    libaudiodevarb
+endif
+ifeq ($(call is-vendor-board-platform,QCOM),true)
+ifeq ($(call is-platform-sdk-version-at-least,28),true)
+PRODUCT_PACKAGES_DEBUG += \
+    libqti_resampler_headers \
+    lib_soundmodel_headers \
+    libqti_vraudio_headers
+endif
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_3D_AUDIO)),true)
+PRODUCT_PACKAGES_DEBUG += \
+    libvr_object_engine \
+    libvr_amb_engine \
+    libhoaeffects_csim
+endif
+endif
+ifeq ($(strip $(BOARD_SUPPORTS_SOUND_TRIGGER)),true)
+PRODUCT_PACKAGES_DEBUG += \
+    libadpcmdec
+endif
+
+AUDIO_FEATURE_ENABLED_GKI := true
