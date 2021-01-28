@@ -1950,6 +1950,22 @@ static void platform_reset_edid_info(void *platform) {
     }
 }
 
+const char *platform_get_mixer_FM_RX_control(struct audio_device *adev) {
+    char *snd_card_name = NULL;
+
+    snd_card_name = strdup(mixer_get_name(adev->mixer));
+    if (!snd_card_name) {
+        ALOGE("%s: failed to allocate memory for snd_card_name\n",__func__);
+        return NULL;
+    }
+
+    if (!strncmp(snd_card_name, "lahaina-yupikidp-snd-card",
+            sizeof("lahaina-yupikidp-snd-card")))
+                return "SEC MI2S LOOPBACK Volume";
+
+    return FM_RX_VOLUME;
+}
+
 bool platform_send_gain_dep_cal(void *platform, int level) {
     bool ret_val = false;
     struct platform_data *my_data = (struct platform_data *)platform;
