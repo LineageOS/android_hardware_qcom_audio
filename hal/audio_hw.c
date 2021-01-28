@@ -4850,15 +4850,6 @@ static void out_snd_mon_cb(void * stream, struct str_parms * parms)
     return;
 }
 
-static int get_alive_usb_card(struct str_parms* parms) {
-    int card;
-    if ((str_parms_get_int(parms, "card", &card) >= 0) &&
-        !audio_extn_usb_alive(card)) {
-        return card;
-    }
-    return -ENODEV;
-}
-
 int route_output_stream(struct stream_out *out,
                         struct listnode *devices)
 {
@@ -4906,7 +4897,7 @@ int route_output_stream(struct stream_out *out,
         reassign_device_list(&new_devices, AUDIO_DEVICE_OUT_SPEAKER, "");
     }
     /*
-     * When USB headset is disconnected the music platback paused
+     * When USB headset is disconnected the music playback paused
      * and the policy manager send routing=0. But if the USB is connected
      * back before the standby time, AFE is not closed and opened
      * when USB is connected back. So routing to speker will guarantee
@@ -4943,14 +4934,13 @@ int route_output_stream(struct stream_out *out,
 
     // Workaround: If routing to an non existing usb device, fail gracefully
     // The routing request will otherwise block during 10 second
-    int card;
     if (is_usb_out_device_type(&new_devices)) {
         struct str_parms *parms =
             str_parms_create_str(get_usb_device_address(&new_devices));
         if (!parms)
             goto error;
-        if ((card = get_alive_usb_card(parms)) >= 0) {
-            ALOGW("%s: ignoring rerouting to non existing USB card %d", __func__, card);
+        if (!audio_extn_usb_connected(NULL)) {
+            ALOGW("%s: ignoring rerouting to non existing USB card", __func__);
             pthread_mutex_unlock(&adev->lock);
             pthread_mutex_unlock(&out->lock);
             str_parms_destroy(parms);
@@ -5927,6 +5917,12 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
                 goto exit;
             }
         }
+    }
+
+    if (is_usb_out_device_type(&out->device_list) &&
+            !audio_extn_usb_connected(NULL)) {
+        ret = -EIO;
+        goto exit;
     }
 
     if (out->standby) {
@@ -6978,12 +6974,11 @@ int route_input_stream(struct stream_in *in,
           is_audio_in_device_type(devices)) {
         // Workaround: If routing to an non existing usb device, fail gracefully
         // The routing request will otherwise block during 10 second
-        int card;
         struct str_parms *usb_addr =
                 str_parms_create_str(get_usb_device_address(devices));
         if (is_usb_in_device_type(devices) && usb_addr &&
-             (card = get_alive_usb_card(usb_addr)) >= 0) {
-            ALOGW("%s: ignoring rerouting to non existing USB card %d", __func__, card);
+             !audio_extn_usb_connected(NULL)) {
+            ALOGW("%s: ignoring rerouting to non existing USB", __func__);
             ret = -ENOSYS;
         } else {
             /* If recording is in progress, change the tx device to new device */
