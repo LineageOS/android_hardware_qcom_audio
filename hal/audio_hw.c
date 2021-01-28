@@ -10444,8 +10444,6 @@ int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool
 {
     struct audio_usecase *uc_info;
     struct audio_usecase *usecase;
-    float left_p;
-    float right_p;
     struct listnode devices;
     struct listnode *node;
 
@@ -10494,33 +10492,31 @@ int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool
                     break;
                 }
             }
-            left_p = out->volume_l;
-            right_p = out->volume_r;
-            out->a2dp_muted = true;
-            if (is_offload_usecase(out->usecase)) {
-                if (out->offload_state == OFFLOAD_STATE_PLAYING)
-                    compress_pause(out->compr);
-                out_set_compr_volume(&out->stream, (float)0, (float)0);
-            } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
-                out_set_voip_volume(&out->stream, (float)0, (float)0);
-            } else {
-                out_set_pcm_volume(&out->stream, (float)0, (float)0);
-                /* wait for stale pcm drained before switching to speaker */
-                uint32_t latency =
-                    (out->config.period_count * out->config.period_size * 1000) /
-                    (out->config.rate);
-                usleep(latency * 1000);
+            if (uc_info->out_snd_device == SND_DEVICE_OUT_BT_A2DP) {
+                out->a2dp_muted = true;
+                if (is_offload_usecase(out->usecase)) {
+                    if (out->offload_state == OFFLOAD_STATE_PLAYING)
+                        compress_pause(out->compr);
+                    out_set_compr_volume(&out->stream, (float)0, (float)0);
+                } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
+                    out_set_voip_volume(&out->stream, (float)0, (float)0);
+                } else {
+                    out_set_pcm_volume(&out->stream, (float)0, (float)0);
+                    /* wait for stale pcm drained before switching to speaker */
+                    uint32_t latency =
+                        (out->config.period_count * out->config.period_size * 1000) /
+                        (out->config.rate);
+                    usleep(latency * 1000);
+                }
             }
             select_devices(adev, out->usecase);
-            ALOGD("%s: switched to device:%s and mute stream",
-                   __func__, platform_get_snd_device_name(uc_info->out_snd_device));
+            ALOGD("%s: switched to device:%s and stream muted:%d", __func__,
+                platform_get_snd_device_name(uc_info->out_snd_device), out->a2dp_muted);
             if (is_offload_usecase(out->usecase)) {
                 if (out->offload_state == OFFLOAD_STATE_PLAYING)
                     compress_resume(out->compr);
             }
             assign_devices(&out->device_list, &devices);
-            out->volume_l = left_p;
-            out->volume_r = right_p;
         }
         pthread_mutex_unlock(&out->latch_lock);
     }
