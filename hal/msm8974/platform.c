@@ -6635,8 +6635,12 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
                     else
                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT;
-                } else
-                    snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
+                } else {
+                    if (my_data->mono_speaker == SPKR_1)
+                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
+                    else
+                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT;
+                }
             } else if (my_data->is_wsa_speaker) {
                     if (my_data->mono_speaker == SPKR_1)
                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_WSA;
@@ -6659,8 +6663,12 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                     }
                 } else if (adev->enable_hfp)
                     snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_HFP;
-                else
-                    snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
+                else {
+                    if (my_data->mono_speaker == SPKR_1)
+                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
+                    else
+                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2;
+                }
             }
         } else if (is_a2dp_out_device_type(&devices)) {
             snd_device = SND_DEVICE_OUT_BT_A2DP;
@@ -8438,18 +8446,17 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         }
     }
 
-    if (hw_info_is_stereo_spkr(my_data->hw_info)) {
-        err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER, value, len);
-        if (err >= 0) {
-            if (!strncmp("left", value, sizeof("left")))
-                my_data->mono_speaker = SPKR_1;
-            else if (!strncmp("right", value, sizeof("right")))
-                my_data->mono_speaker = SPKR_2;
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER, value, len);
+    if (err >= 0) {
+        if (!strncmp("left", value, sizeof("left")))
+            my_data->mono_speaker = SPKR_1;
+        else if (!strncmp("right", value, sizeof("right")))
+            my_data->mono_speaker = SPKR_2;
 
-            str_parms_del(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER);
-        }
+       str_parms_del(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER);
     }
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE,
+
+   err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE,
                             value, len);
     if (err >= 0) {
         char *event_name, *status_str;
