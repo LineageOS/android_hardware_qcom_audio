@@ -5723,7 +5723,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         goto exit;
     }
 
-    if (popcount(devices) == 2) {
+    if((popcount(devices) == 2) && (devices != 802) {
         bool is_active_voice_call = false;
 
         /*
