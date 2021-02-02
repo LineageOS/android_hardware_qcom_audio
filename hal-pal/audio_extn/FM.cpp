@@ -75,7 +75,7 @@ static struct fm_module fm = {
     .muted = 0,
     .restart = 0,
     .volume = 0,
-    .device = 0,
+    .device = (audio_devices_t)0,
     .stream_handle = 0
 };
 
@@ -222,14 +222,14 @@ void fm_get_parameters(std::shared_ptr<AudioDevice> adev __unused, struct str_pa
 }
 
 inline void hal2vec(audio_devices_t hdev, std::vector<audio_devices_t>& hdevs){
-    audio_devices_t out_devs = hdev & AUDIO_DEVICE_OUT_ALL;
-    audio_devices_t in_devs = hdev & AUDIO_DEVICE_IN_ALL;
+    audio_devices_t out_devs = (audio_devices_t)(hdev & AUDIO_DEVICE_OUT_ALL);
+    audio_devices_t in_devs = (audio_devices_t)(hdev & AUDIO_DEVICE_IN_ALL);
 
-    for(audio_devices_t i = 0x1; i < AUDIO_DEVICE_OUT_DEFAULT; i <<= 1)
+    for(audio_devices_t i = (audio_devices_t)0x1; i < AUDIO_DEVICE_OUT_DEFAULT; i = (audio_devices_t)(i << 1))
         if(out_devs & i)
             hdevs.push_back(i);
 
-    for(audio_devices_t i = 0x10000; i < AUDIO_DEVICE_IN_DEFAULT; i <<= 1)
+    for(audio_devices_t i = (audio_devices_t)0x10000; i < AUDIO_DEVICE_IN_DEFAULT; i = (audio_devices_t)(i << 1))
         if(out_devs & i)
             hdevs.push_back(i);
 }
