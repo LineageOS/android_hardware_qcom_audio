@@ -3157,7 +3157,7 @@ int start_input_stream(struct stream_in *in)
     }
 
     if (is_sco_in_device_type(&in->device_list)) {
-        if (!adev->bt_sco_on) {
+        if (!adev->bt_sco_on || audio_extn_a2dp_source_is_ready()) {
             ALOGE("%s: SCO profile is not ready, return error", __func__);
             ret = -EIO;
             goto error_config;
