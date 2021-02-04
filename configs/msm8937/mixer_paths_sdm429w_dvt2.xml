@@ -430,6 +430,15 @@
         <path name="compress-offload-playback2" />
     </path>
 
+    <path name="compress-offload-playback2 bt-a2dp">
+        <ctl name="SLIMBUS_7_RX Audio Mixer MultiMedia7" value="1" />
+    </path>
+
+    <path name="compress-offload-playback2 speaker-and-bt-a2dp">
+        <path name="compress-offload-playback2 bt-a2dp" />
+        <path name="compress-offload-playback2" />
+    </path>
+
     <path name="compress-offload-playback3">
         <ctl name="QUAT_MI2S_RX Audio Mixer MultiMedia10" value="1" />
     </path>
