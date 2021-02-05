@@ -1267,6 +1267,17 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                             sizeof(pal_param_btsco_t));
     }
 
+    ret = str_parms_get_str(parms, "wfd_channel_cap", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_proxy_channel_config_t param_out_proxy;
+
+        val = atoi(value);
+        param_out_proxy.num_proxy_channels = val;
+        AHAL_INFO("Proxy channels: %d", val);
+        ret = pal_set_param(PAL_PARAM_ID_PROXY_CHANNEL_CONFIG, (void *)&param_out_proxy,
+                sizeof(pal_param_proxy_channel_config_t));
+    }
+
     str_parms_destroy(parms);
 
     AHAL_DBG("exit: %s", kvpairs);
