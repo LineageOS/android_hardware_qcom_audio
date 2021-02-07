@@ -64,6 +64,8 @@
         <device name="SND_DEVICE_OUT_SPEAKER_PROTECTED_VBAT" acdb_id="136"/>
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_PROTECTED_VBAT" acdb_id="136"/>
         <device name="SND_DEVICE_IN_CAPTURE_VI_FEEDBACK" acdb_id="137"/>
+        <device name="SND_DEVICE_OUT_VOICE_SPEAKER_HFP" acdb_id="140"/>
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP" acdb_id="141"/>
     </acdb_ids>
 
     <backend_names>
