@@ -8825,3 +8825,8 @@ int platform_get_display_port_ctl_index(int controller __unused,
 bool platform_is_call_proxy_snd_device(snd_device_t snd_device __unused) {
     return false;
 }
+
+const char *platform_get_mixer_FM_RX_control(struct audio_device *adev) {
+    return FM_RX_VOLUME;
+}
+
