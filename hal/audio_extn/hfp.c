@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -50,6 +50,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define AUDIO_PARAMETER_HFP_SET_SAMPLING_RATE "hfp_set_sampling_rate"
 #define AUDIO_PARAMETER_KEY_HFP_VOLUME "hfp_volume"
 #define AUDIO_PARAMETER_HFP_PCM_DEV_ID "hfp_pcm_dev_id"
+#define AUDIO_PARAMETER_HFP_VOL_MIXER_CTL "hfp_vol_mixer_ctl"
+#define AUDIO_PARAMETER_HFP_VALUE_MAX   128
 
 #define AUDIO_PARAMETER_KEY_HFP_MIC_VOLUME "hfp_mic_volume"
 #define PLAYBACK_VOLUME_MAX 0x2000
@@ -85,6 +87,7 @@ struct hfp_module {
     struct pcm *hfp_pcm_tx;
     bool is_hfp_running;
     float hfp_volume;
+    char  hfp_vol_mixer_ctl[AUDIO_PARAMETER_HFP_VALUE_MAX];
     int32_t hfp_pcm_dev_id;
     audio_usecase_t ucid;
     float mic_volume;
@@ -98,6 +101,7 @@ static struct hfp_module hfpmod = {
     .hfp_pcm_tx = NULL,
     .is_hfp_running = 0,
     .hfp_volume = 0,
+    .hfp_vol_mixer_ctl = {0, },
     .hfp_pcm_dev_id = HFP_ASM_RX_TX,
     .ucid = USECASE_AUDIO_HFP_SCO,
     .mic_volume = CAPTURE_VOLUME_DEFAULT,
@@ -155,8 +159,13 @@ static int32_t hfp_set_volume(struct audio_device *adev, float value)
     }
 
     ALOGD("%s: Setting HFP volume to %d \n", __func__, vol);
-    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
-    if (!ctl) {
+
+    if (0 == hfpmod.hfp_vol_mixer_ctl[0])
+        ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    else
+        ctl = mixer_get_ctl_by_name(adev->mixer, hfpmod.hfp_vol_mixer_ctl);
+
+    if(!ctl) {
         ALOGE("%s: Could not get ctl for mixer cmd - %s",
               __func__, mixer_ctl_name);
         return -EINVAL;
@@ -581,6 +590,15 @@ void hfp_set_parameters(struct audio_device *adev, struct str_parms *parms)
             if (val > 0)
                 fp_select_devices(adev, hfpmod.ucid);
         }
+    }
+
+    memset(value, 0, sizeof(value));
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_HFP_VOL_MIXER_CTL,
+                           value, sizeof(value));
+    if (ret >= 0) {
+        ALOGD("%s: mixer ctl name: %s", __func__, value);
+        strlcpy(hfpmod.hfp_vol_mixer_ctl, value, sizeof(value));
+        str_parms_del(parms, AUDIO_PARAMETER_HFP_VOL_MIXER_CTL);
     }
 
     memset(value, 0, sizeof(value));
