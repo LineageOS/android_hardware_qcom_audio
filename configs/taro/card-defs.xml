@@ -27,7 +27,7 @@
 <defs>
 <card>
     <id>100</id>
-    <name>waipiomtpsndca,waipioqrdsndca,waipiocdpsndca</name>
+    <name>waipiomtpsndcar,waipioqrdsndcar,waipiocdpsndcar</name>
 
     <pcm-device>
         <id>100</id>
