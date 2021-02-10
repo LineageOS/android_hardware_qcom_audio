@@ -66,6 +66,9 @@ ifeq ($(TARGET_KERNEL_VERSION), 3.18)
 else
     AUDIO_FEATURE_ENABLED_DLKM := true
 endif
+ifeq ($(TARGET_SUPPORTS_WEARABLES),true)
+AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
+endif
 ##AUDIO_FEATURE_FLAGS
 
 #Audio Specific device overlays
