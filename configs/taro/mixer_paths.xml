@@ -123,14 +123,14 @@
     <ctl name="VA_AIF1_CAP Mixer DEC5" value="0" />
     <ctl name="VA_AIF1_CAP Mixer DEC6" value="0" />
     <ctl name="VA_AIF1_CAP Mixer DEC7" value="0" />
-    <ctl name="VA DEC0 MUX" value="SWR_MIC" />
-    <ctl name="VA DEC1 MUX" value="SWR_MIC" />
-    <ctl name="VA DEC2 MUX" value="SWR_MIC" />
-    <ctl name="VA DEC3 MUX" value="SWR_MIC" />
-    <ctl name="VA DEC4 MUX" value="SWR_MIC" />
-    <ctl name="VA DEC5 MUX" value="SWR_MIC" />
-    <ctl name="VA DEC6 MUX" value="SWR_MIC" />
-    <ctl name="VA DEC7 MUX" value="SWR_MIC" />
+    <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
+    <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
+    <ctl name="VA DEC2 MUX" value="MSM_DMIC" />
+    <ctl name="VA DEC3 MUX" value="MSM_DMIC" />
+    <ctl name="VA DEC4 MUX" value="MSM_DMIC" />
+    <ctl name="VA DEC5 MUX" value="MSM_DMIC" />
+    <ctl name="VA DEC6 MUX" value="MSM_DMIC" />
+    <ctl name="VA DEC7 MUX" value="MSM_DMIC" />
     <ctl name="VA DMIC MUX0" value="ZERO" />
     <ctl name="VA DMIC MUX1" value="ZERO" />
     <ctl name="VA DMIC MUX2" value="ZERO" />
@@ -194,28 +194,28 @@
     <ctl name="TX_AIF1_CAP Mixer DEC5" value="0" />
     <ctl name="TX_AIF1_CAP Mixer DEC6" value="0" />
     <ctl name="TX_AIF1_CAP Mixer DEC7" value="0" />
-    <ctl name="TX DEC0 MUX" value="SWR_MIC" />
+    <ctl name="TX DEC0 MUX" value="MSM_DMIC" />
     <ctl name="TX DMIC MUX0" value="ZERO" />
     <ctl name="TX SMIC MUX0" value="ZERO" />
-    <ctl name="TX DEC1 MUX" value="SWR_MIC" />
+    <ctl name="TX DEC1 MUX" value="MSM_DMIC" />
     <ctl name="TX DMIC MUX1" value="ZERO" />
     <ctl name="TX SMIC MUX1" value="ZERO" />
-    <ctl name="TX DEC2 MUX" value="SWR_MIC" />
+    <ctl name="TX DEC2 MUX" value="MSM_DMIC" />
     <ctl name="TX DMIC MUX2" value="ZERO" />
     <ctl name="TX SMIC MUX2" value="ZERO" />
-    <ctl name="TX DEC3 MUX" value="SWR_MIC" />
+    <ctl name="TX DEC3 MUX" value="MSM_DMIC" />
     <ctl name="TX DMIC MUX3" value="ZERO" />
     <ctl name="TX SMIC MUX3" value="ZERO" />
-    <ctl name="TX DEC4 MUX" value="SWR_MIC" />
+    <ctl name="TX DEC4 MUX" value="MSM_DMIC" />
     <ctl name="TX DMIC MUX4" value="ZERO" />
     <ctl name="TX SMIC MUX4" value="ZERO" />
-    <ctl name="TX DEC5 MUX" value="SWR_MIC" />
+    <ctl name="TX DEC5 MUX" value="MSM_DMIC" />
     <ctl name="TX DMIC MUX5" value="ZERO" />
     <ctl name="TX SMIC MUX5" value="ZERO" />
-    <ctl name="TX DEC6 MUX" value="SWR_MIC" />
+    <ctl name="TX DEC6 MUX" value="MSM_DMIC" />
     <ctl name="TX DMIC MUX6" value="ZERO" />
     <ctl name="TX SMIC MUX6" value="ZERO" />
-    <ctl name="TX DEC7 MUX" value="SWR_MIC" />
+    <ctl name="TX DEC7 MUX" value="MSM_DMIC" />
     <ctl name="TX DMIC MUX7" value="ZERO" />
     <ctl name="TX SMIC MUX7" value="ZERO" />
     <ctl name="ADC1 ChMap" value="ZERO" />
