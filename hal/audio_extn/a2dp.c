@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1168,16 +1168,32 @@ static void a2dp_source_init()
                   dlsym(a2dp.bt_lib_source_handle, "audio_stream_open");
     a2dp.audio_source_start = (audio_source_start_t)
                   dlsym(a2dp.bt_lib_source_handle, "audio_start_stream");
+    if (a2dp.audio_source_start == NULL) {
+        a2dp.audio_source_start = (audio_source_start_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_stream_start");
+    }
     a2dp.audio_get_enc_config = (audio_get_enc_config_t)
                   dlsym(a2dp.bt_lib_source_handle, "audio_get_codec_config");
     a2dp.audio_source_suspend = (audio_source_suspend_t)
                   dlsym(a2dp.bt_lib_source_handle, "audio_suspend_stream");
+    if (a2dp.audio_source_suspend == NULL) {
+        a2dp.audio_source_suspend = (audio_source_suspend_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_stream_suspend");
+    }
     a2dp.audio_source_handoff_triggered = (audio_source_handoff_triggered_t)
                   dlsym(a2dp.bt_lib_source_handle, "audio_handoff_triggered");
     a2dp.clear_source_a2dpsuspend_flag = (clear_source_a2dpsuspend_flag_t)
                   dlsym(a2dp.bt_lib_source_handle, "clear_a2dpsuspend_flag");
+    if (a2dp.clear_source_a2dpsuspend_flag == NULL) {
+        a2dp.clear_source_a2dpsuspend_flag = (clear_source_a2dpsuspend_flag_t)
+                  dlsym(a2dp.bt_lib_source_handle, "clear_a2dp_suspend_flag");
+    }
     a2dp.audio_source_stop = (audio_source_stop_t)
                    dlsym(a2dp.bt_lib_source_handle, "audio_stop_stream");
+    if (a2dp.audio_source_stop == NULL) {
+        a2dp.audio_source_stop = (audio_source_stop_t)
+                  dlsym(a2dp.bt_lib_source_handle, "audio_stream_stop");
+    }
     a2dp.audio_source_close = (audio_source_close_t)
                   dlsym(a2dp.bt_lib_source_handle, "audio_stream_close");
     a2dp.audio_source_check_a2dp_ready = (audio_source_check_a2dp_ready_t)
