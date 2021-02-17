@@ -152,6 +152,7 @@ PRODUCT_PACKAGES += IDP_acdb_cal.acdb
 PRODUCT_PACKAGES += IDP_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += libfmpal
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
