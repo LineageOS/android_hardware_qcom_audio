@@ -317,6 +317,7 @@ struct platform_data {
     bool fluence_nn_enabled;
     int  fluence_type;
     int  fluence_mode;
+    int  afe_loopback;
     char fluence_cap[PROPERTY_VALUE_MAX];
     bool ambisonic_capture;
     bool ambisonic_profile;
@@ -8513,6 +8514,12 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         }
     }
 
+    err = str_parms_get_str(parms, "afe_loopback", value, len);
+    if (err >= 0) {
+        my_data->afe_loopback = atoi(value);
+        ALOGD("Updating afe_loopback as %d from platform XML" , my_data->afe_loopback);
+    }
+
     err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER, value, len);
     if (err >= 0) {
         if (!strncmp("left", value, sizeof("left")))
@@ -11493,6 +11500,12 @@ int platform_set_edid_channels_configuration(void *platform, int channels,
                                      int backend_idx, snd_device_t snd_device) {
     return platform_set_edid_channels_configuration_v2(platform, channels,
                         backend_idx, snd_device, 0, 0);
+}
+
+int platform_get_is_afe_loopback_enabled(void *platform)
+{
+  struct platform_data *my_data = (struct platform_data *)platform;
+  return my_data->afe_loopback;
 }
 
 int platform_set_edid_channels_configuration_v2(void *platform, int channels,

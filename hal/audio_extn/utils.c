@@ -1101,50 +1101,57 @@ static int audio_extn_utils_send_app_type_cfg_hfp(struct audio_device *adev,
         goto exit_send_app_type_cfg;
     }
 
+    /*
+     * Value of afe_loopback gets read  based on the property defined in
+     * audio_platform_info.xml. If afe loopback is set then do not execute
+     * session 1 path as app type mixer control will not be created for
+     * afe loopback
+     */
+
     if (usecase->type == PCM_HFP_CALL) {
-
-        /* config HFP session:1 playback path */
-        if (is_bus_dev_usecase) {
-            app_type = usecase->out_app_type_cfg.app_type;
-            sample_rate= usecase->out_app_type_cfg.sample_rate;
-        } else {
-            snd_device = SND_DEVICE_NONE; // use legacy behavior
-            app_type = platform_get_default_app_type_v2(adev->platform, PCM_PLAYBACK);
-            sample_rate= CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
-        }
-        rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
-                                            acdb_dev_id, sample_rate,
-                                            PCM_PLAYBACK,
-                                            snd_device);
-        if (rc < 0)
-            goto exit_send_app_type_cfg;
-
-        /* config HFP session:1 capture path */
-        if (is_bus_dev_usecase) {
-            snd_device = usecase->in_snd_device;
-            pcm_device_id = platform_get_pcm_device_id(usecase->id, PCM_CAPTURE);
-            acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
-            if (acdb_dev_id < 0) {
-                ALOGE("%s: Couldn't get the acdb dev id", __func__);
-                rc = -EINVAL;
-                goto exit_send_app_type_cfg;
+        if (!(platform_get_is_afe_loopback_enabled(adev->platform))) {
+            /* config HFP session:1 playback path */
+            if (is_bus_dev_usecase) {
+                app_type = usecase->out_app_type_cfg.app_type;
+                sample_rate= usecase->out_app_type_cfg.sample_rate;
+            } else {
+                snd_device = SND_DEVICE_NONE; // use legacy behavior
+                app_type = platform_get_default_app_type_v2(adev->platform, PCM_PLAYBACK);
+                sample_rate= CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
             }
-            app_type = usecase->in_app_type_cfg.app_type;
-            sample_rate= usecase->in_app_type_cfg.sample_rate;
-        } else {
-            snd_device = SND_DEVICE_NONE; // use legacy behavior
-            app_type = platform_get_default_app_type_v2(adev->platform, PCM_CAPTURE);
+            rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
+                                                acdb_dev_id, sample_rate,
+                                                PCM_PLAYBACK,
+                                                snd_device);
+            if (rc < 0)
+                goto exit_send_app_type_cfg;
+
+            /* config HFP session:1 capture path */
+            if (is_bus_dev_usecase) {
+                snd_device = usecase->in_snd_device;
+                pcm_device_id = platform_get_pcm_device_id(usecase->id, PCM_CAPTURE);
+                acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
+                if (acdb_dev_id < 0) {
+                    ALOGE("%s: Couldn't get the acdb dev id", __func__);
+                    rc = -EINVAL;
+                    goto exit_send_app_type_cfg;
+                }
+                app_type = usecase->in_app_type_cfg.app_type;
+                sample_rate= usecase->in_app_type_cfg.sample_rate;
+            } else {
+                snd_device = SND_DEVICE_NONE; // use legacy behavior
+                app_type = platform_get_default_app_type_v2(adev->platform, PCM_CAPTURE);
+            }
+            rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
+                                                acdb_dev_id, sample_rate,
+                                                PCM_CAPTURE,
+                                                snd_device);
+            if (rc < 0)
+                goto exit_send_app_type_cfg;
+
+            if (is_bus_dev_usecase)
+                goto exit_send_app_type_cfg;
         }
-        rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
-                                            acdb_dev_id, sample_rate,
-                                            PCM_CAPTURE,
-                                            snd_device);
-        if (rc < 0)
-            goto exit_send_app_type_cfg;
-
-        if (is_bus_dev_usecase)
-            goto exit_send_app_type_cfg;
-
         /* config HFP session:2 capture path */
         pcm_device_id = HFP_ASM_RX_TX;
         snd_device = usecase->in_snd_device;
@@ -1157,7 +1164,7 @@ static int audio_extn_utils_send_app_type_cfg_hfp(struct audio_device *adev,
         app_type = platform_get_default_app_type_v2(adev->platform, PCM_CAPTURE);
         rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
                                             acdb_dev_id, sample_rate, PCM_CAPTURE,
-                                            SND_DEVICE_NONE);
+                                            usecase->in_snd_device);
         if (rc < 0)
             goto exit_send_app_type_cfg;
 
@@ -1165,7 +1172,7 @@ static int audio_extn_utils_send_app_type_cfg_hfp(struct audio_device *adev,
         app_type = platform_get_default_app_type_v2(adev->platform, PCM_PLAYBACK);
         rc = set_stream_app_type_mixer_ctrl(adev, pcm_device_id, app_type,
                                             acdb_dev_id, sample_rate,
-                                            PCM_PLAYBACK, SND_DEVICE_NONE);
+                                            PCM_PLAYBACK, usecase->out_snd_device);
         if (rc < 0)
             goto exit_send_app_type_cfg;
     }

@@ -333,6 +333,7 @@ bool platform_check_codec_dsd_support(void *platform);
 bool platform_check_codec_asrc_support(void *platform);
 int platform_get_backend_index(snd_device_t snd_device);
 int platform_get_ext_disp_type(void *platform);
+int platform_get_is_afe_loopback_enabled(void *platform);
 void platform_invalidate_hdmi_config(void *platform);
 void platform_invalidate_backend_config(void * platform,snd_device_t snd_device);
 bool platform_get_spkr_hph_single_be_native_concurrency_flag();

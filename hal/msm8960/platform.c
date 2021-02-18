@@ -1223,6 +1223,11 @@ int platform_set_stream_channel_map(void *platform __unused,
     return -ENOSYS;
 }
 
+int platform_get_is_afe_loopback_enabled(void *platform __unused)
+{
+   return 0;
+}
+
 int platform_set_edid_channels_configuration(void *platform __unused,
                                              int channels __unused,
                                              int backend_idx __unused)
