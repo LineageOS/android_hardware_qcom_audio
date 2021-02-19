@@ -29,6 +29,9 @@
 
 #ifndef AUDIO_DEFS_H
 #define AUDIO_DEFS_H
+#include <system/audio-base.h>
+#include <system/audio.h>
+#include <errno.h>
 
 
 /**
@@ -249,12 +252,6 @@ struct audio_device_config_param {
    struct audio_device_cfg_param dev_cfg_params;
 };
 
-struct audio_out_presentation_position_param {
-    struct timespec timestamp;
-    uint64_t frames;
-    int32_t clock_id;
-};
-
 typedef struct mix_matrix_params {
     uint16_t num_output_channels;
     uint16_t num_input_channels;
@@ -288,7 +285,6 @@ typedef union {
     struct audio_device_cfg_param device_cfg;
     struct mix_matrix_params mm_params;
     struct audio_license_params license_params;
-    struct audio_out_presentation_position_param pos_param;
 } audio_extn_param_payload;
 
 typedef enum {
@@ -312,7 +308,6 @@ typedef enum {
     AUDIO_EXTN_PARAM_CH_MIX_MATRIX_PARAMS,
     /* License information */
     AUDIO_EXTN_PARAM_LICENSE_PARAMS,
-    AUDIO_EXTN_PARAM_OUT_PRESENTATION_POSITION,
 } audio_extn_param_id;
 
 typedef union {
