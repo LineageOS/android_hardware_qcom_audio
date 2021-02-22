@@ -182,6 +182,7 @@ int platform_set_native_support(int na_mode);
 int platform_get_native_support();
 int platform_send_audio_calibration(void *platform, struct audio_usecase *usecase,
                                     int app_type);
+int platform_send_audio_calibration_hfp(void *platform, snd_device_t snd_device);
 int platform_get_default_app_type(void *platform);
 int platform_get_default_app_type_v2(void *platform, usecase_type_t  type);
 int platform_switch_voice_call_device_pre(void *platform);
@@ -435,4 +436,5 @@ int platform_set_island_cfg_on_device(struct audio_device* adev, snd_device_t sn
                                       bool enable);
 void platform_reset_island_power_status(void *platform, snd_device_t snd_device);
 void platform_is_volume_boost_supported_device(void *platform, struct listnode *devices);
+const char *platform_get_mixer_FM_RX_control(struct audio_device *adev);
 #endif // AUDIO_PLATFORM_API_H

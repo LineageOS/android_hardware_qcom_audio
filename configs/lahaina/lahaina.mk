@@ -449,6 +449,10 @@ persist.vendor.audio.voicecall.speaker.stereo=true
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.aac_frm_ctl.enabled=true
 
+#Set speaker protection cal tx path sampling rate to 48k
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.spkr_prot.tx.sampling_rate=48000
+
 #enable VBR frame ctl
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.aac_vbr_frm_ctl.enabled=true

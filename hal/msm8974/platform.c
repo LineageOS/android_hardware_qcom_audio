@@ -1950,6 +1950,22 @@ static void platform_reset_edid_info(void *platform) {
     }
 }
 
+const char *platform_get_mixer_FM_RX_control(struct audio_device *adev) {
+    char *snd_card_name = NULL;
+
+    snd_card_name = strdup(mixer_get_name(adev->mixer));
+    if (!snd_card_name) {
+        ALOGE("%s: failed to allocate memory for snd_card_name\n",__func__);
+        return NULL;
+    }
+
+    if (!strncmp(snd_card_name, "lahaina-yupikidp-snd-card",
+            sizeof("lahaina-yupikidp-snd-card")))
+                return "SEC MI2S LOOPBACK Volume";
+
+    return FM_RX_VOLUME;
+}
+
 bool platform_send_gain_dep_cal(void *platform, int level) {
     bool ret_val = false;
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -5593,6 +5609,52 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     return 0;
 }
 
+int platform_send_audio_calibration_hfp(void *platform, snd_device_t snd_device)
+{
+    struct platform_data *my_data = (struct platform_data *)platform;
+    int acdb_dev_id, acdb_dev_type;
+    int sample_rate = CODEC_BACKEND_DEFAULT_SAMPLE_RATE;
+    int app_type = 0;
+
+    acdb_dev_id = platform_get_snd_device_acdb_id(snd_device);
+    if (acdb_dev_id < 0) {
+        ALOGE("%s: Could not find acdb id for device(%d)",
+              __func__, snd_device);
+        return -EINVAL;
+    }
+
+    if ((snd_device >= SND_DEVICE_OUT_BEGIN) &&
+        (snd_device < SND_DEVICE_OUT_END)) {
+        acdb_dev_type = ACDB_DEV_TYPE_OUT;
+        app_type = DEFAULT_APP_TYPE_RX_PATH;
+    } else {
+        acdb_dev_type = ACDB_DEV_TYPE_IN;
+        app_type = DEFAULT_APP_TYPE_TX_PATH;
+    }
+
+    if ((my_data->acdb_send_audio_cal_v3) &&
+        ((snd_device == SND_DEVICE_IN_VOICE_SPEAKER_MIC_HFP) ||
+        (snd_device == SND_DEVICE_IN_VOICE_SPEAKER_DMIC))) {
+        /* TX path calibration */
+        my_data->acdb_send_audio_cal_v3(acdb_dev_id, ACDB_DEV_TYPE_IN,
+                                DEFAULT_APP_TYPE_TX_PATH, sample_rate, 0);
+        my_data->acdb_send_audio_cal_v3(acdb_dev_id, ACDB_DEV_TYPE_OUT,
+                                DEFAULT_APP_TYPE_RX_PATH, sample_rate, 0);
+    } else if ((my_data->acdb_send_audio_cal_v3) &&
+               (snd_device == SND_DEVICE_OUT_VOICE_SPEAKER_HFP)) {
+        /* RX path calibration */
+        my_data->acdb_send_audio_cal_v3(acdb_dev_id, ACDB_DEV_TYPE_IN,
+                                DEFAULT_APP_TYPE_TX_PATH, sample_rate,0 );
+        my_data->acdb_send_audio_cal_v3(acdb_dev_id, ACDB_DEV_TYPE_OUT,
+                                DEFAULT_APP_TYPE_RX_PATH, sample_rate,0 );
+    } else if (my_data->acdb_send_audio_cal) {
+        my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type, app_type,
+                                     sample_rate);
+    }
+
+    return 0;
+}
+
 int platform_switch_voice_call_device_pre(void *platform)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
@@ -6640,8 +6702,12 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
                     else
                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT;
-                } else
-                    snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
+                } else {
+                    if (my_data->mono_speaker == SPKR_1)
+                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_VBAT;
+                    else
+                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2_VBAT;
+                }
             } else if (my_data->is_wsa_speaker) {
                     if (my_data->mono_speaker == SPKR_1)
                         snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_WSA;
@@ -6664,8 +6730,12 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                     }
                 } else if (adev->enable_hfp)
                     snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_HFP;
-                else
-                    snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
+                else {
+                    if (my_data->mono_speaker == SPKR_1)
+                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER;
+                    else
+                        snd_device = SND_DEVICE_OUT_VOICE_SPEAKER_2;
+                }
             }
         } else if (is_a2dp_out_device_type(&devices)) {
             snd_device = SND_DEVICE_OUT_BT_A2DP;
@@ -8443,18 +8513,17 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
         }
     }
 
-    if (hw_info_is_stereo_spkr(my_data->hw_info)) {
-        err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER, value, len);
-        if (err >= 0) {
-            if (!strncmp("left", value, sizeof("left")))
-                my_data->mono_speaker = SPKR_1;
-            else if (!strncmp("right", value, sizeof("right")))
-                my_data->mono_speaker = SPKR_2;
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER, value, len);
+    if (err >= 0) {
+        if (!strncmp("left", value, sizeof("left")))
+            my_data->mono_speaker = SPKR_1;
+        else if (!strncmp("right", value, sizeof("right")))
+            my_data->mono_speaker = SPKR_2;
 
-            str_parms_del(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER);
-        }
+       str_parms_del(parms, AUDIO_PARAMETER_KEY_MONO_SPEAKER);
     }
-    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE,
+
+   err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE,
                             value, len);
     if (err >= 0) {
         char *event_name, *status_str;
