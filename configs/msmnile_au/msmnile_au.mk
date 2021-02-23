@@ -482,6 +482,15 @@ PRODUCT_PACKAGES += \
     android.hardware.automotive.audiocontrol@2.0-service \
     android.hardware.automotive.audiocontrol@2.0
 
+# enable sound trigger hidl hal 2.2
+PRODUCT_PACKAGES += \
+    android.hardware.soundtrigger@2.2-impl \
+
+# enable sound trigger hidl hal 2.3
+PRODUCT_PACKAGES += \
+    android.hardware.soundtrigger@2.3-impl \
+
+
 ifeq ($(ENABLE_HYP),true)
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.calfile0=/vendor/etc/acdbdata/adsp_avs_config.acdb\
