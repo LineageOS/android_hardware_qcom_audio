@@ -1080,6 +1080,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 #            Build AUTO_HAL LIB
 #-------------------------------------------
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AUTO_HAL)), true)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libautohal
@@ -1137,3 +1138,4 @@ ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_SANITIZE := integer_overflow
 endif
 include $(BUILD_SHARED_LIBRARY)
+endif
