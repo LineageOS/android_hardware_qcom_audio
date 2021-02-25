@@ -156,6 +156,7 @@ PRODUCT_PACKAGES += libfmpal
 PRODUCT_PACKAGES += event.eai
 PRODUCT_PACKAGES += music.eai
 PRODUCT_PACKAGES += speech.eai
+PRODUCT_PACKAGES += libqtigefar
 
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
