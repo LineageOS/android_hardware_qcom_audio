@@ -218,12 +218,21 @@ static void get_library_path(char *lib_path)
              "sound_trigger.primary.default.so");
 }
 #else
+#ifdef __LP64__
+static void get_library_path(char *lib_path)
+{
+    snprintf(lib_path, MAX_LIBRARY_PATH,
+             "/vendor/lib64/hw/sound_trigger.primary.%s.so",
+             XSTR(SOUND_TRIGGER_PLATFORM_NAME));
+}
+#else
 static void get_library_path(char *lib_path)
 {
     snprintf(lib_path, MAX_LIBRARY_PATH,
              "/vendor/lib/hw/sound_trigger.primary.%s.so",
              XSTR(SOUND_TRIGGER_PLATFORM_NAME));
 }
+#endif
 #endif
 
 static struct sound_trigger_info *
