@@ -5469,7 +5469,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
     struct audio_backend_cfg backend_cfg = {0};
     bool is_bus_dev_usecase = false;
 
-    if (voice_is_in_call_or_call_screen(my_data->adev))
+    if (voice_is_in_call_or_call_screen(my_data->adev) && (usecase->type == PCM_CAPTURE))
         is_incall_rec_usecase = voice_is_in_call_rec_stream(usecase->stream.in);
 
     if (compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_BUS))
@@ -5477,7 +5477,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
 
     if (usecase->type == PCM_PLAYBACK)
         snd_device = usecase->out_snd_device;
-    else if ((usecase->type == PCM_CAPTURE) && is_incall_rec_usecase)
+    else if (is_incall_rec_usecase)
         snd_device = voice_get_incall_rec_snd_device(usecase->in_snd_device);
     else if ((usecase->type == PCM_HFP_CALL) || (usecase->type == PCM_CAPTURE)||
             (usecase->type == ICC_CALL) || (usecase->type == SYNTH_LOOPBACK))
