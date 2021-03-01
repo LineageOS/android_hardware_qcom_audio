@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -6228,8 +6228,6 @@ int audio_extn_auto_hal_init(struct audio_device *adev)
 {
     if(auto_hal_init) {
         auto_hal_init_config_t auto_hal_init_config;
-        auto_hal_init_config.fp_in_get_stream = in_get_stream;
-        auto_hal_init_config.fp_out_get_stream = out_get_stream;
         auto_hal_init_config.fp_audio_extn_ext_hw_plugin_usecase_start = audio_extn_ext_hw_plugin_usecase_start;
         auto_hal_init_config.fp_audio_extn_ext_hw_plugin_usecase_stop = audio_extn_ext_hw_plugin_usecase_stop;
         auto_hal_init_config.fp_get_usecase_from_list = get_usecase_from_list;
