@@ -3426,6 +3426,7 @@ static void stop_compressed_output_l(struct stream_out *out)
     pthread_mutex_lock(&out->latch_lock);
     out->offload_state = OFFLOAD_STATE_IDLE;
     pthread_mutex_unlock(&out->latch_lock);
+
     out->playback_started = 0;
     out->send_new_metadata = 1;
     if (out->compr != NULL) {
@@ -7749,6 +7750,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 #ifdef AUDIO_GKI_ENABLED
     __s32 *generic_dec;
 #endif
+    pthread_mutexattr_t latch_attr;
 
     if (is_usb_dev && (!audio_extn_usb_connected(NULL))) {
         is_usb_dev = false;
@@ -7778,7 +7780,10 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
     pthread_mutex_init(&out->lock, (const pthread_mutexattr_t *) NULL);
     pthread_mutex_init(&out->pre_lock, (const pthread_mutexattr_t *) NULL);
-    pthread_mutex_init(&out->latch_lock, (const pthread_mutexattr_t *) NULL);
+    pthread_mutexattr_init(&latch_attr);
+    pthread_mutexattr_settype(&latch_attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&out->latch_lock, &latch_attr);
+    pthread_mutexattr_destroy(&latch_attr);
     pthread_mutex_init(&out->position_query_lock, (const pthread_mutexattr_t *) NULL);
     pthread_cond_init(&out->cond, (const pthread_condattr_t *) NULL);
 
@@ -10455,10 +10460,12 @@ int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool
                     if (out->offload_state == OFFLOAD_STATE_PLAYING)
                         compress_pause(out->compr);
                     out_set_compr_volume(&out->stream, (float)0, (float)0);
-                } else if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP) {
-                    out_set_voip_volume(&out->stream, (float)0, (float)0);
                 } else {
-                    out_set_pcm_volume(&out->stream, (float)0, (float)0);
+                    if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP)
+                        out_set_voip_volume(&out->stream, (float)0, (float)0);
+                    else
+                        out_set_pcm_volume(&out->stream, (float)0, (float)0);
+
                     /* wait for stale pcm drained before switching to speaker */
                     uint32_t latency =
                         (out->config.period_count * out->config.period_size * 1000) /
