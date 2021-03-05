@@ -66,6 +66,8 @@ typedef int (*acdb_set_codec_data_t) (void *, char *);
 typedef int (*acdb_reload_t) (char *, char *, char *, int);
 typedef int (*acdb_reload_v2_t) (char *, char *, char *, struct listnode *);
 typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
+typedef void (*acdb_set_fluence_nn_state_t)(bool);
+typedef bool (*acdb_get_fluence_nn_state_t)();
 
 struct meta_key_list {
     struct listnode list;

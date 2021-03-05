@@ -424,6 +424,8 @@ int platform_set_hdmi_channels_v2(void *platform, int channel_count,
 int platform_get_display_port_ctl_index(int controller, int stream);
 bool platform_is_call_proxy_snd_device(snd_device_t snd_device);
 void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms);
+bool platform_set_fluence_nn_state(void *platform, bool start);
+int platform_get_fluence_nn_state(void *platform);
 
 int platform_get_audio_source_index(const char *audio_source_name);
 bool platform_check_and_update_island_power_status(void *platform,
