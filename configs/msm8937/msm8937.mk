@@ -205,10 +205,6 @@ audio.offload.video=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.track.enable=true
 
-#Enable music through deep buffer
-PRODUCT_PROPERTY_OVERRIDES += \
-audio.deep_buffer.media=true
-
 #enable voice path for PCM VoIP by default
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.voice.path.for.pcm.voip=true
