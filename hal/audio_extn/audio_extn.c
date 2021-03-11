@@ -6096,6 +6096,9 @@ static auto_hal_open_output_stream_t auto_hal_open_output_stream;
 typedef int (*auto_hal_open_input_stream_t)(struct stream_in*);
 static auto_hal_open_input_stream_t auto_hal_open_input_stream;
 
+typedef int (*auto_hal_open_echo_reference_stream_t)(struct stream_in*);
+static auto_hal_open_echo_reference_stream_t auto_hal_open_echo_reference_stream;
+
 typedef bool (*auto_hal_is_bus_device_usecase_t)(audio_usecase_t);
 static auto_hal_is_bus_device_usecase_t auto_hal_is_bus_device_usecase;
 
@@ -6163,6 +6166,9 @@ int auto_hal_feature_init(bool is_feature_enabled)
             !(auto_hal_open_input_stream =
                  (auto_hal_open_input_stream_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_open_input_stream")) ||
+            !(auto_hal_open_echo_reference_stream =
+                 (auto_hal_open_echo_reference_stream_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_open_echo_reference_stream")) ||
             !(auto_hal_is_bus_device_usecase =
                  (auto_hal_is_bus_device_usecase_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_is_bus_device_usecase")) ||
@@ -6210,6 +6216,7 @@ feature_disabled:
     auto_hal_get_car_audio_stream_from_address = NULL;
     auto_hal_open_output_stream = NULL;
     auto_hal_open_input_stream = NULL;
+    auto_hal_open_echo_reference_stream = NULL;
     auto_hal_is_bus_device_usecase = NULL;
     auto_hal_get_audio_port = NULL;
     auto_hal_set_audio_port_config = NULL;
@@ -6291,6 +6298,12 @@ int audio_extn_auto_hal_open_input_stream(struct stream_in *in)
 {
     return ((auto_hal_open_input_stream) ?
                             auto_hal_open_input_stream(in): -ENOSYS);
+}
+
+int audio_extn_auto_hal_open_echo_reference_stream(struct stream_in *in)
+{
+    return ((auto_hal_open_echo_reference_stream) ?
+                            auto_hal_open_echo_reference_stream(in): 0);
 }
 
 bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id)

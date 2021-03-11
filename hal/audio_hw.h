@@ -250,6 +250,9 @@ enum {
 
     USECASE_AUDIO_PLAYBACK_SYNTHESIZER,
 
+    /* Echo reference capture usecases */
+    USECASE_AUDIO_RECORD_ECHO_REF_EXT,
+
     /*Audio FM Tuner usecase*/
     USECASE_AUDIO_FM_TUNER_EXT,
     /*voip usecase with low latency path*/

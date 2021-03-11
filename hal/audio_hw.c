@@ -428,6 +428,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER] = "front-passenger-record",
     [USECASE_AUDIO_RECORD_BUS_REAR_SEAT] = "rear-seat-record",
     [USECASE_AUDIO_PLAYBACK_SYNTHESIZER] = "synth-loopback",
+    [USECASE_AUDIO_RECORD_ECHO_REF_EXT] = "echo-reference-external",
 };
 
 static const audio_usecase_t offload_usecases[] = {
@@ -9478,6 +9479,11 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             ret = -EINVAL;
             goto err_open;
         }
+    }
+
+    /* reassign use case for echo reference stream on automotive platforms */
+    if (in->source == AUDIO_SOURCE_ECHO_REFERENCE) {
+        ret = audio_extn_auto_hal_open_echo_reference_stream(in);
     }
 
     if (in->source == AUDIO_SOURCE_FM_TUNER) {

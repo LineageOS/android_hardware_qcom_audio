@@ -536,6 +536,7 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER] = {FRONT_PASSENGER_PCM_DEVICE, FRONT_PASSENGER_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_BUS_REAR_SEAT] = {REAR_SEAT_PCM_DEVICE, REAR_SEAT_PCM_DEVICE},
     [USECASE_AUDIO_PLAYBACK_SYNTHESIZER] = {-1, -1},
+    [USECASE_AUDIO_RECORD_ECHO_REF_EXT] = {MULTIMEDIA2_PCM_DEVICE, MULTIMEDIA2_PCM_DEVICE},
 };
 
 /* Array to store sound devices */
@@ -802,6 +803,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_CALL_PROXY] = "call-proxy-in",
     [SND_DEVICE_IN_ICC] = "speaker-mic",
     [SND_DEVICE_IN_SYNTH_MIC] = "speaker-mic",
+    [SND_DEVICE_IN_ECHO_REFERENCE] = "echo-reference",
 };
 
 // Platform specific backend bit width table
@@ -1039,6 +1041,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_USB_HEADSET_MULTI_CHANNEL_MIC_AEC] = 162,
     [SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_MULTI_CHANNEL_MIC] = 162,
     [SND_DEVICE_IN_CAPTURE_FM] = 0,
+    [SND_DEVICE_IN_ECHO_REFERENCE] = 100,
     [SND_DEVICE_IN_AANC_HANDSET_MIC] = 104,
     [SND_DEVICE_IN_VOICE_FLUENCE_DMIC_AANC] = 105,
     [SND_DEVICE_IN_QUAD_MIC] = 46,
@@ -1293,6 +1296,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_RECOG_USB_HEADSET_MULTI_CHANNEL_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_USB_HEADSET_MULTI_CHANNEL_MIC_AEC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_CAPTURE_FM)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_ECHO_REFERENCE)},
     {TO_NAME_INDEX(SND_DEVICE_IN_AANC_HANDSET_MIC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_VOICE_FLUENCE_DMIC_AANC)},
     {TO_NAME_INDEX(SND_DEVICE_IN_QUAD_MIC)},
@@ -2679,6 +2683,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_ICC] = strdup("TERT_TDM_RX_0");
     hw_interface_table[SND_DEVICE_OUT_SYNTH_SPKR] = strdup("TERT_TDM_RX_0");
     hw_interface_table[SND_DEVICE_IN_SYNTH_MIC] = strdup("TERT_TDM_TX_0");
+    hw_interface_table[SND_DEVICE_IN_ECHO_REFERENCE] = strdup("SEC_TDM_TX_0");
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
 
      /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
@@ -7565,6 +7570,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
         }
     } else if (source == AUDIO_SOURCE_FM_TUNER) {
         snd_device = SND_DEVICE_IN_CAPTURE_FM;
+    } else if (source == AUDIO_SOURCE_ECHO_REFERENCE) {
+        snd_device = SND_DEVICE_IN_ECHO_REFERENCE;
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
     }
@@ -7638,6 +7645,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_FM_TUNER)) {
             snd_device = SND_DEVICE_IN_CAPTURE_FM;
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_ECHO_REFERENCE)) {
+            snd_device = SND_DEVICE_IN_ECHO_REFERENCE;
         } else if (audio_extn_usb_connected(NULL) &&
                    is_usb_in_device_type(&in_devices)) {
             snd_device = fixup_usb_headset_mic_snd_device(platform,
@@ -9033,6 +9042,13 @@ void platform_set_audio_source_delay(audio_source_t audio_source, int delay_ms)
 /* Delay in Us */
 int64_t platform_get_audio_source_delay(audio_source_t audio_source)
 {
+    if (audio_source == AUDIO_SOURCE_ECHO_REFERENCE) {
+        /* return 0 because audio source delay is not
+        currently implemented on automotive in the
+        audio_platform_info.xml */
+        return 0;
+    }
+
     if ((audio_source < AUDIO_SOURCE_DEFAULT) ||
             (audio_source > AUDIO_SOURCE_MAX)) {
         ALOGE("%s: Invalid audio_source = %d", __func__, audio_source);

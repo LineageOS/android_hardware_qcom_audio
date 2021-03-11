@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -182,6 +182,7 @@ static int32_t ext_hw_plugin_check_plugin_usecase(audio_usecase_t hal_usecase,
     case USECASE_AUDIO_RECORD_COMPRESS:
     case USECASE_AUDIO_RECORD_LOW_LATENCY:
     case USECASE_AUDIO_RECORD_FM_VIRTUAL:
+    case USECASE_AUDIO_RECORD_ECHO_REF_EXT:
         *plugin_usecase = AUDIO_HAL_PLUGIN_USECASE_DEFAULT_CAPTURE;
         break;
     case USECASE_AUDIO_HFP_SCO:
