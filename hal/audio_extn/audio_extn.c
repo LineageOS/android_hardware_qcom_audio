@@ -6438,7 +6438,75 @@ void audio_extn_synth_set_parameters(struct audio_device *adev,
 
 // END: Synth ========================================================================
 
+// START: Power Policy Client ======================================================================
+#ifdef __LP64__
+#define POWER_POLICY_LIB_PATH "/vendor/lib64/libaudiopowerpolicy.so"
+#else
+#define POWER_POLICY_LIB_PATH "/vendor/lib/libaudiopowerpolicy.so"
+#endif
 
+static void* power_policy_lib_handle;
+typedef int (*launch_power_policy_t) ();
+static launch_power_policy_t launch_power_policy;
+
+static void* power_policy_thread_func(void* arg __unused) {
+    if (launch_power_policy == NULL) {
+        ALOGE("%s: Power Policy launcher is NULL", __func__);
+        goto exit;
+    }
+    ALOGD("%s: Launching Power Policy Client", __func__);
+    launch_power_policy();
+
+exit:
+    pthread_exit(NULL);
+}
+
+static int power_policy_feature_init(bool is_feature_enabled)
+{
+    pthread_t tid;
+    pthread_attr_t attr;
+
+    ALOGD("%s: Called with feature %s", __func__,
+                  is_feature_enabled ? "Enabled" : "NOT Enabled");
+    if (is_feature_enabled) {
+        // dlopen lib
+        power_policy_lib_handle = dlopen(POWER_POLICY_LIB_PATH, RTLD_NOW);
+
+        if (!power_policy_lib_handle) {
+            ALOGE("%s: dlopen failed", __func__);
+            goto feature_disabled;
+        }
+        if (!(launch_power_policy = (launch_power_policy_t)dlsym(
+                                    power_policy_lib_handle, "launchPowerPolicyClient")))
+        {
+            ALOGE("%s: dlsym failed", __func__);
+            goto feature_disabled;
+        }
+
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+        if (pthread_create(&tid, &attr, power_policy_thread_func, NULL))
+        {
+            ALOGE("%s: Failed to create power policy thread", __func__);
+            goto feature_disabled;
+        }
+        ALOGD("%s:: ---- Feature Power Policy Client is Enabled ----", __func__);
+        return 0;
+    }
+
+feature_disabled:
+    if (power_policy_lib_handle) {
+        dlclose(power_policy_lib_handle);
+        power_policy_lib_handle = NULL;
+    }
+
+    launch_power_policy = NULL;
+
+    ALOGW(":: %s: ---- Feature Power Policy Client is disabled ----", __func__);
+    return -ENOSYS;
+
+// END: Power Policy Client ======================================================================
+}
 void audio_extn_feature_init()
 {
     vendor_enhanced_info = audio_extn_utils_get_vendor_enhanced_info();
@@ -6562,6 +6630,9 @@ void audio_extn_feature_init()
                            false));
     synth_feature_init(
         property_get_bool("vendor.audio.feature.synth.enable",
+                       false));
+    power_policy_feature_init(
+        property_get_bool("vendor.audio.feature.powerpolicy.enable",
                        false));
 }
 
