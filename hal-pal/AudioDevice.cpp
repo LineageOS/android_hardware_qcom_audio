@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -51,6 +51,7 @@
 #include "PalApi.h"
 #include "PalDefs.h"
 
+#include <audio_extn/AudioExtn.h>
 #include "audio_extn.h"
 #include "battery_listener.h"
 
@@ -61,6 +62,7 @@ AudioDevice::~AudioDevice() {
     audio_extn_sound_trigger_deinit(adev_);
     pal_deinit();
 }
+
 
 std::shared_ptr<AudioDevice> AudioDevice::GetInstance() {
     if (!adev_) {
@@ -667,6 +669,12 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     if (ret) {
         AHAL_ERR("pal register callback failed ret=(%d)", ret);
     }
+    /*
+     *Once PAL init is sucessfull, register the PAL service
+     *from HAL process context
+     */
+    ALOGE("Register Pal service");
+    AudioExtn::audio_extn_hidl_init();
 
     adev_->device_.get()->common.tag = HARDWARE_DEVICE_TAG;
     adev_->device_.get()->common.version =
@@ -735,6 +743,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     }
     audio_extn_sound_trigger_init(adev_);
     AudioExtn::hfp_feature_init(property_get_bool("vendor.audio.feature.hfp.enable", false));
+    AudioExtn::audio_extn_fm_init();
     AudioExtn::audio_extn_kpi_optimize_feature_init(
             property_get_bool("vendor.audio.feature.kpi_optimize.enable", false));
     /* no feature configurations yet */
@@ -916,8 +925,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         AHAL_ERR("Error in VoiceSetParameters %d", ret);
 
     parms = str_parms_create_str(kvpairs);
-    ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
+    AudioExtn::audio_extn_set_parameters(adev_, parms);
 
+    ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
     if (ret >= 0) {
         pal_param_screen_state_t param_screen_st;
         if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
@@ -1196,8 +1206,6 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                             sizeof(pal_param_btsco_t));
      }
 
-    AudioExtn::audio_extn_hfp_set_parameters(adev_, parms);
-
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value, sizeof(value));
     if (ret >= 0) {
         pal_param_bta2dp_t param_bt_a2dp;
@@ -1228,10 +1236,23 @@ int AudioDevice::SetParameters(const char *kvpairs) {
 
         AHAL_INFO("Setting tws channel mode to %s", value);
         if (!(strncmp(value, "mono", strlen(value))))
-           param_bt_a2dp.is_tws_mono_mode_on = true;
+            param_bt_a2dp.is_tws_mono_mode_on = true;
         else if (!(strncmp(value,"dual-mono",strlen(value))))
             param_bt_a2dp.is_tws_mono_mode_on = false;
         ret = pal_set_param(PAL_PARAM_ID_BT_A2DP_TWS_CONFIG, (void *)&param_bt_a2dp,
+                            sizeof(pal_param_bta2dp_t));
+    }
+
+    ret = str_parms_get_str(parms, "LEAMono", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_bta2dp_t param_bt_a2dp;
+
+        AHAL_INFO("Setting LC3 channel mode to %s", value);
+        if (!(strncmp(value, "true", strlen(value))))
+            param_bt_a2dp.is_lc3_mono_mode_on = true;
+        else
+            param_bt_a2dp.is_lc3_mono_mode_on = false;
+        ret = pal_set_param(PAL_PARAM_ID_BT_A2DP_LC3_CONFIG, (void *)&param_bt_a2dp,
                             sizeof(pal_param_bta2dp_t));
     }
 
@@ -1246,18 +1267,25 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                             sizeof(pal_param_btsco_t));
     }
 
+    ret = str_parms_get_str(parms, "wfd_channel_cap", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_proxy_channel_config_t param_out_proxy;
+
+        val = atoi(value);
+        param_out_proxy.num_proxy_channels = val;
+        AHAL_INFO("Proxy channels: %d", val);
+        ret = pal_set_param(PAL_PARAM_ID_PROXY_CHANNEL_CONFIG, (void *)&param_out_proxy,
+                sizeof(pal_param_proxy_channel_config_t));
+    }
+
     str_parms_destroy(parms);
 
     AHAL_DBG("exit: %s", kvpairs);
-    return ret;
+    return 0;
 }
 
 int AudioDevice::SetVoiceVolume(float volume) {
-    int ret = 0;
-
-    ret = voice_->SetVoiceVolume(volume);
-
-    return ret;
+    return voice_->SetVoiceVolume(volume);
 }
 
 char* AudioDevice::GetParameters(const char *keys) {
@@ -1313,6 +1341,8 @@ char* AudioDevice::GetParameters(const char *keys) {
     }
 
     AudioExtn::audio_extn_get_parameters(adev_, query, reply);
+    if (voice_)
+        voice_->VoiceGetParameters(query, reply);
 exit:
     str = str_parms_to_str(reply);
     str_parms_destroy(query);
@@ -1380,7 +1410,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_TV_TUNER, PAL_DEVICE_IN_TV_TUNER);
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_LINE, PAL_DEVICE_IN_LINE));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_SPDIF, PAL_DEVICE_IN_SPDIF));
-    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_A2DP, PAL_DEVICE_IN_BLUETOOTH_A2DP);
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_BLUETOOTH_A2DP, PAL_DEVICE_IN_BLUETOOTH_A2DP));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_LOOPBACK, PAL_DEVICE_IN_LOOPBACK);
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_IP, PAL_DEVICE_IN_IP);
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_IN_BUS, PAL_DEVICE_IN_BUS);

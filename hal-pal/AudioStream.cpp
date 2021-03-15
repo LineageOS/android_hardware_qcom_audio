@@ -1579,7 +1579,13 @@ int StreamOutPrimary::Standby() {
             AHAL_ERR("failed to stop stream.");
             return -EINVAL;
         }
-    }
+        if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS && pal_haptics_stream_handle) {
+            ret = pal_stream_stop(pal_haptics_stream_handle);
+            if (ret) {
+                AHAL_ERR("failed to stop haptics stream.");
+            }
+        }
+     }
 
     stream_started_ = false;
     stream_paused_ = false;
@@ -1590,6 +1596,15 @@ int StreamOutPrimary::Standby() {
     if (pal_stream_handle_) {
         ret = pal_stream_close(pal_stream_handle_);
         pal_stream_handle_ = NULL;
+        if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS && pal_haptics_stream_handle) {
+            ret = pal_stream_close(pal_haptics_stream_handle);
+            pal_haptics_stream_handle = NULL;
+            if (hapticBuffer) {
+                free (hapticBuffer);
+                hapticBuffer = NULL;
+            }
+            hapticsBufSize = 0;
+        }
     }
 
     if (ret)
@@ -1605,17 +1620,18 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
     struct pal_device* deviceIdConfigs;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    AHAL_DBG("enter ");
-
     if (!mInitialized){
         AHAL_ERR("Not initialized, returning error");
         ret = -EINVAL;
         goto done;
     }
 
-    AHAL_DBG("mAndroidOutDevices %d, mNoOfOutDevices %zu, new_devices %d, num new_devices: %zu",
+    AHAL_INFO("enter: usecase(%d: %s) devices 0x%x, num devices %zu",
+            this->GetUseCase(), use_case_table[this->GetUseCase()],
+            AudioExtn::get_device_types(new_devices), new_devices.size());
+    AHAL_DBG("mAndroidOutDevices %d, mNoOfOutDevices %zu",
              AudioExtn::get_device_types(mAndroidOutDevices),
-             mAndroidOutDevices.size(), AudioExtn::get_device_types(new_devices), new_devices.size());
+             mAndroidOutDevices.size());
 
     /* If its the same device as what was already routed to, dont bother */
     if (!AudioExtn::audio_devices_empty(new_devices) && mAndroidOutDevices != new_devices) {
@@ -1943,6 +1959,14 @@ int StreamOutPrimary::Open() {
     // Stream channel mask
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
 
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+        AHAL_INFO("Haptics Usecase");
+        /* Setting flag here as no flag is being set for haptics from AudioPolicyManager
+         * so that audio stream runs as low latency stream.
+         */
+        flags_ = AUDIO_OUTPUT_FLAG_FAST;
+        channels = audio_channel_count_from_out_mask(config_.channel_mask & ~AUDIO_CHANNEL_HAPTIC_ALL);
+    }
     ch_info.channels = channels;
     ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
     if (ch_info.channels > 1)
@@ -2005,6 +2029,39 @@ int StreamOutPrimary::Open() {
         ret = -EINVAL;
         goto error_open;
     }
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+        ch_info.channels = audio_channel_count_from_out_mask(config_.channel_mask & AUDIO_CHANNEL_HAPTIC_ALL);
+        ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
+        if (ch_info.channels > 1)
+            ch_info.ch_map[1] = PAL_CHMAP_CHANNEL_FR;
+
+        hapticsStreamAttributes.type = PAL_STREAM_HAPTICS;
+        hapticsStreamAttributes.flags = (pal_stream_flags_t)0;
+        hapticsStreamAttributes.direction = PAL_AUDIO_OUTPUT;
+        hapticsStreamAttributes.out_media_config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        hapticsStreamAttributes.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+        hapticsStreamAttributes.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+        hapticsStreamAttributes.out_media_config.ch_info = ch_info;
+
+        hapticsDevice = new pal_device;
+        hapticsDevice->id = PAL_DEVICE_OUT_HAPTICS_DEVICE;
+        hapticsDevice->config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+        hapticsDevice->config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+        hapticsDevice->config.ch_info = ch_info;
+        hapticsDevice->config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+
+        ret = pal_stream_open (&hapticsStreamAttributes,
+                          1,
+                          hapticsDevice,
+                          0,
+                          NULL,
+                          &pal_callback,
+                          (uint64_t)this,
+                          &pal_haptics_stream_handle);
+        if (ret) {
+            AHAL_ERR("Pal Haptics Stream Open Error (%x)", ret);
+        }
+    }
 
     //TODO: Remove below code, once pal_stream_open is moved to
     //adev_open_output_stream
@@ -2041,15 +2098,20 @@ int StreamOutPrimary::Open() {
                     audio_channel_count_from_out_mask(config_.channel_mask),
                     config_.format);
         outBufCount = ULL_PERIOD_COUNT_DEFAULT;
+    } else if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+        outBufSize = LOW_LATENCY_PLAYBACK_PERIOD_SIZE * audio_bytes_per_frame(
+                    channels,
+                    config_.format);
+        outBufCount = LOW_LATENCY_PLAYBACK_PERIOD_COUNT;
     } else
         outBufSize = StreamOutPrimary::GetBufferSize();
 
     if (usecase_ == USECASE_AUDIO_PLAYBACK_LOW_LATENCY)
         outBufCount = LOW_LATENCY_PLAYBACK_PERIOD_COUNT;
     else if (usecase_ == USECASE_AUDIO_PLAYBACK_OFFLOAD2)
-         outBufCount = PCM_OFFLOAD_PLAYBACK_PERIOD_COUNT;
+        outBufCount = PCM_OFFLOAD_PLAYBACK_PERIOD_COUNT;
     else if (usecase_ == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)
-         outBufCount = DEEP_BUFFER_PLAYBACK_PERIOD_COUNT;
+        outBufCount = DEEP_BUFFER_PLAYBACK_PERIOD_COUNT;
 
     if (halInputFormat != halOutputFormat) {
         convertBufSize =  PCM_OFFLOAD_OUTPUT_PERIOD_DURATION *
@@ -2076,6 +2138,22 @@ int StreamOutPrimary::Open() {
     ret = pal_stream_set_buffer_size(pal_stream_handle_, NULL, &outBufCfg);
     if (ret) {
         AHAL_ERR("Pal Stream set buffer size Error  (%x)", ret);
+    }
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+        outBufSize = LOW_LATENCY_PLAYBACK_PERIOD_SIZE * audio_bytes_per_frame(
+                    hapticsStreamAttributes.out_media_config.ch_info.channels,
+                    config_.format);
+        outBufCount = LOW_LATENCY_PLAYBACK_PERIOD_COUNT;
+
+        fragment_size_ += outBufSize;
+        AHAL_DBG("fragment_size_ %d fragments_ %d", fragment_size_, fragments_);
+        outBufCfg.buf_size = outBufSize;
+        outBufCfg.buf_count = fragments_;
+
+        ret = pal_stream_set_buffer_size(pal_haptics_stream_handle, NULL, &outBufCfg);
+        if (ret) {
+            AHAL_ERR("Pal Stream set buffer size Error  (%x)", ret);
+        }
     }
 
 error_open:
@@ -2131,11 +2209,77 @@ int StreamOutPrimary::GetOutputUseCase(audio_output_flags_t halStreamFlags)
         usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
     else if (halStreamFlags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ)
         usecase = USECASE_AUDIO_PLAYBACK_MMAP;
+    else if (config_.channel_mask & AUDIO_CHANNEL_HAPTIC_ALL)
+        usecase = USECASE_AUDIO_PLAYBACK_WITH_HAPTICS;
 
     return usecase;
 }
 
-ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
+ssize_t StreamOutPrimary::splitAndWriteAudioHapticsStream(const void *buffer, size_t bytes)
+{
+     int ret = 0;
+     bool allocHapticsBuffer = false;
+     struct pal_buffer audioBuf;
+     struct pal_buffer hapticBuf;
+     size_t srcIndex = 0, audIndex = 0, hapIndex = 0;
+     uint8_t channelCount = audio_channel_count_from_out_mask(config_.channel_mask);
+     uint8_t bytesPerSample = audio_bytes_per_sample(config_.format);
+     uint32_t frameSize = channelCount * bytesPerSample;
+     uint32_t frameCount = bytes / frameSize;
+
+     // Calculate Haptics Buffer size
+     uint8_t hapticsChannelCount = hapticsStreamAttributes.out_media_config.ch_info.channels;
+     uint32_t hapticsFrameSize = bytesPerSample * hapticsChannelCount;
+     uint32_t audioFrameSize = frameSize - hapticsFrameSize;
+     uint32_t totalHapticsBufferSize = frameCount * hapticsFrameSize;
+
+     if (!hapticBuffer) {
+         allocHapticsBuffer = true;
+     } else if (hapticsBufSize < totalHapticsBufferSize) {
+         if (hapticBuffer)
+             free (hapticBuffer);
+         allocHapticsBuffer = true;
+         hapticsBufSize = 0;
+     }
+
+     if (allocHapticsBuffer) {
+         hapticBuffer = (uint8_t *)calloc(1, totalHapticsBufferSize);
+         if(!hapticBuffer) {
+             AHAL_ERR("Failed to allocate mem for haptic buffer");
+             return -ENOMEM;
+         }
+         hapticsBufSize = totalHapticsBufferSize;
+     }
+
+     audioBuf.buffer = (uint8_t *)buffer;
+     audioBuf.size = frameCount * audioFrameSize;
+     audioBuf.offset = 0;
+     hapticBuf.buffer  = hapticBuffer;
+     hapticBuf.size = frameCount * hapticsFrameSize;
+     hapticBuf.offset = 0;
+
+     for (size_t i = 0; i < frameCount; i++) {
+         memcpy((uint8_t *)(audioBuf.buffer) + audIndex, (uint8_t *)(audioBuf.buffer) + srcIndex,
+                audioFrameSize);
+         audIndex += audioFrameSize;
+         srcIndex += audioFrameSize;
+
+         memcpy((uint8_t *)(hapticBuf.buffer) + hapIndex, (uint8_t *)(audioBuf.buffer) + srcIndex,
+                    hapticsFrameSize);
+         hapIndex += hapticsFrameSize;
+         srcIndex += hapticsFrameSize;
+     }
+
+     // write audio data
+     ret = pal_stream_write(pal_stream_handle_, &audioBuf);
+     // write haptics data
+     ret = pal_stream_write(pal_haptics_stream_handle, &hapticBuf);
+
+     return ret;
+}
+
+ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes)
+{
     int ret = 0;
     struct pal_buffer palBuffer;
     int local_bytes_written = 0;
@@ -2177,7 +2321,14 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
             ATRACE_END();
             goto exit;
         }
-
+        if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+            ret = pal_stream_start(pal_haptics_stream_handle);
+            if (ret) {
+                AHAL_ERR("failed to start haptics stream. ret=%d", ret);
+                pal_stream_close(pal_haptics_stream_handle);
+                pal_haptics_stream_handle = NULL;
+            }
+        }
         stream_started_ = true;
 
         if (CheckOffloadEffectsType(streamAttributes_.type)) {
@@ -2224,6 +2375,8 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes) {
         local_bytes_written = pal_stream_write(pal_stream_handle_, &palBuffer);
         local_bytes_written = (local_bytes_written * (format_to_bitwidth_table[halInputFormat]/8)) /
                                (format_to_bitwidth_table[halOutputFormat]/8);
+    } else if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS && pal_haptics_stream_handle) {
+        local_bytes_written = splitAndWriteAudioHapticsStream(buffer, bytes);
     } else {
         local_bytes_written = pal_stream_write(pal_stream_handle_, &palBuffer);
     }
@@ -2404,6 +2557,8 @@ StreamOutPrimary::StreamOutPrimary(
     writeAt.tv_nsec = 0;
     total_bytes_written_ = 0;
     convertBuffer = NULL;
+    hapticBuffer = NULL;
+    hapticsBufSize = 0;
 
     if (mAndroidOutDevices.empty())
         mAndroidOutDevices.insert(AUDIO_DEVICE_OUT_DEFAULT);
@@ -2477,6 +2632,16 @@ StreamOutPrimary::~StreamOutPrimary() {
 
         pal_stream_close(pal_stream_handle_);
         pal_stream_handle_ = nullptr;
+    }
+
+    if (pal_haptics_stream_handle) {
+        pal_stream_close(pal_haptics_stream_handle);
+        pal_haptics_stream_handle = NULL;
+        if (hapticBuffer) {
+            free (hapticBuffer);
+            hapticBuffer = NULL;
+        }
+        hapticsBufSize = 0;
     }
     if (convertBuffer)
         free(convertBuffer);

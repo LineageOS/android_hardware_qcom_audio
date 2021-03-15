@@ -245,6 +245,40 @@ done:
     return ret;
 }
 
+void AudioVoice::VoiceGetParameters(struct str_parms *query, struct str_parms *reply)
+{
+    uint32_t tty_mode;
+    int i, ret;
+    char value[256]={0};
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_TTY_MODE,
+                            value, sizeof(value));
+    if (ret >= 0) {
+        for ( i = 0; i < max_voice_sessions_; i++) {
+            tty_mode = voice_.session[i].tty_mode;
+        }
+        if (tty_mode >= PAL_TTY_OFF || tty_mode <= PAL_TTY_FULL) {
+            switch(tty_mode) {
+                case PAL_TTY_OFF:
+                    str_parms_add_str(reply, AUDIO_PARAMETER_KEY_TTY_MODE, AUDIO_PARAMETER_VALUE_TTY_OFF);
+                break;
+               case PAL_TTY_VCO:
+                    str_parms_add_str(reply, AUDIO_PARAMETER_KEY_TTY_MODE, AUDIO_PARAMETER_VALUE_TTY_VCO);
+                break;
+                case PAL_TTY_HCO:
+                    str_parms_add_str(reply, AUDIO_PARAMETER_KEY_TTY_MODE, AUDIO_PARAMETER_VALUE_TTY_HCO);
+                break;
+                case PAL_TTY_FULL:
+                    str_parms_add_str(reply, AUDIO_PARAMETER_KEY_TTY_MODE, AUDIO_PARAMETER_VALUE_TTY_FULL);
+                break;
+            }
+        } else {
+            AHAL_ERR("Error happened for getting TTY mode");
+        }
+    }
+    return;
+}
+
 bool AudioVoice::is_valid_vsid(uint32_t vsid)
 {
     if (vsid == VOICEMMODE1_VSID ||

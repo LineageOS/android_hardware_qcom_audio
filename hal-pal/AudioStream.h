@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -421,6 +421,7 @@ protected:
     int usecase_;
     struct pal_volume_data *volume_; /* used to cache volume */
     std::map <audio_devices_t, pal_device_id_t> mAndroidDeviceMap;
+
     bool AcquirePerfLock();
     void ReleasePerfLock();
 };
@@ -431,6 +432,7 @@ private:
     pal_device_id_t* mPalOutDeviceIds;
     std::set<audio_devices_t> mAndroidOutDevices;
     bool mInitialized;
+
 public:
     StreamOutPrimary(audio_io_handle_t handle,
                      const std::set<audio_devices_t>& devices,
@@ -472,6 +474,7 @@ public:
     int GetMmapPosition(struct audio_mmap_position *position);
     bool isDeviceAvailable(pal_device_id_t deviceId);
     int RouteStream(const std::set<audio_devices_t>&);
+    ssize_t splitAndWriteAudioHapticsStream(const void *buffer, size_t bytes);
 protected:
     struct timespec writeAt;
     int get_compressed_buffer_size();
@@ -492,6 +495,13 @@ protected:
     visualizer_hal_start_output fnp_visualizer_start_output_ = nullptr;
     visualizer_hal_stop_output fnp_visualizer_stop_output_ = nullptr;
     void *convertBuffer;
+    //Haptics Usecase
+    struct pal_stream_attributes hapticsStreamAttributes;
+    pal_stream_handle_t* pal_haptics_stream_handle;
+    struct pal_device* hapticsDevice;
+    uint8_t* hapticBuffer;
+    size_t hapticsBufSize;
+
     int FillHalFnPtrs();
     friend class AudioDevice;
 };
