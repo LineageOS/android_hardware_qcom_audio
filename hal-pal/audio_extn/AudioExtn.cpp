@@ -45,10 +45,9 @@ using vendor::qti::hardware::pal::V1_0::IPAL;
 using vendor::qti::hardware::pal::V1_0::implementation::PAL;
 using android::hardware::defaultPassthroughServiceImplementation;
 using android::sp;
-#endif
-
 using namespace android::hardware;
 using android::OK;
+#endif
 
 #ifdef __LP64__
 #define LIBS "/vendor/lib64/"
