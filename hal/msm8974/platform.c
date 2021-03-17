@@ -7570,7 +7570,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
         }
     } else if (source == AUDIO_SOURCE_FM_TUNER) {
         snd_device = SND_DEVICE_IN_CAPTURE_FM;
-    } else if (source == AUDIO_SOURCE_ECHO_REFERENCE) {
+    } else if ((source == AUDIO_SOURCE_ECHO_REFERENCE) &&
+        (uc_id == USECASE_AUDIO_RECORD_ECHO_REF_EXT)) {
         snd_device = SND_DEVICE_IN_ECHO_REFERENCE;
     } else if (source == AUDIO_SOURCE_DEFAULT) {
         goto exit;
@@ -7645,7 +7646,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
             snd_device = SND_DEVICE_IN_USB_HEADSET_MIC;
         } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_FM_TUNER)) {
             snd_device = SND_DEVICE_IN_CAPTURE_FM;
-        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_ECHO_REFERENCE)) {
+        } else if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_ECHO_REFERENCE) &&
+            (uc_id == USECASE_AUDIO_RECORD_ECHO_REF_EXT)) {
             snd_device = SND_DEVICE_IN_ECHO_REFERENCE;
         } else if (audio_extn_usb_connected(NULL) &&
                    is_usb_in_device_type(&in_devices)) {
