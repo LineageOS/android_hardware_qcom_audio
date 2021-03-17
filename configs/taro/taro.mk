@@ -37,6 +37,7 @@ AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
 AUDIO_FEATURE_ENABLED_SSR := true
 AUDIO_FEATURE_ENABLED_DTS_EAGLE := false
 AUDIO_FEATURE_ENABLED_PAL_HIDL := true
+AUDIO_FEATURE_ENABLED_LSM_HIDL := true
 BOARD_USES_SRS_TRUEMEDIA := false
 DTS_CODEC_M_ := false
 MM_AUDIO_ENABLED_SAFX := false
@@ -527,6 +528,11 @@ PRODUCT_PACKAGES += \
 # enable sound trigger hidl hal 2.3
 PRODUCT_PACKAGES += \
     android.hardware.soundtrigger@2.3-impl \
+
+# enable Listen Sound Model hidl 1.0
+PRODUCT_PACKAGES += \
+    vendor.qti.hardware.ListenSoundModel@1.0 \
+    vendor.qti.hardware.ListenSoundModel@1.0-impl
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \
