@@ -2485,6 +2485,8 @@ StreamOutPrimary::StreamOutPrimary(
     stream_ = std::shared_ptr<audio_stream_out> (new audio_stream_out());
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     mInitialized = false;
+    pal_stream_handle_ = nullptr;
+    pal_haptics_stream_handle = nullptr;
     int noPalDevices = 0;
     int ret = 0;
 
