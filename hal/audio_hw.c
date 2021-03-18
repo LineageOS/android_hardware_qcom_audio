@@ -3157,7 +3157,7 @@ int start_input_stream(struct stream_in *in)
     }
 
     if (is_sco_in_device_type(&in->device_list)) {
-        if (!adev->bt_sco_on) {
+        if (!adev->bt_sco_on || audio_extn_a2dp_source_is_ready()) {
             ALOGE("%s: SCO profile is not ready, return error", __func__);
             ret = -EIO;
             goto error_config;
@@ -8747,7 +8747,30 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         /* When set to false, HAL should disable EC and NS */
         if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0){
             adev->bt_sco_on = true;
-        } else {
+            /*
+             * When ever BT_SCO=ON arrives, make sure to route
+             * all use cases to SCO device, otherwise due to delay in
+             * BT_SCO=ON and lack of synchronization with create audio patch
+             * request for SCO device, some times use case not routed properly to
+             * SCO device
+             */
+            struct audio_usecase *usecase;
+            struct listnode *node;
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                if (usecase->stream.in && (usecase->type == PCM_CAPTURE) &&
+                    (!is_btsco_device(SND_DEVICE_NONE, usecase->in_snd_device))) {
+                    ALOGD("BT_SCO ON, switch all in use case to it");
+                    select_devices(adev, usecase->id);
+                    }
+                if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
+                    (!is_btsco_device(usecase->out_snd_device, SND_DEVICE_NONE))) {
+                     ALOGD("BT_SCO ON, switch all out use case to it");
+                     select_devices(adev, usecase->id);
+                    }
+            }
+         }
+         else {
             adev->bt_sco_on = false;
             audio_extn_sco_reset_configuration();
         }
