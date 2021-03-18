@@ -58,7 +58,7 @@ int AudioVoice::SetMode(const audio_mode_t mode) {
             mode_ = mode;
             if (voice_.in_call && mode == AUDIO_MODE_NORMAL)
                 ret = StopCall();
-            else
+            else if (mode ==  AUDIO_MODE_CALL_SCREEN)
                 UpdateCalls(voice_.session);
         }
     }
