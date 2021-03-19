@@ -1139,3 +1139,41 @@ LOCAL_SANITIZE := integer_overflow
 endif
 include $(BUILD_SHARED_LIBRARY)
 endif
+#-------------------------------------------
+
+#            Build Power_Policy_Client LIB
+#-------------------------------------------
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_POWER_POLICY)),true)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libaudiopowerpolicy
+
+LOCAL_VENDOR_MODULE := true
+
+LOCAL_SRC_FILES:= \
+        PowerPolicyClient.cpp \
+        power_policy_launcher.cpp
+
+LOCAL_C_INCLUDES:= \
+        vendor/qcom/opensource/audio-hal/primary-hal/hal \
+        system/media/audio/include
+
+LOCAL_SHARED_LIBRARIES:= \
+        android.frameworks.automotive.powerpolicy-ndk_platform \
+        libbase \
+        libbinder_ndk \
+        libcutils \
+        liblog \
+        libpowerpolicyclient
+
+ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
+LOCAL_SANITIZE := integer_overflow
+endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT)),true)
+  LOCAL_CFLAGS += -DDAEMON_SUPPORT_AUTO
+endif
+
+include $(BUILD_SHARED_LIBRARY)
+endif
