@@ -7440,38 +7440,6 @@ static int in_remove_audio_effect(const struct audio_stream *stream,
     return add_remove_audio_effect(stream, effect, false);
 }
 
-streams_input_ctxt_t *in_get_stream(struct audio_device *dev,
-                                  audio_io_handle_t input)
-{
-    struct listnode *node;
-
-    list_for_each(node, &dev->active_inputs_list) {
-        streams_input_ctxt_t *in_ctxt = node_to_item(node,
-                                                     streams_input_ctxt_t,
-                                                     list);
-        if (in_ctxt->input->capture_handle == input) {
-            return in_ctxt;
-        }
-    }
-    return NULL;
-}
-
-streams_output_ctxt_t *out_get_stream(struct audio_device *dev,
-                                  audio_io_handle_t output)
-{
-    struct listnode *node;
-
-    list_for_each(node, &dev->active_outputs_list) {
-        streams_output_ctxt_t *out_ctxt = node_to_item(node,
-                                                     streams_output_ctxt_t,
-                                                     list);
-        if (out_ctxt->output->handle == output) {
-            return out_ctxt;
-        }
-    }
-    return NULL;
-}
-
 static int in_stop(const struct audio_stream_in* stream)
 {
     struct stream_in *in = (struct stream_in *)stream;
@@ -7796,15 +7764,6 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     }
 
     *stream_out = NULL;
-
-    pthread_mutex_lock(&adev->lock);
-    if (out_get_stream(adev, handle) != NULL) {
-        ALOGW("%s, output stream already opened", __func__);
-        ret = -EEXIST;
-    }
-    pthread_mutex_unlock(&adev->lock);
-    if (ret)
-        return ret;
 
     out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
 
@@ -8643,17 +8602,10 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     if (ret != 0)
         goto error_open;
 
-    streams_output_ctxt_t *out_ctxt = (streams_output_ctxt_t *)
-        calloc(1, sizeof(streams_output_ctxt_t));
-    if (out_ctxt == NULL) {
-        ALOGE("%s fail to allocate output ctxt", __func__);
-        ret = -ENOMEM;
-        goto error_open;
-    }
-    out_ctxt->output = out;
+    out->out_ctxt.output = out;
 
     pthread_mutex_lock(&adev->lock);
-    list_add_tail(&adev->active_outputs_list, &out_ctxt->list);
+    list_add_tail(&adev->active_outputs_list, &out->out_ctxt.list);
     pthread_mutex_unlock(&adev->lock);
 
     ALOGV("%s: exit", __func__);
@@ -8678,6 +8630,12 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
     ALOGD("%s: enter:stream_handle(%s)",__func__, use_case_table[out->usecase]);
 
     io_streams_map_remove(adev, out->handle);
+
+    // remove out_ctxt early to prevent the stream
+    // being opened in a race condition
+    pthread_mutex_lock(&adev->lock);
+    list_remove(&out->out_ctxt.list);
+    pthread_mutex_unlock(&adev->lock);
 
     // must deregister from sndmonitor first to prevent races
     // between the callback and close_stream
@@ -8741,13 +8699,6 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
     pthread_mutex_destroy(&out->position_query_lock);
 
     pthread_mutex_lock(&adev->lock);
-    streams_output_ctxt_t *out_ctxt = out_get_stream(adev, out->handle);
-    if (out_ctxt != NULL) {
-        list_remove(&out_ctxt->list);
-        free(out_ctxt);
-    } else {
-        ALOGW("%s, output stream already closed", __func__);
-    }
     free(stream);
     pthread_mutex_unlock(&adev->lock);
     ALOGV("%s: exit", __func__);
@@ -9386,15 +9337,6 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             return -EINVAL;
     }
 
-    pthread_mutex_lock(&adev->lock);
-    if (in_get_stream(adev, handle) != NULL) {
-        ALOGW("%s, input stream already opened", __func__);
-        ret = -EEXIST;
-    }
-    pthread_mutex_unlock(&adev->lock);
-    if (ret)
-        return ret;
-
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
 
     if (!in) {
@@ -9781,17 +9723,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     if (ret != 0)
         goto err_open;
 
-    streams_input_ctxt_t *in_ctxt = (streams_input_ctxt_t *)
-        calloc(1, sizeof(streams_input_ctxt_t));
-    if (in_ctxt == NULL) {
-        ALOGE("%s fail to allocate input ctxt", __func__);
-        ret = -ENOMEM;
-        goto err_open;
-    }
-    in_ctxt->input = in;
+    in->in_ctxt.input = in;
 
     pthread_mutex_lock(&adev->lock);
-    list_add_tail(&adev->active_inputs_list, &in_ctxt->list);
+    list_add_tail(&adev->active_inputs_list, &in->in_ctxt.list);
     pthread_mutex_unlock(&adev->lock);
 
     ALOGV("%s: exit", __func__);
@@ -9822,6 +9757,12 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
         return;
     }
     io_streams_map_remove(adev, in->capture_handle);
+
+    // remove out_ctxt early to prevent the stream
+    // being opened in a race condition
+    pthread_mutex_lock(&adev->lock);
+    list_remove(&in->in_ctxt.list);
+    pthread_mutex_unlock(&adev->lock);
 
     /* must deregister from sndmonitor first to prevent races
      * between the callback and close_stream
@@ -9884,13 +9825,6 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     if (in->is_st_session) {
         ALOGV("%s: sound trigger pcm stop lab", __func__);
         audio_extn_sound_trigger_stop_lab(in);
-    }
-    streams_input_ctxt_t *in_ctxt = in_get_stream(adev, in->capture_handle);
-    if (in_ctxt != NULL) {
-        list_remove(&in_ctxt->list);
-        free(in_ctxt);
-    } else {
-        ALOGW("%s, input stream already closed", __func__);
     }
     free(stream);
     pthread_mutex_unlock(&adev->lock);
