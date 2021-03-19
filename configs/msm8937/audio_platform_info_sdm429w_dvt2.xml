@@ -59,6 +59,7 @@
         <param key="spkr_2_tz_name" value=""/>
         <param key="hfp_vol_mixer_ctl" value="SLIMBUS_7 LOOPBACK Volume"/>
         <param key="hfp_pcm_dev_id" value="18"/>
+        <param key="afe_loopback" value="1"/>
     </config_params>
     <acdb_ids>
         <device name="SND_DEVICE_OUT_SPEAKER_PROTECTED" acdb_id="136"/>
