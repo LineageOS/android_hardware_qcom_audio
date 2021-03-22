@@ -129,6 +129,7 @@ AUDIO_C2 += libqc2audio_utils
 AUDIO_C2 += libqc2audio_platform
 AUDIO_C2 += libqc2audio_core
 AUDIO_C2 += libqc2audio_basecodec
+AUDIO_C2 += libqc2audio_hooks
 AUDIO_C2 += libqc2audio_swaudiocodec
 AUDIO_C2 += libqc2audio_swaudiocodec_data_common
 AUDIO_C2 += libqc2audio_hwaudiocodec

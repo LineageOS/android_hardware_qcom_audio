@@ -126,63 +126,63 @@ PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
 
 ifeq ($(AUDIO_FEATURE_ENABLED_DLKM),true)
 BOARD_VENDOR_KERNEL_MODULES += \
-    $(KERNEL_MODULES_OUT)/audio_spf_core.ko \
-    $(KERNEL_MODULES_OUT)/audio_pkt.ko \
-    $(KERNEL_MODULES_OUT)/audio_gpr.ko \
-    $(KERNEL_MODULES_OUT)/audio_prm.ko \
-    $(KERNEL_MODULES_OUT)/audio_audpkt_ion.ko \
-    $(KERNEL_MODULES_OUT)/audio_q6_pdr.ko \
-    $(KERNEL_MODULES_OUT)/audio_q6_notifier.ko \
-    $(KERNEL_MODULES_OUT)/audio_adsp_loader.ko \
-    $(KERNEL_MODULES_OUT)/audio_pinctrl_lpi.ko \
-    $(KERNEL_MODULES_OUT)/audio_swr.ko \
-    $(KERNEL_MODULES_OUT)/audio_wcd_core.ko \
-    $(KERNEL_MODULES_OUT)/audio_swr_ctrl.ko \
-    $(KERNEL_MODULES_OUT)/audio_wsa881x_analog.ko \
-    $(KERNEL_MODULES_OUT)/audio_stub.ko \
-    $(KERNEL_MODULES_OUT)/audio_wcd9xxx.ko \
-    $(KERNEL_MODULES_OUT)/audio_mbhc.ko \
-    $(KERNEL_MODULES_OUT)/audio_wcd937x.ko \
-    $(KERNEL_MODULES_OUT)/audio_wcd937x_slave.ko \
-    $(KERNEL_MODULES_OUT)/audio_rouleur.ko \
-    $(KERNEL_MODULES_OUT)/audio_rouleur_slave.ko \
-    $(KERNEL_MODULES_OUT)/audio_pm2250_spmi.ko \
-    $(KERNEL_MODULES_OUT)/audio_bolero_cdc.ko \
-    $(KERNEL_MODULES_OUT)/audio_va_macro.ko \
-    $(KERNEL_MODULES_OUT)/audio_rx_macro.ko \
-    $(KERNEL_MODULES_OUT)/audio_tx_macro.ko \
-    $(KERNEL_MODULES_OUT)/audio_machine_bengal.ko\
-    $(KERNEL_MODULES_OUT)/audio_snd_event.ko
+    $(KERNEL_MODULES_OUT)/spf_core_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/audio_pkt_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/gpr_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/audio_prm_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/audpkt_ion_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/q6_pdr_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/q6_notifier_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/adsp_loader_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/pinctrl_lpi_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/swr_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/wcd_core_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/swr_ctrl_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/wsa881x_analog_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/stub_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/wcd9xxx_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/mbhc_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/wcd937x_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/wcd937x_slave_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/rouleur_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/rouleur_slave_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/pm2250_spmi_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/bolero_cdc_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/va_macro_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/rx_macro_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/tx_macro_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/machine_dlkm.ko\
+    $(KERNEL_MODULES_OUT)/snd_event_dlkm.ko
 endif
 
 #Audio DLKM
-AUDIO_DLKM := audio_spf_core.ko
-AUDIO_DLKM += audio_pkt.ko
-AUDIO_DLKM += audio_gpr.ko
-AUDIO_DLKM += audio_prm.ko
-AUDIO_DLKM += audio_audpkt_ion.ko
-AUDIO_DLKM += audio_q6_pdr.ko
-AUDIO_DLKM += audio_q6_notifier.ko
-AUDIO_DLKM += audio_adsp_loader.ko
-AUDIO_DLKM += audio_pinctrl_lpi.ko
-AUDIO_DLKM += audio_swr.ko
-AUDIO_DLKM += audio_wcd_core.ko
-AUDIO_DLKM += audio_swr_ctrl.ko
-AUDIO_DLKM += audio_wsa881x_analog.ko
-AUDIO_DLKM += audio_stub.ko
-AUDIO_DLKM += audio_wcd9xxx.ko
-AUDIO_DLKM += audio_mbhc.ko
-AUDIO_DLKM += audio_wcd937x.ko
-AUDIO_DLKM += audio_wcd937x_slave.ko
-AUDIO_DLKM += audio_rouleur.ko
-AUDIO_DLKM += audio_rouleur_slave.ko
-AUDIO_DLKM += audio_bolero_cdc.ko
-AUDIO_DLKM += audio_va_macro.ko
-AUDIO_DLKM += audio_rx_macro.ko
-AUDIO_DLKM += audio_tx_macro.ko
-AUDIO_DLKM += audio_machine_bengal.ko
-AUDIO_DLKM += audio_snd_event.ko
-AUDIO_DLKM += audio_pm2250_spmi.ko
+AUDIO_DLKM := spf_core_dlkm.ko
+AUDIO_DLKM += audio_pkt_dlkm.ko
+AUDIO_DLKM += gpr_dlkm.ko
+AUDIO_DLKM += audio_prm_dlkm.ko
+AUDIO_DLKM += audpkt_ion_dlkm.ko
+AUDIO_DLKM += q6_pdr_dlkm.ko
+AUDIO_DLKM += q6_notifier_dlkm.ko
+AUDIO_DLKM += adsp_loader_dlkm.ko
+AUDIO_DLKM += pinctrl_lpi_dlkm.ko
+AUDIO_DLKM += swr_dlkm.ko
+AUDIO_DLKM += wcd_core_dlkm.ko
+AUDIO_DLKM += swr_ctrl_dlkm.ko
+AUDIO_DLKM += wsa881x_analog_dlkm.ko
+AUDIO_DLKM += stub_dlkm.ko
+AUDIO_DLKM += wcd9xxx_dlkm.ko
+AUDIO_DLKM += mbhc_dlkm.ko
+AUDIO_DLKM += wcd937x_dlkm.ko
+AUDIO_DLKM += wcd937x_slave_dlkm.ko
+AUDIO_DLKM += rouleur_dlkm.ko
+AUDIO_DLKM += rouleur_slave_dlkm.ko
+AUDIO_DLKM += bolero_cdc_dlkm.ko
+AUDIO_DLKM += va_macro_dlkm.ko
+AUDIO_DLKM += rx_macro_dlkm.ko
+AUDIO_DLKM += tx_macro_dlkm.ko
+AUDIO_DLKM += machine_dlkm.ko
+AUDIO_DLKM += snd_event_dlkm.ko
+AUDIO_DLKM += pm2250_spmi_dlkm.ko
 
 PRODUCT_PACKAGES += $(AUDIO_DLKM)
 
