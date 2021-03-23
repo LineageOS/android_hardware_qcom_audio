@@ -1309,6 +1309,32 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 sizeof(pal_param_proxy_channel_config_t));
     }
 
+    ret = str_parms_get_str(parms, "haptics_volume", value, sizeof(value));
+    if (ret >= 0) {
+        struct pal_volume_data* volume = NULL;
+        volume = (struct pal_volume_data *)malloc(sizeof(struct pal_volume_data)
+                      +sizeof(struct pal_channel_vol_kv));
+        volume->no_of_volpair = 1;
+        //For haptics, there is only one channel (FL).
+        volume->volume_pair[0].channel_mask = 0x01;
+        volume->volume_pair[0].vol = atof(value);
+        AHAL_INFO("Setting Haptics Volume as %f", volume->volume_pair[0].vol);
+        ret = pal_set_param(PAL_PARAM_ID_HAPTICS_VOLUME, (void *)volume,
+                 sizeof(pal_volume_data));
+        if (volume)
+            free(volume);
+    }
+
+    ret = str_parms_get_str(parms, "haptics_intensity", value, sizeof(value));
+    if (ret >=0) {
+        pal_param_haptics_intensity_t hIntensity;
+        val = atoi(value);
+        hIntensity.intensity = val;
+        AHAL_INFO("Setting Haptics Volume as %d", hIntensity.intensity);
+        ret = pal_set_param(PAL_PARAM_ID_HAPTICS_INTENSITY, (void *)&hIntensity,
+                 sizeof(pal_param_haptics_intensity_t));
+    }
+
     str_parms_destroy(parms);
 
     AHAL_DBG("exit: %s", kvpairs);
