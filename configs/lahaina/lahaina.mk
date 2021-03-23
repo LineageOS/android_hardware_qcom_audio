@@ -7,6 +7,8 @@ AUDIO_USE_STUB_HAL := true
 endif
 endif
 
+TARGET_USES_ION_CMA_MEMORY := true
+
 ifneq ($(AUDIO_USE_STUB_HAL), true)
 BOARD_USES_ALSA_AUDIO := true
 TARGET_USES_AOSP_FOR_AUDIO := false
