@@ -64,7 +64,8 @@ endif
 LOCAL_HEADER_LIBRARIES := libhardware_headers \
                           libsystem_headers \
                           libacdb_headers \
-                          libutils_headers
+                          libutils_headers \
+                          qti_audio_kernel_uapi
 
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
