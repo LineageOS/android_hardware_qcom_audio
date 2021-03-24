@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, 2020-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -65,8 +65,7 @@ int main(int argc, char *argv[]) {
       VERIFY_EPRINTF("audio adsp daemon error %s", dlerror());
     }
     if (nErr == AEE_ECONNREFUSED) {
-      VERIFY_EPRINTF("fastRPC device driver is disabled, daemon exiting...");
-      break;
+      VERIFY_EPRINTF("fastRPC device driver is disabled, retrying...");
     }
     VERIFY_EPRINTF("audio adsp daemon will restart after 25ms...");
     usleep(25000);
