@@ -89,7 +89,7 @@
 #define ALIGN(x, y) ((y) * DIV_ROUND_UP((x), (y)))
 
 #if LINUX_ENABLED
-#if defined(__LP64__)
+#ifdef __LP64__
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/usr/lib64/libqcompostprocbundle.so"
 #define VISUALIZER_LIBRARY_PATH "/usr/lib64/libqcomvisualizer.so"
 #else
@@ -97,8 +97,13 @@
 #define VISUALIZER_LIBRARY_PATH "/usr/lib/libqcomvisualizer.so"
 #endif
 #else
+#ifdef __LP64__
+#define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/vendor/lib64/soundfx/libqcompostprocbundle.so"
+#define VISUALIZER_LIBRARY_PATH "/vendor/lib64/soundfx/libqcomvisualizer.so"
+#else
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/vendor/lib/soundfx/libqcompostprocbundle.so"
 #define VISUALIZER_LIBRARY_PATH "/vendor/lib/soundfx/libqcomvisualizer.so"
+#endif
 #endif
 
 /* These are the supported use cases by the hardware.

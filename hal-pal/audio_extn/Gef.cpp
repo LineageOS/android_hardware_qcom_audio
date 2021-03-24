@@ -53,10 +53,16 @@
 
 #ifdef AUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED
 
+#ifdef __LP64__
+#define LIBS "/vendor/lib64/"
+#else
+#define LIBS "/vendor/lib/"
+#endif
+
 #if LINUX_ENABLED
 #define GEF_LIBRARY "libqtigefar.so"
 #else
-#define GEF_LIBRARY "/vendor/lib/libqtigefar.so"
+#define GEF_LIBRARY LIBS"libqtigefar.so"
 #endif
 
 typedef int (*gef_get_pal_info)(void* adev,

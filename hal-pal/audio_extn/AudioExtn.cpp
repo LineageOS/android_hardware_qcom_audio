@@ -407,7 +407,7 @@ int AudioExtn::hfp_feature_init(bool is_feature_enabled)
         hfp_lib_handle = dlopen(HFP_LIB_PATH, RTLD_NOW);
 
         if (!hfp_lib_handle) {
-            AHAL_ERR("dlopen failed");
+            ALOGE("%s: dlopen failed with: %s", __func__, dlerror());
             goto feature_disabled;
         }
 
