@@ -302,6 +302,7 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
         AHAL_ERR("HFP tx stream (Mic->BT SCO) open failed, rc %d", ret);
         pal_stream_stop(hfpmod.rx_stream_handle);
         pal_stream_close(hfpmod.rx_stream_handle);
+        hfpmod.rx_stream_handle = NULL;
         return ret;
     }
     ret = pal_stream_start(hfpmod.tx_stream_handle);
@@ -310,6 +311,8 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
         pal_stream_close(hfpmod.tx_stream_handle);
         pal_stream_stop(hfpmod.rx_stream_handle);
         pal_stream_close(hfpmod.rx_stream_handle);
+        hfpmod.rx_stream_handle = NULL;
+        hfpmod.tx_stream_handle = NULL;
         return ret;
     }
     hfpmod.is_hfp_running = true;
@@ -324,13 +327,16 @@ static int32_t stop_hfp()
     int32_t ret = 0;
 
     AHAL_DBG("HFP stop enter");
+    hfpmod.is_hfp_running = false;
     if (hfpmod.rx_stream_handle) {
         pal_stream_stop(hfpmod.rx_stream_handle);
         pal_stream_close(hfpmod.rx_stream_handle);
+        hfpmod.rx_stream_handle = NULL;
     }
     if (hfpmod.tx_stream_handle) {
         pal_stream_stop(hfpmod.tx_stream_handle);
         pal_stream_close(hfpmod.tx_stream_handle);
+        hfpmod.tx_stream_handle = NULL;
     }
 
     pal_param_btsco_t param_btsco;
