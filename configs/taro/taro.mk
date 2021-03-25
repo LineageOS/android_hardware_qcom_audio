@@ -386,6 +386,10 @@ persist.audio.fluence.voicecomm=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.c2.preferred=true
 
+#Enable dmaBuf heap usage by C2 components
+PRODUCT_PROPERTY_OVERRIDES += \
+debug.c2.use_dmabufheaps=1
+
 ifneq ($(GENERIC_ODM_IMAGE),true)
 $(warning "Enabling codec2.0 SW only for non-generic odm build variant")
 #Rank OMX SW codecs lower than OMX HW codecs
