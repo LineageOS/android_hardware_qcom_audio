@@ -148,6 +148,7 @@ public:
     int  facing = 0; /*0 - none, 1 - back, 2 - front/selfie*/
     int  hdr_channel_count = 0;
     int  hdr_sample_rate = 0;
+    int cameraOrientation = CAMERA_DEFAULT;
 protected:
     AudioDevice() {}
     std::shared_ptr<AudioVoice> VoiceInit();

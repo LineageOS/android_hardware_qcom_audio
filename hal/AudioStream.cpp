@@ -3146,6 +3146,12 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
             /* HDR use case check */
             if (is_hdr_mode_enabled())
                 setup_hdr_usecase(&mPalInDevice[i]);
+
+            if (source_ == AUDIO_SOURCE_CAMCORDER && adevice->cameraOrientation == CAMERA_DEFAULT) {
+                strlcpy(mPalInDevice[i].custom_config.custom_key, "camcorder_landscape",
+                        sizeof(mPalInDevice[i].custom_config.custom_key));
+                AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
+            }
         }
 
         mAndroidInDevices = new_devices;
@@ -3651,6 +3657,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
             mPalInDevice[i].address.card_id = adevice->usb_card_id_;
             mPalInDevice[i].address.device_num = adevice->usb_dev_num_;
         }
+
         /* HDR use case check */
         if ( (source_ == AUDIO_SOURCE_UNPROCESSED) &&
            (config_.sample_rate == 48000) ) {
@@ -3662,6 +3669,12 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
                     setup_hdr_usecase(&mPalInDevice[i]);
                 }
             }
+        }
+
+        if (source_ == AUDIO_SOURCE_CAMCORDER && adevice->cameraOrientation == CAMERA_DEFAULT) {
+            strlcpy(mPalInDevice[i].custom_config.custom_key, "camcorder_landscape",
+                    sizeof(mPalInDevice[i].custom_config.custom_key));
+            AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
         }
     }
 
