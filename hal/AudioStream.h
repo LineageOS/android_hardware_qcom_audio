@@ -51,6 +51,12 @@
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
 #define ULL_PLATFORM_DELAY         (4*1000LL)
 
+//Need to confirm audio source delay values from adsp team
+#define DEEP_BUFFER_PLATFORM_CAPTURE_DELAY (40*1000LL)
+#define LOW_LATENCY_PLATFORM_CAPTURE_DELAY (40*1000LL)
+#define VOIP_TX_PLATFORM_CAPTURE_DELAY (40*1000LL)
+#define RAW_STREAM_PLATFORM_CAPTURE_DELAY (40*1000LL)
+
 #define DEEP_BUFFER_OUTPUT_PERIOD_DURATION 40
 #define PCM_OFFLOAD_OUTPUT_PERIOD_DURATION 80
 #define LOW_LATENCY_OUTPUT_PERIOD_DURATION 5
@@ -548,7 +554,12 @@ public:
     int GetMmapPosition(struct audio_mmap_position *position);
     bool isDeviceAvailable(pal_device_id_t deviceId);
     int RouteStream(const std::set<audio_devices_t>& new_devices);
+    int64_t GetSourceLatency(audio_input_flags_t halStreamFlags);
+    uint64_t GetFramesRead(int64_t *time);
 protected:
+    struct timespec readAt;
+    uint32_t fragments_ = 0;
+    uint32_t fragment_size_ = 0;
     int FillHalFnPtrs();
     std::shared_ptr<audio_stream_in>    stream_;
     audio_source_t                      source_;

@@ -990,13 +990,105 @@ exit:
     return ret;
 }
 
-static int astream_in_get_capture_position(const struct audio_stream_in *stream,
-                                           int64_t *frames, int64_t *time) {
-    std::ignore = stream;
-    std::ignore = frames;
-    std::ignore = time;
-    //TODO: get timestamp for input streams
-    AHAL_VERBOSE("position not implemented currently supported in pal");
+int64_t StreamInPrimary::GetSourceLatency(audio_input_flags_t halStreamFlags)
+{
+    struct pal_stream_attributes streamAttributes_;
+    streamAttributes_.type = StreamInPrimary::GetPalStreamType(halStreamFlags,
+        config_.sample_rate);
+    AHAL_VERBOSE(" type %d", streamAttributes_.type);
+    switch (streamAttributes_.type) {
+    case PAL_STREAM_DEEP_BUFFER:
+        return DEEP_BUFFER_PLATFORM_CAPTURE_DELAY;
+    case PAL_STREAM_LOW_LATENCY:
+        return LOW_LATENCY_PLATFORM_CAPTURE_DELAY;
+    case  PAL_STREAM_VOIP_TX:
+        return VOIP_TX_PLATFORM_CAPTURE_DELAY;
+    case  PAL_STREAM_RAW:
+        return RAW_STREAM_PLATFORM_CAPTURE_DELAY;
+        //TODO: Add more streamtypes if available in pal
+    default:
+        return 0;
+    }
+}
+
+uint64_t StreamInPrimary::GetFramesRead(int64_t* time)
+{
+    uint64_t signed_frames = 0;
+    uint64_t read_frames = 0;
+    uint64_t kernel_frames = 0;
+    size_t kernel_buffer_size = 0;
+    int64_t dsp_latency = 0;
+
+    if (!time) {
+        AHAL_ERR("timestamp NULL");
+        return 0;
+    }
+
+    /* This adjustment accounts for buffering after app processor
+     * It is based on estimated DSP latency per use case, rather than exact.
+     */
+    dsp_latency = StreamInPrimary::GetSourceLatency(flags_);
+
+    read_frames = total_bytes_read_ / audio_bytes_per_frame(
+        audio_channel_count_from_in_mask(config_.channel_mask),
+        config_.format);
+
+    /* not querying actual state of buffering in kernel as it would involve an ioctl call
+     * which then needs protection, this causes delay in TS query for pcm_offload usecase
+     * hence only estimate.
+     */
+    kernel_buffer_size = fragment_size_ * fragments_;
+    kernel_frames = kernel_buffer_size /
+        audio_bytes_per_frame(
+            audio_channel_count_from_in_mask(config_.channel_mask),
+            config_.format);
+
+
+    signed_frames = read_frames + kernel_frames;
+
+    *time = (readAt.tv_sec * 1000000000LL) + readAt.tv_nsec - (dsp_latency * 1000LL);
+
+    // Adjustment accounts for A2dp decoder latency
+    // Note: Decoder latency is returned in ms, while platform_source_latency in us.
+    pal_param_bta2dp_t* param_bt_a2dp = NULL;
+    size_t size = 0;
+    int32_t ret;
+
+    if (isDeviceAvailable(PAL_DEVICE_IN_BLUETOOTH_A2DP)) {
+        ret = pal_get_param(PAL_PARAM_ID_BT_A2DP_DECODER_LATENCY,
+            (void**)&param_bt_a2dp, &size, nullptr);
+        if (!ret && param_bt_a2dp) {
+            *time -= param_bt_a2dp->latency * 1000000LL;
+        }
+    }
+
+    AHAL_VERBOSE("signed frames %lld read frames %lld kernel frames %lld",
+        (long long)signed_frames, (long long)read_frames, (long long)kernel_frames);
+
+    return signed_frames;
+}
+
+static int astream_in_get_capture_position(const struct audio_stream_in* stream,
+    int64_t* frames, int64_t* time) {
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamInPrimary> astream_in;
+
+    if (stream == NULL || frames == NULL || time == NULL) {
+        return -EINVAL;
+    }
+
+    if (adevice) {
+        astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    } else {
+        AHAL_ERR("unable to get audio device");
+        return -ENOSYS;
+    }
+    if(astream_in)
+        *frames = astream_in->GetFramesRead(time);
+    else
+        return -ENOSYS;
+    AHAL_VERBOSE("frames %lld played at %lld ", ((long long)*frames), time);
+
     return 0;
 }
 
@@ -3154,6 +3246,8 @@ set_buff_size:
         }
     }
 
+    fragments_ = inBufCount;
+    fragment_size_ = inBufSize;
     total_bytes_read_ = 0; // reset at each open
 
 error_open:
@@ -3328,6 +3422,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     }
 
     total_bytes_read_ += local_bytes_read;
+    clock_gettime(CLOCK_MONOTONIC, &readAt);
 
 exit:
     AHAL_VERBOSE("Exit, bytes read %u", local_bytes_read);
@@ -3382,6 +3477,8 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     mInitialized = false;
     int noPalDevices = 0;
     int ret = 0;
+    readAt.tv_sec = 0;
+    readAt.tv_nsec = 0;
 
     AHAL_DBG("enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)"\
           , handle, config->format, config->sample_rate, config->channel_mask,
