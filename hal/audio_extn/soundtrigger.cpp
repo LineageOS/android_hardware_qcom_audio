@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -342,6 +342,38 @@ exit:
     AHAL_VERBOSE("Exit");
 
     return handle;
+}
+
+bool audio_extn_sound_trigger_check_session_activity(StreamInPrimary *in_stream)
+{
+    struct sound_trigger_info *st_ses_info = nullptr;
+    struct listnode *node = nullptr;
+    bool st_session_available = false;
+
+    AHAL_VERBOSE("Enter");
+    if (!st_dev || !in_stream) {
+        AHAL_ERR("st_dev %d, in_stream %d", !st_dev, !in_stream);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&st_dev->lock);
+    AHAL_VERBOSE("list %d capture_handle %d",
+          list_empty(&st_dev->st_ses_list), in_stream->GetHandle());
+    list_for_each(node, &st_dev->st_ses_list) {
+        st_ses_info = node_to_item(node, struct sound_trigger_info, list);
+        if (st_ses_info->st_ses.capture_handle == in_stream->GetHandle()) {
+            AHAL_DBG("sound trigger session available for capture_handle %d",
+                  in_stream->GetHandle());
+            st_session_available = true;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&st_dev->lock);
+
+exit:
+    AHAL_VERBOSE("Exit");
+
+    return st_session_available;
 }
 
 int audio_extn_sound_trigger_init(std::shared_ptr<AudioDevice> adev)

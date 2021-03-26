@@ -3254,6 +3254,14 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
 
     if (is_st_session) {
         ATRACE_BEGIN("hal: lab read");
+        if (!audio_extn_sound_trigger_check_session_activity(this)) {
+            AHAL_DBG("sound trigger session not available");
+            memset(palBuffer.buffer, 0, palBuffer.size);
+            local_bytes_read = palBuffer.size;
+            total_bytes_read_ += local_bytes_read;
+            ATRACE_END();
+            goto exit;
+        }
         if (!stream_started_) {
             adevice->num_va_sessions_++;
             stream_started_ = true;
