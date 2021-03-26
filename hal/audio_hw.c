@@ -2885,7 +2885,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                     /* get the input with the highest priority source*/
                     priority_in = get_priority_input(adev);
 
-                    if (!priority_in)
+                    if (!priority_in ||
+                            audio_extn_auto_hal_overwrite_priority_for_auto(usecase->stream.in))
                         priority_in = usecase->stream.in;
                 }
                 if (compare_device_type(&usecase->device_list, AUDIO_DEVICE_IN_BUS)){
