@@ -80,6 +80,9 @@ public:
     static void audio_extn_hfp_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parms);
     static int audio_extn_hfp_set_mic_mute2(std::shared_ptr<AudioDevice> adev, bool state);
 
+    //A2DP
+    static int a2dp_source_feature_init(bool is_feature_enabled);
+
     /* start device utils */
     static bool audio_devices_cmp(const std::set<audio_devices_t>&, audio_device_cmp_fn_t);
     static bool audio_devices_cmp(const std::set<audio_devices_t>&, audio_devices_t);

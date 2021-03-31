@@ -59,6 +59,8 @@ using android::OK;
 #define HFP_LIB_PATH LIBS"libhfp_pal.so"
 #define FM_LIB_PATH LIBS"libfmpal.so"
 
+#define BT_IPC_SOURCE_LIB_NAME LIBS"btaudio_offload_if.so"
+
 static batt_listener_init_t batt_listener_init;
 static batt_listener_deinit_t batt_listener_deinit;
 static batt_prop_is_charging_t batt_prop_is_charging;
@@ -485,6 +487,55 @@ int AudioExtn::audio_extn_hfp_set_mic_mute2(std::shared_ptr<AudioDevice> adev, b
         hfp_set_mic_mute2(adev, state) : -1);
 }
 // END: HFP ========================================================================
+
+// START: A2DP ======================================================================
+// Need to call this init for BT HIDL registration. It is expected that Audio HAL
+// do need to do this initialization. Hence -
+typedef void (*a2dp_bt_audio_pre_init_t)(void);
+static void *a2dp_bt_lib_source_handle = NULL;
+static a2dp_bt_audio_pre_init_t a2dp_bt_audio_pre_init = nullptr;
+
+int AudioExtn::a2dp_source_feature_init(bool is_feature_enabled)
+{
+    AHAL_DBG("Called with feature %s",
+        is_feature_enabled ? "Enabled" : "NOT Enabled");
+
+    if (is_feature_enabled &&
+        (access(BT_IPC_SOURCE_LIB_NAME, R_OK) == 0)) {
+        // dlopen lib
+        a2dp_bt_lib_source_handle = dlopen(BT_IPC_SOURCE_LIB_NAME, RTLD_NOW);
+
+        if (!a2dp_bt_lib_source_handle) {
+            AHAL_ERR("dlopen %s failed with: %s", BT_IPC_SOURCE_LIB_NAME, dlerror());
+            goto feature_disabled;
+        }
+
+        if (!(a2dp_bt_audio_pre_init = (a2dp_bt_audio_pre_init_t)dlsym(
+            a2dp_bt_lib_source_handle, "bt_audio_pre_init")) ) {
+            AHAL_ERR("dlsym failed");
+            goto feature_disabled;
+        }
+
+        if (a2dp_bt_lib_source_handle && a2dp_bt_audio_pre_init) {
+            AHAL_DBG("calling BT module preinit");
+            // fwk related check's will be done in the BT layer
+            a2dp_bt_audio_pre_init();
+        }
+        AHAL_DBG("---- Feature A2DP offload is Enabled ----");
+        return 0;
+    }
+
+feature_disabled:
+    if (a2dp_bt_lib_source_handle) {
+        dlclose(a2dp_bt_lib_source_handle);
+        a2dp_bt_lib_source_handle = NULL;
+    }
+
+    a2dp_bt_audio_pre_init = nullptr;
+    AHAL_INFO("---- Feature A2DP offload is disabled ----");
+    return -ENOSYS;
+}
+// END: A2DP
 
 // START: DEVICE UTILS =============================================================
 bool AudioExtn::audio_devices_cmp(const std::set<audio_devices_t>& devs, audio_device_cmp_fn_t fn){
