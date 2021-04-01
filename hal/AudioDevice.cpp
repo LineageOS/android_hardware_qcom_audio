@@ -384,7 +384,7 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
     else
         stream = InGetStream(io_handle);
 
-    if(!stream){
+    if(!stream) {
         AHAL_ERR("Failed to fetch stream with io handle %d", io_handle);
         ret = -EINVAL;
         goto exit;
@@ -428,7 +428,7 @@ exit:
     return ret;
 }
 
-int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
+int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle) {
     int ret = 0;
     AudioPatch *patch = NULL;
     std::shared_ptr<StreamPrimary> stream = nullptr;
@@ -473,7 +473,7 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
     else
         stream = InGetStream(io_handle);
 
-    if (!stream){
+    if (!stream) {
         AHAL_ERR("Failed to fetch stream with io handle %d", io_handle);
         return -EINVAL;
     }
@@ -811,7 +811,7 @@ static size_t adev_get_input_buffer_size(
 int adev_release_audio_patch(struct audio_hw_device *dev,
                              audio_patch_handle_t handle) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
-    if (!adevice){
+    if (!adevice) {
         AHAL_ERR("GetInstance() failed");
         return -EINVAL;
     }
@@ -825,13 +825,13 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
                             const struct audio_port_config *sinks,
                             audio_patch_handle_t *handle) {
 
-    if (!handle){
+    if (!handle) {
         AHAL_ERR("Invalid handle");
         return -EINVAL;
     }
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
-    if (!adevice){
+    if (!adevice) {
         AHAL_ERR("GetInstance() failed");
         return -EINVAL;
     }
@@ -1159,8 +1159,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             param_screen_st.screen_state = true;
             AHAL_DBG(" - screen = on");
             ret = pal_set_param( PAL_PARAM_ID_SCREEN_STATE, (void*)&param_screen_st, sizeof(pal_param_screen_state_t));
-        }
-        else {
+        } else {
             AHAL_DBG(" - screen = off");
             param_screen_st.screen_state = false;
             ret = pal_set_param( PAL_PARAM_ID_SCREEN_STATE, (void*)&param_screen_st, sizeof(pal_param_screen_state_t));
@@ -1296,17 +1295,14 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     spPayload.operationModeRunTime = atoi(cfg_str);
                     ret = pal_set_param(PAL_PARAM_ID_SP_MODE, (void*)&spPayload,
                                 sizeof(pal_spkr_prot_payload));
+                } else {
+                    AHAL_ERR("Unable to parse the FTM time");
                 }
-                else {
-                    AHAL_ERR ("Unable to parse the FTM time");
-                }
+            } else {
+                AHAL_ERR("Parameter missing for the FTM time");
             }
-            else {
-                AHAL_ERR ("Parameter missing for the FTM time");
-            }
-        }
-        else {
-            AHAL_ERR ("Unable to parse the FTM wait time");
+        } else {
+            AHAL_ERR("Unable to parse the FTM wait time");
         }
     }
 
@@ -1328,17 +1324,14 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     spPayload.operationModeRunTime = atoi(cfg_str);
                     ret = pal_set_param(PAL_PARAM_ID_SP_MODE, (void*)&spPayload,
                                 sizeof(pal_spkr_prot_payload));
+                } else {
+                    AHAL_ERR("Unable to parse the V_Validation time");
                 }
-                else {
-                    AHAL_ERR ("Unable to parse the V_Validation time");
-                }
+            } else {
+                AHAL_ERR("Parameter missing for the V-Validation time");
             }
-            else {
-                AHAL_ERR ("Parameter missing for the V-Validation time");
-            }
-        }
-        else {
-            AHAL_ERR ("Unable to parse the V-Validation wait time");
+        } else {
+            AHAL_ERR("Unable to parse the V-Validation wait time");
         }
     }
 
@@ -1405,32 +1398,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         pal_device_ids = NULL;
     }
 
-    ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
-    if (ret >= 0) {
-        pal_param_btsco_t param_bt_sco;
-        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
-            param_bt_sco.bt_sco_on = true;
-        else
-            param_bt_sco.bt_sco_on = false;
-
-        AHAL_INFO("BTSCO on = %d", param_bt_sco.bt_sco_on);
-        ret = pal_set_param(PAL_PARAM_ID_BT_SCO, (void *)&param_bt_sco,
-                            sizeof(pal_param_btsco_t));
-    }
-
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
-    if (ret >= 0) {
-        pal_param_btsco_t param_bt_sco;
-        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
-            param_bt_sco.bt_wb_speech_enabled = true;
-        else
-            param_bt_sco.bt_wb_speech_enabled = false;
-
-        AHAL_INFO("BTSCO WB mode = %d", param_bt_sco.bt_wb_speech_enabled);
-        ret = pal_set_param(PAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
-                            sizeof(pal_param_btsco_t));
-     }
-
+    /* A2DP parameters */
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value, sizeof(value));
     if (ret >= 0) {
         pal_param_bta2dp_t param_bt_a2dp;
@@ -1481,6 +1449,34 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                             sizeof(pal_param_bta2dp_t));
     }
 
+    /* SCO parameters */
+    ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_btsco_t param_bt_sco;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+            param_bt_sco.bt_sco_on = true;
+        else
+            param_bt_sco.bt_sco_on = false;
+
+        memset(&btsco_lc3_cfg, 0, sizeof(btsco_lc3_cfg_t));
+        AHAL_INFO("BTSCO on = %d", param_bt_sco.bt_sco_on);
+        ret = pal_set_param(PAL_PARAM_ID_BT_SCO, (void *)&param_bt_sco,
+                            sizeof(pal_param_btsco_t));
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_btsco_t param_bt_sco;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+            param_bt_sco.bt_wb_speech_enabled = true;
+        else
+            param_bt_sco.bt_wb_speech_enabled = false;
+
+        AHAL_INFO("BTSCO WB mode = %d", param_bt_sco.bt_wb_speech_enabled);
+        ret = pal_set_param(PAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
+                            sizeof(pal_param_btsco_t));
+    }
+
     ret = str_parms_get_str(parms, "bt_swb", value, sizeof(value));
     if (ret >= 0) {
         pal_param_btsco_t param_bt_sco;
@@ -1490,6 +1486,46 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         AHAL_INFO("BTSCO SWB mode = 0x%x", val);
         ret = pal_set_param(PAL_PARAM_ID_BT_SCO_SWB, (void *)&param_bt_sco,
                             sizeof(pal_param_btsco_t));
+    }
+
+    for (auto& key : lc3_reserved_params) {
+        ret = str_parms_get_str(parms, key, value, sizeof(value));
+        if (ret < 0)
+            continue;
+
+        if (!strcmp(key, "Codec") && !strcmp(value, "LC3")) {
+            btsco_lc3_cfg.fields_map |= LC3_CODEC_BIT;
+        } else if (!strcmp(key, "StreamMap")) {
+            strlcpy((char *)&(btsco_lc3_cfg.streamMap), value, PAL_LC3_MAX_STRING_LEN);
+            btsco_lc3_cfg.fields_map |= LC3_STREAM_MAP_BIT;
+        } else if (!strcmp(key, "FrameDuration")) {
+            btsco_lc3_cfg.frame_duration = atoi(value);
+            btsco_lc3_cfg.fields_map |= LC3_FRAME_DURATION_BIT;
+        } else if (!strcmp(key, "Blocks_forSDU")) {
+            btsco_lc3_cfg.num_blocks = atoi(value);
+            btsco_lc3_cfg.fields_map |= LC3_BLOCKS_FORSDU_BIT;
+        } else if (!strcmp(key, "rxconfig_index")) {
+            btsco_lc3_cfg.rxconfig_index = atoi(value);
+            btsco_lc3_cfg.fields_map |= LC3_RXCFG_IDX_BIT;
+        } else if (!strcmp(key, "txconfig_index")) {
+            btsco_lc3_cfg.txconfig_index = atoi(value);
+            btsco_lc3_cfg.fields_map |= LC3_TXCFG_IDX_BIT;
+        } else if (!strcmp(key, "version")) {
+            btsco_lc3_cfg.api_version = atoi(value);
+            btsco_lc3_cfg.fields_map |= LC3_VERSION_BIT;
+        }
+    }
+
+    if ((btsco_lc3_cfg.fields_map & LC3_BIT_MASK) == LC3_BIT_VALID) {
+        pal_param_btsco_t param_bt_sco;
+        param_bt_sco.bt_lc3_speech_enabled = true;
+        strlcpy((char *)&(param_bt_sco.lc3_cfg), (char *)&btsco_lc3_cfg, sizeof(btsco_lc3_cfg_t));
+
+        AHAL_INFO("BTSCO LC3 on = %d", param_bt_sco.bt_lc3_speech_enabled);
+        ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
+                            sizeof(pal_param_btsco_t));
+
+        memset(&btsco_lc3_cfg, 0, sizeof(btsco_lc3_cfg_t));
     }
 
     ret = str_parms_get_str(parms, "wfd_channel_cap", value, sizeof(value));
@@ -1786,7 +1822,7 @@ struct audio_module HAL_MODULE_INFO_SYM = {
     },
 };
 
-audio_patch_handle_t AudioPatch::generate_patch_handle_l(){
+audio_patch_handle_t AudioPatch::generate_patch_handle_l() {
     static audio_patch_handle_t handles = AUDIO_PATCH_HANDLE_NONE;
     if (++handles < 0)
         handles = AUDIO_PATCH_HANDLE_NONE + 1;
@@ -1796,7 +1832,7 @@ audio_patch_handle_t AudioPatch::generate_patch_handle_l(){
 AudioPatch::AudioPatch(PatchType patch_type,
                        const std::vector<struct audio_port_config>& sources,
                        const std::vector<struct audio_port_config>& sinks):
-                       type(patch_type), sources(sources), sinks(sinks){
+                       type(patch_type), sources(sources), sinks(sinks) {
         static std::mutex patch_lock;
         std::lock_guard<std::mutex> lock(patch_lock);
         handle = AudioPatch::generate_patch_handle_l();

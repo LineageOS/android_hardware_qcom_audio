@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,6 +35,7 @@
 #include <mutex>
 #include <vector>
 #include <set>
+#include <string>
 
 #include <cutils/properties.h>
 #include <hardware/audio.h>
@@ -42,6 +43,7 @@
 
 #include "AudioStream.h"
 #include "AudioVoice.h"
+#include "PalDefs.h"
 
 #define COMPRESS_VOIP_IO_BUF_SIZE_NB 320
 #define COMPRESS_VOIP_IO_BUF_SIZE_WB 640
@@ -125,10 +127,10 @@ public:
     int GetPalDeviceIds(
             const std::set<audio_devices_t>& hal_device_id,
             pal_device_id_t* pal_device_id);
-    int                       usb_card_id_;
-    int                       usb_dev_num_;
-    int   dp_controller;
-    int   dp_stream;
+    int usb_card_id_;
+    int usb_dev_num_;
+    int dp_controller;
+    int dp_stream;
     int num_va_sessions_ = 0;
     pal_speaker_rotation_type current_rotation;
     static card_status_t sndCardState;
@@ -147,7 +149,7 @@ public:
     int  hdr_channel_count = 0;
     int  hdr_sample_rate = 0;
 protected:
-    AudioDevice(){}
+    AudioDevice() {}
     std::shared_ptr<AudioVoice> VoiceInit();
     static std::shared_ptr<AudioDevice> adev_;
     static std::shared_ptr<audio_hw_device_t> device_;
@@ -156,6 +158,7 @@ protected:
     std::mutex out_list_mutex;
     std::mutex in_list_mutex;
     std::mutex patch_map_mutex;
+    btsco_lc3_cfg_t btsco_lc3_cfg;
     void *offload_effects_lib_;
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;
