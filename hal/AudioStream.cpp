@@ -54,6 +54,17 @@
 #define MAX_READ_RETRY_COUNT 25
 
 #define AFE_PROXY_RECORD_PERIOD_SIZE  768
+static bool is_pcm_format(audio_format_t format)
+{
+    if (format == AUDIO_FORMAT_PCM_16_BIT ||
+        format == AUDIO_FORMAT_PCM_8_BIT ||
+        format == AUDIO_FORMAT_PCM_8_24_BIT ||
+        format == AUDIO_FORMAT_PCM_FLOAT ||
+        format == AUDIO_FORMAT_PCM_24_BIT_PACKED ||
+        format == AUDIO_FORMAT_PCM_32_BIT)
+        return true;
+    return false;
+}
 
 void StreamOutPrimary::GetStreamHandle(audio_stream_out** stream) {
   *stream = (audio_stream_out*)stream_.get();
@@ -1340,6 +1351,16 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
 
         return palStreamType;
     }
+
+    /*
+     *For AUDIO_SOURCE_UNPROCESSED we use LL pal stream as it corresponds to
+     *RAW record graphs ( record with no pp)
+     */
+    if (source_ == AUDIO_SOURCE_UNPROCESSED) {
+        palStreamType = PAL_STREAM_LOW_LATENCY;
+        return palStreamType;
+    }
+
     switch (halStreamFlags) {
         case AUDIO_INPUT_FLAG_FAST:
             palStreamType = PAL_STREAM_LOW_LATENCY;
@@ -1758,7 +1779,7 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
             mPalOutDevice[i].config.sample_rate = mPalOutDevice[0].config.sample_rate;
             mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
             mPalOutDevice[i].config.ch_info = {0, {0}};
-            mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; 
+            mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
             if ((mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_DEVICE) ||
                (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_HEADSET)) {
                 mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
@@ -2070,7 +2091,7 @@ int StreamOutPrimary::Open() {
     streamAttributes_.direction = PAL_AUDIO_OUTPUT;
     streamAttributes_.out_media_config.sample_rate = config_.sample_rate;
     streamAttributes_.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes_.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    streamAttributes_.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
     streamAttributes_.out_media_config.ch_info = ch_info;
 
     if (streamAttributes_.type == PAL_STREAM_COMPRESSED) {
@@ -2089,8 +2110,10 @@ int StreamOutPrimary::Open() {
                streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
         halInputFormat = config_.format;
         halOutputFormat = (audio_format_t)(getAlsaSupportedFmt.at(halInputFormat));
-        AHAL_DBG("halInputFormat %d halOutputFormat %d", halInputFormat, halOutputFormat);
+        streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(halOutputFormat);
         streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[halOutputFormat];
+        AHAL_DBG("halInputFormat %d halOutputFormat %d palformat %d", halInputFormat,
+                 halOutputFormat, streamAttributes_.out_media_config.aud_fmt_id);
         if (streamAttributes_.out_media_config.bit_width == 0)
             streamAttributes_.out_media_config.bit_width = 16;
     } else if ((streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) &&
@@ -2133,7 +2156,7 @@ int StreamOutPrimary::Open() {
         hapticsStreamAttributes.direction = PAL_AUDIO_OUTPUT;
         hapticsStreamAttributes.out_media_config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         hapticsStreamAttributes.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-        hapticsStreamAttributes.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+        hapticsStreamAttributes.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
         hapticsStreamAttributes.out_media_config.ch_info = ch_info;
 
         hapticsDevice = new pal_device;
@@ -2141,7 +2164,7 @@ int StreamOutPrimary::Open() {
         hapticsDevice->config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         hapticsDevice->config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         hapticsDevice->config.ch_info = ch_info;
-        hapticsDevice->config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+        hapticsDevice->config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
         ret = pal_stream_open (&hapticsStreamAttributes,
                           1,
@@ -2689,7 +2712,7 @@ StreamOutPrimary::StreamOutPrimary(
         else
             mPalOutDevice[i].config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-        mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+        mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
         AHAL_INFO("device rate = %#x width=%#x fmt=%#x",
             mPalOutDevice[i].config.sample_rate,
             mPalOutDevice[i].config.bit_width,
@@ -3053,7 +3076,7 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
             mPalInDevice[i].config.sample_rate = mPalInDevice[0].config.sample_rate;
             mPalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
             mPalInDevice[i].config.ch_info = ch_info;
-            mPalInDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+            mPalInDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
             if ((mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_DEVICE) ||
                (mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_HEADSET)) {
                 mPalInDevice[i].address.card_id = adevice->usb_card_id_;
@@ -3186,8 +3209,14 @@ int StreamInPrimary::Open() {
     streamAttributes_.flags = (pal_stream_flags_t)0;
     streamAttributes_.direction = PAL_AUDIO_INPUT;
     streamAttributes_.in_media_config.sample_rate = config_.sample_rate;
-    streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes_.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    if (is_pcm_format(config_.format)) {
+       streamAttributes_.in_media_config.aud_fmt_id = getFormatId.at(config_.format);
+       streamAttributes_.in_media_config.bit_width = format_to_bitwidth_table[config_.format];
+    } else {
+       /*TODO:Update this to support compressed capture using hal apis*/
+       streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+       streamAttributes_.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
+    }
     streamAttributes_.in_media_config.ch_info = ch_info;
 
     if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
@@ -3551,7 +3580,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
         mPalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         // ch_info memory is allocated at resource manager:getdeviceconfig
         mPalInDevice[i].config.ch_info = {0, {0}};
-        mPalInDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+        mPalInDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
         if ((mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_DEVICE) ||
            (mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_HEADSET)) {
             mPalInDevice[i].address.card_id = adevice->usb_card_id_;

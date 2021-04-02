@@ -259,7 +259,11 @@ static const struct string_to_enum channels_name_to_enum_table[] = {
 };
 
 const std::map<uint32_t, pal_audio_fmt_t> getFormatId {
-    {AUDIO_FORMAT_PCM,                 PAL_AUDIO_FMT_DEFAULT_PCM},
+    {AUDIO_FORMAT_PCM_8_BIT,           PAL_AUDIO_FMT_PCM_S8},
+    {AUDIO_FORMAT_PCM_16_BIT,          PAL_AUDIO_FMT_PCM_S16_LE},
+    {AUDIO_FORMAT_PCM_24_BIT_PACKED,   PAL_AUDIO_FMT_PCM_S24_3LE},
+    {AUDIO_FORMAT_PCM_8_24_BIT,        PAL_AUDIO_FMT_PCM_S24_LE},
+    {AUDIO_FORMAT_PCM_32_BIT,          PAL_AUDIO_FMT_PCM_S32_LE},
     {AUDIO_FORMAT_MP3,                 PAL_AUDIO_FMT_MP3},
     {AUDIO_FORMAT_AAC,                 PAL_AUDIO_FMT_AAC},
     {AUDIO_FORMAT_AAC_ADTS,            PAL_AUDIO_FMT_AAC_ADTS},
@@ -286,7 +290,7 @@ const uint32_t format_to_bitwidth_table[] = {
 const std::map<uint32_t, uint32_t> getAlsaSupportedFmt {
     {AUDIO_FORMAT_PCM_32_BIT,           AUDIO_FORMAT_PCM_32_BIT},
     {AUDIO_FORMAT_PCM_FLOAT,            AUDIO_FORMAT_PCM_32_BIT},
-    {AUDIO_FORMAT_PCM_8_24_BIT,         AUDIO_FORMAT_PCM_24_BIT_PACKED},
+    {AUDIO_FORMAT_PCM_8_24_BIT,         AUDIO_FORMAT_PCM_8_24_BIT},
     {AUDIO_FORMAT_PCM_8_BIT,            AUDIO_FORMAT_PCM_8_BIT},
     {AUDIO_FORMAT_PCM_24_BIT_PACKED,    AUDIO_FORMAT_PCM_24_BIT_PACKED},
     {AUDIO_FORMAT_PCM_16_BIT,           AUDIO_FORMAT_PCM_16_BIT},

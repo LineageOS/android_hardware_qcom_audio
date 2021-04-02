@@ -241,18 +241,18 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
     stream_attr.in_media_config.sample_rate = hfpmod.sample_rate;
     stream_attr.in_media_config.bit_width = 16;
     stream_attr.in_media_config.ch_info = ch_info;
-    stream_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
     stream_attr.out_media_config.sample_rate = 48000;
     stream_attr.out_media_config.bit_width = 16;
     stream_attr.out_media_config.ch_info = ch_info;
-    stream_attr.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_attr.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
     devices[0].id = PAL_DEVICE_IN_BLUETOOTH_SCO_HEADSET;
     devices[0].config.sample_rate = hfpmod.sample_rate;
     devices[0].config.bit_width = 16;
     devices[0].config.ch_info = ch_info;
-    devices[0].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    devices[0].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
     devices[1].id = PAL_DEVICE_OUT_SPEAKER;
 
@@ -281,18 +281,18 @@ static int32_t start_hfp(std::shared_ptr<AudioDevice> adev __unused,
     stream_tx_attr.in_media_config.sample_rate = hfpmod.sample_rate;
     stream_tx_attr.in_media_config.bit_width = 16;
     stream_tx_attr.in_media_config.ch_info = ch_info;
-    stream_tx_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_tx_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
     stream_tx_attr.out_media_config.sample_rate = 48000;
     stream_tx_attr.out_media_config.bit_width = 16;
     stream_tx_attr.out_media_config.ch_info = ch_info;
-    stream_tx_attr.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_tx_attr.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
     devices[0].id = PAL_DEVICE_OUT_BLUETOOTH_SCO;
     devices[0].config.sample_rate = hfpmod.sample_rate;
     devices[0].config.bit_width = 16;
     devices[0].config.ch_info = ch_info;
-    devices[0].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    devices[0].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
     devices[1].id = PAL_DEVICE_IN_SPEAKER_MIC;
 

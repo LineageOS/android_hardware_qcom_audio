@@ -485,11 +485,19 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         AHAL_ERR("invalid adevice object");
         goto exit;
     }
+
+    /*> 24 bit is restricted to UNPROCESSED source only,also format supported
+     * from HAL is 24_packed and 8_24
+     *> In case of UNPROCESSED source, for 24 bit, if format requested is other than
+     *  24_packed or 8_24 return error indicating supported format is 8_24
+     *> In case of any other source requesting 24 bit or float return error
+     *  indicating format supported is 16 bit only.
+     *> On error flinger will retry with supported format passed
+     */
     if ((config->format == AUDIO_FORMAT_PCM_FLOAT) ||
         (config->format == AUDIO_FORMAT_PCM_32_BIT) ||
         (config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) ||
         (config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
-        //astream->bit_width = 24;
         if ((source != AUDIO_SOURCE_UNPROCESSED) &&
                 (source != AUDIO_SOURCE_CAMCORDER)) {
             config->format = AUDIO_FORMAT_PCM_16_BIT;
@@ -498,7 +506,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             ret_error = true;
         } else if (!(config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED ||
                     config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
-            config->format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+            /*TODO: This can be updated as AUDIO_FORMAT_PCM_24_BIT_PACKED
+             * based on what the platform wants to configure.
+             */
+            config->format = AUDIO_FORMAT_PCM_8_24_BIT;
             ret_error = true;
         }
 
