@@ -486,6 +486,17 @@ snd_device_t auto_hal_get_snd_device_for_car_audio_stream(int car_audio_stream)
     return snd_device;
 }
 
+bool auto_hal_overwrite_priority_for_auto(struct stream_in *in)
+{
+    /* Don't use the priority_in stream when the source is
+     * AUDIO_SOURCE_ECHO_REFERENCE because the platform_get_input_snd_device
+     * call (below) needs to set the snd_device based the echo ref stream and
+     * NOT based on higher priority streams (such as concurrent recording
+     * streams from the mic) */
+
+    return (in->source == AUDIO_SOURCE_ECHO_REFERENCE);
+}
+
 int auto_hal_get_audio_port(struct audio_hw_device *dev __unused,
                         struct audio_port *config __unused)
 {

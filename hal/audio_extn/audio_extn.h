@@ -1374,6 +1374,7 @@ int audio_extn_auto_hal_get_car_audio_stream_from_address(const char *address);
 int audio_extn_auto_hal_open_output_stream(struct stream_out *out);
 int audio_extn_auto_hal_open_input_stream(struct stream_in *in);
 int audio_extn_auto_hal_open_echo_reference_stream(struct stream_in *in);
+bool audio_extn_auto_hal_overwrite_priority_for_auto(struct stream_in *in);
 bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id);
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
                                 struct audio_port *config);
