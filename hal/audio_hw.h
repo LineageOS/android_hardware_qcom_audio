@@ -748,6 +748,7 @@ struct audio_device {
     int    haptic_pcm_device_id;
     uint8_t *haptic_buffer;
     size_t haptic_buffer_size;
+    int fluence_nn_usecase_id;
 
     /* logging */
     snd_device_t last_logged_snd_device[AUDIO_USECASE_MAX][2]; /* [out, in] */
