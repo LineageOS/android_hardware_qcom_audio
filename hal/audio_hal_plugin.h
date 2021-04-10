@@ -86,6 +86,8 @@ typedef enum
     AUDIO_HAL_PLUGIN_MSG_CODEC_GET_PP_EQ, /**< get EQ params */
     AUDIO_HAL_PLUGIN_MSG_CODEC_GET_PP_EQ_SUBBANDS, /**< get EQ subbands params */
     AUDIO_HAL_PLUGIN_MSG_CODEC_TUNNEL_GET_CMD, /**< pass through get cmds */
+    AUDIO_HAL_PLUGIN_MSG_SILENT_MODE, /**<set silent boot mode */
+    AUDIO_HAL_PLUGIN_MSG_MIC_STATE, /**< enable or disable codec mic */
     AUDIO_HAL_PLUGIN_MSG_MAX
 } audio_hal_plugin_msg_type_t;
 

@@ -7665,6 +7665,11 @@ bool platform_is_edid_supported_sample_rate(void *platform, int sample_rate)
     return false;
 }
 
+int platform_get_is_afe_loopback_enabled(void *platform __unused)
+{
+   return 0;
+}
+
 int platform_set_edid_channels_configuration(void *platform, int channels, int backend_idx __unused, snd_device_t snd_device __unused) {
 
     struct platform_data *my_data = (struct platform_data *)platform;

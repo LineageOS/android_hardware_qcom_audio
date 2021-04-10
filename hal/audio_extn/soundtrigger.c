@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -561,7 +561,7 @@ void audio_extn_sound_trigger_update_device_status(snd_device_t snd_device,
     struct stream_in *active_input = adev_get_active_input(st_dev->adev);
     audio_source_t  source = (active_input == NULL) ?
                                AUDIO_SOURCE_DEFAULT : active_input->source;
-    if (st_dev->adev->mode == AUDIO_MODE_IN_CALL) {
+    if (voice_is_call_state_active_in_call(st_dev->adev)) {
         ev_info.u.usecase.type = USECASE_TYPE_VOICE_CALL;
     } else if ((st_dev->adev->mode == AUDIO_MODE_IN_COMMUNICATION ||
                 source == AUDIO_SOURCE_VOICE_COMMUNICATION) &&

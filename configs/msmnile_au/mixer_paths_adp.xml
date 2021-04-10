@@ -1371,6 +1371,10 @@
         <ctl name="MultiMedia1 Mixer TERT_TDM_TX_0" value="1" />
     </path>
 
+    <path name="echo-reference-external">
+        <ctl name="MultiMedia2 Mixer SEC_TDM_TX_0" value="1" />
+    </path>
+
     <path name="audio-record-compress">
         <ctl name="TERT_TDM_TX_0 Channels" value="One" />
         <ctl name="MultiMedia8 Mixer TERT_TDM_TX_0" value="1" />

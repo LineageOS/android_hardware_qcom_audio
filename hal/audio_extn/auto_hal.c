@@ -336,6 +336,25 @@ int auto_hal_open_input_stream(struct stream_in *in)
     return ret;
 }
 
+/*
+ * Function: auto_hal_open_echo_reference_stream
+ * ---------------------------------------------
+ * opens an input stream to capture an echo reference
+ * and sets for external echo reference
+ *
+ * param *in: stream to be used for echo reference
+ *
+ * returns: 0
+ */
+int auto_hal_open_echo_reference_stream(struct stream_in *in)
+{
+    /* note: this function may be expanded in the future
+    to accommodate other echo reference sources
+    such as an internal AFE loopback. */
+    in->usecase = USECASE_AUDIO_RECORD_ECHO_REF_EXT;
+    return 0;
+}
+
 int auto_hal_open_output_stream(struct stream_out *out)
 {
     int ret = 0;
