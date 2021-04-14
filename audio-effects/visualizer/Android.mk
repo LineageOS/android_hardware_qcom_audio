@@ -64,8 +64,5 @@ LOCAL_CFLAGS += -Wno-tautological-compare
 LOCAL_CFLAGS += -Wno-unused-function
 LOCAL_CFLAGS += -Wno-unused-local-typedef
 
-ifneq ($(filter kona lahaina holi taro,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 endif
