@@ -2498,7 +2498,7 @@ StreamOutPrimary::StreamOutPrimary(
 
     if (!stream_) {
         AHAL_ERR("No memory allocated for stream_");
-        goto error;
+        throw std::runtime_error("No memory allocated for stream_");
     }
     AHAL_ERR("enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)\
           address(%s)", handle, config->format, config->sample_rate, config->channel_mask,
