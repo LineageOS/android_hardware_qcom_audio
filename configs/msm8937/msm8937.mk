@@ -160,7 +160,8 @@ ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
       $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration_common.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
    else
       PRODUCT_COPY_FILES += \
-      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
+      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml \
+      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration_common.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
    endif
 PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
