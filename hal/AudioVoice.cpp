@@ -710,10 +710,11 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
         palDevices[0].id = PAL_DEVICE_IN_PROXY;  //overwrite the device with proxy dev
         palDevices[1].id = PAL_DEVICE_OUT_PROXY;  //overwrite the device with proxy dev
     }
-    if (session->tty_mode == PAL_TTY_HCO) {
+
+    if (session && session->tty_mode == PAL_TTY_HCO) {
         palDevices[1].id = PAL_DEVICE_OUT_HANDSET;  //overwrite the device for HCO
     }
-    if (session->tty_mode == PAL_TTY_VCO) {
+    if (session && session->tty_mode == PAL_TTY_VCO) {
         palDevices[0].id = PAL_DEVICE_IN_HANDSET_MIC;  //overwrite the device for VCO
     }
 
