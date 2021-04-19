@@ -285,7 +285,10 @@ void fm_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parm
     if (ret >= 0) {
         ALOGD("%s: Param: mute", __func__);
         fm.muted = (value[0] == '1');
-        fm_set_volume(0);
+        if(fm.muted)
+           fm_set_volume(0);
+        else
+           fm_set_volume(fm.volume);
     }
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FM_RESTORE_VOLUME, value, sizeof(value));
