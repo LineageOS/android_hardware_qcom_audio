@@ -340,7 +340,7 @@ static audio_channel_mask_t astream_out_get_channels(const struct audio_stream *
         return (audio_channel_mask_t) 0;
     }
 
-    if (astream_out != nullptr) {
+    if (astream_out != nullptr && astream_out->GetChannelMask()) {
         return astream_out->GetChannelMask();
     } else {
         AHAL_ERR("unable to get audio stream");

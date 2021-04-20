@@ -256,6 +256,7 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
     auto patch_it = patch_map_.find(handle);
     if (patch_it == patch_map_.end() || !patch_it->second) {
         AHAL_ERR("Patch info not found with handle %d", handle);
+        patch_map_mutex.unlock();
         return -EINVAL;
     }
     patch = &(*patch_it->second);
@@ -271,6 +272,7 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
         case AUDIO_PORT_TYPE_SESSION:
         case AUDIO_PORT_TYPE_NONE:
             AHAL_DBG("Invalid port type: %d", patch->sources[0].type);
+            patch_map_mutex.unlock();
             return -EINVAL;
     }
     patch_map_mutex.unlock();
@@ -939,6 +941,10 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         AHAL_ERR("Error in VoiceSetParameters %d", ret);
 
     parms = str_parms_create_str(kvpairs);
+    if (!parms) {
+        AHAL_ERR("Error in str_parms_create_str");
+        return 0;
+    }
     AudioExtn::audio_extn_set_parameters(adev_, parms);
 
     ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));

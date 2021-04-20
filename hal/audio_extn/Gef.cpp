@@ -116,6 +116,10 @@ void audio_extn_gef_init(std::shared_ptr<AudioDevice> adev)
         dlerror();
         gef_hal_handle.init =
             (gef_init_t)dlsym(gef_hal_handle.handle, "gef_init");
+
+        if (!gef_hal_handle.init)
+            goto ERROR_RETURN;
+
         error = dlerror();
 
         if(error != NULL) {

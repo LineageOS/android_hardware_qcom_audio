@@ -111,6 +111,10 @@ int32_t fm_set_volume(float value, bool persist=false)
     ALOGD("%s: Setting FM volume to %d", __func__, vol);
 
     pal_volume = (struct pal_volume_data *) malloc(sizeof(struct pal_volume_data) + sizeof(struct pal_channel_vol_kv));
+
+    if (!pal_volume)
+       return -ENOMEM;
+
     pal_volume->no_of_volpair = 1;
     pal_volume->volume_pair[0].channel_mask = 0x03;
     pal_volume->volume_pair[0].vol = value;
@@ -119,6 +123,7 @@ int32_t fm_set_volume(float value, bool persist=false)
     if (ret)
         ALOGE("%s: set volume failed: %d \n", __func__, ret);
 
+    free(pal_volume);
     ALOGV("%s: exit", __func__);
     return ret;
 }
