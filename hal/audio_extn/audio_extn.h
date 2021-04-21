@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,6 +41,8 @@ typedef enum st_event_type st_event_type_t;
 int audio_extn_sound_trigger_init(std::shared_ptr<AudioDevice> adev);
 void audio_extn_sound_trigger_deinit(std::shared_ptr<AudioDevice> adev);
 void* audio_extn_sound_trigger_check_and_get_session(
+    StreamInPrimary *in_stream);
+bool audio_extn_sound_trigger_check_session_activity(
     StreamInPrimary *in_stream);
 
 extern "C" int audio_hw_get_gain_level_mapping(struct pal_amp_db_and_gain_table *mapping_tbl,
