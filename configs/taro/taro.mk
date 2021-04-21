@@ -218,6 +218,10 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     af.fast_track_multiplier=1
 
+# Reduce AF standby time for playback threads (except offload)
+PRODUCT_PROPERTY_OVERRIDES += \
+   ro.audio.flinger_standbytime_ms=2000
+
 # Low latency audio buffer size in frames
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.audio_hal.period_size=192
