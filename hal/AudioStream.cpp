@@ -2319,6 +2319,12 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes)
             pal_stream_close(pal_stream_handle_);
             pal_stream_handle_ = NULL;
             ATRACE_END();
+            if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS &&
+                pal_haptics_stream_handle) {
+                AHAL_ERR("Close haptics stream");
+                pal_stream_close(pal_haptics_stream_handle);
+                pal_haptics_stream_handle = NULL;
+            }
             goto exit;
         }
         if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
