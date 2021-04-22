@@ -9555,7 +9555,9 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             ALOGD("%s:becf: afe: %s mixer set to %d bit for %x format", __func__,
                   my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl, bit_width, format);
             for (int idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
-                if (my_data->current_backend_cfg[idx].bitwidth_mixer_ctl) {
+                if (my_data->current_backend_cfg[idx].bitwidth_mixer_ctl
+                        && strcmp(my_data->current_backend_cfg[idx].bitwidth_mixer_ctl,
+                        my_data->current_backend_cfg[backend_idx].bitwidth_mixer_ctl) == 0) {
                     ctl = mixer_get_ctl_by_name(adev->mixer,
                                  my_data->current_backend_cfg[idx].bitwidth_mixer_ctl);
                     id_string = platform_get_mixer_control(ctl);
@@ -9660,7 +9662,9 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             ALOGD("%s:becf: afe: %s set to %s", __func__,
                   my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl, rate_str);
             for (int idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
-                if (my_data->current_backend_cfg[idx].samplerate_mixer_ctl) {
+                if (my_data->current_backend_cfg[idx].samplerate_mixer_ctl
+                        && strcmp(my_data->current_backend_cfg[idx].samplerate_mixer_ctl,
+                        my_data->current_backend_cfg[backend_idx].samplerate_mixer_ctl) == 0) {
                     ctl = mixer_get_ctl_by_name(adev->mixer,
                                  my_data->current_backend_cfg[idx].samplerate_mixer_ctl);
                     id_string = platform_get_mixer_control(ctl);
@@ -9715,7 +9719,9 @@ static int platform_set_codec_backend_cfg(struct audio_device* adev,
             ALOGD("%s:becf: afe: %s set to %s", __func__,
                   my_data->current_backend_cfg[backend_idx].channels_mixer_ctl, channel_cnt_str);
             for (int idx = 0; idx < MAX_CODEC_BACKENDS; idx++) {
-                if (my_data->current_backend_cfg[idx].channels_mixer_ctl) {
+                if (my_data->current_backend_cfg[idx].channels_mixer_ctl &&
+                        strcmp(my_data->current_backend_cfg[idx].channels_mixer_ctl,
+                        my_data->current_backend_cfg[backend_idx].channels_mixer_ctl) == 0) {
                     ctl = mixer_get_ctl_by_name(adev->mixer,
                                  my_data->current_backend_cfg[idx].channels_mixer_ctl);
                     id_string = platform_get_mixer_control(ctl);
