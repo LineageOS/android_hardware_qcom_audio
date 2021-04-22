@@ -190,6 +190,7 @@ LOCAL_SHARED_LIBRARIES := \
         libcutils \
         liblog \
         libdl \
+        libar-pal \
         libaudioutils
 
 LOCAL_MODULE_RELATIVE_PATH := soundfx
@@ -201,6 +202,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_C_INCLUDES := \
         vendor/qcom/opensource/audio-hal/primary-hal/hal \
+        vendor/qcom/opensource/pal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
