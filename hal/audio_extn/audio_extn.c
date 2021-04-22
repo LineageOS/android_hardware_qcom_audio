@@ -6134,6 +6134,9 @@ typedef snd_device_t (*auto_hal_get_snd_device_for_car_audio_stream_t)(int
                                 car_audio_stream);
 static auto_hal_get_snd_device_for_car_audio_stream_t auto_hal_get_snd_device_for_car_audio_stream;
 
+typedef bool (*auto_hal_overwrite_priority_for_auto_t)(struct stream_in*);
+static auto_hal_overwrite_priority_for_auto_t auto_hal_overwrite_priority_for_auto;
+
 int auto_hal_feature_init(bool is_feature_enabled)
 {
     ALOGD("%s: Called with feature %s", __func__,
@@ -6195,7 +6198,10 @@ int auto_hal_feature_init(bool is_feature_enabled)
                             auto_hal_lib_handle, "auto_hal_get_output_snd_device")) ||
             !(auto_hal_get_snd_device_for_car_audio_stream =
                  (auto_hal_get_snd_device_for_car_audio_stream_t)dlsym(
-                            auto_hal_lib_handle, "auto_hal_get_snd_device_for_car_audio_stream"))) {
+                            auto_hal_lib_handle, "auto_hal_get_snd_device_for_car_audio_stream")) ||
+            !(auto_hal_overwrite_priority_for_auto =
+                 (auto_hal_overwrite_priority_for_auto_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_overwrite_priority_for_auto"))) {
             ALOGE("%s: dlsym failed", __func__);
             goto feature_disabled;
         }
@@ -6226,6 +6232,7 @@ feature_disabled:
     auto_hal_get_input_snd_device = NULL;
     auto_hal_get_output_snd_device = NULL;
     auto_hal_get_snd_device_for_car_audio_stream = NULL;
+    auto_hal_overwrite_priority_for_auto = NULL;
 
     ALOGW(":: %s: ---- Feature AUTO_HAL is disabled ----", __func__);
     return -ENOSYS;
@@ -6366,6 +6373,13 @@ snd_device_t audio_extn_auto_hal_get_snd_device_for_car_audio_stream(int car_aud
     return ((auto_hal_get_snd_device_for_car_audio_stream) ?
                             auto_hal_get_snd_device_for_car_audio_stream(car_audio_stream): SND_DEVICE_NONE);
 }
+
+bool audio_extn_auto_hal_overwrite_priority_for_auto(struct stream_in *in)
+{
+    return ((auto_hal_overwrite_priority_for_auto) ?
+                            auto_hal_overwrite_priority_for_auto(in): false);
+}
+
 // END: AUTO_HAL ===================================================================
 
 // START: Synth ======================================================================
