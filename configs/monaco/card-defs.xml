@@ -49,7 +49,7 @@
  <defs>
  <card>
      <id>100</id>
-     <name>monacoidpsndcar,monacoidpamicsn,monacoidpwsasnd</name>
+     <name>monacoidpsndcar,monacoidpamicsn,monacoidpwsasnd,monacoidpslates,monacoidpslatea,monacoidpslatew</name>
      <pcm-device>
         <id>100</id>
         <name>PCM100</name>

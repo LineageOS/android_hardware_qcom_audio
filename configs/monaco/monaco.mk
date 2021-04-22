@@ -194,6 +194,9 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/mixer_paths_amic.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_amic.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/mixer_paths_wsa.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wsa.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/mixer_paths_slate.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_slate.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/mixer_paths_slate_amic.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_slate_amic.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/mixer_paths_slate_wsa.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_slate_wsa.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/audio_configs_stock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs_stock.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
@@ -201,6 +204,9 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/pal/configs/monaco/resourcemanager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager.xml \
     vendor/qcom/opensource/pal/configs/monaco/resourcemanager_amic.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_amic.xml \
     vendor/qcom/opensource/pal/configs/monaco/resourcemanager_wsa.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_wsa.xml \
+    vendor/qcom/opensource/pal/configs/monaco/resourcemanager_slate.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_slate.xml \
+    vendor/qcom/opensource/pal/configs/monaco/resourcemanager_slate_amic.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_slate_amic.xml \
+    vendor/qcom/opensource/pal/configs/monaco/resourcemanager_slate_wsa.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_slate_wsa.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml
 
 #XML Audio configuration files
