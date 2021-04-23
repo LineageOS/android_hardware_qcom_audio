@@ -149,6 +149,7 @@ public:
     int  hdr_channel_count = 0;
     int  hdr_sample_rate = 0;
     int cameraOrientation = CAMERA_DEFAULT;
+    bool usb_input_dev_enabled = false;
 protected:
     AudioDevice() {}
     std::shared_ptr<AudioVoice> VoiceInit();
@@ -169,7 +170,6 @@ protected:
     visualizer_hal_stop_output fnp_visualizer_stop_output_ = nullptr;
     std::map<audio_devices_t, pal_device_id_t> android_device_map_;
     std::map<audio_patch_handle_t, AudioPatch*> patch_map_;
-    bool usb_input_dev_enabled = false;
     int add_input_headset_if_usb_out_headset(int *device_count,  pal_device_id_t** pal_device_ids);
 };
 
