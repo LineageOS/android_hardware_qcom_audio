@@ -7,6 +7,8 @@ AUDIO_USE_STUB_HAL := true
 endif
 endif
 
+TARGET_USES_ION_CMA_MEMORY := true
+
 ifneq ($(AUDIO_USE_STUB_HAL), true)
 BOARD_USES_ALSA_AUDIO := true
 TARGET_USES_AOSP_FOR_AUDIO := false
@@ -154,6 +156,10 @@ PRODUCT_PACKAGES += IDP_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += libfmpal
+PRODUCT_PACKAGES += event.eai
+PRODUCT_PACKAGES += music.eai
+PRODUCT_PACKAGES += speech.eai
+PRODUCT_PACKAGES += libqtigefar
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays

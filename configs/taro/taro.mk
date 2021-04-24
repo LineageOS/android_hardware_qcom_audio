@@ -153,6 +153,11 @@ PRODUCT_PACKAGES += IDP_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += libfmpal
+PRODUCT_PACKAGES += event.eai
+PRODUCT_PACKAGES += music.eai
+PRODUCT_PACKAGES += speech.eai
+PRODUCT_PACKAGES += libqtigefar
+
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
@@ -381,6 +386,10 @@ persist.audio.fluence.voicecomm=true
 #enable c2 based encoders/decoders as default NT decoders/encoders
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.c2.preferred=true
+
+#Enable dmaBuf heap usage by C2 components
+PRODUCT_PROPERTY_OVERRIDES += \
+debug.c2.use_dmabufheaps=1
 
 ifneq ($(GENERIC_ODM_IMAGE),true)
 $(warning "Enabling codec2.0 SW only for non-generic odm build variant")

@@ -9,14 +9,10 @@ else
 ifneq ($(filter mpq8092,$(TARGET_BOARD_PLATFORM)),)
 include $(MY_LOCAL_PATH)/hal_mpq/Android.mk
 else
-include $(MY_LOCAL_PATH)/hal-pal/Android.mk
-include $(MY_LOCAL_PATH)/hal-pal/audio_extn/Android.mk
+include $(MY_LOCAL_PATH)/hal/Android.mk
+include $(MY_LOCAL_PATH)/hal/audio_extn/Android.mk
 endif
-#include $(MY_LOCAL_PATH)/hal/audio_extn/Android.mk
 include $(MY_LOCAL_PATH)/audio-effects/Android.mk
-#include $(MY_LOCAL_PATH)/mm-audio/Android.mk
-include $(MY_LOCAL_PATH)/qahw/Android.mk
-include $(MY_LOCAL_PATH)/qahw_api/Android.mk
 endif
 
 ifeq ($(USE_LEGACY_AUDIO_DAEMON), true)

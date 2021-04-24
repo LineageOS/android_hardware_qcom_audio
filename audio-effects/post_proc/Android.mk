@@ -4,6 +4,7 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -DLIB_AUDIO_HAL="/vendor/lib/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
+LOCAL_CFLAGS += -DPLATFORM_NAME=$(TARGET_BOARD_PLATFORM)
 LOCAL_CFLAGS += -Wno-unused-variable
 LOCAL_CFLAGS += -Wno-sign-compare
 LOCAL_CFLAGS += -Wno-unused-parameter
@@ -64,7 +65,8 @@ endif
 LOCAL_HEADER_LIBRARIES := libhardware_headers \
                           libsystem_headers \
                           libacdb_headers \
-                          libutils_headers
+                          libutils_headers \
+                          qti_audio_kernel_uapi
 
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
@@ -160,6 +162,7 @@ ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv sdm71
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -DLIB_AUDIO_HAL="/vendor/lib/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
+LOCAL_CFLAGS += -DPLATFORM_NAME=$(TARGET_BOARD_PLATFORM)
 LOCAL_CFLAGS += -Wno-unused-variable
 LOCAL_CFLAGS += -Wno-sign-compare
 LOCAL_CFLAGS += -Wno-unused-parameter
