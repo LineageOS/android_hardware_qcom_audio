@@ -3227,4 +3227,7 @@
     <path name="call-proxy-in">
     </path>
 
+    <path name="ext_ec_ref_tx">
+    </path>
+
 </mixer>
