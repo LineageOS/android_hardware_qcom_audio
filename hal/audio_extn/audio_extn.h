@@ -38,6 +38,25 @@ enum st_event_type {
 };
 typedef enum st_event_type st_event_type_t;
 
+typedef enum {
+    ST_EVENT_SESSION_REGISTER,
+    ST_EVENT_SESSION_DEREGISTER,
+    ST_EVENT_START_KEEP_ALIVE,
+    ST_EVENT_STOP_KEEP_ALIVE,
+    ST_EVENT_UPDATE_ECHO_REF
+} sound_trigger_event_type_t;
+
+struct sound_trigger_session_info {
+    void* p_ses; /* opaque pointer to st_session obj */
+    int capture_handle;
+};
+
+struct sound_trigger_event_info {
+    struct sound_trigger_session_info st_ses;
+    bool st_ec_ref_enabled;
+};
+typedef struct sound_trigger_event_info sound_trigger_event_info_t;
+
 int audio_extn_sound_trigger_init(std::shared_ptr<AudioDevice> adev);
 void audio_extn_sound_trigger_deinit(std::shared_ptr<AudioDevice> adev);
 void* audio_extn_sound_trigger_check_and_get_session(
