@@ -458,12 +458,14 @@ protected:
     struct pal_volume_data *volume_; /* used to cache volume */
     std::map <audio_devices_t, pal_device_id_t> mAndroidDeviceMap;
 
-    bool AcquirePerfLock();
-    void ReleasePerfLock();
 };
 
 class StreamOutPrimary : public StreamPrimary {
 private:
+    // Helper function for write to open pal stream & configure.
+    ssize_t configurePalOutputStream();
+    //Helper method to standby streams upon write failures and sleep for buffer duration.
+    ssize_t onWriteError(size_t bytes);
     struct pal_device* mPalOutDevice;
     pal_device_id_t* mPalOutDeviceIds;
     std::set<audio_devices_t> mAndroidOutDevices;
@@ -492,7 +494,7 @@ public:
     int Flush();
     int Start();
     int Stop();
-    ssize_t Write(const void *buffer, size_t bytes);
+    ssize_t write(const void *buffer, size_t bytes);
     int Open();
     void GetStreamHandle(audio_stream_out** stream);
     uint32_t GetBufferSize();
@@ -525,7 +527,7 @@ protected:
     uint32_t msample_rate;
     uint16_t mchannels;
     std::shared_ptr<audio_stream_out>   stream_;
-    uint64_t total_bytes_written_; /* total frames written, not cleared when entering standby */
+    uint64_t mBytesWritten; /* total bytes written, not cleared when entering standby */
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;
     visualizer_hal_start_output fnp_visualizer_start_output_ = nullptr;
@@ -549,6 +551,8 @@ private:
      pal_device_id_t* mPalInDeviceIds;
      std::set<audio_devices_t> mAndroidInDevices;
      bool mInitialized;
+    //Helper method to standby streams upon read failures and sleep for buffer duration.
+    ssize_t onReadError(size_t bytes);
 public:
     StreamInPrimary(audio_io_handle_t handle,
                     const std::set<audio_devices_t> &devices,
@@ -565,7 +569,7 @@ public:
     int Start();
     int Stop();
     int SetMicMute(bool mute);
-    ssize_t Read(const void *buffer, size_t bytes);
+    ssize_t read(const void *buffer, size_t bytes);
     uint32_t GetBufferSize();
     pal_stream_type_t GetPalStreamType(audio_input_flags_t halStreamFlags,
             uint32_t sample_rate);
@@ -589,7 +593,7 @@ protected:
     std::shared_ptr<audio_stream_in>    stream_;
     audio_source_t                      source_;
     friend class AudioDevice;
-    uint64_t total_bytes_read_; /* total frames written, not cleared when entering standby */
+    uint64_t mBytesRead; /* total bytes read, not cleared when entering standby */
     bool isECEnabled = false;
     bool isNSEnabled = false;
     bool effects_applied_ = true;
