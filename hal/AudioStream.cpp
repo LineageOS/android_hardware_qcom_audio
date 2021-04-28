@@ -1377,9 +1377,14 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
             break;
         case AUDIO_INPUT_FLAG_HW_HOTWORD:
         case AUDIO_INPUT_FLAG_NONE:
-            if (isDeviceAvailable(PAL_DEVICE_IN_TELEPHONY_RX))
-                palStreamType = PAL_STREAM_PROXY;
-            else
+            if (isDeviceAvailable(PAL_DEVICE_IN_TELEPHONY_RX)) {
+                if (source_ == AUDIO_SOURCE_VOICE_UPLINK ||
+                    source_ == AUDIO_SOURCE_VOICE_DOWNLINK ||
+                    source_ == AUDIO_SOURCE_VOICE_CALL) {
+                    palStreamType = PAL_STREAM_VOICE_CALL_RECORD;
+                } else
+                    palStreamType = PAL_STREAM_PROXY;
+            } else
                 palStreamType = PAL_STREAM_DEEP_BUFFER;
             break;
         default:
@@ -3313,7 +3318,8 @@ uint32_t StreamInPrimary::GetBufferSize() {
             audio_bytes_per_frame(
                     audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
-    } else if (streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
+    } else if (streamAttributes_.type == PAL_STREAM_DEEP_BUFFER ||
+               streamAttributes_.type == PAL_STREAM_VOICE_CALL_RECORD) {
         return (config_.sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC/ 1000) *
             audio_bytes_per_frame(
                     audio_channel_count_from_in_mask(config_.channel_mask),
