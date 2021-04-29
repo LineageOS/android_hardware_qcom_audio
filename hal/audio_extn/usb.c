@@ -336,7 +336,7 @@ static int usb_get_capability(int type,
     char *bit_width_str = NULL;
     struct usb_device_config * usb_device_info;
     bool check = false;
-    int tries=5;
+    int tries=3;
 
     memset(path, 0, sizeof(path));
     ALOGV("%s: for %s", __func__, (type == USB_PLAYBACK) ?
@@ -354,7 +354,7 @@ static int usb_get_capability(int type,
     // TODO: figure up if this wait is needed any more
     while (tries--) {
         if (access(path, F_OK) < 0) {
-            ALOGW("stream %s doesn't exist retrying\n", path);
+            ALOGW("stream %s doesn't exist retrying %d more times\n", path, tries);
             sleep(1);
             continue;
         }
