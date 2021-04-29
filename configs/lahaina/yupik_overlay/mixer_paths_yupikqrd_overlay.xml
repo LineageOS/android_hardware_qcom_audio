@@ -270,4 +270,8 @@
     <path name="mmap-record capture-fm">
         <ctl name="MultiMedia16 Mixer SEC_MI2S_TX" value="1"/>
     </path>
+    <path name="audio-with-haptics-playback handset">
+        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
+        <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1"/>
+    </path>
 </mixer>
