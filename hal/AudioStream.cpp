@@ -1729,11 +1729,12 @@ int StreamOutPrimary::Standby() {
 
 int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
     int ret = 0, noPalDevices = 0;
+    bool forceRouting = false;
     pal_device_id_t * deviceId;
     struct pal_device* deviceIdConfigs;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    if (!mInitialized){
+    if (!mInitialized) {
         AHAL_ERR("Not initialized, returning error");
         ret = -EINVAL;
         goto done;
@@ -1746,9 +1747,12 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
              AudioExtn::get_device_types(mAndroidOutDevices),
              mAndroidOutDevices.size());
 
-    /* If its the same device as what was already routed to, dont bother */
-    if (!AudioExtn::audio_devices_empty(new_devices) && mAndroidOutDevices != new_devices) {
-        //re-allocate mPalOutDevice and mPalOutDeviceIds
+    forceRouting = AudioExtn::audio_devices_cmp(new_devices, audio_is_a2dp_out_device);
+
+    /* Ignore routing to same device unless it's forced */
+    if ((!AudioExtn::audio_devices_empty(new_devices) && (mAndroidOutDevices != new_devices))
+            || forceRouting) {
+        // re-allocate mPalOutDevice and mPalOutDeviceIds
         if (new_devices.size() != mAndroidOutDevices.size()) {
             deviceId = (pal_device_id_t*) realloc(mPalOutDeviceIds,
                     new_devices.size() * sizeof(pal_device_id_t));
@@ -1787,17 +1791,17 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
             }
         }
 
-        mAndroidOutDevices = new_devices;
-
-        if (pal_stream_handle_){
+        if (pal_stream_handle_) {
             ret = pal_stream_set_device(pal_stream_handle_, noPalDevices, mPalOutDevice);
-            if (!ret)
+            if (!ret) {
+                mAndroidOutDevices = new_devices;
                 for (const auto &dev : mAndroidOutDevices)
                     audio_extn_gef_notify_device_config(dev,
                             config_.channel_mask,
                             config_.sample_rate, flags_);
-            else
+            } else {
                 AHAL_ERR("failed to set device. Error %d" ,ret);
+            }
         }
     }
 

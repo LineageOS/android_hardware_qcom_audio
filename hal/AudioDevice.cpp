@@ -1240,7 +1240,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value, sizeof(value));
     if (ret >= 0) {
         pal_param_bta2dp_t param_bt_a2dp;
-        param_bt_a2dp.reconfigured = true;
+        param_bt_a2dp.reconfig = true;
 
         AHAL_INFO("BT A2DP Reconfig command received");
         ret = pal_set_param(PAL_PARAM_ID_BT_A2DP_RECONFIG, (void *)&param_bt_a2dp,
