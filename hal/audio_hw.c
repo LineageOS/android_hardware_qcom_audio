@@ -10787,8 +10787,7 @@ static int adev_open(const hw_module_t *module, const char *name,
             configured_low_latency_capture_period_size = trial;
         }
     }
-    if ((property_get("vendor.audio_hal.in_period_size", value, NULL) > 0) ||
-        (property_get("audio_hal.in_period_size", value, NULL) > 0)) {
+    if (property_get("vendor.audio_hal.in_period_size", value, NULL) > 0) {
         trial = atoi(value);
         if (period_size_is_plausible_for_low_latency(trial)) {
             configured_low_latency_capture_period_size = trial;
