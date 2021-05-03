@@ -214,10 +214,10 @@
     <ctl name="HPHR Volume" value="20" />
 
     <ctl name="TX_DEC0 Volume" value="102" />
-    <ctl name="TX_DEC1 Volume" value="102" />
-    <ctl name="TX_DEC2 Volume" value="102" />
-    <ctl name="TX_DEC3 Volume" value="102" />
-    <ctl name="TX_DEC4 Volume" value="102" />
+    <ctl name="TX_DEC1 Volume" value="114" />
+    <ctl name="TX_DEC2 Volume" value="114" />
+    <ctl name="TX_DEC3 Volume" value="114" />
+    <ctl name="TX_DEC4 Volume" value="144" />
     <ctl name="TX_DEC5 Volume" value="84" />
     <ctl name="TX_DEC6 Volume" value="84" />
     <ctl name="TX_DEC7 Volume" value="84" />
@@ -2006,7 +2006,7 @@
 
     <path name="sidetone-handset">
         <path name="sidetone-iir" />
-        <ctl name="IIR0 INP0 Volume" value="54" />
+        <ctl name="IIR0 INP0 Volume" value="0" />
         <ctl name="IIR0 INP0 MUX" value="DEC2" />
         <ctl name="RX INT2 MIX2 INP" value="SRC0" />
         <ctl name="WSA_RX0 INT0 SIDETONE MIX" value="SRC0" />
@@ -2082,7 +2082,7 @@
         <ctl name="SpkrLeft COMP Switch" value="1" />
         <ctl name="SpkrLeft VISENSE Switch" value="1" />
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
-        <ctl name="WSA_RX0 Digital Volume" value="50" />
+        <ctl name="WSA_RX0 Digital Volume" value="70" />
     </path>
 
     <path name="handset-mic">
