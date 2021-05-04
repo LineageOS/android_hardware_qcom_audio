@@ -148,6 +148,8 @@ PRODUCT_PACKAGES += ftm_test_config
 PRODUCT_PACKAGES += ftm_test_config_waipio-qrd-snd-card
 PRODUCT_PACKAGES += audioadsprpcd
 PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
+PRODUCT_PACKAGES += android.hardware.audio.service_64
+PRODUCT_PACKAGES += android.hardware.audio.service_64.rc
 PRODUCT_PACKAGES += IDP_acdb_cal.acdb
 PRODUCT_PACKAGES += IDP_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_acdb_cal.acdb
@@ -486,7 +488,7 @@ vendor.audio.feature.dmabuf.cma.memory.enable=true
 
 # for HIDL related packages
 PRODUCT_PACKAGES += \
-    android.hardware.audio@2.0-service \
+    android.hardware.audio@2.0-service_64 \
     android.hardware.audio@2.0-impl \
     android.hardware.audio.effect@2.0-impl \
     android.hardware.soundtrigger@2.1-impl \
