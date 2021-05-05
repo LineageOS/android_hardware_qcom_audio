@@ -1817,6 +1817,11 @@
         <path name="compress-offload-playback9" />
     </path>
 
+    <path name="audio-with-haptics-playback handset">
+        <ctl name="RX_CDC_DMA_RX_6 Audio Mixer MultiMedia32" value="1"/>
+        <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia31" value="1"/>
+    </path>
+
     <path name="audio-record">
         <ctl name="MultiMedia1 Mixer TX_CDC_DMA_TX_3" value="1" />
     </path>
