@@ -49,6 +49,16 @@
 #define COMPRESS_VOIP_IO_BUF_SIZE_FB 1920
 #define MAX_PERF_LOCK_OPTS 20
 
+/* HDR Audio use case parameters */
+#define AUDIO_PARAMETER_KEY_HDR "hdr_record_on"
+#define AUDIO_PARAMETER_KEY_WNR "wnr_on"
+#define AUDIO_PARAMETER_KEY_ANS "ans_on"
+#define AUDIO_PARAMETER_KEY_ORIENTATION "orientation"
+#define AUDIO_PARAMETER_KEY_INVERTED "inverted"
+#define AUDIO_PARAMETER_KEY_FACING "facing"
+#define AUDIO_PARAMETER_KEY_HDR_CHANNELS "hdr_audio_channel_count"
+#define AUDIO_PARAMETER_KEY_HDR_SAMPLERATE "hdr_audio_sampling_rate"
+
 class AudioPatch{
     public:
         enum PatchType{
@@ -128,6 +138,14 @@ public:
     int perf_lock_handle;
     int perf_lock_opts[MAX_PERF_LOCK_OPTS];
     int perf_lock_opts_size;
+    bool hdr_record_enabled = false;
+    bool wnr_enabled = false;
+    bool ans_enabled = false;
+    bool orientation_landscape = true;
+    bool inverted = false;
+    int  facing = 0; /*0 - none, 1 - back, 2 - front/selfie*/
+    int  hdr_channel_count = 0;
+    int  hdr_sample_rate = 0;
 protected:
     AudioDevice(){}
     std::shared_ptr<AudioVoice> VoiceInit();

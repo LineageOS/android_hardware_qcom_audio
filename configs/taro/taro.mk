@@ -486,7 +486,8 @@ vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=true \
-vendor.audio.feature.dmabuf.cma.memory.enable=true
+vendor.audio.feature.dmabuf.cma.memory.enable=true \
+vendor.audio.hdr.record.enable=false
 
 
 # for HIDL related packages

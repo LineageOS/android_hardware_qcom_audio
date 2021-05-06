@@ -66,6 +66,42 @@ static bool is_pcm_format(audio_format_t format)
     return false;
 }
 
+static bool is_hdr_mode_enabled() {
+    if (!property_get_bool("vendor.audio.hdr.record.enable", false)) {
+        AHAL_INFO("HDR feature is disabled");
+        return false;
+    }
+
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    return adevice->hdr_record_enabled;
+}
+
+static void setup_hdr_usecase(struct pal_device* palInDevice) {
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    bool orientationLandscape = adevice->orientation_landscape;
+    bool orientationInverted = adevice->inverted;
+
+    if (orientationLandscape && !orientationInverted) {
+        strlcpy(palInDevice->custom_config.custom_key,
+            "unprocessed-hdr-mic-landscape",
+            sizeof(palInDevice->custom_config.custom_key));
+    } else if (!orientationLandscape && !orientationInverted) {
+        strlcpy(palInDevice->custom_config.custom_key,
+            "unprocessed-hdr-mic-portrait",
+            sizeof(palInDevice->custom_config.custom_key));
+    } else if (orientationLandscape && orientationInverted) {
+        strlcpy(palInDevice->custom_config.custom_key,
+            "unprocessed-hdr-mic-inverted-landscape",
+            sizeof(palInDevice->custom_config.custom_key));
+    } else if (!orientationLandscape && orientationInverted) {
+        strlcpy(palInDevice->custom_config.custom_key,
+            "unprocessed-hdr-mic-inverted-portrait",
+            sizeof(palInDevice->custom_config.custom_key));
+    }
+    AHAL_INFO("Setting custom key as %s",
+        palInDevice->custom_config.custom_key);
+}
+
 void StreamOutPrimary::GetStreamHandle(audio_stream_out** stream) {
   *stream = (audio_stream_out*)stream_.get();
 }
@@ -3095,6 +3131,9 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
                 mPalInDevice[i].address.card_id = adevice->usb_card_id_;
                 mPalInDevice[i].address.device_num = adevice->usb_dev_num_;
             }
+            /* HDR use case check */
+            if (is_hdr_mode_enabled())
+                setup_hdr_usecase(&mPalInDevice[i]);
         }
 
         mAndroidInDevices = new_devices;
@@ -3599,6 +3638,18 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
            (mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_HEADSET)) {
             mPalInDevice[i].address.card_id = adevice->usb_card_id_;
             mPalInDevice[i].address.device_num = adevice->usb_dev_num_;
+        }
+        /* HDR use case check */
+        if ( (source_ == AUDIO_SOURCE_UNPROCESSED) &&
+           (config_.sample_rate == 48000) ) {
+            uint8_t channels =
+                audio_channel_count_from_in_mask(config_.channel_mask);
+            if (channels == 4) {
+                if (is_hdr_mode_enabled()) {
+                    flags = flags_ = AUDIO_INPUT_FLAG_RAW;
+                    setup_hdr_usecase(&mPalInDevice[i]);
+                }
+            }
         }
     }
 

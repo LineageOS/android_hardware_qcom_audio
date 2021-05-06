@@ -2795,6 +2795,22 @@
         <path name="speaker-qmic-liquid" />
     </path>
 
+    <path name="unprocessed-hdr-mic-landscape">
+        <path name="speaker-qmic" />
+    </path>
+
+    <path name="unprocessed-hdr-mic-inverted-landscape">
+        <path name="speaker-qmic" />
+    </path>
+
+    <path name="unprocessed-hdr-mic-portrait">
+        <path name="speaker-qmic" />
+    </path>
+
+    <path name="unprocessed-hdr-mic-inverted-portrait">
+        <path name="speaker-qmic" />
+    </path>
+
     <!-- TTY devices -->
 
     <path name="tty-headphones">

@@ -57,6 +57,197 @@
 
 card_status_t AudioDevice::sndCardState = CARD_STATUS_ONLINE;
 
+static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
+    struct str_parms *parms) {
+
+    if (adev == nullptr || parms == nullptr) {
+        AHAL_ERR("%s Invalid arguments", __func__);
+        return;
+    }
+
+    int ret = 0, val = 0;
+    char value[32];
+
+    /* HDR Audio Parameters */
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HDR, value,
+              sizeof(value));
+    if (ret >= 0) {
+        if (strncmp(value, "true", 4) == 0)
+            adev->hdr_record_enabled = true;
+        else
+            adev->hdr_record_enabled = false;
+
+        AHAL_INFO("HDR Enabled: %d", adev->hdr_record_enabled);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_WNR, value,
+              sizeof(value));
+    if (ret >= 0) {
+        if (strncmp(value, "true", 4) == 0)
+            adev->wnr_enabled = true;
+        else
+            adev->wnr_enabled = false;
+
+        AHAL_INFO("WNR Enabled: %d", adev->wnr_enabled);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_ANS, value,
+              sizeof(value));
+    if (ret >= 0) {
+        if (strncmp(value, "true", 4) == 0)
+            adev->ans_enabled = true;
+        else
+            adev->ans_enabled = false;
+
+        AHAL_INFO("ANS Enabled: %d", adev->ans_enabled);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_ORIENTATION, value,
+              sizeof(value));
+    if (ret >= 0) {
+        if (strncmp(value, "landscape", 9) == 0)
+            adev->orientation_landscape = true;
+        else if (strncmp(value, "portrait", 8) == 0)
+            adev->orientation_landscape = false;
+
+        AHAL_INFO("Orientation %s",
+            adev->orientation_landscape ? "landscape" : "portrait");
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_INVERTED, value,
+              sizeof(value));
+    if (ret >= 0) {
+        if (strncmp(value, "true", 4) == 0)
+            adev->inverted = true;
+        else
+            adev->inverted = false;
+
+        AHAL_INFO("Orientation inverted: %d", adev->inverted);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FACING, value,
+              sizeof(value));
+    if (ret >= 0) {
+        /*0-none, 1-back, 2-front/selfie*/
+        if (strncmp(value, "front", 5) == 0)
+            adev->facing = 2;
+        else if (strncmp(value, "back", 4) == 0)
+            adev->facing = 1;
+        else if (strncmp(value, "none", 4) == 0)
+            adev->facing = 0;
+
+        AHAL_INFO("Device facing %s", value);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HDR_CHANNELS, value,
+              sizeof(value));
+    if (ret >= 0) {
+        val = atoi(value);
+        if (val != 4) {
+           AHAL_DBG("Invalid HDR channels: %d", val);
+        } else {
+            adev->hdr_channel_count = val;
+        }
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HDR_SAMPLERATE, value,
+              sizeof(value));
+    if (ret >= 0) {
+        val = atoi(value);
+        if (val != 48000) {
+            AHAL_DBG("Invalid HDR sample rate: %d", val);
+        } else {
+            adev->hdr_sample_rate = val;
+        }
+    }
+}
+
+static void hdr_get_parameters(std::shared_ptr<AudioDevice> adev,
+    struct str_parms *query, struct str_parms *reply) {
+
+    if (adev == nullptr || query == nullptr || reply == nullptr) {
+        AHAL_ERR("%s Invalid arguments", __func__);
+        return;
+    }
+
+    int32_t ret;
+    char value[256]={0};
+    size_t size = 0;
+
+    /* HDR Audio Parameters */
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_HDR, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_HDR,
+            adev->hdr_record_enabled ? "true" : "false");
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_HDR,
+            adev->hdr_record_enabled ? "true" : "false");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_WNR, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_WNR, adev->wnr_enabled
+            ? "true" : "false");
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_WNR, adev->wnr_enabled
+            ? "true" : "false");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_ANS, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_ANS, adev->ans_enabled
+            ? "true" : "false");
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_ANS, adev->ans_enabled
+            ? "true" : "false");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_ORIENTATION, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply,AUDIO_PARAMETER_KEY_ORIENTATION,
+            adev->orientation_landscape ? "landscape" : "portrait");
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_ORIENTATION,
+            adev->orientation_landscape ? "landscape" : "portrait");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_INVERTED, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_INVERTED, adev->inverted
+            ? "true" : "false");
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_INVERTED, adev->inverted
+            ? "true" : "false");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_FACING, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_FACING,
+            (adev->facing == 0) ? "none" : ((adev->facing == 1) ?  "back"
+                : "front"));
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_FACING, (adev->facing == 0)
+            ? "none" : ((adev->facing == 1) ?  "back" : "front"));
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_HDR_CHANNELS, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_HDR_CHANNELS,
+            adev->hdr_channel_count);
+        AHAL_VERBOSE("%s=%d",AUDIO_PARAMETER_KEY_HDR_CHANNELS,
+            adev->hdr_channel_count);
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_HDR_SAMPLERATE, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_HDR_SAMPLERATE,
+            adev->hdr_sample_rate);
+        AHAL_INFO("%s=%d", AUDIO_PARAMETER_KEY_HDR_SAMPLERATE, adev->hdr_sample_rate);
+    }
+}
+
 AudioDevice::~AudioDevice() {
     audio_extn_gef_deinit(adev_);
     audio_extn_sound_trigger_deinit(adev_);
@@ -958,6 +1149,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     }
     AudioExtn::audio_extn_set_parameters(adev_, parms);
 
+    if (property_get_bool("vendor.audio.hdr.record.enable", false))
+        hdr_set_parameters(adev_, parms);
+
     ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
     if (ret >= 0) {
         pal_param_screen_state_t param_screen_st;
@@ -1400,6 +1594,10 @@ char* AudioDevice::GetParameters(const char *keys) {
     AudioExtn::audio_extn_get_parameters(adev_, query, reply);
     if (voice_)
         voice_->VoiceGetParameters(query, reply);
+
+    if (property_get_bool("vendor.audio.hdr.record.enable", false))
+        hdr_get_parameters(adev_, query, reply);
+
 exit:
     str = str_parms_to_str(reply);
     str_parms_destroy(query);
