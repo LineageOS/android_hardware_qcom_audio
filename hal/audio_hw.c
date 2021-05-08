@@ -8786,12 +8786,14 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             struct listnode *node;
             list_for_each(node, &adev->usecase_list) {
                 usecase = node_to_item(node, struct audio_usecase, list);
-                if (usecase->stream.in && (usecase->type == PCM_CAPTURE) &&
+                if (usecase->stream.in && (usecase->type == PCM_CAPTURE ||
+                                           usecase->type == VOICE_CALL) &&
                     (!is_btsco_device(SND_DEVICE_NONE, usecase->in_snd_device))) {
                     ALOGD("BT_SCO ON, switch all in use case to it");
                     select_devices(adev, usecase->id);
                     }
-                if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
+                if (usecase->stream.out && (usecase->type == PCM_PLAYBACK ||
+                                            usecase->type == VOICE_CALL) &&
                     (!is_btsco_device(usecase->out_snd_device, SND_DEVICE_NONE))) {
                      ALOGD("BT_SCO ON, switch all out use case to it");
                      select_devices(adev, usecase->id);
@@ -10787,8 +10789,7 @@ static int adev_open(const hw_module_t *module, const char *name,
             configured_low_latency_capture_period_size = trial;
         }
     }
-    if ((property_get("vendor.audio_hal.in_period_size", value, NULL) > 0) ||
-        (property_get("audio_hal.in_period_size", value, NULL) > 0)) {
+    if (property_get("vendor.audio_hal.in_period_size", value, NULL) > 0) {
         trial = atoi(value);
         if (period_size_is_plausible_for_low_latency(trial)) {
             configured_low_latency_capture_period_size = trial;
