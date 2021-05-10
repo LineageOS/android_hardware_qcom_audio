@@ -4817,6 +4817,12 @@ uint32_t audio_extn_a2dp_get_encoder_latency()
                 a2dp_get_encoder_latency() : 0);
 }
 
+uint32_t audio_extn_a2dp_get_decoder_latency()
+{
+    return (a2dp_get_encoder_latency ?
+                a2dp_get_encoder_latency() : 0);
+}
+
 bool audio_extn_a2dp_sink_is_ready()
 {
     return (a2dp_sink_is_ready ?

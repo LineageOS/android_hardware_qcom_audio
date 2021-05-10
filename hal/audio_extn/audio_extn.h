@@ -325,6 +325,7 @@ void audio_extn_a2dp_set_handoff_mode(bool is_on);
 void audio_extn_a2dp_get_enc_sample_rate(int *sample_rate);
 void audio_extn_a2dp_get_dec_sample_rate(int *sample_rate);
 uint32_t audio_extn_a2dp_get_encoder_latency();
+uint32_t audio_extn_a2dp_get_decoder_latency();
 bool audio_extn_a2dp_sink_is_ready();
 bool audio_extn_a2dp_source_is_ready();
 bool audio_extn_a2dp_source_is_suspended();

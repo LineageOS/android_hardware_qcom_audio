@@ -7325,6 +7325,10 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
             *frames = in->frames_read + avail;
             *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec
                     - platform_capture_latency(in) * 1000LL;
+             //Adjustment accounts for A2dp decoder latency for recording usecase
+             // Note: decoder latency is returned in ms, while platform_capture_latency in ns.
+            if (is_a2dp_in_device_type(&in->device_list))
+                *time -= audio_extn_a2dp_get_decoder_latency() * 1000000LL;
             ret = 0;
         }
     }
