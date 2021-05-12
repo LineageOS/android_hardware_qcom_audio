@@ -3049,7 +3049,7 @@ int a2dp_start_capture()
     }
 
     if (a2dp.bt_lib_sink_handle && !a2dp.a2dp_sink_started
-       && !a2dp.a2dp_sink_total_active_session_requests) {
+       && !a2dp.a2dp_sink_total_active_session_requests && a2dp.audio_sink_start) {
         ALOGD("calling BT module stream start");
         /* This call indicates BT IPC lib to start capture */
         ret =  a2dp.audio_sink_start();
@@ -3161,6 +3161,9 @@ static int reset_a2dp_source_dec_config_params()
     struct abr_dec_cfg_t dummy_reset_cfg;
     int ret = 0;
 
+    if (a2dp.bt_decoder_format == CODEC_TYPE_LC3)
+        a2dp.bt_decoder_format = CODEC_TYPE_INVALID;
+
     ctl_dec_data = mixer_get_ctl_by_name(a2dp.adev->mixer, MIXER_SOURCE_DEC_CONFIG_BLOCK);
     if (!ctl_dec_data) {
         ALOGE("%s: ERROR A2DP decoder config mixer control not identifed", __func__);
@@ -3264,7 +3267,7 @@ int a2dp_stop_capture()
         a2dp.a2dp_sink_total_active_session_requests--;
 
     if (a2dp.bt_lib_sink_handle && a2dp.a2dp_sink_started
-        && !a2dp.a2dp_sink_total_active_session_requests) {
+        && !a2dp.a2dp_sink_total_active_session_requests && a2dp.audio_sink_stop) {
         ALOGV("calling BT module stream stop");
         ret = a2dp.audio_sink_stop();
         if (ret < 0)
@@ -3279,7 +3282,7 @@ int a2dp_stop_capture()
             ALOGE("stop stream to BT IPC lib failed");
         else
             ALOGV("stop steam to BT IPC lib successful");
-        a2dp.bt_decoder_format = MEDIA_FMT_NONE;
+        a2dp.bt_decoder_format = CODEC_TYPE_INVALID;
         reset_codec_config();
         a2dp.a2dp_sink_started = false;
     }
