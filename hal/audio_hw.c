@@ -5490,7 +5490,9 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
         latency = period_ms + platform_render_latency(out) / 1000;
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
-           (out->config.rate);
+                   (out->config.rate);
+        if (out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)
+            latency += platform_render_latency(out)/1000;
     }
 
     if (!out->standby && is_a2dp_out_device_type(&out->device_list))
