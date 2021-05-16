@@ -1504,7 +1504,8 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
         }
     }
     // need to set adm channel for LC3 decoder
-    if (a2dp.bt_decoder_format == CODEC_TYPE_LC3) {
+    if (a2dp.bt_decoder_format == CODEC_TYPE_LC3 &&
+        direction == SINK) {
         if (!adm_ctrl_channels) {
             ALOGE(" ERROR ADM channels mixer control not identified");
         } else {
@@ -3127,6 +3128,13 @@ int a2dp_start_capture()
         /* Start abr for LC3 decoder*/
         if (a2dp.bt_decoder_format == CODEC_TYPE_LC3) {
             a2dp.abr_config.is_abr_enabled = true;
+            /*
+             * Before starting abr, we must ensure to set correct acdb id
+             * because abr will trigger port open which needs acdb_id
+             */
+            fp_platform_switch_voice_call_device_post(a2dp.adev->platform,
+                                               SND_DEVICE_OUT_BT_SCO_WB,
+                                               SND_DEVICE_IN_BT_SCO_MIC_WB);
             start_abr();
         }
     }
