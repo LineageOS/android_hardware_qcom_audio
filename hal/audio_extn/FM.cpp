@@ -111,6 +111,10 @@ int32_t fm_set_volume(float value, bool persist=false)
     ALOGD("%s: Setting FM volume to %d", __func__, vol);
 
     pal_volume = (struct pal_volume_data *) malloc(sizeof(struct pal_volume_data) + sizeof(struct pal_channel_vol_kv));
+
+    if (!pal_volume)
+       return -ENOMEM;
+
     pal_volume->no_of_volpair = 1;
     pal_volume->volume_pair[0].channel_mask = 0x03;
     pal_volume->volume_pair[0].vol = value;
@@ -119,6 +123,7 @@ int32_t fm_set_volume(float value, bool persist=false)
     if (ret)
         ALOGE("%s: set volume failed: %d \n", __func__, ret);
 
+    free(pal_volume);
     ALOGV("%s: exit", __func__);
     return ret;
 }
@@ -148,12 +153,12 @@ int32_t fm_start(std::shared_ptr<AudioDevice> adev __unused, int device_id)
     stream_attr.in_media_config.sample_rate = SAMPLE_RATE;
     stream_attr.in_media_config.bit_width = BIT_WIDTH;
     stream_attr.in_media_config.ch_info = ch_info;
-    stream_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
     stream_attr.out_media_config.sample_rate = SAMPLE_RATE;
     stream_attr.out_media_config.bit_width = BIT_WIDTH;
     stream_attr.out_media_config.ch_info = ch_info;
-    stream_attr.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_attr.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
 
     for(int i = 0; i < 2; ++i){
@@ -162,7 +167,7 @@ int32_t fm_start(std::shared_ptr<AudioDevice> adev __unused, int device_id)
         pal_devs[i].config.sample_rate = SAMPLE_RATE;
         pal_devs[i].config.bit_width = BIT_WIDTH;
         pal_devs[i].config.ch_info = ch_info;
-        pal_devs[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+        pal_devs[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
     }
 
     ret = pal_stream_open(&stream_attr,
@@ -285,7 +290,10 @@ void fm_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parm
     if (ret >= 0) {
         ALOGD("%s: Param: mute", __func__);
         fm.muted = (value[0] == '1');
-        fm_set_volume(0);
+        if(fm.muted)
+           fm_set_volume(0);
+        else
+           fm_set_volume(fm.volume);
     }
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FM_RESTORE_VOLUME, value, sizeof(value));

@@ -51,6 +51,12 @@
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
 #define ULL_PLATFORM_DELAY         (4*1000LL)
 
+//Need to confirm audio source delay values from adsp team
+#define DEEP_BUFFER_PLATFORM_CAPTURE_DELAY (40*1000LL)
+#define LOW_LATENCY_PLATFORM_CAPTURE_DELAY (40*1000LL)
+#define VOIP_TX_PLATFORM_CAPTURE_DELAY (40*1000LL)
+#define RAW_STREAM_PLATFORM_CAPTURE_DELAY (40*1000LL)
+
 #define DEEP_BUFFER_OUTPUT_PERIOD_DURATION 40
 #define PCM_OFFLOAD_OUTPUT_PERIOD_DURATION 80
 #define LOW_LATENCY_OUTPUT_PERIOD_DURATION 5
@@ -253,7 +259,11 @@ static const struct string_to_enum channels_name_to_enum_table[] = {
 };
 
 const std::map<uint32_t, pal_audio_fmt_t> getFormatId {
-    {AUDIO_FORMAT_PCM,                 PAL_AUDIO_FMT_DEFAULT_PCM},
+    {AUDIO_FORMAT_PCM_8_BIT,           PAL_AUDIO_FMT_PCM_S8},
+    {AUDIO_FORMAT_PCM_16_BIT,          PAL_AUDIO_FMT_PCM_S16_LE},
+    {AUDIO_FORMAT_PCM_24_BIT_PACKED,   PAL_AUDIO_FMT_PCM_S24_3LE},
+    {AUDIO_FORMAT_PCM_8_24_BIT,        PAL_AUDIO_FMT_PCM_S24_LE},
+    {AUDIO_FORMAT_PCM_32_BIT,          PAL_AUDIO_FMT_PCM_S32_LE},
     {AUDIO_FORMAT_MP3,                 PAL_AUDIO_FMT_MP3},
     {AUDIO_FORMAT_AAC,                 PAL_AUDIO_FMT_AAC},
     {AUDIO_FORMAT_AAC_ADTS,            PAL_AUDIO_FMT_AAC_ADTS},
@@ -280,7 +290,7 @@ const uint32_t format_to_bitwidth_table[] = {
 const std::map<uint32_t, uint32_t> getAlsaSupportedFmt {
     {AUDIO_FORMAT_PCM_32_BIT,           AUDIO_FORMAT_PCM_32_BIT},
     {AUDIO_FORMAT_PCM_FLOAT,            AUDIO_FORMAT_PCM_32_BIT},
-    {AUDIO_FORMAT_PCM_8_24_BIT,         AUDIO_FORMAT_PCM_24_BIT_PACKED},
+    {AUDIO_FORMAT_PCM_8_24_BIT,         AUDIO_FORMAT_PCM_8_24_BIT},
     {AUDIO_FORMAT_PCM_8_BIT,            AUDIO_FORMAT_PCM_8_BIT},
     {AUDIO_FORMAT_PCM_24_BIT_PACKED,    AUDIO_FORMAT_PCM_24_BIT_PACKED},
     {AUDIO_FORMAT_PCM_16_BIT,           AUDIO_FORMAT_PCM_16_BIT},
@@ -548,7 +558,12 @@ public:
     int GetMmapPosition(struct audio_mmap_position *position);
     bool isDeviceAvailable(pal_device_id_t deviceId);
     int RouteStream(const std::set<audio_devices_t>& new_devices);
+    int64_t GetSourceLatency(audio_input_flags_t halStreamFlags);
+    uint64_t GetFramesRead(int64_t *time);
 protected:
+    struct timespec readAt;
+    uint32_t fragments_ = 0;
+    uint32_t fragment_size_ = 0;
     int FillHalFnPtrs();
     std::shared_ptr<audio_stream_in>    stream_;
     audio_source_t                      source_;

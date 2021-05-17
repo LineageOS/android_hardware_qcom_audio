@@ -54,6 +54,17 @@
 #define MAX_READ_RETRY_COUNT 25
 
 #define AFE_PROXY_RECORD_PERIOD_SIZE  768
+static bool is_pcm_format(audio_format_t format)
+{
+    if (format == AUDIO_FORMAT_PCM_16_BIT ||
+        format == AUDIO_FORMAT_PCM_8_BIT ||
+        format == AUDIO_FORMAT_PCM_8_24_BIT ||
+        format == AUDIO_FORMAT_PCM_FLOAT ||
+        format == AUDIO_FORMAT_PCM_24_BIT_PACKED ||
+        format == AUDIO_FORMAT_PCM_32_BIT)
+        return true;
+    return false;
+}
 
 void StreamOutPrimary::GetStreamHandle(audio_stream_out** stream) {
   *stream = (audio_stream_out*)stream_.get();
@@ -340,7 +351,7 @@ static audio_channel_mask_t astream_out_get_channels(const struct audio_stream *
         return (audio_channel_mask_t) 0;
     }
 
-    if (astream_out != nullptr) {
+    if (astream_out != nullptr && astream_out->GetChannelMask()) {
         return astream_out->GetChannelMask();
     } else {
         AHAL_ERR("unable to get audio stream");
@@ -990,13 +1001,105 @@ exit:
     return ret;
 }
 
-static int astream_in_get_capture_position(const struct audio_stream_in *stream,
-                                           int64_t *frames, int64_t *time) {
-    std::ignore = stream;
-    std::ignore = frames;
-    std::ignore = time;
-    //TODO: get timestamp for input streams
-    AHAL_VERBOSE("position not implemented currently supported in pal");
+int64_t StreamInPrimary::GetSourceLatency(audio_input_flags_t halStreamFlags)
+{
+    struct pal_stream_attributes streamAttributes_;
+    streamAttributes_.type = StreamInPrimary::GetPalStreamType(halStreamFlags,
+        config_.sample_rate);
+    AHAL_VERBOSE(" type %d", streamAttributes_.type);
+    switch (streamAttributes_.type) {
+    case PAL_STREAM_DEEP_BUFFER:
+        return DEEP_BUFFER_PLATFORM_CAPTURE_DELAY;
+    case PAL_STREAM_LOW_LATENCY:
+        return LOW_LATENCY_PLATFORM_CAPTURE_DELAY;
+    case  PAL_STREAM_VOIP_TX:
+        return VOIP_TX_PLATFORM_CAPTURE_DELAY;
+    case  PAL_STREAM_RAW:
+        return RAW_STREAM_PLATFORM_CAPTURE_DELAY;
+        //TODO: Add more streamtypes if available in pal
+    default:
+        return 0;
+    }
+}
+
+uint64_t StreamInPrimary::GetFramesRead(int64_t* time)
+{
+    uint64_t signed_frames = 0;
+    uint64_t read_frames = 0;
+    uint64_t kernel_frames = 0;
+    size_t kernel_buffer_size = 0;
+    int64_t dsp_latency = 0;
+
+    if (!time) {
+        AHAL_ERR("timestamp NULL");
+        return 0;
+    }
+
+    /* This adjustment accounts for buffering after app processor
+     * It is based on estimated DSP latency per use case, rather than exact.
+     */
+    dsp_latency = StreamInPrimary::GetSourceLatency(flags_);
+
+    read_frames = total_bytes_read_ / audio_bytes_per_frame(
+        audio_channel_count_from_in_mask(config_.channel_mask),
+        config_.format);
+
+    /* not querying actual state of buffering in kernel as it would involve an ioctl call
+     * which then needs protection, this causes delay in TS query for pcm_offload usecase
+     * hence only estimate.
+     */
+    kernel_buffer_size = fragment_size_ * fragments_;
+    kernel_frames = kernel_buffer_size /
+        audio_bytes_per_frame(
+            audio_channel_count_from_in_mask(config_.channel_mask),
+            config_.format);
+
+
+    signed_frames = read_frames + kernel_frames;
+
+    *time = (readAt.tv_sec * 1000000000LL) + readAt.tv_nsec - (dsp_latency * 1000LL);
+
+    // Adjustment accounts for A2dp decoder latency
+    // Note: Decoder latency is returned in ms, while platform_source_latency in us.
+    pal_param_bta2dp_t* param_bt_a2dp = NULL;
+    size_t size = 0;
+    int32_t ret;
+
+    if (isDeviceAvailable(PAL_DEVICE_IN_BLUETOOTH_A2DP)) {
+        ret = pal_get_param(PAL_PARAM_ID_BT_A2DP_DECODER_LATENCY,
+            (void**)&param_bt_a2dp, &size, nullptr);
+        if (!ret && param_bt_a2dp) {
+            *time -= param_bt_a2dp->latency * 1000000LL;
+        }
+    }
+
+    AHAL_VERBOSE("signed frames %lld read frames %lld kernel frames %lld",
+        (long long)signed_frames, (long long)read_frames, (long long)kernel_frames);
+
+    return signed_frames;
+}
+
+static int astream_in_get_capture_position(const struct audio_stream_in* stream,
+    int64_t* frames, int64_t* time) {
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamInPrimary> astream_in;
+
+    if (stream == NULL || frames == NULL || time == NULL) {
+        return -EINVAL;
+    }
+
+    if (adevice) {
+        astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    } else {
+        AHAL_ERR("unable to get audio device");
+        return -ENOSYS;
+    }
+    if(astream_in)
+        *frames = astream_in->GetFramesRead(time);
+    else
+        return -ENOSYS;
+    AHAL_VERBOSE("frames %lld played at %lld ", ((long long)*frames), time);
+
     return 0;
 }
 
@@ -1248,6 +1351,16 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
 
         return palStreamType;
     }
+
+    /*
+     *For AUDIO_SOURCE_UNPROCESSED we use LL pal stream as it corresponds to
+     *RAW record graphs ( record with no pp)
+     */
+    if (source_ == AUDIO_SOURCE_UNPROCESSED) {
+        palStreamType = PAL_STREAM_LOW_LATENCY;
+        return palStreamType;
+    }
+
     switch (halStreamFlags) {
         case AUDIO_INPUT_FLAG_FAST:
             palStreamType = PAL_STREAM_LOW_LATENCY;
@@ -1616,11 +1729,12 @@ int StreamOutPrimary::Standby() {
 
 int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
     int ret = 0, noPalDevices = 0;
+    bool forceRouting = false;
     pal_device_id_t * deviceId;
     struct pal_device* deviceIdConfigs;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    if (!mInitialized){
+    if (!mInitialized) {
         AHAL_ERR("Not initialized, returning error");
         ret = -EINVAL;
         goto done;
@@ -1633,9 +1747,12 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
              AudioExtn::get_device_types(mAndroidOutDevices),
              mAndroidOutDevices.size());
 
-    /* If its the same device as what was already routed to, dont bother */
-    if (!AudioExtn::audio_devices_empty(new_devices) && mAndroidOutDevices != new_devices) {
-        //re-allocate mPalOutDevice and mPalOutDeviceIds
+    forceRouting = AudioExtn::audio_devices_cmp(new_devices, audio_is_a2dp_out_device);
+
+    /* Ignore routing to same device unless it's forced */
+    if ((!AudioExtn::audio_devices_empty(new_devices) && (mAndroidOutDevices != new_devices))
+            || forceRouting) {
+        // re-allocate mPalOutDevice and mPalOutDeviceIds
         if (new_devices.size() != mAndroidOutDevices.size()) {
             deviceId = (pal_device_id_t*) realloc(mPalOutDeviceIds,
                     new_devices.size() * sizeof(pal_device_id_t));
@@ -1666,7 +1783,7 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
             mPalOutDevice[i].config.sample_rate = mPalOutDevice[0].config.sample_rate;
             mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
             mPalOutDevice[i].config.ch_info = {0, {0}};
-            mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; 
+            mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
             if ((mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_DEVICE) ||
                (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_HEADSET)) {
                 mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
@@ -1674,16 +1791,17 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
             }
         }
 
-        mAndroidOutDevices = new_devices;
-
-        if (pal_stream_handle_){
+        if (pal_stream_handle_) {
             ret = pal_stream_set_device(pal_stream_handle_, noPalDevices, mPalOutDevice);
-            if (!ret)
+            if (!ret) {
+                mAndroidOutDevices = new_devices;
                 for (const auto &dev : mAndroidOutDevices)
                     audio_extn_gef_notify_device_config(dev,
-                            config_.channel_mask, config_.sample_rate);
-            else
+                            config_.channel_mask,
+                            config_.sample_rate, flags_);
+            } else {
                 AHAL_ERR("failed to set device. Error %d" ,ret);
+            }
         }
     }
 
@@ -1977,7 +2095,7 @@ int StreamOutPrimary::Open() {
     streamAttributes_.direction = PAL_AUDIO_OUTPUT;
     streamAttributes_.out_media_config.sample_rate = config_.sample_rate;
     streamAttributes_.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes_.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    streamAttributes_.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
     streamAttributes_.out_media_config.ch_info = ch_info;
 
     if (streamAttributes_.type == PAL_STREAM_COMPRESSED) {
@@ -1996,8 +2114,10 @@ int StreamOutPrimary::Open() {
                streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
         halInputFormat = config_.format;
         halOutputFormat = (audio_format_t)(getAlsaSupportedFmt.at(halInputFormat));
-        AHAL_DBG("halInputFormat %d halOutputFormat %d", halInputFormat, halOutputFormat);
+        streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(halOutputFormat);
         streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[halOutputFormat];
+        AHAL_DBG("halInputFormat %d halOutputFormat %d palformat %d", halInputFormat,
+                 halOutputFormat, streamAttributes_.out_media_config.aud_fmt_id);
         if (streamAttributes_.out_media_config.bit_width == 0)
             streamAttributes_.out_media_config.bit_width = 16;
     } else if ((streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) &&
@@ -2040,7 +2160,7 @@ int StreamOutPrimary::Open() {
         hapticsStreamAttributes.direction = PAL_AUDIO_OUTPUT;
         hapticsStreamAttributes.out_media_config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         hapticsStreamAttributes.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-        hapticsStreamAttributes.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+        hapticsStreamAttributes.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
         hapticsStreamAttributes.out_media_config.ch_info = ch_info;
 
         hapticsDevice = new pal_device;
@@ -2048,7 +2168,7 @@ int StreamOutPrimary::Open() {
         hapticsDevice->config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         hapticsDevice->config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         hapticsDevice->config.ch_info = ch_info;
-        hapticsDevice->config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+        hapticsDevice->config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
         ret = pal_stream_open (&hapticsStreamAttributes,
                           1,
@@ -2319,6 +2439,12 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes)
             pal_stream_close(pal_stream_handle_);
             pal_stream_handle_ = NULL;
             ATRACE_END();
+            if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS &&
+                pal_haptics_stream_handle) {
+                AHAL_ERR("Close haptics stream");
+                pal_stream_close(pal_haptics_stream_handle);
+                pal_haptics_stream_handle = NULL;
+            }
             goto exit;
         }
         if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
@@ -2492,7 +2618,7 @@ StreamOutPrimary::StreamOutPrimary(
 
     if (!stream_) {
         AHAL_ERR("No memory allocated for stream_");
-        goto error;
+        throw std::runtime_error("No memory allocated for stream_");
     }
     AHAL_ERR("enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)\
           address(%s)", handle, config->format, config->sample_rate, config->channel_mask,
@@ -2590,7 +2716,7 @@ StreamOutPrimary::StreamOutPrimary(
         else
             mPalOutDevice[i].config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-        mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+        mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
         AHAL_INFO("device rate = %#x width=%#x fmt=%#x",
             mPalOutDevice[i].config.sample_rate,
             mPalOutDevice[i].config.bit_width,
@@ -2612,7 +2738,8 @@ StreamOutPrimary::StreamOutPrimary(
     (void)FillHalFnPtrs();
     mInitialized = true;
     for(auto dev : mAndroidOutDevices)
-        audio_extn_gef_notify_device_config(dev, config_.channel_mask, config_.sample_rate);
+        audio_extn_gef_notify_device_config(dev, config_.channel_mask,
+            config_.sample_rate, flags_);
 
 error:
     AHAL_DBG("Exit");
@@ -2953,7 +3080,7 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
             mPalInDevice[i].config.sample_rate = mPalInDevice[0].config.sample_rate;
             mPalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
             mPalInDevice[i].config.ch_info = ch_info;
-            mPalInDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+            mPalInDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
             if ((mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_DEVICE) ||
                (mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_HEADSET)) {
                 mPalInDevice[i].address.card_id = adevice->usb_card_id_;
@@ -3086,8 +3213,14 @@ int StreamInPrimary::Open() {
     streamAttributes_.flags = (pal_stream_flags_t)0;
     streamAttributes_.direction = PAL_AUDIO_INPUT;
     streamAttributes_.in_media_config.sample_rate = config_.sample_rate;
-    streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes_.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    if (is_pcm_format(config_.format)) {
+       streamAttributes_.in_media_config.aud_fmt_id = getFormatId.at(config_.format);
+       streamAttributes_.in_media_config.bit_width = format_to_bitwidth_table[config_.format];
+    } else {
+       /*TODO:Update this to support compressed capture using hal apis*/
+       streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+       streamAttributes_.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
+    }
     streamAttributes_.in_media_config.ch_info = ch_info;
 
     if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
@@ -3148,6 +3281,8 @@ set_buff_size:
         }
     }
 
+    fragments_ = inBufCount;
+    fragment_size_ = inBufSize;
     total_bytes_read_ = 0; // reset at each open
 
 error_open:
@@ -3248,6 +3383,14 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
 
     if (is_st_session) {
         ATRACE_BEGIN("hal: lab read");
+        if (!audio_extn_sound_trigger_check_session_activity(this)) {
+            AHAL_DBG("sound trigger session not available");
+            memset(palBuffer.buffer, 0, palBuffer.size);
+            local_bytes_read = palBuffer.size;
+            total_bytes_read_ += local_bytes_read;
+            ATRACE_END();
+            goto exit;
+        }
         if (!stream_started_) {
             adevice->num_va_sessions_++;
             stream_started_ = true;
@@ -3314,6 +3457,7 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     }
 
     total_bytes_read_ += local_bytes_read;
+    clock_gettime(CLOCK_MONOTONIC, &readAt);
 
 exit:
     AHAL_VERBOSE("Exit, bytes read %u", local_bytes_read);
@@ -3368,6 +3512,8 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     mInitialized = false;
     int noPalDevices = 0;
     int ret = 0;
+    readAt.tv_sec = 0;
+    readAt.tv_nsec = 0;
 
     AHAL_DBG("enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)"\
           , handle, config->format, config->sample_rate, config->channel_mask,
@@ -3438,7 +3584,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
         mPalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
         // ch_info memory is allocated at resource manager:getdeviceconfig
         mPalInDevice[i].config.ch_info = {0, {0}};
-        mPalInDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+        mPalInDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
         if ((mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_DEVICE) ||
            (mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_HEADSET)) {
             mPalInDevice[i].address.card_id = adevice->usb_card_id_;

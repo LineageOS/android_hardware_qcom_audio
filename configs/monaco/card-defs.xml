@@ -1,35 +1,56 @@
-<!--  Copyright (c) 2019,2021 The Linux Foundation. All rights reserved.      -->
-<!--                                                                          -->
-<!--  Redistribution and use in source and binary forms, with or without      -->
-<!--  modification, are permitted provided that the following conditions are  -->
-<!--  met:                                                                    -->
-<!--      * Redistributions of source code must retain the above copyright    -->
-<!--        notice, this list of conditions and the following disclaimer.     -->
-<!--      * Redistributions in binary form must reproduce the above           -->
-<!--        copyright notice, this list of conditions and the following       -->
-<!--        disclaimer in the documentation and/or other materials provided   -->
-<!--        with the distribution.                                            -->
-<!--      * Neither the name of The Linux Foundation nor the names of its     -->
-<!--        contributors may be used to endorse or promote products derived   -->
-<!--        from this software without specific prior written permission.     -->
-<!--                                                                          -->
-<!--  THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED            -->
-<!--  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    -->
-<!--  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT  -->
-<!--  ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS  -->
-<!--  BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR  -->
-<!--  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    -->
-<!--  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         -->
-<!--  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   -->
-<!--  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    -->
-<!--  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  -->
-<!--  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           -->
-<defs>
-<card>
-    <id>100</id>
-    <name>waipiomtpsndcar,waipioqrdsndcar,waipiocdpsndcar</name>
-
-    <pcm-device>
+ <!--  Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
+-->
+ <!--
+-->
+ <!--  Redistribution and use in source and binary forms, with or without
+-->
+ <!--  modification, are permitted provided that the following conditions are
+-->
+ <!--  met:
+-->
+ <!--      * Redistributions of source code must retain the above copyright
+-->
+ <!--        notice, this list of conditions and the following disclaimer.
+-->
+ <!--      * Redistributions in binary form must reproduce the above
+-->
+ <!--        copyright notice, this list of conditions and the following
+-->
+ <!--        disclaimer in the documentation and/or other materials provided
+-->
+ <!--        contributors may be used to endorse or promote products derived
+-->
+ <!--        from this software without specific prior written permission.
+-->
+ <!--
+-->
+ <!--  THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+-->
+ <!--  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+-->
+ <!--  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+-->
+ <!--  ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+-->
+ <!--  BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+-->
+ <!--  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+-->
+ <!--  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+-->
+ <!--  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+-->
+ <!--  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+-->
+ <!--  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+-->
+ <!--  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+ <defs>
+ <card>
+     <id>100</id>
+     <name>monacoidpsndcar,monacoidpamicsn,monacoidpwsasnd,monacoidpslates,monacoidpslatea,monacoidpslatew</name>
+     <pcm-device>
         <id>100</id>
         <name>PCM100</name>
         <pcm_plugin>
@@ -38,7 +59,6 @@
         <props>
             <playback>1</playback>
             <capture>0</capture>
-            <session_mode>0</session_mode>
         </props>
     </pcm-device>
 
@@ -51,7 +71,6 @@
         <props>
             <playback>0</playback>
             <capture>1</capture>
-            <session_mode>0</session_mode>
         </props>
     </pcm-device>
 
@@ -64,7 +83,6 @@
         <props>
             <playback>1</playback>
             <capture>0</capture>
-            <session_mode>0</session_mode>
         </props>
     </pcm-device>
 
@@ -167,7 +185,6 @@
         <props>
             <playback>1</playback>
             <capture>0</capture>
-            <session_mode>0</session_mode>
         </props>
     </pcm-device>
 
@@ -180,7 +197,6 @@
         <props>
             <playback>0</playback>
             <capture>1</capture>
-            <session_mode>0</session_mode>
         </props>
     </pcm-device>
 
@@ -193,7 +209,6 @@
         <props>
             <playback>0</playback>
             <capture>1</capture>
-            <session_mode>0</session_mode>
         </props>
     </pcm-device>
 
@@ -232,31 +247,6 @@
         <props>
             <playback>0</playback>
             <capture>1</capture>
-            <session_mode>0</session_mode>
-        </props>
-    </pcm-device>
-
-    <pcm-device>
-        <id>116</id>
-        <name>PCM116</name>
-        <pcm_plugin>
-            <so-name>libagm_pcm_plugin.so</so-name>
-        </pcm_plugin>
-        <props>
-            <capture>1</capture>
-            <session_mode>3</session_mode>
-        </props>
-    </pcm-device>
-
-    <pcm-device>
-        <id>117</id>
-        <name>PCM117</name>
-        <pcm_plugin>
-            <so-name>libagm_pcm_plugin.so</so-name>
-        </pcm_plugin>
-        <props>
-            <playback>1</playback>
-            <capture>0</capture>
         </props>
     </pcm-device>
 
@@ -270,3 +260,4 @@
 
 </card>
 </defs>
+

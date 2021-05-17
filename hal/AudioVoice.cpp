@@ -527,7 +527,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     palDevices[0].config.ch_info = in_ch_info;
     palDevices[0].config.sample_rate = 48000;
     palDevices[0].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    palDevices[0].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    palDevices[0].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
     palDevices[0].address.card_id = adevice->usb_card_id_;
     palDevices[0].address.device_num =adevice->usb_dev_num_;
 
@@ -535,7 +535,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     palDevices[1].config.ch_info = out_ch_info;
     palDevices[1].config.sample_rate = 48000;
     palDevices[1].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    palDevices[1].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    palDevices[1].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
     palDevices[1].address.card_id = adevice->usb_card_id_;
     palDevices[1].address.device_num = adevice->usb_dev_num_;
 
@@ -559,11 +559,11 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     streamAttributes.in_media_config.sample_rate = 48000;
     streamAttributes.in_media_config.ch_info = in_ch_info;
     streamAttributes.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    streamAttributes.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
     streamAttributes.out_media_config.sample_rate = 48000;
     streamAttributes.out_media_config.ch_info = out_ch_info;
     streamAttributes.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    streamAttributes.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    streamAttributes.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
 
     //streamAttributes.in_media_config.ch_info = ch_info;
     ret = pal_stream_open(&streamAttributes,
@@ -693,7 +693,7 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     palDevices[0].config.ch_info = in_ch_info;
     palDevices[0].config.sample_rate = 48000;
     palDevices[0].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    palDevices[0].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    palDevices[0].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
     palDevices[0].address.card_id = adevice->usb_card_id_;
     palDevices[0].address.device_num =adevice->usb_dev_num_;
 
@@ -701,7 +701,7 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     palDevices[1].config.ch_info = out_ch_info;
     palDevices[1].config.sample_rate = 48000;
     palDevices[1].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-    palDevices[1].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM; // TODO: need to convert this from output format
+    palDevices[1].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
     palDevices[1].address.card_id = adevice->usb_card_id_;
     palDevices[1].address.device_num =adevice->usb_dev_num_;
     /*device overwrites for usecases*/
@@ -710,10 +710,11 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
         palDevices[0].id = PAL_DEVICE_IN_PROXY;  //overwrite the device with proxy dev
         palDevices[1].id = PAL_DEVICE_OUT_PROXY;  //overwrite the device with proxy dev
     }
-    if (session->tty_mode == PAL_TTY_HCO) {
+
+    if (session && session->tty_mode == PAL_TTY_HCO) {
         palDevices[1].id = PAL_DEVICE_OUT_HANDSET;  //overwrite the device for HCO
     }
-    if (session->tty_mode == PAL_TTY_VCO) {
+    if (session && session->tty_mode == PAL_TTY_VCO) {
         palDevices[0].id = PAL_DEVICE_IN_HANDSET_MIC;  //overwrite the device for VCO
     }
 

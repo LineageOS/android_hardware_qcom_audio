@@ -335,13 +335,13 @@ void *capture_thread_loop(void *arg)
     stream_attr.in_media_config.sample_rate = AUDIO_CAPTURE_SMP_RATE;
     stream_attr.in_media_config.bit_width = AUDIO_CAPTURE_BIT_WIDTH;
     stream_attr.in_media_config.ch_info = ch_info;
-    stream_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    stream_attr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
     devices.id = PAL_DEVICE_IN_PROXY;
     devices.config.sample_rate = AUDIO_CAPTURE_SMP_RATE;
     devices.config.bit_width = AUDIO_CAPTURE_BIT_WIDTH;
     devices.config.ch_info = ch_info;
-    devices.config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    devices.config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
     ALOGD("thread enter");
 

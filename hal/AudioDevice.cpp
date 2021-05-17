@@ -87,12 +87,19 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::CreateStreamOut(
                         struct audio_config *config,
                         audio_stream_out **stream_out,
                         const char *address) {
-    std::shared_ptr<StreamOutPrimary> astream (new StreamOutPrimary(handle,
-                                              devices, flags, config, address,
-                                              fnp_offload_effect_start_output_,
-                                              fnp_offload_effect_stop_output_,
-                                              fnp_visualizer_start_output_,
-                                              fnp_visualizer_stop_output_));
+    std::shared_ptr<StreamOutPrimary> astream = nullptr;
+
+    try {
+        astream = std::shared_ptr<StreamOutPrimary> (new StreamOutPrimary(handle,
+                                       devices, flags, config, address,
+                                       fnp_offload_effect_start_output_,
+                                       fnp_offload_effect_stop_output_,
+                                       fnp_visualizer_start_output_,
+                                       fnp_visualizer_stop_output_));
+    } catch (const std::exception& e) {
+        AHAL_ERR("Failed to create StreamOutPrimary");
+        return nullptr;
+    }
     astream->GetStreamHandle(stream_out);
     out_list_mutex.lock();
     stream_out_list_.push_back(astream);
@@ -249,6 +256,7 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
     auto patch_it = patch_map_.find(handle);
     if (patch_it == patch_map_.end() || !patch_it->second) {
         AHAL_ERR("Patch info not found with handle %d", handle);
+        patch_map_mutex.unlock();
         return -EINVAL;
     }
     patch = &(*patch_it->second);
@@ -264,6 +272,7 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
         case AUDIO_PORT_TYPE_SESSION:
         case AUDIO_PORT_TYPE_NONE:
             AHAL_DBG("Invalid port type: %d", patch->sources[0].type);
+            patch_map_mutex.unlock();
             return -EINVAL;
     }
     patch_map_mutex.unlock();
@@ -399,8 +408,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     }
 
     astream = adevice->OutGetStream(handle);
-    if (astream == nullptr)
+    if (astream == nullptr) {
         astream = adevice->CreateStreamOut(handle, {devices}, flags, config, stream_out, address);
+        if (astream == nullptr) {
+            ret = -ENOMEM;
+            goto exit;
+        }
+    }
 exit:
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
@@ -471,11 +485,19 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         AHAL_ERR("invalid adevice object");
         goto exit;
     }
+
+    /*> 24 bit is restricted to UNPROCESSED source only,also format supported
+     * from HAL is 24_packed and 8_24
+     *> In case of UNPROCESSED source, for 24 bit, if format requested is other than
+     *  24_packed or 8_24 return error indicating supported format is 8_24
+     *> In case of any other source requesting 24 bit or float return error
+     *  indicating format supported is 16 bit only.
+     *> On error flinger will retry with supported format passed
+     */
     if ((config->format == AUDIO_FORMAT_PCM_FLOAT) ||
         (config->format == AUDIO_FORMAT_PCM_32_BIT) ||
         (config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED) ||
         (config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
-        //astream->bit_width = 24;
         if ((source != AUDIO_SOURCE_UNPROCESSED) &&
                 (source != AUDIO_SOURCE_CAMCORDER)) {
             config->format = AUDIO_FORMAT_PCM_16_BIT;
@@ -484,7 +506,10 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             ret_error = true;
         } else if (!(config->format == AUDIO_FORMAT_PCM_24_BIT_PACKED ||
                     config->format == AUDIO_FORMAT_PCM_8_24_BIT)) {
-            config->format = AUDIO_FORMAT_PCM_24_BIT_PACKED;
+            /*TODO: This can be updated as AUDIO_FORMAT_PCM_24_BIT_PACKED
+             * based on what the platform wants to configure.
+             */
+            config->format = AUDIO_FORMAT_PCM_8_24_BIT;
             ret_error = true;
         }
 
@@ -927,6 +952,10 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         AHAL_ERR("Error in VoiceSetParameters %d", ret);
 
     parms = str_parms_create_str(kvpairs);
+    if (!parms) {
+        AHAL_ERR("Error in str_parms_create_str");
+        return 0;
+    }
     AudioExtn::audio_extn_set_parameters(adev_, parms);
 
     ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
@@ -1211,7 +1240,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value, sizeof(value));
     if (ret >= 0) {
         pal_param_bta2dp_t param_bt_a2dp;
-        param_bt_a2dp.reconfigured = true;
+        param_bt_a2dp.reconfig = true;
 
         AHAL_INFO("BT A2DP Reconfig command received");
         ret = pal_set_param(PAL_PARAM_ID_BT_A2DP_RECONFIG, (void *)&param_bt_a2dp,

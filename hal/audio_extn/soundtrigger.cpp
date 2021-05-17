@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -62,14 +62,6 @@
 #define ST_DEVICE_HANDSET_MIC 1
 
 typedef enum {
-    ST_EVENT_SESSION_REGISTER,
-    ST_EVENT_SESSION_DEREGISTER,
-    ST_EVENT_START_KEEP_ALIVE,
-    ST_EVENT_STOP_KEEP_ALIVE,
-    ST_EVENT_UPDATE_ECHO_REF
-} sound_trigger_event_type_t;
-
-typedef enum {
     AUDIO_EVENT_CAPTURE_DEVICE_INACTIVE,
     AUDIO_EVENT_CAPTURE_DEVICE_ACTIVE,
     AUDIO_EVENT_PLAYBACK_STREAM_INACTIVE,
@@ -105,11 +97,6 @@ typedef enum {
     SLPI_STATUS_ONLINE
 } ssr_event_status_t;
 
-struct sound_trigger_session_info {
-    void* p_ses; /* opaque pointer to st_session obj */
-    int capture_handle;
-};
-
 struct audio_read_samples_info {
     struct sound_trigger_session_info *ses_info;
     void *buf;
@@ -119,12 +106,6 @@ struct audio_read_samples_info {
 struct audio_hal_usecase {
     audio_stream_usecase_type_t type;
 };
-
-struct sound_trigger_event_info {
-    struct sound_trigger_session_info st_ses;
-    bool st_ec_ref_enabled;
-};
-typedef struct sound_trigger_event_info sound_trigger_event_info_t;
 
 struct sound_trigger_device_info {
     int device;
@@ -250,14 +231,14 @@ get_sound_trigger_info(int capture_handle)
     return NULL;
 }
 
-extern "C" int audio_hw_call_back(sound_trigger_event_type_t event,
+extern "C" void audio_hw_call_back(sound_trigger_event_type_t event,
                                   sound_trigger_event_info_t* config)
 {
     int status = 0;
     struct sound_trigger_info  *st_ses_info;
 
     if (!st_dev)
-       return -EINVAL;
+       return;
 
     pthread_mutex_lock(&st_dev->lock);
     switch (event) {
@@ -306,7 +287,6 @@ extern "C" int audio_hw_call_back(sound_trigger_event_type_t event,
     }
     pthread_mutex_unlock(&st_dev->lock);
 
-    return status;
 }
 
 void* audio_extn_sound_trigger_check_and_get_session(StreamInPrimary *in_stream)
@@ -342,6 +322,38 @@ exit:
     AHAL_VERBOSE("Exit");
 
     return handle;
+}
+
+bool audio_extn_sound_trigger_check_session_activity(StreamInPrimary *in_stream)
+{
+    struct sound_trigger_info *st_ses_info = nullptr;
+    struct listnode *node = nullptr;
+    bool st_session_available = false;
+
+    AHAL_VERBOSE("Enter");
+    if (!st_dev || !in_stream) {
+        AHAL_ERR("st_dev %d, in_stream %d", !st_dev, !in_stream);
+        goto exit;
+    }
+
+    pthread_mutex_lock(&st_dev->lock);
+    AHAL_VERBOSE("list %d capture_handle %d",
+          list_empty(&st_dev->st_ses_list), in_stream->GetHandle());
+    list_for_each(node, &st_dev->st_ses_list) {
+        st_ses_info = node_to_item(node, struct sound_trigger_info, list);
+        if (st_ses_info->st_ses.capture_handle == in_stream->GetHandle()) {
+            AHAL_DBG("sound trigger session available for capture_handle %d",
+                  in_stream->GetHandle());
+            st_session_available = true;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&st_dev->lock);
+
+exit:
+    AHAL_VERBOSE("Exit");
+
+    return st_session_available;
 }
 
 int audio_extn_sound_trigger_init(std::shared_ptr<AudioDevice> adev)
