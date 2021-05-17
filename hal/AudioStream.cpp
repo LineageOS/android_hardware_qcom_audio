@@ -2933,7 +2933,7 @@ int StreamInPrimary::Standby() {
     if (pal_stream_handle_) {
         if (!is_st_session) {
             ret = pal_stream_stop(pal_stream_handle_);
-        } else {
+        } else if (audio_extn_sound_trigger_check_session_activity(this)) {
             ret = pal_stream_set_param(pal_stream_handle_,
                 PAL_PARAM_ID_STOP_BUFFERING, nullptr);
             if (adevice->num_va_sessions_ > 0) {
