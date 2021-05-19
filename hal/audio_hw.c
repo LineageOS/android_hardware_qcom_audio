@@ -3078,6 +3078,30 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
     enable_audio_route(adev, usecase);
 
+    if (uc_id == USECASE_AUDIO_PLAYBACK_VOIP) {
+        struct stream_in *voip_in = get_voice_communication_input(adev);
+        struct audio_usecase *voip_in_usecase = NULL;
+        voip_in_usecase = get_usecase_from_list(adev, USECASE_AUDIO_RECORD_VOIP);
+        if (voip_in != NULL &&
+            voip_in_usecase != NULL &&
+            !(out_snd_device == AUDIO_DEVICE_OUT_SPEAKER ||
+              out_snd_device == AUDIO_DEVICE_OUT_SPEAKER_SAFE) &&
+            (voip_in_usecase->in_snd_device ==
+            platform_get_input_snd_device(adev->platform, voip_in,
+                    &usecase->stream.out->device_list,usecase->type))) {
+            /*
+             * if VOIP TX is enabled before VOIP RX, needs to re-route the TX path
+             * for enabling echo-reference-voip with correct port
+             */
+            ALOGD("%s: VOIP TX is enabled before VOIP RX,needs to re-route the TX path",__func__);
+            disable_audio_route(adev, voip_in_usecase);
+            disable_snd_device(adev, voip_in_usecase->in_snd_device);
+            enable_snd_device(adev, voip_in_usecase->in_snd_device);
+            enable_audio_route(adev, voip_in_usecase);
+        }
+    }
+
+
     audio_extn_qdsp_set_device(usecase);
 
     /* If input stream is already running then effect needs to be
@@ -5466,7 +5490,9 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
         latency = period_ms + platform_render_latency(out) / 1000;
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
-           (out->config.rate);
+                   (out->config.rate);
+        if (out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)
+            latency += platform_render_latency(out)/1000;
     }
 
     if (!out->standby && is_a2dp_out_device_type(&out->device_list))
@@ -7325,6 +7351,10 @@ static int in_get_capture_position(const struct audio_stream_in *stream,
             *frames = in->frames_read + avail;
             *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec
                     - platform_capture_latency(in) * 1000LL;
+             //Adjustment accounts for A2dp decoder latency for recording usecase
+             // Note: decoder latency is returned in ms, while platform_capture_latency in ns.
+            if (is_a2dp_in_device_type(&in->device_list))
+                *time -= audio_extn_a2dp_get_decoder_latency() * 1000000LL;
             ret = 0;
         }
     }
@@ -10476,14 +10506,16 @@ int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool
             reassign_device_list(&out->device_list, AUDIO_DEVICE_OUT_SPEAKER, "");
             list_for_each(node, &adev->usecase_list) {
                 usecase = node_to_item(node, struct audio_usecase, list);
-                if ((usecase != uc_info) &&
-                        platform_check_backends_match(SND_DEVICE_OUT_SPEAKER,
-                                                      usecase->out_snd_device)) {
+                if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info) &&
+                    !is_a2dp_out_device_type(&usecase->stream.out->device_list) &&
+                    platform_check_backends_match(SND_DEVICE_OUT_SPEAKER,
+                                                  usecase->out_snd_device)) {
                     assign_devices(&out->device_list, &usecase->stream.out->device_list);
                     break;
                 }
             }
-            if (uc_info->out_snd_device == SND_DEVICE_OUT_BT_A2DP) {
+            if (is_a2dp_out_device_type(&devices) &&
+                list_length(&devices) == 1) {
                 out->a2dp_muted = true;
                 if (is_offload_usecase(out->usecase)) {
                     if (out->offload_state == OFFLOAD_STATE_PLAYING)
