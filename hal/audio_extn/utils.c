@@ -1367,6 +1367,8 @@ int audio_extn_utils_get_app_sample_rate_for_device(
             if (voice_is_in_call_rec_stream(usecase->stream.in)) {
                 audio_extn_btsco_get_sample_rate(usecase->in_snd_device,
                                                  &usecase->stream.in->app_type_cfg.sample_rate);
+            } if (SND_DEVICE_IN_BT_A2DP == snd_device) {
+                audio_extn_a2dp_get_dec_sample_rate(&usecase->stream.in->app_type_cfg.sample_rate);
             } else {
                 audio_extn_btsco_get_sample_rate(snd_device,
                                                  &usecase->stream.in->app_type_cfg.sample_rate);
