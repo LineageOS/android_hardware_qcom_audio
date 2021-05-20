@@ -1,6 +1,18 @@
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
+ifeq ($(TARGET_BOARD_PLATFORM),taro)
+LOCAL_MODULE       := android.hardware.audio.service_64.rc
+else
+LOCAL_MODULE       := android.hardware.audio.service.rc
+endif
+LOCAL_SRC_FILES    := $(LOCAL_MODULE)
+LOCAL_MODULE_TAGS  := optional
+LOCAL_MODULE_CLASS := ETC
+LOCAL_MODULE_PATH  := $(TARGET_OUT_VENDOR_ETC)/init
+include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_RELATIVE_PATH := hw
