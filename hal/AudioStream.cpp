@@ -2506,7 +2506,10 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes)
     } else {
         local_bytes_written = pal_stream_write(pal_stream_handle_, &palBuffer);
     }
-    total_bytes_written_ += local_bytes_written;
+    if (local_bytes_written < 0) local_bytes_written = 0;
+
+    if (total_bytes_written_ < UINT64_MAX - local_bytes_written)
+        total_bytes_written_ += local_bytes_written;
     clock_gettime(CLOCK_MONOTONIC, &writeAt);
     ATRACE_END();
 
