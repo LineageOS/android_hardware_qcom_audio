@@ -129,20 +129,23 @@
          <ctl name="DMIC1_MUX" value="DMIC0" />
          <ctl name="TX0_INP_MUX" value="DMIC_0" />
          <ctl name="TX1_INP_MUX" value="DMIC_1" />
-         <ctl name="LP_DEC1_MUX" value="PDM0" />
-         <ctl name="LP_DEC0_MUX" value="PDM1" />
+         <ctl name="LP_DEC1_MUX" value="PDM_0" />
+         <ctl name="LP_DEC0_MUX" value="PDM_1" />
          <ctl name="VA_PCM0_MUX" value="LP_TX_0" />
          <ctl name="VA_PCM1_MUX" value="LP_TX_1" />
          <ctl name="VA_CAP_MIXER PCM_0" value="1" />
          <ctl name="VA_CAP_MIXER PCM_1" value="1" />
+         <ctl name="DMIC0_IN_S Switch" value="1" />
+         <ctl name="DMIC1_IN_S Switch" value="1" />
     </path>
 
     <path name="va-mic-mono">
-         <ctl name="DMIC0_MUX" value="DMIC1" />
-         <ctl name="TX0_INP_MUX" value="DMIC_0" />
-         <ctl name="LP_DEC0_MUX" value="PDM1" />
+         <ctl name="DMIC1_MUX" value="DMIC0" />
+         <ctl name="TX1_INP_MUX" value="DMIC_1" />
+         <ctl name="LP_DEC0_MUX" value="PDM_1" />
          <ctl name="VA_PCM0_MUX" value="LP_TX_0" />
          <ctl name="VA_CAP_MIXER PCM_0" value="1" />
+         <ctl name="DMIC0_IN_S Switch" value="1" />
     </path>
 
     <path name="va-mic">
