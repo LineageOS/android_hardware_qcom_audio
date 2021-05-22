@@ -1375,6 +1375,7 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
         case AUDIO_INPUT_FLAG_MMAP_NOIRQ:
             palStreamType = PAL_STREAM_ULTRA_LOW_LATENCY;
             break;
+        case AUDIO_INPUT_FLAG_HW_HOTWORD:
         case AUDIO_INPUT_FLAG_NONE:
             if (isDeviceAvailable(PAL_DEVICE_IN_TELEPHONY_RX))
                 palStreamType = PAL_STREAM_PROXY;
@@ -1384,7 +1385,6 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
         default:
             /*
             unsupported from PAL
-            AUDIO_INPUT_FLAG_HW_HOTWORD = 0x2,
             AUDIO_INPUT_FLAG_SYNC        = 0x8,
             AUDIO_INPUT_FLAG_HW_AV_SYNC = 0x40,
             */
