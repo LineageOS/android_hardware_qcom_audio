@@ -8825,12 +8825,12 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     if (ret >= 0) {
         bool reverse_speakers = false;
         int camera_rotation = CAMERA_ROTATION_LANDSCAPE;
+        int default_speaker_rotation =
+                property_get_int32("vendor.audio.default_speaker_rotation", 90);
         switch (val) {
-        // FIXME: note that the code below assumes that the speakers are in the correct placement
-        //   relative to the user when the device is rotated 90deg from its default rotation. This
-        //   assumption is device-specific, not platform-specific like this code.
         case 270:
-            reverse_speakers = true;
+            if (default_speaker_rotation == 90)
+                reverse_speakers = true;
             camera_rotation = CAMERA_ROTATION_INVERT_LANDSCAPE;
             break;
         case 0:
@@ -8838,6 +8838,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             camera_rotation = CAMERA_ROTATION_PORTRAIT;
             break;
         case 90:
+            if (default_speaker_rotation == 270)
+                reverse_speakers = true;
             camera_rotation = CAMERA_ROTATION_LANDSCAPE;
             break;
         default:
