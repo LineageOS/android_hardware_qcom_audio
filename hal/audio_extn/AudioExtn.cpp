@@ -29,6 +29,7 @@
 
 #define LOG_TAG "AHAL: AudioExtn"
 #include <dlfcn.h>
+#include <unistd.h>
 #include "AudioExtn.h"
 #include <cutils/properties.h>
 #include "AudioCommon.h"

@@ -1098,7 +1098,7 @@ static int astream_in_get_capture_position(const struct audio_stream_in* stream,
         *frames = astream_in->GetFramesRead(time);
     else
         return -ENOSYS;
-    AHAL_VERBOSE("frames %lld played at %lld ", ((long long)*frames), time);
+    AHAL_VERBOSE("frames %lld played at %lld ", ((long long)*frames), ((long long)*time));
 
     return 0;
 }
