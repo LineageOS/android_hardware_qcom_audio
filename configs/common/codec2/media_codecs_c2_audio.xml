@@ -45,6 +45,10 @@
             <Limit name="sample-rate" ranges="8000-192000" />
             <Limit name="bitrate" range="1-9216000" />
         </MediaCodec>
+        <MediaCodec name="c2.qti.dsd.sw.decoder" type="audio/dsd" rank="0">
+            <Limit name="channel-count" max="6" />
+            <Limit name="sample-rate" ranges="2822400-22579200" />
+        </MediaCodec>
         <MediaCodec name="c2.qti.aac.hw.decoder" type="audio/mp4a-latm">
             <Limit name="channel-count" max="6" />
             <Limit name="sample-rate" ranges="8000-96000" />
