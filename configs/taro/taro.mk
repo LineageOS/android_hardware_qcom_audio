@@ -161,7 +161,7 @@ PRODUCT_PACKAGES += event.eai
 PRODUCT_PACKAGES += music.eai
 PRODUCT_PACKAGES += speech.eai
 PRODUCT_PACKAGES += libqtigefar
-
+PRODUCT_PACKAGES += libmcs
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
