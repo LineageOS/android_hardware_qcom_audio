@@ -151,6 +151,14 @@ BOARD_VENDOR_KERNEL_MODULES += \
     $(KERNEL_MODULES_OUT)/snd_event_dlkm.ko
 endif
 
+ifeq ($(AUDIO_FEATURE_ENABLED_DLKM),true)
+ifeq ($(TARGET_SUPPORTS_WEAR_AON),true)
+BOARD_VENDOR_KERNEL_MODULES += \
+    $(KERNEL_MODULES_OUT)/cc_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/audio_cc_ipc_dlkm.ko
+endif
+endif
+
 #Audio DLKM
 AUDIO_DLKM := spf_core_dlkm.ko
 AUDIO_DLKM += audio_pkt_dlkm.ko
@@ -176,6 +184,10 @@ AUDIO_DLKM += besbev-slave_dlkm.ko
 AUDIO_DLKM += wsa883x_dlkm.ko
 AUDIO_DLKM += machine_dlkm.ko
 AUDIO_DLKM += snd_event_dlkm.ko
+ifeq ($(TARGET_SUPPORTS_WEAR_AON),true)
+AUDIO_DLKM += cc_dlkm.ko
+AUDIO_DLKM += audio_cc_ipc_dlkm.ko
+endif
 
 PRODUCT_PACKAGES += $(AUDIO_DLKM)
 
