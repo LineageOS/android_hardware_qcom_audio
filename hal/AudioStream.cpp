@@ -1791,10 +1791,11 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
             }
         }
 
+        mAndroidOutDevices = new_devices;
+
         if (pal_stream_handle_) {
             ret = pal_stream_set_device(pal_stream_handle_, noPalDevices, mPalOutDevice);
             if (!ret) {
-                mAndroidOutDevices = new_devices;
                 for (const auto &dev : mAndroidOutDevices)
                     audio_extn_gef_notify_device_config(dev,
                             config_.channel_mask,
