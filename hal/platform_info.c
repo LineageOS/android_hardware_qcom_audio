@@ -41,6 +41,7 @@
 #include "platform_api.h"
 #include "audio_extn.h"
 #include <platform.h>
+#include <pthread.h>
 #include <math.h>
 #ifdef LINUX_ENABLED
 #include <float.h>
