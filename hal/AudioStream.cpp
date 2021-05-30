@@ -702,7 +702,7 @@ exit:
 
 static char* astream_out_get_parameters(const struct audio_stream *stream,
                                         const char *keys) {
-    int ret = 0;
+    int ret = 0, hal_output_suspend_supported = 0;
     struct str_parms *query = str_parms_create_str(keys);
     char value[256];
     char *str = (char*) nullptr;
@@ -746,6 +746,18 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
         if (str)
             free(str);
         str = str_parms_to_str(reply);
+    }
+
+    if (str_parms_get_str(query, "supports_hw_suspend", value, sizeof(value)) >= 0) {
+        //only low latency track supports suspend_resume
+        if (astream_out->flags_ & AUDIO_OUTPUT_FLAG_FAST)
+            hal_output_suspend_supported = 1;
+        str_parms_add_int(reply, "supports_hw_suspend", hal_output_suspend_supported);
+        if (str)
+            free(str);
+        str = str_parms_to_str(reply);
+        AHAL_ERR("exit: returns - %s", str);
+        return str;
     }
 
 #if 0
