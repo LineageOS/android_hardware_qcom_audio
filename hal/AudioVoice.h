@@ -76,6 +76,7 @@ public:
             bool volume_boost;
             bool slow_talk;
             bool hd_voice;
+            struct pal_volume_data *pal_vol_data;
     };
     struct voice_t {
             voice_session_t session[MAX_VOICE_SESSIONS];
@@ -88,6 +89,7 @@ public:
     voice_t voice_;
     audio_mode_t mode_;
     std::shared_ptr<StreamOutPrimary> stream_out_primary_;
+    struct pal_volume_data *pal_vol_;
     int VoiceSetParameters(const char *kvpairs);
     void VoiceGetParameters(struct str_parms *query, struct str_parms *reply);
     int RouteStream(const std::set<audio_devices_t>&);
