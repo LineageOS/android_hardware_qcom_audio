@@ -1415,6 +1415,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     android_device_map_.clear();
     /* go through all devices and pushback */
 
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_NONE, PAL_DEVICE_NONE));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_EARPIECE, PAL_DEVICE_OUT_HANDSET));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_SPEAKER, PAL_DEVICE_OUT_SPEAKER));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADSET, PAL_DEVICE_OUT_WIRED_HEADSET));
@@ -1490,25 +1491,22 @@ int AudioDevice::GetPalDeviceIds(const std::set<audio_devices_t>& hal_device_ids
     AHAL_DBG("haldeviceIds: %zu", hal_device_ids.size());
 
     for(auto hal_device_id : hal_device_ids) {
-        // skip AUDIO_DEVICE_NONE as device count not 0
-        if (hal_device_id != AUDIO_DEVICE_NONE) {
-            auto it = android_device_map_.find(hal_device_id);
-            if (it != android_device_map_.end() &&
-               audio_is_input_device(it->first) == audio_is_input_device(hal_device_id)) {
-                AHAL_DBG("Found haldeviceId: %x and PAL Device ID %d",
-                        it->first, it->second);
-                if (it->second == PAL_DEVICE_OUT_AUX_DIGITAL ||
-                        it->second == PAL_DEVICE_OUT_HDMI) {
-                   AHAL_ERR("dp_controller: %d dp_stream: %d",
-                           dp_controller, dp_stream);
-                   if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
-                      pal_device_id[device_count] = PAL_DEVICE_OUT_AUX_DIGITAL_1;
-                   } else {
-                      pal_device_id[device_count] = it->second;
-                   }
-                } else {
-                   pal_device_id[device_count] = it->second;
-                }
+        auto it = android_device_map_.find(hal_device_id);
+        if (it != android_device_map_.end() &&
+                audio_is_input_device(it->first) == audio_is_input_device(hal_device_id)) {
+            AHAL_DBG("Found haldeviceId: %x and PAL Device ID %d",
+                    it->first, it->second);
+            if (it->second == PAL_DEVICE_OUT_AUX_DIGITAL ||
+                    it->second == PAL_DEVICE_OUT_HDMI) {
+               AHAL_ERR("dp_controller: %d dp_stream: %d",
+                       dp_controller, dp_stream);
+               if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
+                  pal_device_id[device_count] = PAL_DEVICE_OUT_AUX_DIGITAL_1;
+               } else {
+                  pal_device_id[device_count] = it->second;
+               }
+            } else {
+               pal_device_id[device_count] = it->second;
             }
         }
         ++device_count;

@@ -561,8 +561,7 @@ audio_devices_t AudioExtn::get_device_types(const std::set<audio_devices_t>& dev
 }
 
 bool AudioExtn::audio_devices_empty(const std::set<audio_devices_t>& devs){
-    return devs.empty()
-           || (devs.size() == 1 && *devs.begin() == AUDIO_DEVICE_NONE);
+    return devs.empty();
 }
 // END: DEVICE UTILS ===============================================================
 
