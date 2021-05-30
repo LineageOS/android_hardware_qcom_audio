@@ -53,11 +53,9 @@ LOCAL_SRC_FILES := \
     AudioVoice.cpp \
     audio_extn/soundtrigger.cpp \
     audio_extn/Gain.cpp \
-    audio_extn/AudioExtn.cpp \
-    audio_extn/battery_listener.cpp
+    audio_extn/AudioExtn.cpp
 
 LOCAL_HEADER_LIBRARIES := libhardware_headers qti_audio_kernel_uapi
-LOCAL_STATIC_LIBRARIES := libhealthhalutils
 
 LOCAL_SHARED_LIBRARIES := \
     libbase \
@@ -69,10 +67,7 @@ LOCAL_SHARED_LIBRARIES := \
     libhidlbase \
     libprocessgroup \
     libutils \
-    libar-pal \
-    android.hardware.health@1.0 \
-    android.hardware.health@2.0 \
-    android.hardware.power@1.2
+    libar-pal
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PAL_HIDL)),true)
   LOCAL_SHARED_LIBRARIES += \

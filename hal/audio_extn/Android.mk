@@ -77,3 +77,35 @@ LOCAL_C_INCLUDES := \
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
 include $(BUILD_SHARED_LIBRARY)
+
+#-------------------------------------------
+#            Build BATTERY_LISTENER
+#-------------------------------------------
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libbatterylistener
+LOCAL_VENDOR_MODULE := true
+
+LOCAL_SRC_FILES:= battery_listener.cpp
+
+LOCAL_CFLAGS := \
+    -Wall \
+    -Werror \
+    -Wno-unused-function \
+    -Wno-unused-variable
+
+LOCAL_SHARED_LIBRARIES := \
+    android.hardware.health@1.0 \
+    android.hardware.health@2.0 \
+    android.hardware.power@1.2 \
+    libaudioutils \
+    libbase \
+    libcutils \
+    libdl \
+    libhidlbase \
+    liblog \
+    libutils \
+
+LOCAL_STATIC_LIBRARIES := libhealthhalutils
+
+include $(BUILD_SHARED_LIBRARY)
