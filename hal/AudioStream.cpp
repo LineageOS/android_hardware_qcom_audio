@@ -1920,12 +1920,22 @@ int StreamOutPrimary::SetVolume(float left , float right) {
     if (left == right) {
         volume_ = (struct pal_volume_data *)malloc(sizeof(struct pal_volume_data)
                     +sizeof(struct pal_channel_vol_kv));
+        if (!volume_) {
+            AHAL_ERR("Failed to allocate mem for volume_");
+            ret = -ENOMEM;
+            goto done;
+        }
         volume_->no_of_volpair = 1;
         volume_->volume_pair[0].channel_mask = 0x03;
         volume_->volume_pair[0].vol = left;
     } else {
         volume_ = (struct pal_volume_data *)malloc(sizeof(struct pal_volume_data)
                     +sizeof(struct pal_channel_vol_kv) * 2);
+        if (!volume_) {
+            AHAL_ERR("Failed to allocate mem for volume_");
+            ret = -ENOMEM;
+            goto done;
+        }
         volume_->no_of_volpair = 2;
         volume_->volume_pair[0].channel_mask = 0x01;
         volume_->volume_pair[0].vol = left;
@@ -1940,6 +1950,8 @@ int StreamOutPrimary::SetVolume(float left , float right) {
             AHAL_ERR("Pal Stream volume Error (%x)", ret);
         }
     }
+
+done:
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
@@ -2724,7 +2736,12 @@ StreamOutPrimary::StreamOutPrimary(
     if (AudioExtn::audio_devices_cmp(mAndroidOutDevices, audio_is_usb_out_device)){
         if (!config->sample_rate) {
             // get capability from device of USB
-            pal_param_device_capability_t *device_cap_query = new pal_param_device_capability_t();
+            pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
+                                                      malloc(sizeof(pal_param_device_capability_t));
+            if (!device_cap_query) {
+                AHAL_ERR("Failed to allocate mem for device_cap_query");
+                goto error;
+            }
             dynamic_media_config_t dynamic_media_config;
             size_t payload_size = 0;
             device_cap_query->id = PAL_DEVICE_OUT_USB_DEVICE;
@@ -2735,7 +2752,7 @@ StreamOutPrimary::StreamOutPrimary(
             ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
                                 (void **)&device_cap_query,
                                 &payload_size, nullptr);
-            delete device_cap_query;
+            free(device_cap_query);
 
             config->sample_rate = dynamic_media_config.sample_rate;
             config->channel_mask = (audio_channel_mask_t) dynamic_media_config.mask;
@@ -3098,6 +3115,11 @@ int StreamInPrimary::SetGain(float gain) {
     AHAL_DBG("Enter");
     volume = (struct pal_volume_data*)malloc(sizeof(uint32_t)
                 +sizeof(struct pal_channel_vol_kv));
+    if (!volume) {
+        AHAL_ERR("Failed to allocate mem for volume");
+        ret = -ENOMEM;
+        goto done;
+    }
     volume->no_of_volpair = 1;
     volume->volume_pair[0].channel_mask = 0x03;
     volume->volume_pair[0].vol = gain;
@@ -3109,6 +3131,8 @@ int StreamInPrimary::SetGain(float gain) {
     if (ret) {
         AHAL_ERR("Pal Stream volume Error (%x)", ret);
     }
+
+done:
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
@@ -3632,6 +3656,11 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     AHAL_DBG("enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)"\
           , handle, config->format, config->sample_rate, config->channel_mask,
           mAndroidInDevices.size(), flags);
+    if (!(stream_.get())) {
+        AHAL_ERR("stream_ new allocation failed");
+        goto error;
+    }
+
     if (AudioExtn::audio_devices_cmp(mAndroidInDevices, audio_is_usb_in_device)) {
         if (!config->sample_rate) {
             // get capability from device of USB
