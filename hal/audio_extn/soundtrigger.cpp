@@ -248,18 +248,24 @@ extern "C" void audio_hw_call_back(sound_trigger_event_type_t event,
             status = -EINVAL;
             break;
         }
-        st_ses_info = (struct sound_trigger_info *)calloc(1,
-            sizeof(struct sound_trigger_info ));
-        if (!st_ses_info) {
-            AHAL_ERR("st_ses_info alloc failed");
-            status = -ENOMEM;
-            break;
+        st_ses_info = get_sound_trigger_info(config->st_ses.capture_handle);
+        if (st_ses_info) {
+            memcpy(&st_ses_info->st_ses, &config->st_ses,
+                sizeof(struct sound_trigger_session_info));
+        } else {
+            st_ses_info = (struct sound_trigger_info *)calloc(1,
+                sizeof(struct sound_trigger_info ));
+            if (!st_ses_info) {
+                AHAL_ERR("st_ses_info alloc failed");
+                status = -ENOMEM;
+                break;
+            }
+            memcpy(&st_ses_info->st_ses, &config->st_ses,
+                sizeof(struct sound_trigger_session_info));
+            AHAL_VERBOSE("add capture_handle %d st session opaque ptr %p",
+                st_ses_info->st_ses.capture_handle, st_ses_info->st_ses.p_ses);
+            list_add_tail(&st_dev->st_ses_list, &st_ses_info->list);
         }
-        memcpy(&st_ses_info->st_ses, &config->st_ses,
-               sizeof(struct sound_trigger_session_info));
-        AHAL_VERBOSE("add capture_handle %d st session opaque ptr %p",
-              st_ses_info->st_ses.capture_handle, st_ses_info->st_ses.p_ses);
-        list_add_tail(&st_dev->st_ses_list, &st_ses_info->list);
         break;
 
     case ST_EVENT_SESSION_DEREGISTER:
