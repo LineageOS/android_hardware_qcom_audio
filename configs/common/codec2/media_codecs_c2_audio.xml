@@ -20,12 +20,12 @@
 <Included>
     <Decoders>
         <!-- C2 audio decoders -->
-        <MediaCodec name="c2.qti.alac.sw.decoder" type="audio/alac" rank="1">
+        <MediaCodec name="c2.qti.alac.sw.decoder" type="audio/alac" rank="0">
             <Limit name="channel-count" max="8" />
             <Limit name="sample-rate" ranges="8000-192000" />
             <Limit name="bitrate" range="1-100000000" />
         </MediaCodec>
-        <MediaCodec name="c2.qti.ape.sw.decoder" type="audio/x-ape" rank="1">
+        <MediaCodec name="c2.qti.ape.sw.decoder" type="audio/x-ape" rank="0">
             <Limit name="channel-count" max="2" />
             <Limit name="sample-rate" ranges="8000-192000" />
             <Limit name="bitrate" range="1-100000000" />
@@ -54,7 +54,7 @@
             <Limit name="sample-rate" ranges="8000-96000" />
             <Limit name="bitrate" range="8000-1536000" />
         </MediaCodec>
-        <MediaCodec name="c2.qti.alac.hw.decoder" type="audio/alac" rank="0">
+        <MediaCodec name="c2.qti.alac.hw.decoder" type="audio/alac" rank="1">
             <Limit name="channel-count" max="8" />
             <Limit name="sample-rate" ranges="8000-192000" />
             <Limit name="bitrate" range="1-100000000" />
@@ -64,7 +64,7 @@
             <Limit name="sample-rate" ranges="8000-96000" />
             <Limit name="bitrate" range="8000-1536000" />
         </MediaCodec>
-        <MediaCodec name="c2.qti.ape.hw.decoder" type="audio/x-ape" rank="0">
+        <MediaCodec name="c2.qti.ape.hw.decoder" type="audio/x-ape" rank="1">
             <Limit name="channel-count" max="2" />
             <Limit name="sample-rate" ranges="8000-192000" />
             <Limit name="bitrate" range="1-100000000" />
