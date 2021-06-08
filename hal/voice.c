@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -204,6 +204,7 @@ int voice_stop_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
     disable_snd_device(adev, uc_info->in_snd_device);
 
     adev->voice.lte_call = false;
+    adev->voice.in_call = false;
 
     list_remove(&uc_info->list);
     free(uc_info);
@@ -244,6 +245,8 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
         return -ENOMEM;
     }
 
+    adev->voice.in_call = true;
+
     uc_info->id = usecase_id;
     uc_info->type = VOICE_CALL;
     uc_info->stream.out = adev->current_call_output;
@@ -263,7 +266,6 @@ int voice_start_usecase(struct audio_device *adev, audio_usecase_t usecase_id)
 
     if (is_sco_out_device_type(&uc_info->device_list) && !adev->bt_sco_on) {
         ALOGE("start_call: couldn't find BT SCO, SCO is not ready");
-        adev->voice.in_call = false;
         ret = -EIO;
         goto error_start_voice;
     }
@@ -725,12 +727,12 @@ int voice_stop_call(struct audio_device *adev)
 {
     int ret = 0;
 
-    adev->voice.in_call = false;
     ret = voice_extn_stop_call(adev);
     if (ret == -ENOSYS) {
         ret = voice_stop_usecase(adev, USECASE_VOICE_CALL);
     }
 
+    adev->voice.in_call = false;
     return ret;
 }
 

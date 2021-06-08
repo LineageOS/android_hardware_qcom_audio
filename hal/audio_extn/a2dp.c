@@ -94,6 +94,7 @@
 #define MIXER_AFE_SINK_CHANNELS_SLIM7    "AFE Output Channels SLIM7"
 #define MIXER_FMT_TWS_CHANNEL_MODE "TWS Channel Mode"
 #define MIXER_FMT_LC3_CHANNEL_MODE "LC3 Channel Mode"
+#define MIXER_SLIM7_TX_ADM_CHANNEL "SLIM7_TX ADM Channels"
 #define ENCODER_LATENCY_SBC        10
 #define ENCODER_LATENCY_APTX       40
 #define ENCODER_LATENCY_APTX_HD    20
@@ -1326,6 +1327,7 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
     char *rate_str = NULL, *channels = NULL;
     uint32_t sampling_rate;
     struct mixer_ctl *ctl_sample_rate = NULL, *ctrl_channels = NULL;
+    struct mixer_ctl *adm_ctrl_channels = NULL;
     bool is_configured = false;
 
     if (direction == SINK) {
@@ -1466,12 +1468,15 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
         }
 
         ALOGD("%s: set afe dec channels =%s", __func__, channels);
-        if (a2dp.bt_decoder_format == CODEC_TYPE_LC3)
+        if (a2dp.bt_decoder_format == CODEC_TYPE_LC3) {
             ctrl_channels = mixer_get_ctl_by_name(a2dp.adev->mixer,
                                                 MIXER_AFE_SINK_CHANNELS_SLIM7);
-        else
+            adm_ctrl_channels = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                                MIXER_SLIM7_TX_ADM_CHANNEL);
+        } else {
             ctrl_channels = mixer_get_ctl_by_name(a2dp.adev->mixer,
                                                 MIXER_AFE_SINK_CHANNELS);
+        }
     } else {
         //Configure AFE enc channels
         switch (a2dp.enc_channels) {
@@ -1498,6 +1503,20 @@ static bool a2dp_set_backend_cfg(uint8_t direction)
             goto fail;
         }
     }
+    // need to set adm channel for LC3 decoder
+    if (a2dp.bt_decoder_format == CODEC_TYPE_LC3 &&
+        direction == SINK) {
+        if (!adm_ctrl_channels) {
+            ALOGE(" ERROR ADM channels mixer control not identified");
+        } else {
+            if (mixer_ctl_set_enum_by_string(adm_ctrl_channels, channels) != 0) {
+                ALOGE("%s: Failed to set ADM channels =%s", __func__, channels);
+                is_configured = false;
+                goto fail;
+            }
+        }
+    }
+
     is_configured = true;
 fail:
     return is_configured;
@@ -1615,7 +1634,7 @@ static int a2dp_reset_backend_cfg(uint8_t direction)
 {
     const char *rate_str = "KHZ_8", *channels = "Zero";
     struct mixer_ctl *ctl_sample_rate = NULL, *ctl_sample_rate_tx = NULL;
-    struct mixer_ctl *ctrl_channels = NULL;
+    struct mixer_ctl *ctrl_channels = NULL, *adm_ctrl_channels = NULL;
 
     // Reset backend sampling rate
     if (direction == SINK) {
@@ -1647,7 +1666,6 @@ static int a2dp_reset_backend_cfg(uint8_t direction)
             }
         }
     } else {
-
         ctl_sample_rate = mixer_get_ctl_by_name(a2dp.adev->mixer,
                                         MIXER_SAMPLE_RATE_DEFAULT);
         if (!ctl_sample_rate) {
@@ -1678,6 +1696,13 @@ static int a2dp_reset_backend_cfg(uint8_t direction)
     if (mixer_ctl_set_enum_by_string(ctrl_channels, channels) != 0) {
         ALOGE("%s: Failed to reset AFE in channels = %d", __func__, a2dp.enc_channels);
         return -ENOSYS;
+    }
+    // Reset adm channels for slim7 tx if available
+    adm_ctrl_channels = mixer_get_ctl_by_name(a2dp.adev->mixer,
+                                            MIXER_SLIM7_TX_ADM_CHANNEL);
+    if (adm_ctrl_channels) {
+        if (mixer_ctl_set_enum_by_string(adm_ctrl_channels, channels) != 0)
+            ALOGE("%s: Failed to reset ADM in channels = %d", __func__, a2dp.dec_channels);
     }
 
     return 0;
@@ -1953,6 +1978,8 @@ bool configure_lc3_dec_format(audio_lc3_codec_config_t *lc3_bt_cfg)
     is_configured = true;
     a2dp.bt_decoder_format = CODEC_TYPE_LC3;
     a2dp.dec_channels = CH_STEREO;
+    a2dp.dec_sampling_rate =
+        lc3_dsp_cfg.dec_codec.from_Air_cfg.fromAirConfig.sampling_freq;
 
 fail:
     return is_configured;
@@ -3101,6 +3128,13 @@ int a2dp_start_capture()
         /* Start abr for LC3 decoder*/
         if (a2dp.bt_decoder_format == CODEC_TYPE_LC3) {
             a2dp.abr_config.is_abr_enabled = true;
+            /*
+             * Before starting abr, we must ensure to set correct acdb id
+             * because abr will trigger port open which needs acdb_id
+             */
+            fp_platform_switch_voice_call_device_post(a2dp.adev->platform,
+                                               SND_DEVICE_OUT_BT_SCO_WB,
+                                               SND_DEVICE_IN_BT_SCO_MIC_WB);
             start_abr();
         }
     }
