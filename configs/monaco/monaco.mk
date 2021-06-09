@@ -206,6 +206,7 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/pal/configs/monaco/resourcemanager_slate.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_slate.xml \
     vendor/qcom/opensource/pal/configs/monaco/resourcemanager_slate_amic.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_slate_amic.xml \
     vendor/qcom/opensource/pal/configs/monaco/resourcemanager_slate_wsa.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_slate_wsa.xml \
+    vendor/qcom/opensource/pal/configs/monaco/usecaseKvManager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usecaseKvManager.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml
 
 #XML Audio configuration files
