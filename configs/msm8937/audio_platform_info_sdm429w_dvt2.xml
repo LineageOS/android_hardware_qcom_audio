@@ -53,6 +53,7 @@
         <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="out" id="25" />
         <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="27" />
         <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="27" />
+        <usecase name="USECASE_AUDIO_A2DP_ABR_FEEDBACK" type="in" id="56" />
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsa881x.0f"/>
