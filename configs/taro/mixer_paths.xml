@@ -2294,10 +2294,6 @@
         <path name="handset-mic" />
     </path>
 
-    <path name="camcorder-mic">
-        <path name="handset-mic" />
-    </path>
-
     <path name="bt-sco-headset">
     </path>
 
@@ -2614,6 +2610,18 @@
     </path>
 
     <path name="unprocessed-hdr-mic-inverted-portrait">
+        <path name="speaker-qmic" />
+    </path>
+
+    <path name="camcorder-main-mic">
+        <path name="speaker-mic" />
+    </path>
+
+    <path name="camcorder-dual-mic">
+        <path name="speaker-dmic-endfire" />
+    </path>
+
+    <path name="camcorder-quad-mic">
         <path name="speaker-qmic" />
     </path>
 

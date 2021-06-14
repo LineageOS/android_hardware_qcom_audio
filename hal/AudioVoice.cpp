@@ -298,6 +298,7 @@ bool AudioVoice::is_valid_call_state(int call_state)
 
 int AudioVoice::GetMatchingTxDevices(const std::set<audio_devices_t>& rx_devices,
                                      std::set<audio_devices_t>& tx_devices){
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     for(auto rx_dev : rx_devices)
         switch(rx_dev) {
             case AUDIO_DEVICE_OUT_EARPIECE:
@@ -313,7 +314,10 @@ int AudioVoice::GetMatchingTxDevices(const std::set<audio_devices_t>& rx_devices
                 tx_devices.insert(AUDIO_DEVICE_IN_BUILTIN_MIC);
                 break;
             case AUDIO_DEVICE_OUT_USB_HEADSET:
-                tx_devices.insert(AUDIO_DEVICE_IN_USB_HEADSET);
+                if (adevice->usb_input_dev_enabled)
+                    tx_devices.insert(AUDIO_DEVICE_IN_USB_HEADSET);
+                else
+                    tx_devices.insert(AUDIO_DEVICE_IN_BUILTIN_MIC);
                 break;
             case AUDIO_DEVICE_OUT_BLUETOOTH_SCO:
             case AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET:

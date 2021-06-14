@@ -102,6 +102,25 @@ static void setup_hdr_usecase(struct pal_device* palInDevice) {
         palInDevice->custom_config.custom_key);
 }
 
+/*
+* Scope based implementation of acquiring/releasing PerfLock.
+*/
+class AutoPerfLock {
+public :
+    AutoPerfLock() {
+        std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+        if (adevice)
+            AudioExtn::audio_extn_perf_lock_acquire(&adevice->perf_lock_handle, 0,
+                    adevice->perf_lock_opts, adevice->perf_lock_opts_size);
+    }
+
+    ~AutoPerfLock() {
+        std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+        if (adevice)
+            AudioExtn::audio_extn_perf_lock_release(&adevice->perf_lock_handle);
+    }
+};
+
 void StreamOutPrimary::GetStreamHandle(audio_stream_out** stream) {
   *stream = (audio_stream_out*)stream_.get();
 }
@@ -130,24 +149,6 @@ audio_io_handle_t StreamPrimary::GetHandle()
 int StreamPrimary::GetUseCase()
 {
     return usecase_;
-}
-
-bool StreamPrimary::AcquirePerfLock()
-{
-    if (!pal_stream_handle_ || !stream_started_) { // use-case is being setup
-        std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
-        AudioExtn::audio_extn_perf_lock_acquire(&adevice->perf_lock_handle, 0,
-                adevice->perf_lock_opts, adevice->perf_lock_opts_size);
-        return true;
-    }
-
-    return false;
-}
-
-void StreamPrimary::ReleasePerfLock()
-{
-    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
-    AudioExtn::audio_extn_perf_lock_release(&adevice->perf_lock_handle);
 }
 
 #if 0
@@ -852,7 +853,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
     }
 
     if (astream_in) {
-        return astream_in->Read(buffer, bytes);
+        return astream_in->read(buffer, bytes);
     } else {
         AHAL_ERR("unable to get audio stream");
         return -EINVAL;
@@ -875,7 +876,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     }
 
     if (astream_out) {
-        return astream_out->Write(buffer, bytes);
+        return astream_out->write(buffer, bytes);
     } else {
         AHAL_ERR("unable to get audio stream");
         return -EINVAL;
@@ -1088,7 +1089,7 @@ uint64_t StreamInPrimary::GetFramesRead(int64_t* time)
      */
     dsp_latency = StreamInPrimary::GetSourceLatency(flags_);
 
-    read_frames = total_bytes_read_ / audio_bytes_per_frame(
+    read_frames = mBytesRead / audio_bytes_per_frame(
         audio_channel_count_from_in_mask(config_.channel_mask),
         config_.format);
 
@@ -1699,7 +1700,7 @@ int StreamOutPrimary::Flush() {
         } else {
             AHAL_INFO("called in invalid state (stream not paused)" );
         }
-        total_bytes_written_ = 0;
+        mBytesWritten = 0;
     }
 
     if (ret)
@@ -1757,6 +1758,7 @@ int StreamOutPrimary::Standby() {
     stream_paused_ = false;
     if (CheckOffloadEffectsType(streamAttributes_.type)) {
         ret = StopOffloadEffects(handle_, pal_stream_handle_);
+        ret = StopOffloadVisualizer(handle_, pal_stream_handle_);
     }
 
     if (pal_stream_handle_) {
@@ -1986,7 +1988,7 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
        AHAL_ERR("timestamp NULL");
        return 0;
     }
-    written_frames = total_bytes_written_ / audio_bytes_per_frame(
+    written_frames = mBytesWritten / audio_bytes_per_frame(
         audio_channel_count_from_out_mask(config_.channel_mask),
         config_.format);
 
@@ -2391,7 +2393,7 @@ int StreamOutPrimary::GetOutputUseCase(audio_output_flags_t halStreamFlags)
 
 ssize_t StreamOutPrimary::splitAndWriteAudioHapticsStream(const void *buffer, size_t bytes)
 {
-     int ret = 0;
+     ssize_t ret = 0;
      bool allocHapticsBuffer = false;
      struct pal_buffer audioBuf;
      struct pal_buffer hapticBuf;
@@ -2452,23 +2454,31 @@ ssize_t StreamOutPrimary::splitAndWriteAudioHapticsStream(const void *buffer, si
      return ret;
 }
 
-ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes)
-{
-    int ret = 0;
-    struct pal_buffer palBuffer;
-    int local_bytes_written = 0;
-    uint32_t frames;
-    bool is_perf_lock_acquired = false;
+ssize_t StreamOutPrimary::onWriteError(size_t bytes) {
+    // standby streams upon write failures and sleep for buffer duration.
+    AHAL_ERR("write error");
+    Standby();
+    if (streamAttributes_.type != PAL_STREAM_COMPRESSED) {
+        uint32_t byteWidth = streamAttributes_.out_media_config.bit_width / 8;
+        uint32_t sampleRate = streamAttributes_.out_media_config.sample_rate;
+        uint32_t channelCount = streamAttributes_.out_media_config.ch_info.channels;
+        uint32_t frameSize = byteWidth * channelCount;
 
-    palBuffer.buffer = (uint8_t*)buffer;
-    palBuffer.size = bytes;
-    palBuffer.offset = 0;
+        if (frameSize == 0 || sampleRate == 0) {
+            AHAL_ERR(LOG_TAG, "frameSize=%d, sampleRate=%d", frameSize, sampleRate);
+            return -EINVAL;
+        } else {
+            usleep((uint64_t)bytes * 1000000 / frameSize / sampleRate);
+        }
+    }
+    return bytes;
+}
 
-    AHAL_VERBOSE("handle_ %x Bytes:(%zu)", handle_, bytes);
-    is_perf_lock_acquired = AcquirePerfLock();
-
+ssize_t StreamOutPrimary::configurePalOutputStream() {
+    ssize_t ret = 0;
     if (!pal_stream_handle_) {
-        ATRACE_BEGIN("hal: pal_stream_open");
+        AutoPerfLock perfLock;
+        ATRACE_BEGIN("hal:open_output");
         ret = Open();
         ATRACE_END();
         if (ret) {
@@ -2478,6 +2488,7 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes)
     }
 
     if (!stream_started_) {
+        AutoPerfLock perfLock;
         /* set cached volume if any, dont return failure back up */
         if (volume_) {
             ret = pal_stream_set_volume(pal_stream_handle_, volume_);
@@ -2499,38 +2510,32 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes)
                 pal_stream_close(pal_haptics_stream_handle);
                 pal_haptics_stream_handle = NULL;
             }
-            goto exit;
+            return -EINVAL;
         }
         if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
             ret = pal_stream_start(pal_haptics_stream_handle);
             if (ret) {
                 AHAL_ERR("failed to start haptics stream. ret=%d", ret);
+                ATRACE_END();
                 pal_stream_close(pal_haptics_stream_handle);
                 pal_haptics_stream_handle = NULL;
+                return -EINVAL;
             }
         }
         stream_started_ = true;
 
         if (CheckOffloadEffectsType(streamAttributes_.type)) {
             ret = StartOffloadEffects(handle_, pal_stream_handle_);
-        }
-
-        if (CheckOffloadEffectsType(streamAttributes_.type)) {
             ret = StartOffloadVisualizer(handle_, pal_stream_handle_);
         }
-
         ATRACE_END();
     }
-    if (streamAttributes_.type == PAL_STREAM_COMPRESSED &&
-                                      sendGaplessMetadata) {
+    if ((streamAttributes_.type == PAL_STREAM_COMPRESSED) && sendGaplessMetadata) {
         pal_param_payload *param_payload = nullptr;
         param_payload = (pal_param_payload *) calloc (1,
                                               sizeof(pal_param_payload) +
                                               sizeof(struct pal_compr_gapless_mdata));
-        if (!param_payload) {
-            AHAL_ERR("calloc failed for size %zu",
-                   sizeof(pal_param_payload) + sizeof(struct pal_compr_gapless_mdata));
-        } else {
+        if (param_payload) {
             AHAL_DBG("sending gapless metadata");
             param_payload->payload_size = sizeof(struct pal_compr_gapless_mdata);
             memcpy(param_payload->payload, &gaplessMeta, param_payload->payload_size);
@@ -2541,36 +2546,70 @@ ssize_t StreamOutPrimary::Write(const void *buffer, size_t bytes)
             if (ret)
                 AHAL_ERR("PAL set param for gapless failed, error (%x)", ret);
             free(param_payload);
+        } else {
+            AHAL_ERR("Failed to allocate gapless payload");
         }
         sendGaplessMetadata = false;
     }
+    return 0;
+}
 
+ssize_t StreamOutPrimary::write(const void *buffer, size_t bytes)
+{
+    ssize_t ret = 0;
+    struct pal_buffer palBuffer;
+    uint32_t frames;
+
+    palBuffer.buffer = (uint8_t*)buffer;
+    palBuffer.size = bytes;
+    palBuffer.offset = 0;
+
+    AHAL_VERBOSE("handle_ %x bytes:(%zu)", handle_, bytes);
+
+    ret = configurePalOutputStream();
+    if (ret < 0)
+        goto exit;
     ATRACE_BEGIN("hal: pal_stream_write");
     if (halInputFormat != halOutputFormat && convertBuffer != NULL) {
-        frames = bytes / (format_to_bitwidth_table[halInputFormat]/8);
-        memcpy_by_audio_format(convertBuffer, halOutputFormat, buffer, halInputFormat,
-                               frames);
-        palBuffer.buffer = (uint8_t *)convertBuffer;
-        palBuffer.size = frames * (format_to_bitwidth_table[halOutputFormat]/8);
-        local_bytes_written = pal_stream_write(pal_stream_handle_, &palBuffer);
-        local_bytes_written = (local_bytes_written * (format_to_bitwidth_table[halInputFormat]/8)) /
-                               (format_to_bitwidth_table[halOutputFormat]/8);
-    } else if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS && pal_haptics_stream_handle) {
-        local_bytes_written = splitAndWriteAudioHapticsStream(buffer, bytes);
-    } else {
-        local_bytes_written = pal_stream_write(pal_stream_handle_, &palBuffer);
-    }
-    if (local_bytes_written < 0) local_bytes_written = 0;
+        if (bytes > fragment_size_) {
+            AHAL_ERR("Error written bytes %zu > %d (fragment_size)", bytes, fragment_size_);
+            ATRACE_END();
+            return -EINVAL;
+        }
+        /* prevent division-by-zero */
+        uint32_t inputBitWidth = format_to_bitwidth_table[halInputFormat];
+        uint32_t outputBitWidth = format_to_bitwidth_table[halOutputFormat];
 
-    if (total_bytes_written_ < UINT64_MAX - local_bytes_written)
-        total_bytes_written_ += local_bytes_written;
-    clock_gettime(CLOCK_MONOTONIC, &writeAt);
+        if (inputBitWidth == 0 || outputBitWidth == 0) {
+            AHAL_ERR("Error inputBitWidth %u, outputBitWidth %u", inputBitWidth, outputBitWidth);
+            ATRACE_END();
+            return -EINVAL;
+        }
+
+        frames = bytes / (inputBitWidth / 8);
+        memcpy_by_audio_format(convertBuffer, halOutputFormat, buffer, halInputFormat, frames);
+        palBuffer.buffer = (uint8_t *)convertBuffer;
+        palBuffer.size = frames * (outputBitWidth / 8);
+        ret = pal_stream_write(pal_stream_handle_, &palBuffer);
+        if (ret >= 0) {
+            ret = (ret * inputBitWidth) / outputBitWidth;
+        }
+    } else if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS && pal_haptics_stream_handle) {
+        ret = splitAndWriteAudioHapticsStream(buffer, bytes);
+    } else {
+        ret = pal_stream_write(pal_stream_handle_, &palBuffer);
+    }
     ATRACE_END();
 
 exit:
-    if (is_perf_lock_acquired)
-        ReleasePerfLock();
-    return local_bytes_written;
+    if (mBytesWritten <= UINT64_MAX - bytes) {
+        mBytesWritten += bytes;
+    } else {
+        mBytesWritten = UINT64_MAX;
+    }
+    clock_gettime(CLOCK_MONOTONIC, &writeAt);
+
+    return (ret < 0 ? onWriteError(bytes) : bytes);
 }
 
 bool StreamOutPrimary::CheckOffloadEffectsType(pal_stream_type_t pal_stream_type) {
@@ -2740,7 +2779,7 @@ StreamOutPrimary::StreamOutPrimary(
 
     writeAt.tv_sec = 0;
     writeAt.tv_nsec = 0;
-    total_bytes_written_ = 0;
+    mBytesWritten = 0;
     convertBuffer = NULL;
     hapticBuffer = NULL;
     hapticsBufSize = 0;
@@ -2810,9 +2849,6 @@ StreamOutPrimary::~StreamOutPrimary() {
     if (pal_stream_handle_) {
         if (CheckOffloadEffectsType(streamAttributes_.type)) {
             StopOffloadEffects(handle_, pal_stream_handle_);
-        }
-
-        if (CheckOffloadEffectsType(streamAttributes_.type)) {
             StopOffloadVisualizer(handle_, pal_stream_handle_);
         }
 
@@ -3146,6 +3182,12 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
             /* HDR use case check */
             if (is_hdr_mode_enabled())
                 setup_hdr_usecase(&mPalInDevice[i]);
+
+            if (source_ == AUDIO_SOURCE_CAMCORDER && adevice->cameraOrientation == CAMERA_DEFAULT) {
+                strlcpy(mPalInDevice[i].custom_config.custom_key, "camcorder_landscape",
+                        sizeof(mPalInDevice[i].custom_config.custom_key));
+                AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
+            }
         }
 
         mAndroidInDevices = new_devices;
@@ -3177,7 +3219,7 @@ exit:
 }
 
 int StreamInPrimary::Open() {
-    int ret = -EINVAL;
+    int ret = 0;
     uint8_t channels = 0;
     struct pal_channel_info ch_info = {0, {0}};
     uint32_t inBufSize = 0;
@@ -3188,7 +3230,7 @@ int StreamInPrimary::Open() {
     AHAL_DBG("Enter InPrimary");
     if (!mInitialized) {
         AHAL_ERR("Not initialized, returning error");
-        goto error_open;
+        return -EINVAL;
     }
 
     handle = audio_extn_sound_trigger_check_and_get_session(this);
@@ -3343,7 +3385,7 @@ set_buff_size:
 
     fragments_ = inBufCount;
     fragment_size_ = inBufSize;
-    total_bytes_read_ = 0; // reset at each open
+    mBytesRead = 0; // reset at each open
 
 error_open:
     AHAL_DBG("Exit ret: %d", ret);
@@ -3422,13 +3464,29 @@ int StreamInPrimary::SetMicMute(bool mute) {
     return ret;
 }
 
-ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
-    int ret = 0;
+ssize_t StreamInPrimary::onReadError(size_t bytes) {
+    // standby streams upon read failures and sleep for buffer duration.
+    AHAL_ERR("read failed");
+    Standby();
+    uint32_t byteWidth = streamAttributes_.in_media_config.bit_width / 8;
+    uint32_t sampleRate = streamAttributes_.in_media_config.sample_rate;
+    uint32_t channelCount = streamAttributes_.in_media_config.ch_info.channels;
+    uint32_t frameSize = byteWidth * channelCount;
+
+    if (frameSize == 0 || sampleRate == 0) {
+        AHAL_ERR(LOG_TAG, "frameSize=%d, sampleRate=%d", frameSize, sampleRate);
+        return -EINVAL;
+    } else {
+        usleep((uint64_t)bytes * 1000000 / frameSize / sampleRate);
+    }
+    return bytes;
+}
+
+ssize_t StreamInPrimary::read(const void *buffer, size_t bytes) {
+    ssize_t ret = 0;
     int retry_count = MAX_READ_RETRY_COUNT;
     ssize_t size = 0;
     struct pal_buffer palBuffer;
-    uint32_t local_bytes_read = 0;
-    bool is_perf_lock_acquired = false;
 
     palBuffer.buffer = (uint8_t *)buffer;
     palBuffer.size = bytes;
@@ -3436,10 +3494,12 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     AHAL_VERBOSE("Bytes:(%zu)", bytes);
-    is_perf_lock_acquired = AcquirePerfLock();
 
     if (!pal_stream_handle_) {
+        AutoPerfLock perfLock;
         ret = Open();
+        if (ret < 0)
+            goto exit;
     }
 
     if (is_st_session) {
@@ -3447,8 +3507,6 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
         if (!audio_extn_sound_trigger_check_session_activity(this)) {
             AHAL_DBG("sound trigger session not available");
             memset(palBuffer.buffer, 0, palBuffer.size);
-            local_bytes_read = palBuffer.size;
-            total_bytes_read_ += local_bytes_read;
             ATRACE_END();
             goto exit;
         }
@@ -3460,8 +3518,6 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
             size = pal_stream_read(pal_stream_handle_, &palBuffer);
             if (size < 0) {
                 memset(palBuffer.buffer, 0, palBuffer.size);
-                local_bytes_read = palBuffer.size;
-                total_bytes_read_ += local_bytes_read;
                 AHAL_ERR("error, failed to read data from PAL");
                 ATRACE_END();
                 goto exit;
@@ -3469,13 +3525,12 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
                 break;
             }
         }
-        local_bytes_read = size;
-        total_bytes_read_ += local_bytes_read;
         ATRACE_END();
         goto exit;
     }
 
     if (!stream_started_) {
+        AutoPerfLock perfLock;
         ret = pal_stream_start(pal_stream_handle_);
         if (ret) {
             AHAL_ERR("failed to start stream. ret=%d", ret);
@@ -3506,26 +3561,24 @@ ssize_t StreamInPrimary::Read(const void *buffer, size_t bytes) {
        effects_applied_ = true;
     }
 
-    local_bytes_read = pal_stream_read(pal_stream_handle_, &palBuffer);
-
+    ret = pal_stream_read(pal_stream_handle_, &palBuffer);
     // mute pcm data if sva client is reading lab data
     if (adevice->num_va_sessions_ > 0 &&
         source_ != AUDIO_SOURCE_VOICE_RECOGNITION &&
         property_get_bool("persist.vendor.audio.va_concurrency_mute_enabled",
         false)) {
         memset(palBuffer.buffer, 0, palBuffer.size);
-        local_bytes_read = palBuffer.size;
     }
 
-    total_bytes_read_ += local_bytes_read;
+exit:
+    if (mBytesRead <= UINT64_MAX - bytes) {
+        mBytesRead += bytes;
+    } else {
+        mBytesRead = UINT64_MAX;
+    }
     clock_gettime(CLOCK_MONOTONIC, &readAt);
 
-exit:
-    AHAL_VERBOSE("Exit, bytes read %u", local_bytes_read);
-
-    if (is_perf_lock_acquired)
-        ReleasePerfLock();
-    return local_bytes_read;
+    return (ret < 0 ? onReadError(bytes) : bytes);
 }
 
 int StreamInPrimary::FillHalFnPtrs() {
@@ -3651,6 +3704,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
             mPalInDevice[i].address.card_id = adevice->usb_card_id_;
             mPalInDevice[i].address.device_num = adevice->usb_dev_num_;
         }
+
         /* HDR use case check */
         if ( (source_ == AUDIO_SOURCE_UNPROCESSED) &&
            (config_.sample_rate == 48000) ) {
@@ -3662,6 +3716,12 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
                     setup_hdr_usecase(&mPalInDevice[i]);
                 }
             }
+        }
+
+        if (source_ == AUDIO_SOURCE_CAMCORDER && adevice->cameraOrientation == CAMERA_DEFAULT) {
+            strlcpy(mPalInDevice[i].custom_config.custom_key, "camcorder_landscape",
+                    sizeof(mPalInDevice[i].custom_config.custom_key));
+            AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
         }
     }
 

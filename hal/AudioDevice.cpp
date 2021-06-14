@@ -1224,8 +1224,24 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     AHAL_ERR("pal set param failed for device connection, pal_device_ids:%d",
                              pal_device_ids[i]);
                 }
-                AHAL_INFO("pal set param success  for device connection");
             }
+            AHAL_INFO("pal set param success  for device connection");
+            /* check if capture profile is supported or not */
+            pal_param_device_capability_t *device_cap_query = new pal_param_device_capability_t();
+            dynamic_media_config_t dynamic_media_config;
+            size_t payload_size = 0;
+            device_cap_query->id = PAL_DEVICE_IN_USB_HEADSET;
+            device_cap_query->addr.card_id = usb_card_id_;
+            device_cap_query->addr.device_num = usb_dev_num_;
+            device_cap_query->config = &dynamic_media_config;
+            device_cap_query->is_playback = false;
+            ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
+                    (void **)&device_cap_query,
+                    &payload_size, nullptr);
+            if (dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
+                    dynamic_media_config.mask == 0)
+                usb_input_dev_enabled = false;
+            delete device_cap_query;
             if (pal_device_ids) {
                 free(pal_device_ids);
                 pal_device_ids = NULL;
