@@ -27,12 +27,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
 <manifest version="1.0" type="device">
     <hal format="hidl">
-        <name>android.hardware.soundtrigger</name>
+        <name>vendor.qti.hardware.ListenSoundModel</name>
         <transport>hwbinder</transport>
-        <version>2.3</version>
+        <version>1.0</version>
         <interface>
-            <name>ISoundTriggerHw</name>
+            <name>IListenSoundModel</name>
             <instance>default</instance>
-        </interface>
+            </interface>
     </hal>
 </manifest>
