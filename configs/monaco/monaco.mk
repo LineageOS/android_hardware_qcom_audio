@@ -9,7 +9,6 @@ endif
 
 ifneq ($(AUDIO_USE_STUB_HAL), true)
 BOARD_USES_ALSA_AUDIO := true
-TARGET_USES_AOSP_FOR_AUDIO := false
 
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 USE_CUSTOM_AUDIO_POLICY := 1
