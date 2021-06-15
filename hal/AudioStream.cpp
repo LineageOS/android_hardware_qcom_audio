@@ -2465,7 +2465,7 @@ ssize_t StreamOutPrimary::onWriteError(size_t bytes) {
         uint32_t frameSize = byteWidth * channelCount;
 
         if (frameSize == 0 || sampleRate == 0) {
-            AHAL_ERR(LOG_TAG, "frameSize=%d, sampleRate=%d", frameSize, sampleRate);
+            AHAL_ERR("frameSize=%d, sampleRate=%d", frameSize, sampleRate);
             return -EINVAL;
         } else {
             usleep((uint64_t)bytes * 1000000 / frameSize / sampleRate);
@@ -3474,7 +3474,7 @@ ssize_t StreamInPrimary::onReadError(size_t bytes) {
     uint32_t frameSize = byteWidth * channelCount;
 
     if (frameSize == 0 || sampleRate == 0) {
-        AHAL_ERR(LOG_TAG, "frameSize=%d, sampleRate=%d", frameSize, sampleRate);
+        AHAL_ERR("frameSize=%d, sampleRate=%d", frameSize, sampleRate);
         return -EINVAL;
     } else {
         usleep((uint64_t)bytes * 1000000 / frameSize / sampleRate);
