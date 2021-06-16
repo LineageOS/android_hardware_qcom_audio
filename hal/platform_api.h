@@ -25,6 +25,8 @@
 #define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
 #define CODEC_BACKEND_DEFAULT_SAMPLE_RATE 48000
 
+enum card_status_t;
+
 void *platform_init(struct audio_device *adev);
 void platform_deinit(void *platform);
 const char *platform_get_snd_device_name(snd_device_t snd_device);
