@@ -351,7 +351,7 @@ vendor.audio.use.sw.mpegh.decoder=true
 
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.hw.aac.encoder=true
+vendor.audio.hw.aac.encoder=false
 
 #Set HAL buffer size to samples equal to 3 ms
 PRODUCT_PROPERTY_OVERRIDES += \
