@@ -992,6 +992,8 @@ static void open_a2dp_source() {
                 ALOGE("Failed to open source stream for a2dp: status %d", ret);
             }
             a2dp.bt_state_source = A2DP_STATE_CONNECTED;
+            if (!a2dp.adev->bt_sco_on)
+                a2dp.a2dp_source_suspended = false;
         } else {
             ALOGD("Called a2dp open with improper state %d", a2dp.bt_state_source);
         }
@@ -1088,7 +1090,8 @@ static int close_a2dp_output()
     }
     a2dp.a2dp_source_started = false;
     a2dp.a2dp_source_total_active_session_requests = 0;
-    a2dp.a2dp_source_suspended = false;
+    if (!a2dp.adev->bt_sco_on)
+        a2dp.a2dp_source_suspended = false;
     a2dp.bt_encoder_format = CODEC_TYPE_INVALID;
     a2dp.enc_sampling_rate = 48000;
     a2dp.enc_channels = 2;
@@ -2944,6 +2947,13 @@ int a2dp_set_parameters(struct str_parms *parms, bool *reconfig)
             *reconfig = true;
         }
         goto param_handled;
+    }
+
+    ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
+    if (ret >= 0) {
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
+            a2dp.a2dp_source_suspended = true;
+        }
     }
 
 param_handled:
