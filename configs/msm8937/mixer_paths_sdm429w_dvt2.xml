@@ -935,6 +935,7 @@
 
     <path name="speaker-and-bt-a2dp">
         <path name="speaker" />
+        <path name="bt-a2dp" />
     </path>
 
     <path name="voice-rec-mic">
