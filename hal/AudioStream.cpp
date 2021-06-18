@@ -2108,8 +2108,7 @@ uint32_t StreamOutPrimary::GetBufferSize() {
         return voip_get_buffer_size(config_.sample_rate);
     } else if (streamAttributes_.type == PAL_STREAM_COMPRESSED) {
         return get_compressed_buffer_size();
-    } else if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD
-              || streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
+    } else if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD) {
         return get_pcm_buffer_size();
     } else if (streamAttributes_.type == PAL_STREAM_LOW_LATENCY) {
         return LOW_LATENCY_PLAYBACK_PERIOD_SIZE *
@@ -2118,6 +2117,11 @@ uint32_t StreamOutPrimary::GetBufferSize() {
                     config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
         return ULL_PERIOD_SIZE * ULL_PERIOD_MULTIPLIER *
+            audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+    } else if (streamAttributes_.type == PAL_STREAM_DEEP_BUFFER){
+        return DEEP_BUFFER_PLAYBACK_PERIOD_SIZE *
             audio_bytes_per_frame(
                     audio_channel_count_from_out_mask(config_.channel_mask),
                     config_.format);
