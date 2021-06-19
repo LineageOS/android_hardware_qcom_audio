@@ -874,6 +874,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     int ret = 0;
     /* default audio HAL major version */
     uint32_t maj_version = 3;
+    bool is_charging = false;
 
     ret = pal_init();
     if (ret) {
@@ -967,6 +968,8 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     /* no feature configurations yet */
     AudioExtn::battery_listener_feature_init(true);
     AudioExtn::battery_properties_listener_init(adev_on_battery_status_changed);
+    is_charging = AudioExtn::battery_properties_is_charging();
+    SetChargingMode(is_charging);
     AudioExtn::audio_extn_perf_lock_init();
     adev_->perf_lock_opts[0] = 0x40400000;
     adev_->perf_lock_opts[1] = 0x1;
