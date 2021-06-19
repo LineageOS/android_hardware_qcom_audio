@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -77,6 +77,7 @@ public:
             bool slow_talk;
             bool hd_voice;
             struct pal_volume_data *pal_vol_data;
+            pal_device_mute_t device_mute;
     };
     struct voice_t {
             voice_session_t session[MAX_VOICE_SESSIONS];

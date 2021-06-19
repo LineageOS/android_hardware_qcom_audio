@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -236,6 +236,55 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
             }
             free(params);
             params = nullptr;
+        }
+    }
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_DEVICE_MUTE, c_value,
+                            sizeof(c_value));
+    if (err >= 0) {
+        bool mute = false;
+        pal_stream_direction_t dir = PAL_AUDIO_INPUT;
+        str_parms_del(parms, AUDIO_PARAMETER_KEY_DEVICE_MUTE);
+
+        if (strcmp(c_value, "true") == 0) {
+            mute = true;
+        }
+
+        err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_DIRECTION, c_value,
+                                sizeof(c_value));
+        if (err >= 0) {
+            str_parms_del(parms, AUDIO_PARAMETER_KEY_DIRECTION);
+
+            if (strcmp(c_value, "rx") == 0){
+                dir = PAL_AUDIO_OUTPUT;
+            }
+        } else {
+            ALOGE("direction key not found");
+            ret = -EINVAL;
+            goto done;
+        }
+        params = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
+                                                sizeof(pal_device_mute_t));
+        if (!params) {
+            ALOGE("calloc failed for size %zu",
+                     sizeof(pal_param_payload) + sizeof(pal_device_mute_t));
+        } else {
+            params->payload_size = sizeof(pal_device_mute_t);
+;
+
+            for ( i = 0; i < max_voice_sessions_; i++) {
+                voice_.session[i].device_mute.mute = mute;
+                voice_.session[i].device_mute.dir = dir;
+                memcpy(params->payload, &(voice_.session[i].device_mute), params->payload_size);
+                if (IsCallActive(&voice_.session[i])) {
+                    ret= pal_stream_set_param(voice_.session[i].pal_voice_handle,
+                                         PAL_PARAM_ID_DEVICE_MUTE, params);
+                }
+                if (ret != 0) {
+                    ALOGE("%s: Failed to set mute err:%d", __func__, ret);
+                    ret = -EINVAL;
+                    goto done;
+                }
+            }
         }
     }
 
@@ -666,6 +715,24 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
    } else {
       AHAL_DBG("Pal Stream Start Success");
    }
+   /*apply device mute if needed */
+   if (session->device_mute.mute) {
+        param_payload = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
+                                               sizeof(session->device_mute));
+       if (!param_payload) {
+           ALOGE("calloc failed for size %zu",
+                    sizeof(pal_param_payload) + sizeof(session->device_mute));
+       } else {
+           param_payload->payload_size = sizeof(session->device_mute);
+           memcpy(param_payload->payload, &(session->device_mute), param_payload->payload_size);
+           ret = pal_stream_set_param(session->pal_voice_handle, PAL_PARAM_ID_DEVICE_MUTE,
+                                      param_payload);
+           if (ret)
+               ALOGE("%s Voice Device mute failed %x", __func__, ret);
+           free(param_payload);
+           param_payload = nullptr;
+       }
+   }
 
 error_open:
     AHAL_DBG("Exit ret: %d", ret);
@@ -848,6 +915,8 @@ AudioVoice::AudioVoice() {
         voice_.session[i].pal_voice_handle = NULL;
         voice_.session[i].hd_voice = false;
         voice_.session[i].pal_vol_data = pal_vol_;
+        voice_.session[i].device_mute.dir = PAL_AUDIO_OUTPUT;
+        voice_.session[i].device_mute.mute = false;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
