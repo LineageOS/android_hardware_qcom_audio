@@ -261,8 +261,8 @@
     </pcm-device>
 
     <pcm-device>
-        <id>116</id>
-        <name>EXTEC116</name>
+        <id>118</id>
+        <name>ExtEC118</name>
         <pcm_plugin>
             <so-name>libagm_pcm_plugin.so</so-name>
         </pcm_plugin>
