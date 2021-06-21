@@ -2240,6 +2240,7 @@
     </path>
 
     <path name="voice-speaker-stereo">
+        <ctl name="WSA_RX0 Digital Volume" value="60" />
         <path name="speaker" />
     </path>
 
