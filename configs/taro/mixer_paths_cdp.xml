@@ -133,7 +133,7 @@
     <ctl name="VA SMIC MUX3" value="ZERO" />
     <ctl name="VA_DEC0 MODE" value="ADC_DEFAULT" />
     <ctl name="ADC2_BCS Disable" value="0" />
-    <ctl name="LPI Enable" value="1" />
+    <ctl name="LPI Enable" value="0" />
     <ctl name="ADC1_MIXER Switch" value="0" />
     <ctl name="ADC2_MIXER Switch" value="0" />
     <ctl name="ADC3_MIXER Switch" value="0" />
@@ -2430,12 +2430,14 @@
     </path>
 
     <path name="va-mic-mono-lpi">
+        <ctl name="LPI Enable" value="1" />
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
         <ctl name="VA DMIC MUX0" value="DMIC1" />
     </path>
 
     <path name="va-mic-dmic-lpi">
+        <ctl name="LPI Enable" value="1" />
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA_AIF1_CAP Mixer DEC1" value="1" />
         <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
@@ -2445,6 +2447,7 @@
     </path>
 
     <path name="va-mic-tmic-lpi">
+        <ctl name="LPI Enable" value="1" />
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA_AIF1_CAP Mixer DEC1" value="1" />
         <ctl name="VA_AIF1_CAP Mixer DEC2" value="1" />
@@ -2457,6 +2460,7 @@
     </path>
 
     <path name="va-mic-qmic-lpi">
+        <ctl name="LPI Enable" value="1" />
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA_AIF1_CAP Mixer DEC1" value="1" />
         <ctl name="VA_AIF1_CAP Mixer DEC2" value="1" />
@@ -2475,7 +2479,8 @@
         <path name="va-mic-mono-lpi" />
     </path>
 
-    <path name="headset-va-mic">
+    <path name="headset-va-mic-lpi">
+         <ctl name="LPI Enable" value="1" />
          <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
          <ctl name="VA DEC0 MUX" value="SWR_MIC" />
          <ctl name="VA SMIC MUX0" value="SWR_MIC5" />
@@ -2489,6 +2494,19 @@
          <ctl name="VA_AMIC2_MIXER Switch" value="1" />
     </path>
 
+    <path name="headset-va-mic">
+         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+         <ctl name="VA DEC0 MUX" value="SWR_MIC" />
+         <ctl name="VA SMIC MUX0" value="SWR_MIC5" />
+         <ctl name="TX1 MODE" value="ADC_LP" />
+         <ctl name="ADC2 MUX" value="INP2" />
+         <ctl name="VA_DEC0 MODE" value="ADC_LOW_PWR" />
+         <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
+         <ctl name="HDR12 MUX" value="NO_HDR12" />
+         <ctl name="ADC2_BCS Disable" value="1" />
+         <ctl name="ADC2_MIXER Switch" value="1" />
+         <ctl name="VA_AMIC2_MIXER Switch" value="1" />
+    </path>
 
     <!-- Dual MIC devices -->
     <path name="handset-dmic-endfire">
@@ -2641,6 +2659,22 @@
 
     <path name="quad-mic-liquid">
         <path name="speaker-qmic-liquid" />
+    </path>
+
+    <path name="unprocessed-hdr-mic-landscape">
+        <path name="speaker-qmic" />
+    </path>
+
+    <path name="unprocessed-hdr-mic-inverted-landscape">
+        <path name="speaker-qmic" />
+    </path>
+
+    <path name="unprocessed-hdr-mic-portrait">
+        <path name="speaker-qmic" />
+    </path>
+
+    <path name="unprocessed-hdr-mic-inverted-portrait">
+        <path name="speaker-qmic" />
     </path>
 
     <!-- TTY devices -->
@@ -3191,6 +3225,9 @@
     </path>
 
     <path name="call-proxy-in">
+    </path>
+
+    <path name="ext_ec_ref_tx">
     </path>
 
 </mixer>

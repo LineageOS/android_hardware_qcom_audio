@@ -57,6 +57,197 @@
 
 card_status_t AudioDevice::sndCardState = CARD_STATUS_ONLINE;
 
+static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
+    struct str_parms *parms) {
+
+    if (adev == nullptr || parms == nullptr) {
+        AHAL_ERR("%s Invalid arguments", __func__);
+        return;
+    }
+
+    int ret = 0, val = 0;
+    char value[32];
+
+    /* HDR Audio Parameters */
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HDR, value,
+              sizeof(value));
+    if (ret >= 0) {
+        if (strncmp(value, "true", 4) == 0)
+            adev->hdr_record_enabled = true;
+        else
+            adev->hdr_record_enabled = false;
+
+        AHAL_INFO("HDR Enabled: %d", adev->hdr_record_enabled);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_WNR, value,
+              sizeof(value));
+    if (ret >= 0) {
+        if (strncmp(value, "true", 4) == 0)
+            adev->wnr_enabled = true;
+        else
+            adev->wnr_enabled = false;
+
+        AHAL_INFO("WNR Enabled: %d", adev->wnr_enabled);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_ANS, value,
+              sizeof(value));
+    if (ret >= 0) {
+        if (strncmp(value, "true", 4) == 0)
+            adev->ans_enabled = true;
+        else
+            adev->ans_enabled = false;
+
+        AHAL_INFO("ANS Enabled: %d", adev->ans_enabled);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_ORIENTATION, value,
+              sizeof(value));
+    if (ret >= 0) {
+        if (strncmp(value, "landscape", 9) == 0)
+            adev->orientation_landscape = true;
+        else if (strncmp(value, "portrait", 8) == 0)
+            adev->orientation_landscape = false;
+
+        AHAL_INFO("Orientation %s",
+            adev->orientation_landscape ? "landscape" : "portrait");
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_INVERTED, value,
+              sizeof(value));
+    if (ret >= 0) {
+        if (strncmp(value, "true", 4) == 0)
+            adev->inverted = true;
+        else
+            adev->inverted = false;
+
+        AHAL_INFO("Orientation inverted: %d", adev->inverted);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FACING, value,
+              sizeof(value));
+    if (ret >= 0) {
+        /*0-none, 1-back, 2-front/selfie*/
+        if (strncmp(value, "front", 5) == 0)
+            adev->facing = 2;
+        else if (strncmp(value, "back", 4) == 0)
+            adev->facing = 1;
+        else if (strncmp(value, "none", 4) == 0)
+            adev->facing = 0;
+
+        AHAL_INFO("Device facing %s", value);
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HDR_CHANNELS, value,
+              sizeof(value));
+    if (ret >= 0) {
+        val = atoi(value);
+        if (val != 4) {
+           AHAL_DBG("Invalid HDR channels: %d", val);
+        } else {
+            adev->hdr_channel_count = val;
+        }
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HDR_SAMPLERATE, value,
+              sizeof(value));
+    if (ret >= 0) {
+        val = atoi(value);
+        if (val != 48000) {
+            AHAL_DBG("Invalid HDR sample rate: %d", val);
+        } else {
+            adev->hdr_sample_rate = val;
+        }
+    }
+}
+
+static void hdr_get_parameters(std::shared_ptr<AudioDevice> adev,
+    struct str_parms *query, struct str_parms *reply) {
+
+    if (adev == nullptr || query == nullptr || reply == nullptr) {
+        AHAL_ERR("%s Invalid arguments", __func__);
+        return;
+    }
+
+    int32_t ret;
+    char value[256]={0};
+    size_t size = 0;
+
+    /* HDR Audio Parameters */
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_HDR, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_HDR,
+            adev->hdr_record_enabled ? "true" : "false");
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_HDR,
+            adev->hdr_record_enabled ? "true" : "false");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_WNR, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_WNR, adev->wnr_enabled
+            ? "true" : "false");
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_WNR, adev->wnr_enabled
+            ? "true" : "false");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_ANS, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_ANS, adev->ans_enabled
+            ? "true" : "false");
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_ANS, adev->ans_enabled
+            ? "true" : "false");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_ORIENTATION, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply,AUDIO_PARAMETER_KEY_ORIENTATION,
+            adev->orientation_landscape ? "landscape" : "portrait");
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_ORIENTATION,
+            adev->orientation_landscape ? "landscape" : "portrait");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_INVERTED, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_INVERTED, adev->inverted
+            ? "true" : "false");
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_INVERTED, adev->inverted
+            ? "true" : "false");
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_FACING, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_str(reply, AUDIO_PARAMETER_KEY_FACING,
+            (adev->facing == 0) ? "none" : ((adev->facing == 1) ?  "back"
+                : "front"));
+        AHAL_VERBOSE("%s=%s", AUDIO_PARAMETER_KEY_FACING, (adev->facing == 0)
+            ? "none" : ((adev->facing == 1) ?  "back" : "front"));
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_HDR_CHANNELS, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_HDR_CHANNELS,
+            adev->hdr_channel_count);
+        AHAL_VERBOSE("%s=%d",AUDIO_PARAMETER_KEY_HDR_CHANNELS,
+            adev->hdr_channel_count);
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_HDR_SAMPLERATE, value,
+              sizeof(value));
+    if (ret >= 0) {
+        str_parms_add_int(reply, AUDIO_PARAMETER_KEY_HDR_SAMPLERATE,
+            adev->hdr_sample_rate);
+        AHAL_INFO("%s=%d", AUDIO_PARAMETER_KEY_HDR_SAMPLERATE, adev->hdr_sample_rate);
+    }
+}
+
 AudioDevice::~AudioDevice() {
     audio_extn_gef_deinit(adev_);
     audio_extn_sound_trigger_deinit(adev_);
@@ -193,7 +384,7 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
     else
         stream = InGetStream(io_handle);
 
-    if(!stream){
+    if(!stream) {
         AHAL_ERR("Failed to fetch stream with io handle %d", io_handle);
         ret = -EINVAL;
         goto exit;
@@ -237,7 +428,7 @@ exit:
     return ret;
 }
 
-int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
+int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle) {
     int ret = 0;
     AudioPatch *patch = NULL;
     std::shared_ptr<StreamPrimary> stream = nullptr;
@@ -282,7 +473,7 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle){
     else
         stream = InGetStream(io_handle);
 
-    if (!stream){
+    if (!stream) {
         AHAL_ERR("Failed to fetch stream with io handle %d", io_handle);
         return -EINVAL;
     }
@@ -620,7 +811,7 @@ static size_t adev_get_input_buffer_size(
 int adev_release_audio_patch(struct audio_hw_device *dev,
                              audio_patch_handle_t handle) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
-    if (!adevice){
+    if (!adevice) {
         AHAL_ERR("GetInstance() failed");
         return -EINVAL;
     }
@@ -634,13 +825,13 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
                             const struct audio_port_config *sinks,
                             audio_patch_handle_t *handle) {
 
-    if (!handle){
+    if (!handle) {
         AHAL_ERR("Invalid handle");
         return -EINVAL;
     }
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance(dev);
-    if (!adevice){
+    if (!adevice) {
         AHAL_ERR("GetInstance() failed");
         return -EINVAL;
     }
@@ -683,6 +874,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     int ret = 0;
     /* default audio HAL major version */
     uint32_t maj_version = 3;
+    bool is_charging = false;
 
     ret = pal_init();
     if (ret) {
@@ -776,6 +968,8 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     /* no feature configurations yet */
     AudioExtn::battery_listener_feature_init(true);
     AudioExtn::battery_properties_listener_init(adev_on_battery_status_changed);
+    is_charging = AudioExtn::battery_properties_is_charging();
+    SetChargingMode(is_charging);
     AudioExtn::audio_extn_perf_lock_init();
     adev_->perf_lock_opts[0] = 0x40400000;
     adev_->perf_lock_opts[1] = 0x1;
@@ -958,6 +1152,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     }
     AudioExtn::audio_extn_set_parameters(adev_, parms);
 
+    if (property_get_bool("vendor.audio.hdr.record.enable", false))
+        hdr_set_parameters(adev_, parms);
+
     ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
     if (ret >= 0) {
         pal_param_screen_state_t param_screen_st;
@@ -965,8 +1162,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             param_screen_st.screen_state = true;
             AHAL_DBG(" - screen = on");
             ret = pal_set_param( PAL_PARAM_ID_SCREEN_STATE, (void*)&param_screen_st, sizeof(pal_param_screen_state_t));
-        }
-        else {
+        } else {
             AHAL_DBG(" - screen = off");
             param_screen_st.screen_state = false;
             ret = pal_set_param( PAL_PARAM_ID_SCREEN_STATE, (void*)&param_screen_st, sizeof(pal_param_screen_state_t));
@@ -1031,8 +1227,24 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     AHAL_ERR("pal set param failed for device connection, pal_device_ids:%d",
                              pal_device_ids[i]);
                 }
-                AHAL_INFO("pal set param success  for device connection");
             }
+            AHAL_INFO("pal set param success  for device connection");
+            /* check if capture profile is supported or not */
+            pal_param_device_capability_t *device_cap_query = new pal_param_device_capability_t();
+            dynamic_media_config_t dynamic_media_config;
+            size_t payload_size = 0;
+            device_cap_query->id = PAL_DEVICE_IN_USB_HEADSET;
+            device_cap_query->addr.card_id = usb_card_id_;
+            device_cap_query->addr.device_num = usb_dev_num_;
+            device_cap_query->config = &dynamic_media_config;
+            device_cap_query->is_playback = false;
+            ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
+                    (void **)&device_cap_query,
+                    &payload_size, nullptr);
+            if (dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
+                    dynamic_media_config.mask == 0)
+                usb_input_dev_enabled = false;
+            delete device_cap_query;
             if (pal_device_ids) {
                 free(pal_device_ids);
                 pal_device_ids = NULL;
@@ -1102,17 +1314,14 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     spPayload.operationModeRunTime = atoi(cfg_str);
                     ret = pal_set_param(PAL_PARAM_ID_SP_MODE, (void*)&spPayload,
                                 sizeof(pal_spkr_prot_payload));
+                } else {
+                    AHAL_ERR("Unable to parse the FTM time");
                 }
-                else {
-                    AHAL_ERR ("Unable to parse the FTM time");
-                }
+            } else {
+                AHAL_ERR("Parameter missing for the FTM time");
             }
-            else {
-                AHAL_ERR ("Parameter missing for the FTM time");
-            }
-        }
-        else {
-            AHAL_ERR ("Unable to parse the FTM wait time");
+        } else {
+            AHAL_ERR("Unable to parse the FTM wait time");
         }
     }
 
@@ -1134,17 +1343,14 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     spPayload.operationModeRunTime = atoi(cfg_str);
                     ret = pal_set_param(PAL_PARAM_ID_SP_MODE, (void*)&spPayload,
                                 sizeof(pal_spkr_prot_payload));
+                } else {
+                    AHAL_ERR("Unable to parse the V_Validation time");
                 }
-                else {
-                    AHAL_ERR ("Unable to parse the V_Validation time");
-                }
+            } else {
+                AHAL_ERR("Parameter missing for the V-Validation time");
             }
-            else {
-                AHAL_ERR ("Parameter missing for the V-Validation time");
-            }
-        }
-        else {
-            AHAL_ERR ("Unable to parse the V-Validation wait time");
+        } else {
+            AHAL_ERR("Unable to parse the V-Validation wait time");
         }
     }
 
@@ -1211,32 +1417,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         pal_device_ids = NULL;
     }
 
-    ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
-    if (ret >= 0) {
-        pal_param_btsco_t param_bt_sco;
-        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
-            param_bt_sco.bt_sco_on = true;
-        else
-            param_bt_sco.bt_sco_on = false;
-
-        AHAL_INFO("BTSCO on = %d", param_bt_sco.bt_sco_on);
-        ret = pal_set_param(PAL_PARAM_ID_BT_SCO, (void *)&param_bt_sco,
-                            sizeof(pal_param_btsco_t));
-    }
-
-    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
-    if (ret >= 0) {
-        pal_param_btsco_t param_bt_sco;
-        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
-            param_bt_sco.bt_wb_speech_enabled = true;
-        else
-            param_bt_sco.bt_wb_speech_enabled = false;
-
-        AHAL_INFO("BTSCO WB mode = %d", param_bt_sco.bt_wb_speech_enabled);
-        ret = pal_set_param(PAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
-                            sizeof(pal_param_btsco_t));
-     }
-
+    /* A2DP parameters */
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_RECONFIG_A2DP, value, sizeof(value));
     if (ret >= 0) {
         pal_param_bta2dp_t param_bt_a2dp;
@@ -1287,6 +1468,34 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                             sizeof(pal_param_bta2dp_t));
     }
 
+    /* SCO parameters */
+    ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_btsco_t param_bt_sco;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+            param_bt_sco.bt_sco_on = true;
+        else
+            param_bt_sco.bt_sco_on = false;
+
+        memset(&btsco_lc3_cfg, 0, sizeof(btsco_lc3_cfg_t));
+        AHAL_INFO("BTSCO on = %d", param_bt_sco.bt_sco_on);
+        ret = pal_set_param(PAL_PARAM_ID_BT_SCO, (void *)&param_bt_sco,
+                            sizeof(pal_param_btsco_t));
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_btsco_t param_bt_sco;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+            param_bt_sco.bt_wb_speech_enabled = true;
+        else
+            param_bt_sco.bt_wb_speech_enabled = false;
+
+        AHAL_INFO("BTSCO WB mode = %d", param_bt_sco.bt_wb_speech_enabled);
+        ret = pal_set_param(PAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
+                            sizeof(pal_param_btsco_t));
+    }
+
     ret = str_parms_get_str(parms, "bt_swb", value, sizeof(value));
     if (ret >= 0) {
         pal_param_btsco_t param_bt_sco;
@@ -1298,6 +1507,46 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                             sizeof(pal_param_btsco_t));
     }
 
+    for (auto& key : lc3_reserved_params) {
+        ret = str_parms_get_str(parms, key, value, sizeof(value));
+        if (ret < 0)
+            continue;
+
+        if (!strcmp(key, "Codec") && !strcmp(value, "LC3")) {
+            btsco_lc3_cfg.fields_map |= LC3_CODEC_BIT;
+        } else if (!strcmp(key, "StreamMap")) {
+            strlcpy((char *)&(btsco_lc3_cfg.streamMap), value, PAL_LC3_MAX_STRING_LEN);
+            btsco_lc3_cfg.fields_map |= LC3_STREAM_MAP_BIT;
+        } else if (!strcmp(key, "FrameDuration")) {
+            btsco_lc3_cfg.frame_duration = atoi(value);
+            btsco_lc3_cfg.fields_map |= LC3_FRAME_DURATION_BIT;
+        } else if (!strcmp(key, "Blocks_forSDU")) {
+            btsco_lc3_cfg.num_blocks = atoi(value);
+            btsco_lc3_cfg.fields_map |= LC3_BLOCKS_FORSDU_BIT;
+        } else if (!strcmp(key, "rxconfig_index")) {
+            btsco_lc3_cfg.rxconfig_index = atoi(value);
+            btsco_lc3_cfg.fields_map |= LC3_RXCFG_IDX_BIT;
+        } else if (!strcmp(key, "txconfig_index")) {
+            btsco_lc3_cfg.txconfig_index = atoi(value);
+            btsco_lc3_cfg.fields_map |= LC3_TXCFG_IDX_BIT;
+        } else if (!strcmp(key, "version")) {
+            btsco_lc3_cfg.api_version = atoi(value);
+            btsco_lc3_cfg.fields_map |= LC3_VERSION_BIT;
+        }
+    }
+
+    if ((btsco_lc3_cfg.fields_map & LC3_BIT_MASK) == LC3_BIT_VALID) {
+        pal_param_btsco_t param_bt_sco;
+        param_bt_sco.bt_lc3_speech_enabled = true;
+        strlcpy((char *)&(param_bt_sco.lc3_cfg), (char *)&btsco_lc3_cfg, sizeof(btsco_lc3_cfg_t));
+
+        AHAL_INFO("BTSCO LC3 on = %d", param_bt_sco.bt_lc3_speech_enabled);
+        ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
+                            sizeof(pal_param_btsco_t));
+
+        memset(&btsco_lc3_cfg, 0, sizeof(btsco_lc3_cfg_t));
+    }
+
     ret = str_parms_get_str(parms, "wfd_channel_cap", value, sizeof(value));
     if (ret >= 0) {
         pal_param_proxy_channel_config_t param_out_proxy;
@@ -1307,6 +1556,32 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         AHAL_INFO("Proxy channels: %d", val);
         ret = pal_set_param(PAL_PARAM_ID_PROXY_CHANNEL_CONFIG, (void *)&param_out_proxy,
                 sizeof(pal_param_proxy_channel_config_t));
+    }
+
+    ret = str_parms_get_str(parms, "haptics_volume", value, sizeof(value));
+    if (ret >= 0) {
+        struct pal_volume_data* volume = NULL;
+        volume = (struct pal_volume_data *)malloc(sizeof(struct pal_volume_data)
+                      +sizeof(struct pal_channel_vol_kv));
+        volume->no_of_volpair = 1;
+        //For haptics, there is only one channel (FL).
+        volume->volume_pair[0].channel_mask = 0x01;
+        volume->volume_pair[0].vol = atof(value);
+        AHAL_INFO("Setting Haptics Volume as %f", volume->volume_pair[0].vol);
+        ret = pal_set_param(PAL_PARAM_ID_HAPTICS_VOLUME, (void *)volume,
+                 sizeof(pal_volume_data));
+        if (volume)
+            free(volume);
+    }
+
+    ret = str_parms_get_str(parms, "haptics_intensity", value, sizeof(value));
+    if (ret >=0) {
+        pal_param_haptics_intensity_t hIntensity;
+        val = atoi(value);
+        hIntensity.intensity = val;
+        AHAL_INFO("Setting Haptics Volume as %d", hIntensity.intensity);
+        ret = pal_set_param(PAL_PARAM_ID_HAPTICS_INTENSITY, (void *)&hIntensity,
+                 sizeof(pal_param_haptics_intensity_t));
     }
 
     str_parms_destroy(parms);
@@ -1374,6 +1649,10 @@ char* AudioDevice::GetParameters(const char *keys) {
     AudioExtn::audio_extn_get_parameters(adev_, query, reply);
     if (voice_)
         voice_->VoiceGetParameters(query, reply);
+
+    if (property_get_bool("vendor.audio.hdr.record.enable", false))
+        hdr_get_parameters(adev_, query, reply);
+
 exit:
     str = str_parms_to_str(reply);
     str_parms_destroy(query);
@@ -1389,6 +1668,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     android_device_map_.clear();
     /* go through all devices and pushback */
 
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_NONE, PAL_DEVICE_NONE));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_EARPIECE, PAL_DEVICE_OUT_HANDSET));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_SPEAKER, PAL_DEVICE_OUT_SPEAKER));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADSET, PAL_DEVICE_OUT_WIRED_HEADSET));
@@ -1464,25 +1744,22 @@ int AudioDevice::GetPalDeviceIds(const std::set<audio_devices_t>& hal_device_ids
     AHAL_DBG("haldeviceIds: %zu", hal_device_ids.size());
 
     for(auto hal_device_id : hal_device_ids) {
-        // skip AUDIO_DEVICE_NONE as device count not 0
-        if (hal_device_id != AUDIO_DEVICE_NONE) {
-            auto it = android_device_map_.find(hal_device_id);
-            if (it != android_device_map_.end() &&
-               audio_is_input_device(it->first) == audio_is_input_device(hal_device_id)) {
-                AHAL_DBG("Found haldeviceId: %x and PAL Device ID %d",
-                        it->first, it->second);
-                if (it->second == PAL_DEVICE_OUT_AUX_DIGITAL ||
-                        it->second == PAL_DEVICE_OUT_HDMI) {
-                   AHAL_ERR("dp_controller: %d dp_stream: %d",
-                           dp_controller, dp_stream);
-                   if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
-                      pal_device_id[device_count] = PAL_DEVICE_OUT_AUX_DIGITAL_1;
-                   } else {
-                      pal_device_id[device_count] = it->second;
-                   }
-                } else {
-                   pal_device_id[device_count] = it->second;
-                }
+        auto it = android_device_map_.find(hal_device_id);
+        if (it != android_device_map_.end() &&
+                audio_is_input_device(it->first) == audio_is_input_device(hal_device_id)) {
+            AHAL_DBG("Found haldeviceId: %x and PAL Device ID %d",
+                    it->first, it->second);
+            if (it->second == PAL_DEVICE_OUT_AUX_DIGITAL ||
+                    it->second == PAL_DEVICE_OUT_HDMI) {
+               AHAL_ERR("dp_controller: %d dp_stream: %d",
+                       dp_controller, dp_stream);
+               if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
+                  pal_device_id[device_count] = PAL_DEVICE_OUT_AUX_DIGITAL_1;
+               } else {
+                  pal_device_id[device_count] = it->second;
+               }
+            } else {
+               pal_device_id[device_count] = it->second;
             }
         }
         ++device_count;
@@ -1564,7 +1841,7 @@ struct audio_module HAL_MODULE_INFO_SYM = {
     },
 };
 
-audio_patch_handle_t AudioPatch::generate_patch_handle_l(){
+audio_patch_handle_t AudioPatch::generate_patch_handle_l() {
     static audio_patch_handle_t handles = AUDIO_PATCH_HANDLE_NONE;
     if (++handles < 0)
         handles = AUDIO_PATCH_HANDLE_NONE + 1;
@@ -1574,7 +1851,7 @@ audio_patch_handle_t AudioPatch::generate_patch_handle_l(){
 AudioPatch::AudioPatch(PatchType patch_type,
                        const std::vector<struct audio_port_config>& sources,
                        const std::vector<struct audio_port_config>& sinks):
-                       type(patch_type), sources(sources), sinks(sinks){
+                       type(patch_type), sources(sources), sinks(sinks) {
         static std::mutex patch_lock;
         std::lock_guard<std::mutex> lock(patch_lock);
         handle = AudioPatch::generate_patch_handle_l();

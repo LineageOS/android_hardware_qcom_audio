@@ -135,14 +135,21 @@ int32_t fm_start(std::shared_ptr<AudioDevice> adev __unused, int device_id)
     struct pal_stream_attributes stream_attr;
     struct pal_channel_info ch_info;
     struct pal_device pal_devs[num_pal_devs];
-    pal_device_id_t pal_device_id;
+    pal_device_id_t pal_device_id = PAL_DEVICE_OUT_SPEAKER;
 
     ALOGD("%s: Enter", __func__);
 
-    if(device_id == 0x02)
-            pal_device_id = PAL_DEVICE_OUT_SPEAKER;
+    if(device_id == AUDIO_DEVICE_OUT_SPEAKER)
+        pal_device_id = PAL_DEVICE_OUT_SPEAKER;
+    else if(device_id == AUDIO_DEVICE_OUT_WIRED_HEADSET)
+        pal_device_id = PAL_DEVICE_OUT_WIRED_HEADSET;
+    else if(device_id == AUDIO_DEVICE_OUT_WIRED_HEADPHONE)
+        pal_device_id = PAL_DEVICE_OUT_WIRED_HEADPHONE;
     else
-            pal_device_id = PAL_DEVICE_OUT_WIRED_HEADSET;
+    {
+        ALOGD("%s: Unsupported device_id %d", __func__, device_id);
+        return -EINVAL;
+    }
 
     ch_info.channels = 1;
     ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;

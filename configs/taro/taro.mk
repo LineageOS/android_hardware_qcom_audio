@@ -37,6 +37,7 @@ AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
 AUDIO_FEATURE_ENABLED_SSR := true
 AUDIO_FEATURE_ENABLED_DTS_EAGLE := false
 AUDIO_FEATURE_ENABLED_PAL_HIDL := true
+AUDIO_FEATURE_ENABLED_LSM_HIDL := true
 BOARD_USES_SRS_TRUEMEDIA := false
 DTS_CODEC_M_ := false
 MM_AUDIO_ENABLED_SAFX := false
@@ -155,12 +156,13 @@ PRODUCT_PACKAGES += IDP_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.10.pmd
+PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.36_enpu2_comp.pmd
 PRODUCT_PACKAGES += libfmpal
 PRODUCT_PACKAGES += event.eai
 PRODUCT_PACKAGES += music.eai
 PRODUCT_PACKAGES += speech.eai
 PRODUCT_PACKAGES += libqtigefar
-
+PRODUCT_PACKAGES += libmcs
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
@@ -170,27 +172,25 @@ PRODUCT_PACKAGES += $(AUDIO_AGM)
 PRODUCT_PACKAGES += $(AUDIO_PAL)
 PRODUCT_PACKAGES += $(AUDIO_C2)
 
+# Audio configuration xml's related to Waipio
+QCV_FAMILY_SKUS := taro
+DEVICE_SKU := taro
+
+CONFIG_PAL_SRC_DIR := vendor/qcom/opensource/pal/configs/taro
+CONFIG_HAL_SRC_DIR := vendor/qcom/opensource/audio-hal/primary-hal/configs/taro
+CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
+
 PRODUCT_COPY_FILES += \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/audio_platform_info_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/audio_platform_info_intcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_intcodec.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/sound_trigger_mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_cdp.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_cdp.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/audio_configs_stock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs_stock.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
-    vendor/qcom/opensource/pal/configs/taro/resourcemanager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager.xml \
-    vendor/qcom/opensource/pal/configs/taro/resourcemanager_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_qrd.xml \
-    vendor/qcom/opensource/pal/configs/taro/resourcemanager_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_cdp.xml \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
+    $(CONFIG_HAL_SRC_DIR)/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_qrd.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_cdp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_cdp.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_qrd.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_cdp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_cdp.xml \
+    $(CONFIG_PAL_SRC_DIR)/usecaseKvManager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usecaseKvManager.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
@@ -198,7 +198,13 @@ PRODUCT_COPY_FILES += \
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
+
+#Audio configuration xml's common to Taro family
+PRODUCT_COPY_FILES += \
+$(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
+
 endif
 PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
@@ -327,6 +333,11 @@ vendor.audio.parser.ip.buffer.size=262144
 #flac sw decoder 24 bit decode capability
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.flac.sw.decoder.24bit=true
+
+#timeout crash duration set to 20sec before system is ready.
+#timeout duration updates to default timeout of 5sec once the system is ready.
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.hal.boot.timeout.ms=20000
 
 #split a2dp DSP supported encoder list
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -483,7 +494,8 @@ vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=true \
-vendor.audio.feature.dmabuf.cma.memory.enable=true
+vendor.audio.feature.dmabuf.cma.memory.enable=true \
+vendor.audio.hdr.record.enable=false
 
 
 # for HIDL related packages
@@ -527,6 +539,11 @@ PRODUCT_PACKAGES += \
 # enable sound trigger hidl hal 2.3
 PRODUCT_PACKAGES += \
     android.hardware.soundtrigger@2.3-impl \
+
+# enable Listen Sound Model hidl 1.0
+PRODUCT_PACKAGES += \
+    vendor.qti.hardware.ListenSoundModel@1.0 \
+    vendor.qti.hardware.ListenSoundModel@1.0-impl
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \

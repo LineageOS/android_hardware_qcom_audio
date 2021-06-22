@@ -31,6 +31,8 @@
 #define VERIFY_PRINT_ERROR
 #endif
 
+#define VERIFY_PRINT_INFO 0
+
 #include <stdio.h>
 #include <dlfcn.h>
 #include <unistd.h>

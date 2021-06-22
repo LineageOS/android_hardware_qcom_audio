@@ -34,6 +34,7 @@
 #include <math.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <inttypes.h>
 
 #include <cutils/list.h>
 #include <log/log.h>
@@ -718,7 +719,7 @@ static void init_once()
                 }
 
                 if (dumping_enabled) {
-                    ALOGD("%s: dumping table here .. size of table received %d",
+                    ALOGD("%s: dumping table here .. size of table received %" PRId64,
                            __func__, max_table_ent);
                     for (int i = 0; i < MAX_VOLUME_CAL_STEPS ; i++)
                         ALOGD("[%d]  %f %f %d", i, volume_curve_gain_mapping_table[i].amp,

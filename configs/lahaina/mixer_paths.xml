@@ -1968,9 +1968,9 @@
     <path name="dmic5">
         <ctl name="TX_AIF2_CAP Mixer DEC4" value="1" />
         <ctl name="TX DEC4 MUX" value="SWR_MIC" />
-        <ctl name="TX SMIC MUX2" value="SWR_MIC11" />
-        <ctl name="SWR_MIC3 HIFI PortMap" value="SWRM_TX3_CH4" />
-        <ctl name="SWR_MIC3 SWR_DMIC_MIXER Switch" value="1" />
+        <ctl name="TX SMIC MUX4" value="SWR_MIC8" />
+        <ctl name="SWR_MIC4 HIFI PortMap" value="SWRM_TX3_CH1" />
+        <ctl name="SWR_MIC4 SWR_DMIC_MIXER Switch" value="1" />
     </path>
 
     <path name="speaker">
@@ -2349,10 +2349,6 @@
         <path name="handset-mic" />
     </path>
 
-    <path name="camcorder-mic">
-        <path name="handset-mic" />
-    </path>
-
     <path name="bt-sco-headset">
     </path>
 
@@ -2669,6 +2665,18 @@
 
     <path name="quad-mic-liquid">
         <path name="speaker-qmic-liquid" />
+    </path>
+
+    <path name="camcorder-main-mic">
+        <path name="speaker-mic" />
+    </path>
+
+    <path name="camcorder-dual-mic">
+        <path name="speaker-dmic-endfire" />
+    </path>
+
+    <path name="camcorder-quad-mic">
+        <path name="speaker-qmic" />
     </path>
 
     <!-- TTY devices -->

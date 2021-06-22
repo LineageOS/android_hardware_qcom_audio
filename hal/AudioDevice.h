@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,6 +35,7 @@
 #include <mutex>
 #include <vector>
 #include <set>
+#include <string>
 
 #include <cutils/properties.h>
 #include <hardware/audio.h>
@@ -42,12 +43,23 @@
 
 #include "AudioStream.h"
 #include "AudioVoice.h"
+#include "PalDefs.h"
 
 #define COMPRESS_VOIP_IO_BUF_SIZE_NB 320
 #define COMPRESS_VOIP_IO_BUF_SIZE_WB 640
 #define COMPRESS_VOIP_IO_BUF_SIZE_SWB 1280
 #define COMPRESS_VOIP_IO_BUF_SIZE_FB 1920
 #define MAX_PERF_LOCK_OPTS 20
+
+/* HDR Audio use case parameters */
+#define AUDIO_PARAMETER_KEY_HDR "hdr_record_on"
+#define AUDIO_PARAMETER_KEY_WNR "wnr_on"
+#define AUDIO_PARAMETER_KEY_ANS "ans_on"
+#define AUDIO_PARAMETER_KEY_ORIENTATION "orientation"
+#define AUDIO_PARAMETER_KEY_INVERTED "inverted"
+#define AUDIO_PARAMETER_KEY_FACING "facing"
+#define AUDIO_PARAMETER_KEY_HDR_CHANNELS "hdr_audio_channel_count"
+#define AUDIO_PARAMETER_KEY_HDR_SAMPLERATE "hdr_audio_sampling_rate"
 
 class AudioPatch{
     public:
@@ -115,10 +127,10 @@ public:
     int GetPalDeviceIds(
             const std::set<audio_devices_t>& hal_device_id,
             pal_device_id_t* pal_device_id);
-    int                       usb_card_id_;
-    int                       usb_dev_num_;
-    int   dp_controller;
-    int   dp_stream;
+    int usb_card_id_;
+    int usb_dev_num_;
+    int dp_controller;
+    int dp_stream;
     int num_va_sessions_ = 0;
     pal_speaker_rotation_type current_rotation;
     static card_status_t sndCardState;
@@ -128,8 +140,18 @@ public:
     int perf_lock_handle;
     int perf_lock_opts[MAX_PERF_LOCK_OPTS];
     int perf_lock_opts_size;
+    bool hdr_record_enabled = false;
+    bool wnr_enabled = false;
+    bool ans_enabled = false;
+    bool orientation_landscape = true;
+    bool inverted = false;
+    int  facing = 0; /*0 - none, 1 - back, 2 - front/selfie*/
+    int  hdr_channel_count = 0;
+    int  hdr_sample_rate = 0;
+    int cameraOrientation = CAMERA_DEFAULT;
+    bool usb_input_dev_enabled = false;
 protected:
-    AudioDevice(){}
+    AudioDevice() {}
     std::shared_ptr<AudioVoice> VoiceInit();
     static std::shared_ptr<AudioDevice> adev_;
     static std::shared_ptr<audio_hw_device_t> device_;
@@ -138,6 +160,7 @@ protected:
     std::mutex out_list_mutex;
     std::mutex in_list_mutex;
     std::mutex patch_map_mutex;
+    btsco_lc3_cfg_t btsco_lc3_cfg;
     void *offload_effects_lib_;
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;
@@ -147,7 +170,6 @@ protected:
     visualizer_hal_stop_output fnp_visualizer_stop_output_ = nullptr;
     std::map<audio_devices_t, pal_device_id_t> android_device_map_;
     std::map<audio_patch_handle_t, AudioPatch*> patch_map_;
-    bool usb_input_dev_enabled = false;
     int add_input_headset_if_usb_out_headset(int *device_count,  pal_device_id_t** pal_device_ids);
 };
 
