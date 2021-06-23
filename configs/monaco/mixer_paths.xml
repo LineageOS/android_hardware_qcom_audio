@@ -158,9 +158,7 @@
     <ctl name="VA SMIC MUX1" value="ZERO" />
 
     <!-- Volume controls -->
-    <ctl name="RX_RX0 Digital Volume" value="84" />
-    <ctl name="RX_RX1 Digital Volume" value="84" />
-    <ctl name="RX_RX2 Digital Volume" value="78" />
+    <ctl name="RX_RX2 Digital Volume" value="84" />
 
     <ctl name="TX_DEC0 Volume" value="102" />
     <ctl name="TX_DEC1 Volume" value="102" />
@@ -296,7 +294,7 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="dmic1" />
+        <path name="dmic3" />
     </path>
 
     <path name="speaker-mic-liquid">
@@ -311,7 +309,7 @@
     </path>
 
     <path name="handset-mic">
-        <path name="dmic1" />
+        <path name="dmic3" />
     </path>
 
     <path name="va-mic-dmic">
@@ -428,18 +426,14 @@
 
     <!-- Dual MIC devices -->
     <path name="handset-dmic-endfire">
-        <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
-        <ctl name="TX DMIC MUX0" value="DMIC1" />
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC2" />
+        <path name="dmic3" />
+        <path name="dmic4" />
         <ctl name="TX_DEC1 Volume" value="84" />
     </path>
 
     <path name="speaker-dmic-endfire">
-        <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
-        <ctl name="TX DMIC MUX0" value="DMIC1" />
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC2" />
+        <path name="dmic3" />
+        <path name="dmic4" />
         <ctl name="TX_DEC1 Volume" value="84" />
     </path>
 
@@ -506,10 +500,8 @@
     </path>
 
     <path name="speaker-dmic-broadside">
-        <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
-        <ctl name="TX DMIC MUX0" value="DMIC1" />
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC2" />
+        <path name="dmic3" />
+        <path name="dmic4" />
     </path>
 
     <path name="dmic-broadside">

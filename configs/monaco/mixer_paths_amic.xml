@@ -158,9 +158,7 @@
     <ctl name="VA SMIC MUX1" value="ZERO" />
 
     <!-- Volume controls -->
-    <ctl name="RX_RX0 Digital Volume" value="84" />
-    <ctl name="RX_RX1 Digital Volume" value="84" />
-    <ctl name="RX_RX2 Digital Volume" value="78" />
+    <ctl name="RX_RX2 Digital Volume" value="84" />
 
     <ctl name="TX_DEC0 Volume" value="102" />
     <ctl name="TX_DEC1 Volume" value="102" />
