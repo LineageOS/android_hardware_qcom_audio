@@ -197,23 +197,12 @@ PRODUCT_PACKAGES += $(AUDIO_AGM)
 PRODUCT_PACKAGES += $(AUDIO_PAL)
 
 PRODUCT_COPY_FILES += \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_platform_info_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_platform_info_intcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_intcodec.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/sound_trigger_mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_cdp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_cdp.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_configs_stock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs_stock.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/kona/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
     vendor/qcom/opensource/pal/configs/kona/resourcemanager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager.xml \
     vendor/qcom/opensource/pal/configs/kona/resourcemanager_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_qrd.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
