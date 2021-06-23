@@ -2621,7 +2621,7 @@ exit:
     }
     clock_gettime(CLOCK_MONOTONIC, &writeAt);
 
-    return (ret < 0 ? onWriteError(bytes) : bytes);
+    return (ret < 0 ? onWriteError(bytes) : ret);
 }
 
 bool StreamOutPrimary::CheckOffloadEffectsType(pal_stream_type_t pal_stream_type) {
