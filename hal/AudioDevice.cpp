@@ -1134,7 +1134,7 @@ int AudioDevice::add_input_headset_if_usb_out_headset(int *device_count,
 int AudioDevice::SetParameters(const char *kvpairs) {
     int ret = 0, val = 0;
     struct str_parms *parms;
-    char value[32];
+    char value[256];
     int pal_device_count = 0;
     pal_device_id_t* pal_device_ids = NULL;
     char *test_r = NULL;
@@ -1515,7 +1515,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         if (!strcmp(key, "Codec") && !strcmp(value, "LC3")) {
             btsco_lc3_cfg.fields_map |= LC3_CODEC_BIT;
         } else if (!strcmp(key, "StreamMap")) {
-            strlcpy((char *)&(btsco_lc3_cfg.streamMap), value, PAL_LC3_MAX_STRING_LEN);
+            strlcpy(btsco_lc3_cfg.streamMap, value, PAL_LC3_MAX_STRING_LEN);
             btsco_lc3_cfg.fields_map |= LC3_STREAM_MAP_BIT;
         } else if (!strcmp(key, "FrameDuration")) {
             btsco_lc3_cfg.frame_duration = atoi(value);
@@ -1538,7 +1538,12 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     if ((btsco_lc3_cfg.fields_map & LC3_BIT_MASK) == LC3_BIT_VALID) {
         pal_param_btsco_t param_bt_sco;
         param_bt_sco.bt_lc3_speech_enabled = true;
-        strlcpy((char *)&(param_bt_sco.lc3_cfg), (char *)&btsco_lc3_cfg, sizeof(btsco_lc3_cfg_t));
+        param_bt_sco.lc3_cfg.frame_duration = btsco_lc3_cfg.frame_duration;
+        param_bt_sco.lc3_cfg.num_blocks = btsco_lc3_cfg.num_blocks;
+        param_bt_sco.lc3_cfg.rxconfig_index = btsco_lc3_cfg.rxconfig_index;
+        param_bt_sco.lc3_cfg.txconfig_index = btsco_lc3_cfg.txconfig_index;
+        param_bt_sco.lc3_cfg.api_version = btsco_lc3_cfg.api_version;
+        strlcpy(param_bt_sco.lc3_cfg.streamMap, btsco_lc3_cfg.streamMap, PAL_LC3_MAX_STRING_LEN);
 
         AHAL_INFO("BTSCO LC3 on = %d", param_bt_sco.bt_lc3_speech_enabled);
         ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
