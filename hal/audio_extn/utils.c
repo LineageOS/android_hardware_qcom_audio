@@ -1329,12 +1329,6 @@ int audio_extn_utils_get_app_sample_rate_for_device(
               platform_check_and_update_copp_sample_rate(adev->platform, snd_device,
                                       usecase->stream.out->sample_rate,
                                       &usecase->stream.out->app_type_cfg.sample_rate);
-        } else if (((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
-                     !audio_is_this_native_usecase(usecase)) &&
-            usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
-            (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
-            /* Reset to default if no native stream is active*/
-            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         } else if (snd_device == SND_DEVICE_OUT_BT_A2DP) {
                  /*
                   * For a2dp playback get encoder sampling rate and set copp sampling rate,
@@ -1343,8 +1337,12 @@ int audio_extn_utils_get_app_sample_rate_for_device(
                    audio_extn_a2dp_get_enc_sample_rate(&usecase->stream.out->app_type_cfg.sample_rate);
                    ALOGI("%s using %d sample rate rate for A2DP CoPP",
                         __func__, usecase->stream.out->app_type_cfg.sample_rate);
-        } else if (compare_device_type(&usecase->stream.out->device_list,
-                                       AUDIO_DEVICE_OUT_SPEAKER)) {
+        } else if ((((snd_device != SND_DEVICE_OUT_HEADPHONES_44_1 &&
+                     !audio_is_this_native_usecase(usecase)) &&
+            usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
+            (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) ||
+            (compare_device_type(&usecase->stream.out->device_list,AUDIO_DEVICE_OUT_SPEAKER))) {
+            /* Reset to default if no native stream is active or default device is speaker*/
             usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
         }
         audio_extn_btsco_get_sample_rate(snd_device, &usecase->stream.out->app_type_cfg.sample_rate);
