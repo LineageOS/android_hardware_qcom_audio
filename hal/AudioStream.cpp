@@ -1406,7 +1406,7 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
      *RAW record graphs ( record with no pp)
      */
     if (source_ == AUDIO_SOURCE_UNPROCESSED) {
-        palStreamType = PAL_STREAM_LOW_LATENCY;
+        palStreamType = PAL_STREAM_RAW;
         return palStreamType;
     }
 
@@ -2621,7 +2621,7 @@ exit:
     }
     clock_gettime(CLOCK_MONOTONIC, &writeAt);
 
-    return (ret < 0 ? onWriteError(bytes) : bytes);
+    return (ret < 0 ? onWriteError(bytes) : ret);
 }
 
 bool StreamOutPrimary::CheckOffloadEffectsType(pal_stream_type_t pal_stream_type) {
