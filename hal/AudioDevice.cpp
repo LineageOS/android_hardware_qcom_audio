@@ -1633,7 +1633,7 @@ char* AudioDevice::GetParameters(const char *keys) {
     }
 
     ret = str_parms_get_str(query, "get_ftm_param", value, sizeof(value));
-    if (ret >=0 ) {
+    if (ret >= 0) {
         char ftm_value[255];
         ret = pal_get_param(PAL_PARAM_ID_SP_MODE, (void **)&ftm_value, &size, nullptr);
         if (!ret) {
@@ -1644,6 +1644,19 @@ char* AudioDevice::GetParameters(const char *keys) {
                 AHAL_ERR("Error happened for getting FTM param");
         }
 
+    }
+
+    ret = str_parms_get_str(query, "get_spkr_cal", value, sizeof(value));
+    if (ret >= 0) {
+        char cal_value[255];
+        ret = pal_get_param(PAL_PARAM_ID_SP_GET_CAL, (void **)&cal_value, &size, nullptr);
+        if (!ret) {
+            if (size > 0) {
+                str_parms_add_str(reply, "get_spkr_cal", cal_value);
+            }
+            else
+                AHAL_ERR("Error happened for getting Cal param");
+        }
     }
 
     AudioExtn::audio_extn_get_parameters(adev_, query, reply);
