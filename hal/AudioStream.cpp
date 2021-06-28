@@ -565,6 +565,7 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
         latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
         break;
     case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
+    case USECASE_AUDIO_PLAYBACK_WITH_HAPTICS:
         latency = LOW_LATENCY_OUTPUT_PERIOD_DURATION * LOW_LATENCY_PLAYBACK_PERIOD_COUNT;
         latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
         break;
