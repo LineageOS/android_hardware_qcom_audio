@@ -2354,15 +2354,22 @@ error_open:
 }
 
 
-int StreamOutPrimary::GetFrames(uint64_t *frames) {
+int StreamOutPrimary::GetFrames(uint64_t *frames)
+{
     int ret = 0;
+    pal_session_time tstamp;
+    uint64_t timestamp = 0;
+
     if (!pal_stream_handle_) {
         AHAL_VERBOSE("pal_stream_handle_ NULL");
         *frames = 0;
         return 0;
     }
-    pal_session_time tstamp;
-    uint64_t timestamp = 0;
+    if (!stream_started_) {
+        AHAL_VERBOSE("stream not in started state");
+        *frames = 0;
+        return 0;
+    }
     ret = pal_get_timestamp(pal_stream_handle_, &tstamp);
     if (ret != 0) {
        AHAL_ERR("pal_get_timestamp failed %d", ret);
