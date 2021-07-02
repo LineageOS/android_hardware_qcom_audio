@@ -595,7 +595,7 @@ protected:
     std::shared_ptr<audio_stream_in>    stream_;
     audio_source_t                      source_;
     friend class AudioDevice;
-    uint64_t mBytesRead; /* total bytes read, not cleared when entering standby */
+    uint64_t mBytesRead = 0; /* total bytes read, not cleared when entering standby */
     bool isECEnabled = false;
     bool isNSEnabled = false;
     bool effects_applied_ = true;

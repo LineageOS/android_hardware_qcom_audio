@@ -3413,7 +3413,6 @@ set_buff_size:
 
     fragments_ = inBufCount;
     fragment_size_ = inBufSize;
-    mBytesRead = 0; // reset at each open
 
 error_open:
     AHAL_DBG("Exit ret: %d", ret);
