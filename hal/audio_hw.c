@@ -3169,7 +3169,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                             &voip_out->app_type_cfg.gain[0]);
     }
 
-    ALOGV("%s: done",__func__);
+    ALOGD("%s: done",__func__);
 
     return status;
 }
