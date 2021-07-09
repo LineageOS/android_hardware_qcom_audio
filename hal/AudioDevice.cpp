@@ -842,8 +842,7 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
     return adevice->CreateAudioPatch(handle, source_vec, sink_vec);
 }
 
-int adev_get_audio_port(struct audio_hw_device *dev,
-                        struct audio_port *config) {
+int get_audio_port_v7(struct audio_hw_device *dev, struct audio_port_v7 *config) {
     std::ignore = dev;
     std::ignore = config;
 
@@ -859,8 +858,13 @@ int adev_set_audio_port_config(struct audio_hw_device *dev,
     return 0;
 }
 
-static int adev_dump(const audio_hw_device_t *device __unused, int fd __unused)
+static int adev_dump(const audio_hw_device_t *device, int fd)
 {
+    dprintf(fd, " \n");
+    dprintf(fd, "PrimaryHal adev: \n");
+    int major =  (device->common.version >> 8) & 0xff;
+    int minor =   device->common.version & 0xff;
+    dprintf(fd, "Device API Version: %d.%d \n", major, minor);
     return 0;
 }
 
@@ -872,8 +876,6 @@ static int adev_get_microphones(const struct audio_hw_device *dev __unused,
 
 int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     int ret = 0;
-    /* default audio HAL major version */
-    uint32_t maj_version = 3;
     bool is_charging = false;
 
     ret = pal_init();
@@ -894,8 +896,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     AudioExtn::audio_extn_hidl_init();
 
     adev_->device_.get()->common.tag = HARDWARE_DEVICE_TAG;
-    adev_->device_.get()->common.version =
-                                HARDWARE_DEVICE_API_VERSION(maj_version, 0);
+    adev_->device_.get()->common.version = AUDIO_DEVICE_API_VERSION_3_2;
     adev_->device_.get()->common.close = adev_close;
     adev_->device_.get()->init_check = adev_init_check;
     adev_->device_.get()->set_voice_volume = adev_set_voice_volume;
@@ -915,7 +916,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     adev_->device_.get()->close_input_stream = adev_close_input_stream;
     adev_->device_.get()->create_audio_patch = adev_create_audio_patch;
     adev_->device_.get()->release_audio_patch = adev_release_audio_patch;
-    adev_->device_.get()->get_audio_port = adev_get_audio_port;
+    adev_->device_.get()->get_audio_port_v7 = get_audio_port_v7;
     adev_->device_.get()->set_audio_port_config = adev_set_audio_port_config;
     adev_->device_.get()->dump = adev_dump;
     adev_->device_.get()->get_microphones = adev_get_microphones;
