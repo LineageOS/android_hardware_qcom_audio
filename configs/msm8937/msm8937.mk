@@ -199,8 +199,10 @@ PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.min.duration.secs=30
 
 #Enable offload audio video playback by default
+ifneq ($(TARGET_PRODUCT),sdm429w)
 PRODUCT_PROPERTY_OVERRIDES += \
 audio.offload.video=true
+endif
 
 #Enable audio track offload by default
 PRODUCT_PROPERTY_OVERRIDES += \

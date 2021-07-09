@@ -2810,7 +2810,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                  (is_single_device_type_equal(&usecase->device_list,
                                                      AUDIO_DEVICE_IN_USB_HEADSET) &&
                                  is_single_device_type_equal(&vc_usecase->device_list,
-                                                        AUDIO_DEVICE_OUT_USB_HEADSET)))) {
+                                                        AUDIO_DEVICE_OUT_USB_HEADSET))||
+                                 (is_single_device_type_equal(&usecase->device_list,
+                                                     AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) &&
+                                 is_codec_backend_out_device_type(&vc_usecase->device_list)))) {
                 in_snd_device = vc_usecase->in_snd_device;
                 out_snd_device = vc_usecase->out_snd_device;
             }
@@ -4116,9 +4119,8 @@ int start_output_stream(struct stream_out *out)
             }
         }
 
-        if (out->realtime)
-            platform_set_stream_channel_map(adev->platform, out->channel_mask,
-                   out->pcm_device_id, -1, &out->channel_map_param.channel_map[0]);
+        platform_set_stream_channel_map(adev->platform, out->channel_mask,
+               out->pcm_device_id, -1, &out->channel_map_param.channel_map[0]);
 
         out->pcm = pcm_open_prepare_helper(adev->snd_card, out->pcm_device_id,
                                        flags, pcm_open_retry_count,
@@ -4141,10 +4143,6 @@ int start_output_stream(struct stream_out *out)
                 platform_set_qtime(adev->platform, out->pcm_device_id, adev->haptic_pcm_device_id);
             }
         }
-
-        if (!out->realtime)
-            platform_set_stream_channel_map(adev->platform, out->channel_mask,
-                   out->pcm_device_id, -1, &out->channel_map_param.channel_map[0]);
 
         // apply volume for voip playback after path is set up
         if (out->usecase == USECASE_AUDIO_PLAYBACK_VOIP)

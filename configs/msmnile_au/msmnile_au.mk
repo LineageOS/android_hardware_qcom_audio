@@ -97,7 +97,7 @@ AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL := true
 ifneq ($(ENABLE_HYP),true)
 AUDIO_FEATURE_ENABLED_AUTO_AUDIOD := true
 
-ifeq ($(TARGET_PRODUCT),msmnile_au)
+ifneq ( ,$(filter msmnile_au msmnile_tb, $(TARGET_PRODUCT)))
 AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT := true
 AUDIO_FEATURE_ENABLED_SILENT_BOOT := true
 else
