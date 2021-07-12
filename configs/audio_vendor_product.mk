@@ -1,9 +1,31 @@
 #MM_AUDIO product packages
 MM_AUDIO := libcapiv2uvvendor
-MM_AUDIO += liblsmclient
+MM_AUDIO += sound_trigger.primary.$(TARGET_BOARD_PLATFORM)
+MM_AUDIO += libadm
+MM_AUDIO += libAlacSwDec
+MM_AUDIO += libApeSwDec
+MM_AUDIO += libcapiv2svacnnvendor
+MM_AUDIO += libcapiv2svarnnvendor
+MM_AUDIO += libdsd2pcm
+MM_AUDIO += libFlacSwDec
+MM_AUDIO += libasphere
+MM_AUDIO += libqcompostprocbundle
+MM_AUDIO += libqcomvisualizer
+MM_AUDIO += libqcomvoiceprocessing
+MM_AUDIO += libshoebox
+MM_AUDIO += libbatterylistener
+MM_AUDIO += audioflacapp
 
+#MM_AUDIO_DBG
+MM_AUDIO_DBG := mm-audio-ftm
+
+#KERNEL_TESTS
+KERNEL_TESTS := mm-audio-native-test
 
 PRODUCT_PACKAGES += $(MM_AUDIO)
+PRODUCT_PACKAGES += $(KERNEL_TESTS)
+
+PRODUCT_PACKAGES_DEBUG += $(MM_AUDIO_DBG)
 
 #----------------------------------------------------------------------
 # audio specific
