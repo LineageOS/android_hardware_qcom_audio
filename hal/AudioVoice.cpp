@@ -607,10 +607,31 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
         palDevices[1].id = PAL_DEVICE_OUT_PROXY;  //overwrite the device with proxy dev
     }
     if (streamAttributes.info.voice_call_info.tty_mode == PAL_TTY_HCO) {
-        palDevices[1].id = PAL_DEVICE_OUT_HANDSET;  //overwrite the device for HCO
+        /**  device pairs for HCO usecase
+          *  <handset, headset-mic>
+          *  <speaker, headset-mic>
+          *  override devices accordingly.
+          */
+        if (pal_voice_rx_device_id_ == PAL_DEVICE_OUT_WIRED_HEADSET)
+            palDevices[1].id = PAL_DEVICE_OUT_HANDSET;
+        else if (pal_voice_rx_device_id_ == PAL_DEVICE_OUT_SPEAKER)
+            palDevices[0].id = PAL_DEVICE_IN_WIRED_HEADSET;
+        else
+            AHAL_ERR("Invalid device pair for the usecase");
     }
     if (streamAttributes.info.voice_call_info.tty_mode == PAL_TTY_VCO) {
-        palDevices[0].id = PAL_DEVICE_IN_HANDSET_MIC;  //overwrite the device for VCO
+        /**  device pairs for VCO usecase
+          *  <headphones, handset-mic>
+          *  <headphones, speaker-mic>
+          *  override devices accordingly.
+          */
+        if (pal_voice_rx_device_id_ == PAL_DEVICE_OUT_WIRED_HEADSET ||
+            pal_voice_rx_device_id_ == PAL_DEVICE_OUT_WIRED_HEADPHONE)
+            palDevices[0].id = PAL_DEVICE_IN_HANDSET_MIC;
+        else if (pal_voice_rx_device_id_ == PAL_DEVICE_OUT_SPEAKER)
+            palDevices[1].id = PAL_DEVICE_OUT_WIRED_HEADSET;
+        else
+            AHAL_ERR("Invalid device pair for the usecase");
     }
     streamAttributes.direction = PAL_AUDIO_INPUT_OUTPUT;
     streamAttributes.in_media_config.sample_rate = 48000;
@@ -801,10 +822,31 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
     }
 
     if (session && session->tty_mode == PAL_TTY_HCO) {
-        palDevices[1].id = PAL_DEVICE_OUT_HANDSET;  //overwrite the device for HCO
+        /**  device pairs for HCO usecase
+          *  <handset, headset-mic>
+          *  <speaker, headset-mic>
+          *  override devices accordingly.
+          */
+        if (pal_voice_rx_device_id_ == PAL_DEVICE_OUT_WIRED_HEADSET)
+            palDevices[1].id = PAL_DEVICE_OUT_HANDSET;
+        else if (pal_voice_rx_device_id_ == PAL_DEVICE_OUT_SPEAKER)
+            palDevices[0].id = PAL_DEVICE_IN_WIRED_HEADSET;
+        else
+            AHAL_ERR("Invalid device pair for the usecase");
     }
     if (session && session->tty_mode == PAL_TTY_VCO) {
-        palDevices[0].id = PAL_DEVICE_IN_HANDSET_MIC;  //overwrite the device for VCO
+        /**  device pairs for VCO usecase
+          *  <headphones, handset-mic>
+          *  <headphones, speaker-mic>
+          *  override devices accordingly.
+          */
+        if (pal_voice_rx_device_id_ == PAL_DEVICE_OUT_WIRED_HEADSET ||
+            pal_voice_rx_device_id_ == PAL_DEVICE_OUT_WIRED_HEADPHONE)
+            palDevices[0].id = PAL_DEVICE_IN_HANDSET_MIC;
+        else if (pal_voice_rx_device_id_ == PAL_DEVICE_OUT_SPEAKER)
+            palDevices[1].id = PAL_DEVICE_OUT_WIRED_HEADSET;
+        else
+            AHAL_ERR("Invalid device pair for the usecase");
     }
 
     if (session && session->volume_boost) {
