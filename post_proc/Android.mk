@@ -82,16 +82,25 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_C_INCLUDES := \
         external/tinyalsa/include \
-        vendor/qcom/opensource/audio-hal/primary-hal/hal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio \
-	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
-        $(call include-path-for, audio-effects) \
-        vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn/
+        $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
+        $(call include-path-for, audio-effects)
+ifneq ($(BOARD_OPENSOURCE_DIR), )
+   LOCAL_C_INCLUDES += $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal/hal \
+                       $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal/hal/audio_extn/
+else
+   LOCAL_C_INCLUDES += vendor/qcom/opensource/audio-hal/primary-hal/hal \
+                       vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn/
+endif # BOARD_OPENSOURCE_DIR
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
-  LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
+  ifneq ($(BOARD_OPENSOURCE_DIR), )
+    LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/$(BOARD_OPENSOURCE_DIR)/audio-kernel/include
+  else
+    LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
+  endif # BOARD_OPENSOURCE_DIR
 endif
 
 ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
@@ -195,20 +204,29 @@ LOCAL_MODULE_OWNER := qti
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_C_INCLUDES := \
-        vendor/qcom/opensource/audio-hal/primary-hal/hal \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio \
         $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include \
         external/tinyalsa/include \
         $(call include-path-for, audio-effects) \
         $(call include-path-for, audio-route) \
-        vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn \
         external/tinycompress/include \
         system/media/audio_utils/include
+ifneq ($(BOARD_OPENSOURCE_DIR), )
+  LOCAL_C_INCLUDES += $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal/hal \
+                      $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal/hal/audio_extn
+else
+  LOCAL_C_INCLUDES += vendor/qcom/opensource/audio-hal/primary-hal/hal \
+                      vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn
+endif # BOARD_OPENSOURCE_DIR
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
-  LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
+  ifneq ($(BOARD_OPENSOURCE_DIR), )
+    LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/$(BOARD_OPENSOURCE_DIR)/audio-kernel/include
+  else
+    LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
+  endif # BOARD_OPENSOURCE_DIR
 endif
 
 ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
