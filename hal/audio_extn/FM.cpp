@@ -198,6 +198,7 @@ int32_t fm_start(std::shared_ptr<AudioDevice> adev __unused, int device_id)
     }
 
     fm.running = true;
+    fm_set_volume(fm.volume, true);
     return ret;
 }
 
