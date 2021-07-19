@@ -1914,11 +1914,6 @@
         <ctl name="TX DMIC MUX2" value="DMIC3" />
     </path>
 
-    <path name="dmic5">
-        <ctl name="TX_AIF2_CAP Mixer DEC4" value="1" />
-        <ctl name="TX DMIC MUX4" value="DMIC2" />
-    </path>
-
     <path name="speaker">
         <ctl name="WSA RX0 MUX" value="AIF1_PB" />
         <ctl name="WSA RX1 MUX" value="AIF1_PB" />
@@ -2016,7 +2011,7 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="dmic1" />
+        <path name="dmic3" />
     </path>
 
     <path name="speaker-mic-liquid">
@@ -2100,7 +2095,8 @@
     </path>
 
     <path name="ultrasound-mic">
-        <path name="dmic5" />
+        <ctl name="TX_AIF2_CAP Mixer DEC4" value="1" />
+        <ctl name="TX DMIC MUX4" value="DMIC2" />
     </path>
 
     <path name="headphones">
@@ -2324,7 +2320,7 @@
     <path name="va-mic-mono">
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
-        <ctl name="VA DMIC MUX0" value="DMIC0" />
+        <ctl name="VA DMIC MUX0" value="DMIC1" />
     </path>
 
     <path name="va-mic-dmic">

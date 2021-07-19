@@ -9,7 +9,6 @@ endif
 
 ifneq ($(AUDIO_USE_STUB_HAL), true)
 BOARD_USES_ALSA_AUDIO := true
-TARGET_USES_AOSP_FOR_AUDIO := false
 
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 USE_CUSTOM_AUDIO_POLICY := 1
@@ -152,6 +151,14 @@ BOARD_VENDOR_KERNEL_MODULES += \
     $(KERNEL_MODULES_OUT)/snd_event_dlkm.ko
 endif
 
+ifeq ($(AUDIO_FEATURE_ENABLED_DLKM),true)
+ifeq ($(TARGET_SUPPORTS_WEAR_AON),true)
+BOARD_VENDOR_KERNEL_MODULES += \
+    $(KERNEL_MODULES_OUT)/cc_dlkm.ko \
+    $(KERNEL_MODULES_OUT)/audio_cc_ipc_dlkm.ko
+endif
+endif
+
 #Audio DLKM
 AUDIO_DLKM := spf_core_dlkm.ko
 AUDIO_DLKM += audio_pkt_dlkm.ko
@@ -177,6 +184,10 @@ AUDIO_DLKM += besbev-slave_dlkm.ko
 AUDIO_DLKM += wsa883x_dlkm.ko
 AUDIO_DLKM += machine_dlkm.ko
 AUDIO_DLKM += snd_event_dlkm.ko
+ifeq ($(TARGET_SUPPORTS_WEAR_AON),true)
+AUDIO_DLKM += cc_dlkm.ko
+AUDIO_DLKM += audio_cc_ipc_dlkm.ko
+endif
 
 PRODUCT_PACKAGES += $(AUDIO_DLKM)
 
@@ -207,6 +218,7 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/pal/configs/monaco/resourcemanager_slate.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_slate.xml \
     vendor/qcom/opensource/pal/configs/monaco/resourcemanager_slate_amic.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_slate_amic.xml \
     vendor/qcom/opensource/pal/configs/monaco/resourcemanager_slate_wsa.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_slate_wsa.xml \
+    vendor/qcom/opensource/pal/configs/monaco/usecaseKvManager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usecaseKvManager.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/monaco/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml
 
 #XML Audio configuration files
@@ -351,7 +363,7 @@ vendor.audio.use.sw.mpegh.decoder=true
 
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.hw.aac.encoder=true
+vendor.audio.hw.aac.encoder=false
 
 #Set HAL buffer size to samples equal to 3 ms
 PRODUCT_PROPERTY_OVERRIDES += \

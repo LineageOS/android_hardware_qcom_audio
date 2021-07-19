@@ -1971,11 +1971,6 @@
         <ctl name="TX DMIC MUX2" value="DMIC5" />
     </path>
 
-    <path name="dmic7">
-        <ctl name="TX_AIF2_CAP Mixer DEC4" value="1" />
-        <ctl name="TX DMIC MUX4" value="DMIC2" />
-    </path>
-
     <path name="speaker">
         <ctl name="WSA RX0 MUX" value="AIF1_PB" />
         <ctl name="WSA RX1 MUX" value="AIF1_PB" />
@@ -2245,6 +2240,7 @@
     </path>
 
     <path name="voice-speaker-stereo">
+        <ctl name="WSA_RX0 Digital Volume" value="60" />
         <path name="speaker" />
     </path>
 

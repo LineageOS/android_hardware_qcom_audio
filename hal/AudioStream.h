@@ -46,7 +46,7 @@
 #include <map>
 
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
-#define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
+#define DEEP_BUFFER_PLATFORM_DELAY (70*1000LL)
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
 #define ULL_PLATFORM_DELAY         (4*1000LL)
@@ -71,6 +71,8 @@
 
 #define PCM_OFFLOAD_PLAYBACK_PERIOD_COUNT 2 /** Direct PCM */
 #define DEEP_BUFFER_PLAYBACK_PERIOD_COUNT 2 /** Deep Buffer*/
+
+#define DEEP_BUFFER_PLAYBACK_PERIOD_SIZE 1920 /** 40ms; frames */
 
 #define ULL_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE / 1000) /** 1ms; frames */
 #define ULL_PERIOD_COUNT_DEFAULT 512
@@ -593,7 +595,7 @@ protected:
     std::shared_ptr<audio_stream_in>    stream_;
     audio_source_t                      source_;
     friend class AudioDevice;
-    uint64_t mBytesRead; /* total bytes read, not cleared when entering standby */
+    uint64_t mBytesRead = 0; /* total bytes read, not cleared when entering standby */
     bool isECEnabled = false;
     bool isNSEnabled = false;
     bool effects_applied_ = true;
