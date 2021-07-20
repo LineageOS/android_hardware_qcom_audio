@@ -171,6 +171,7 @@
                      <profile name="" format="AUDIO_FORMAT_PCM_FLOAT"
                               samplingRates="8000,11025,12000,16000,22050,24000,32000,44100,48000,88200,96000,176400,192000"
                               channelMasks="AUDIO_CHANNEL_IN_5POINT1,AUDIO_CHANNEL_INDEX_MASK_6,AUDIO_CHANNEL_IN_7POINT1,AUDIO_CHANNEL_INDEX_MASK_8"/>
+                </mixPort>
                 <mixPort name="incall_music_uplink" role="source"
                          flags="AUDIO_OUTPUT_FLAG_INCALL_MUSIC">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
