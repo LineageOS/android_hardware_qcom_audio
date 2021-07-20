@@ -1472,12 +1472,21 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
     if (ret >= 0) {
         pal_param_btsco_t param_bt_sco;
-        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
             param_bt_sco.bt_sco_on = true;
-        else
+        } else {
             param_bt_sco.bt_sco_on = false;
 
+            // turn off BLE voice bit during sco off
+            param_bt_sco.bt_lc3_speech_enabled = false;
+            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
+                                sizeof(pal_param_btsco_t));
+        }
+
+        // clear btsco_lc3_cfg whenever there's sco state change to
+        // avoid stale and partial cfg being used in next round
         memset(&btsco_lc3_cfg, 0, sizeof(btsco_lc3_cfg_t));
+
         AHAL_INFO("BTSCO on = %d", param_bt_sco.bt_sco_on);
         ret = pal_set_param(PAL_PARAM_ID_BT_SCO, (void *)&param_bt_sco,
                             sizeof(pal_param_btsco_t));
