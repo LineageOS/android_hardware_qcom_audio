@@ -71,9 +71,18 @@ AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
 endif
 ##AUDIO_FEATURE_FLAGS
 
-#Audio Specific device overlays
-DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
 
+ifneq ($(BOARD_OPENSOURCE_DIR), )
+  #Audio Specific device overlays
+  DEVICE_PACKAGE_OVERLAYS += $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal/configs/common/overlay
+  #AudioHal-primaryHal path
+  PRIMARYHAL_PATH += $(BOARD_OPENSOURCE_DIR)/audio-hal/primary-hal
+else
+  #Audio Specific device overlays
+  DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
+  #AudioHal-primaryHal path
+  PRIMARYHAL_PATH += vendor/qcom/opensource/audio-hal/primary-hal
+endif # BOARD_OPENSOURCE_DIR
 
 ifeq ($(TARGET_SUPPORTS_WEARABLES),true)
  ifeq ($(TARGET_KERNEL_VERSION), 4.14)
@@ -88,7 +97,7 @@ ifeq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
    ifeq ($(TARGET_SUPPORTS_WEARABLES), true)
       ifeq ($(AUDIO_FEATURE_ENABLED_SPLIT_A2DP), true)
          PRODUCT_COPY_FILES += \
-              vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy.conf
+            $(PRIMARYHAL_PATH)/configs/msm8937/audio_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy.conf
       else
           PRODUCT_COPY_FILES += \
                   $(BOARD_COMMON_DIR)/media/audio_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy.conf
@@ -99,7 +108,7 @@ ifeq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
    endif
 else
 PRODUCT_COPY_FILES += \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy.conf
+    $(PRIMARYHAL_PATH)/configs/msm8937/audio_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy.conf
 endif
 
 # Target supports smartPA
@@ -108,63 +117,63 @@ WEARABLE_SUPPORTS_TFA_SMARTPA := true
 endif
 
 PRODUCT_COPY_FILES +=\
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf\
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf\
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/mixer_paths_tasha.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tasha.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/mixer_paths_tashalite.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tashalite.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/mixer_paths_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_mtp.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/mixer_paths_sku1.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_sku1.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/mixer_paths_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wtp.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/mixer_paths_sdm429w_dvt2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wtp_newport.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/sound_trigger_mixer_paths_wcd9306.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9306.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/sound_trigger_mixer_paths_wcd9330.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9330.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/sound_trigger_mixer_paths_wcd9335.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9335.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_platform_info_intcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_intcodec.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_platform_info_tashalite.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_tashalite.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_platform_info_tasha.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_tasha.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_platform_info_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_mtp.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_platform_info_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_wtp.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_platform_info_sdm429w_dvt2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_wtp_newport.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_output_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_output_policy.conf\
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf\
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_tasha.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tasha.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_tashalite.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tashalite.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_mtp.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_sku1.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_sku1.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wtp.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_sdm429w_dvt2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wtp_newport.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/sound_trigger_mixer_paths_wcd9306.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9306.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/sound_trigger_mixer_paths_wcd9330.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9330.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/sound_trigger_mixer_paths_wcd9335.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_wcd9335.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_platform_info_intcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_intcodec.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_platform_info_tashalite.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_tashalite.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_platform_info_tasha.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_tasha.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_platform_info_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_mtp.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_platform_info_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_wtp.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_platform_info_sdm429w_dvt2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_wtp_newport.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
+$(PRIMARYHAL_PATH)/configs/msm8937/audio_configs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs.xml
 
 ifeq ($(TARGET_SUPPORTS_WEARABLES), true)
    ifeq ($(TARGET_SUPPORTS_A2DP_SLIMBUS_INTERFACE),true)
       PRODUCT_COPY_FILES += \
-      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_platform_info_sdm429w_dvt2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
-      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/mixer_paths_sdm429w_dvt2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml
+      $(TOPDIR)$(PRIMARYHAL_PATH)/configs/msm8937/audio_platform_info_sdm429w_dvt2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
+      $(TOPDIR)$(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_sdm429w_dvt2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml
    else
       PRODUCT_COPY_FILES += \
-      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_platform_info_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
-      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/mixer_paths_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml
+      $(TOPDIR)$(PRIMARYHAL_PATH)/configs/msm8937/audio_platform_info_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
+      $(TOPDIR)$(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml
    endif
 else
    PRODUCT_COPY_FILES += \
-   $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
-   $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml
+   $(TOPDIR)$(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
+   $(TOPDIR)$(PRIMARYHAL_PATH)/configs/msm8937/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml
 endif
 
 #XML Audio configuration files
 ifeq ($(USE_XML_AUDIO_POLICY_CONF), 1)
    ifeq ($(TARGET_PRODUCT),sdm429w_law)
       PRODUCT_COPY_FILES += \
-      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration_sdm429w_law.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
+      $(TOPDIR)$(PRIMARYHAL_PATH)/configs/msm8937/audio_policy_configuration_sdm429w_law.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
    else ifeq ($(TARGET_SUPPORTS_WEARABLES), true)
       PRODUCT_COPY_FILES += \
-      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
+      $(TOPDIR)$(PRIMARYHAL_PATH)/configs/msm8937/audio_policy_configuration_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
    else ifeq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
       PRODUCT_COPY_FILES += \
-      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration_common.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
+      $(TOPDIR)$(PRIMARYHAL_PATH)/configs/msm8937/audio_policy_configuration_common.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
    else
       PRODUCT_COPY_FILES += \
-      $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml \
+      $(TOPDIR)$(PRIMARYHAL_PATH)/configs/msm8937/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml \
       $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msm8937/audio_policy_configuration_common.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
    endif
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
+    $(TOPDIR)$(PRIMARYHAL_PATH)/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/r_submix_audio_policy_configuration.xml \

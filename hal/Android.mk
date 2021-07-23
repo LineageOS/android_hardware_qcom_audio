@@ -176,12 +176,16 @@ LOCAL_C_INCLUDES += \
     external/tinycompress/include \
     system/media/audio_utils/include \
     external/expat/lib \
-    vendor/qcom/opensource/core-utils/fwk-detect \
     $(call include-path-for, audio-route) \
     $(call include-path-for, audio-effects) \
     $(LOCAL_PATH)/$(AUDIO_PLATFORM) \
     $(LOCAL_PATH)/audio_extn \
     $(LOCAL_PATH)/voice_extn
+ifneq ($(BOARD_OPENSOURCE_DIR), )
+  LOCAL_C_INCLUDES += $(BOARD_OPENSOURCE_DIR)/core-utils/fwk-detect
+else
+  LOCAL_C_INCLUDES += vendor/qcom/opensource/core-utils/fwk-detect
+endif # BOARD_OPENSOURCE_DIR
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
@@ -192,7 +196,11 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 # Hardware specific feature
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_HEADER_LIBRARIES += audio_kernel_headers
-  LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
+ifneq ($(BOARD_OPENSOURCE_DIR), )
+    LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/$(BOARD_OPENSOURCE_DIR)/audio-kernel/include
+  else
+    LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/vendor/qcom/opensource/audio-kernel/include
+  endif # BOARD_OPENSOURCE_DIR
 endif
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT)),true)
