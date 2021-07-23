@@ -412,6 +412,10 @@ vendor.audio.c2.preferred=true
 PRODUCT_PROPERTY_OVERRIDES += \
 debug.c2.use_dmabufheaps=1
 
+#Enable C2 suspend
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.qc2audio.suspend.enabled=true
+
 ifneq ($(GENERIC_ODM_IMAGE),true)
 $(warning "Enabling codec2.0 SW only for non-generic odm build variant")
 #Rank OMX SW codecs lower than OMX HW codecs
