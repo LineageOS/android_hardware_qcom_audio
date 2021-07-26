@@ -2160,8 +2160,41 @@
         <ctl name="WSA_RX0 Digital Volume" value="50" />
     </path>
 
+    <path name="handset-wcd">
+        <ctl name="RX_MACRO RX0 MUX" value="AIF1_PB" />
+        <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
+        <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
+        <ctl name="EAR_RDAC Switch" value="1" />
+        <ctl name="RDAC3_MUX" value="RX1" />
+        <ctl name="RX_EAR Mode" value="ON" />
+    </path>
+
+    <path name="ultrasound-handset">
+        <ctl name="WSA RX_MIX0 MUX" value="AIF_MIX1_PB" />
+        <ctl name="WSA_RX0 MIX INP" value="RX_MIX0" />
+        <ctl name="WSA_COMP1 Switch" value="1" />
+        <ctl name="SpkrLeft COMP Switch" value="1" />
+        <ctl name="SpkrLeft VISENSE Switch" value="1" />
+        <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
+        <ctl name="WSA_RX0 Digital Volume" value="50" />
+    </path>
+
+    <path name="ultrasound-handset-wcd">
+        <ctl name="RX_MACRO RX2 MUX" value="AIF2_PB" />
+        <ctl name="RX INT0_2 MUX" value="RX2" />
+        <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
+        <ctl name="EAR_RDAC Switch" value="1" />
+        <ctl name="RDAC3_MUX" value="RX1" />
+        <ctl name="RX_EAR Mode" value="ON" />
+    </path>
+
     <path name="handset-mic">
         <path name="dmic2" />
+    </path>
+
+    <path name="ultrasound-mic">
+        <ctl name="TX_AIF2_CAP Mixer DEC4" value="1" />
+        <ctl name="TX DMIC MUX4" value="DMIC2" />
     </path>
 
     <path name="headphones">
