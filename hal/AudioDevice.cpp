@@ -1589,6 +1589,20 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                  sizeof(pal_param_haptics_intensity_t));
     }
 
+    ret = str_parms_get_str(parms, "A2dpCaptureSuspend", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_bta2dp_t param_bt_a2dp;
+
+        if (strncmp(value, "true", 4) == 0)
+            param_bt_a2dp.a2dp_capture_suspended = true;
+        else
+            param_bt_a2dp.a2dp_capture_suspended = false;
+
+        AHAL_INFO("BT A2DP Capture Suspended = %s, command received", value);
+        ret = pal_set_param(PAL_PARAM_ID_BT_A2DP_CAPTURE_SUSPENDED, (void*)&param_bt_a2dp,
+            sizeof(pal_param_bta2dp_t));
+    }
+
     str_parms_destroy(parms);
 
     AHAL_DBG("exit: %s", kvpairs);
