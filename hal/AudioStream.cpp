@@ -2482,10 +2482,11 @@ ssize_t StreamOutPrimary::splitAndWriteAudioHapticsStream(const void *buffer, si
      return ret;
 }
 
-ssize_t StreamOutPrimary::onWriteError(size_t bytes) {
+ssize_t StreamOutPrimary::onWriteError(size_t bytes, size_t ret) {
     // standby streams upon write failures and sleep for buffer duration.
-    AHAL_ERR("write error");
+    AHAL_ERR("write error %d usecase(%d: %s)", ret, GetUseCase(), use_case_table[GetUseCase()]);
     Standby();
+
     if (streamAttributes_.type != PAL_STREAM_COMPRESSED) {
         uint32_t byteWidth = streamAttributes_.out_media_config.bit_width / 8;
         uint32_t sampleRate = streamAttributes_.out_media_config.sample_rate;
@@ -2497,9 +2498,11 @@ ssize_t StreamOutPrimary::onWriteError(size_t bytes) {
             return -EINVAL;
         } else {
             usleep((uint64_t)bytes * 1000000 / frameSize / sampleRate);
+            return bytes;
         }
     }
-    return bytes;
+    // Return error in case of compress offload.
+    return ret;
 }
 
 ssize_t StreamOutPrimary::configurePalOutputStream() {
@@ -2667,7 +2670,7 @@ exit:
     }
     clock_gettime(CLOCK_MONOTONIC, &writeAt);
 
-    return (ret < 0 ? onWriteError(bytes) : ret);
+    return (ret < 0 ? onWriteError(bytes, ret) : ret);
 }
 
 bool StreamOutPrimary::CheckOffloadEffectsType(pal_stream_type_t pal_stream_type) {
@@ -3534,9 +3537,9 @@ int StreamInPrimary::SetMicMute(bool mute) {
     return ret;
 }
 
-ssize_t StreamInPrimary::onReadError(size_t bytes) {
+ssize_t StreamInPrimary::onReadError(size_t bytes, size_t ret) {
     // standby streams upon read failures and sleep for buffer duration.
-    AHAL_ERR("read failed");
+    AHAL_ERR("read failed %d usecase(%d: %s)", ret, GetUseCase(), use_case_table[GetUseCase()]);
     Standby();
     uint32_t byteWidth = streamAttributes_.in_media_config.bit_width / 8;
     uint32_t sampleRate = streamAttributes_.in_media_config.sample_rate;
@@ -3648,7 +3651,7 @@ exit:
     }
     clock_gettime(CLOCK_MONOTONIC, &readAt);
 
-    return (ret < 0 ? onReadError(bytes) : bytes);
+    return (ret < 0 ? onReadError(bytes, ret) : bytes);
 }
 
 int StreamInPrimary::FillHalFnPtrs() {
