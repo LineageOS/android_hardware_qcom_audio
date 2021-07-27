@@ -67,6 +67,10 @@
 #include <log_utils.h>
 #endif
 
+#ifdef LINUX_ENABLED
+#include "audio_stub.h"
+#endif
+
 #define MAX_SLEEP_RETRY 100
 #define WIFI_INIT_WAIT_SLEEP 50
 #define MAX_NUM_CHANNELS 8
@@ -4871,9 +4875,17 @@ void audio_extn_sco_reset_configuration()
 
 // START: HFP ======================================================================
 #ifdef __LP64__
+#ifdef LINUX_ENABLED
+#define HFP_LIB_PATH "/usr/lib64/libhfp.so"
+#else
 #define HFP_LIB_PATH "/vendor/lib64/libhfp.so"
+#endif
+#else
+#ifdef LINUX_ENABLED
+#define HFP_LIB_PATH "/usr/lib/libhfp.so"
 #else
 #define HFP_LIB_PATH "/vendor/lib/libhfp.so"
+#endif
 #endif
 
 static void *hfp_lib_handle = NULL;
@@ -4965,7 +4977,6 @@ feature_disabled:
     hfp_set_mic_mute = NULL;
     hfp_set_mic_mute2 = NULL;
     hfp_set_parameters = NULL;
-
     ALOGW(":: %s: ---- Feature HFP is disabled ----", __func__);
     return -ENOSYS;
 }
@@ -6066,10 +6077,18 @@ bool audio_extn_ma_supported_usb()
 // END: MAXX_AUDIO =====================================================================
 
 // START: AUTO_HAL ===================================================================
+#ifdef LINUX_ENABLED
+#ifdef __LP64__
+#define AUTO_HAL_LIB_PATH "/usr/lib64/libautohal.so"
+#else
+#define AUTO_HAL_LIB_PATH "/usr/lib/libautohal.so"
+#endif
+#else
 #ifdef __LP64__
 #define AUTO_HAL_LIB_PATH "/vendor/lib64/libautohal.so"
 #else
 #define AUTO_HAL_LIB_PATH "/vendor/lib/libautohal.so"
+#endif
 #endif
 
 static void *auto_hal_lib_handle = NULL;
@@ -6147,6 +6166,11 @@ int auto_hal_feature_init(bool is_feature_enabled)
 {
     ALOGD("%s: Called with feature %s", __func__,
                   is_feature_enabled ? "Enabled" : "NOT Enabled");
+
+#ifdef LINUX_ENABLED
+    is_feature_enabled = true;
+#endif
+
     if (is_feature_enabled) {
         // dlopen lib
         auto_hal_lib_handle = dlopen(AUTO_HAL_LIB_PATH, RTLD_NOW);
@@ -6543,7 +6567,6 @@ feature_disabled:
 void audio_extn_feature_init()
 {
     vendor_enhanced_info = audio_extn_utils_get_vendor_enhanced_info();
-
     // register feature init functions here
     // each feature needs a vendor property
     // default value added is for GSI (non vendor modified images)
@@ -6628,9 +6651,17 @@ void audio_extn_feature_init()
     hwdep_cal_feature_init(
         property_get_bool("vendor.audio.feature.hwdep_cal.enable",
                            false));
+    #ifdef LINUX_ENABLED
+    #ifdef HFP_ENABLED
+        hfp_feature_init(true);
+    #else
+        hfp_feature_init(false);
+    #endif
+    #else
     hfp_feature_init(
         property_get_bool("vendor.audio.feature.hfp.enable",
-                           false));
+                            false));
+    #endif
     icc_feature_init(
         property_get_bool("vendor.audio.feature.icc.enable",
                            false));
