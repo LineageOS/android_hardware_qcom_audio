@@ -1527,7 +1527,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         if (ret < 0)
             continue;
 
-        if (!strcmp(key, "Codec") && !strcmp(value, "LC3")) {
+        if (!strcmp(key, "Codec") && (!strcmp(value, "LC3"))) {
             btsco_lc3_cfg.fields_map |= LC3_CODEC_BIT;
         } else if (!strcmp(key, "StreamMap")) {
             strlcpy(btsco_lc3_cfg.streamMap, value, PAL_LC3_MAX_STRING_LEN);
@@ -1547,6 +1547,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         } else if (!strcmp(key, "version")) {
             btsco_lc3_cfg.api_version = atoi(value);
             btsco_lc3_cfg.fields_map |= LC3_VERSION_BIT;
+        } else if (!strcmp(key, "vendor")) {
+            strlcpy(btsco_lc3_cfg.vendor, value, PAL_LC3_MAX_STRING_LEN);
+            btsco_lc3_cfg.fields_map |= LC3_VENDOR_BIT;
         }
     }
 
@@ -1559,6 +1562,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         param_bt_sco.lc3_cfg.txconfig_index = btsco_lc3_cfg.txconfig_index;
         param_bt_sco.lc3_cfg.api_version = btsco_lc3_cfg.api_version;
         strlcpy(param_bt_sco.lc3_cfg.streamMap, btsco_lc3_cfg.streamMap, PAL_LC3_MAX_STRING_LEN);
+        strlcpy(param_bt_sco.lc3_cfg.vendor, btsco_lc3_cfg.vendor, PAL_LC3_MAX_STRING_LEN);
 
         AHAL_INFO("BTSCO LC3 on = %d", param_bt_sco.bt_lc3_speech_enabled);
         ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
