@@ -27,7 +27,7 @@
 <defs>
 <card>
     <id>100</id>
-    <name>lahainamtpsndca,lahainaqrdsndca,lahainacdpsndca</name>
+    <name>lahainavirtualsndcard</name>
 
     <pcm-device>
         <id>100</id>
