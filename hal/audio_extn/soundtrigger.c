@@ -425,7 +425,7 @@ exit:
             in->is_st_session_active = false;
         memset(buffer, 0, bytes);
         ALOGV("%s: read failed status %d - sleep", __func__, ret);
-        usleep((bytes * 1000000) / (audio_stream_in_frame_size((struct audio_stream_in *)in) *
+        usleep(((useconds_t)bytes * 1000000) / (audio_stream_in_frame_size((struct audio_stream_in *)in) *
                                    in->config.rate));
     }
     return ret;
