@@ -49,6 +49,7 @@ AC_ARG_ENABLE(target,
                         [qtiquingvm], [TARGET_SUPPORT=msmnile_au],
                         [sa81*],      [TARGET_SUPPORT=msmnile_au],
                         [sa61*],      [TARGET_SUPPORT=msmsteppe_au],
+                        [qrbx210],    [TARGET_SUPPORT=qrbx210],
                         [TARGET_SUPPORT=none])],
                [TARGET_SUPPORT=none]
 )
@@ -103,6 +104,12 @@ fi
 if (test x$TARGET_SUPPORT = xsdmsteppe); then
          AC_SUBST([TARGET_PLATFORM], ["msm8974"])
          TARGET_CFLAGS="-DPLATFORM_MSMSTEPPE"
+fi
+if (test x$TARGET_SUPPORT = xqrbx210); then
+         AC_SUBST([TARGET_PLATFORM], ["msm8974"])
+         TARGET_CFLAGS=" -DPLATFORM_BENGAL"
+         TARGET_CFLAGS+=" -DMAX_TARGET_SPECIFIC_CHANNEL_CNT=\"4\""
+         TARGET_CFLAGS+=" -DINCALL_STEREO_CAPTURE_ENABLED"
 fi
 if (test x$TARGET_SUPPORT = xmsmnile_au); then
          AC_SUBST([TARGET_PLATFORM], ["msm8974"])
@@ -161,6 +168,7 @@ AM_CONDITIONAL([RUN_KEEP_ALIVE_IN_ARM_FFV], [test x$AUDIO_FEATURE_ENABLED_KEEP_A
 AM_CONDITIONAL([INSTANCE_ID], [test x$AUDIO_FEATURE_ENABLED_INSTANCE_ID = xtrue])
 AM_CONDITIONAL([LL_AS_PRIMARY_OUTPUT], [test x$AUDIO_USE_LL_AS_PRIMARY_OUTPUT = xtrue])
 AM_CONDITIONAL([QAHW_V1], [test x$AUDIO_FEATURE_ENABLED_QAHW_1_0 = xtrue])
+AM_CONDITIONAL([DISABLE_COMPRESS_FORMAT], [test x$AUDIO_FEATURE_DISABLE_COMPRESS_FORMAT = xtrue])
 
 AC_CONFIG_FILES([ \
         Makefile \
