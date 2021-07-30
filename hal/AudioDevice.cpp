@@ -1231,21 +1231,26 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             }
             AHAL_INFO("pal set param success  for device connection");
             /* check if capture profile is supported or not */
-            pal_param_device_capability_t *device_cap_query = new pal_param_device_capability_t();
-            dynamic_media_config_t dynamic_media_config;
-            size_t payload_size = 0;
-            device_cap_query->id = PAL_DEVICE_IN_USB_HEADSET;
-            device_cap_query->addr.card_id = usb_card_id_;
-            device_cap_query->addr.device_num = usb_dev_num_;
-            device_cap_query->config = &dynamic_media_config;
-            device_cap_query->is_playback = false;
-            ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
-                    (void **)&device_cap_query,
-                    &payload_size, nullptr);
-            if (dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
-                    dynamic_media_config.mask == 0)
-                usb_input_dev_enabled = false;
-            delete device_cap_query;
+            pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
+                                                          malloc(sizeof(pal_param_device_capability_t));
+            if (device_cap_query) {
+                dynamic_media_config_t dynamic_media_config;
+                size_t payload_size = 0;
+                device_cap_query->id = PAL_DEVICE_IN_USB_HEADSET;
+                device_cap_query->addr.card_id = usb_card_id_;
+                device_cap_query->addr.device_num = usb_dev_num_;
+                device_cap_query->config = &dynamic_media_config;
+                device_cap_query->is_playback = false;
+                ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
+                        (void **)&device_cap_query,
+                        &payload_size, nullptr);
+                if (dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
+                        dynamic_media_config.mask == 0)
+                    usb_input_dev_enabled = false;
+                free(device_cap_query);
+            } else {
+                    AHAL_ERR("Failed to allocate mem for device_cap_query");
+            }
             if (pal_device_ids) {
                 free(pal_device_ids);
                 pal_device_ids = NULL;
@@ -1578,15 +1583,16 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         struct pal_volume_data* volume = NULL;
         volume = (struct pal_volume_data *)malloc(sizeof(struct pal_volume_data)
                       +sizeof(struct pal_channel_vol_kv));
-        volume->no_of_volpair = 1;
-        //For haptics, there is only one channel (FL).
-        volume->volume_pair[0].channel_mask = 0x01;
-        volume->volume_pair[0].vol = atof(value);
-        AHAL_INFO("Setting Haptics Volume as %f", volume->volume_pair[0].vol);
-        ret = pal_set_param(PAL_PARAM_ID_HAPTICS_VOLUME, (void *)volume,
-                 sizeof(pal_volume_data));
-        if (volume)
+        if (volume) {
+            volume->no_of_volpair = 1;
+            //For haptics, there is only one channel (FL).
+            volume->volume_pair[0].channel_mask = 0x01;
+            volume->volume_pair[0].vol = atof(value);
+            AHAL_INFO("Setting Haptics Volume as %f", volume->volume_pair[0].vol);
+            ret = pal_set_param(PAL_PARAM_ID_HAPTICS_VOLUME, (void *)volume,
+                     sizeof(pal_volume_data));
             free(volume);
+        }
     }
 
     ret = str_parms_get_str(parms, "haptics_intensity", value, sizeof(value));
@@ -1618,6 +1624,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     AHAL_DBG("exit: %s", kvpairs);
     return 0;
 }
+
 
 int AudioDevice::SetVoiceVolume(float volume) {
     return voice_->SetVoiceVolume(volume);
