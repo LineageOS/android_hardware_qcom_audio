@@ -7,11 +7,13 @@ AUDIO_USE_STUB_HAL := true
 endif
 endif
 
+AUDIO_HAL_DIR := hardware/qcom-caf/sm8350/audio
+
 #mixer xml generation
-BASE_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/common/base
-OVERLAY_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/holi_overlay
-TARGET_PATH := vendor/qcom/opensource/audio-hal/primary-hal/configs/holi
-SCRIPT := vendor/qcom/opensource/audio-hal/primary-hal/configs/common/mixer_xml_utils.py
+BASE_PATH := $(AUDIO_HAL_DIR)/configs/common/base
+OVERLAY_PATH := $(AUDIO_HAL_DIR)/configs/holi/holi_overlay
+TARGET_PATH := $(AUDIO_HAL_DIR)/configs/holi
+SCRIPT := $(AUDIO_HAL_DIR)/configs/common/mixer_xml_utils.py
 
 $(shell python $(SCRIPT) --generate combine --base $(BASE_PATH)/mixer_paths_base.xml --overlay $(OVERLAY_PATH)/mixer_paths_overlay.xml $(OVERLAY_PATH)/mixer_paths_qrd_overlay.xml $(OVERLAY_PATH)/mixer_paths_usbc_overlay.xml --out_dir $(TARGET_PATH) --out mixer_paths.xml mixer_paths_qrd.xml mixer_paths_usbc.xml )
 
@@ -119,44 +121,44 @@ PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
-DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
+DEVICE_PACKAGE_OVERLAYS += $(AUDIO_HAL_DIR)/configs/common/overlay
 endif
 
 PRODUCT_COPY_FILES += \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_platform_info_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_platform_info_intcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_intcodec.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_mixer_paths_usbc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_usbc.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrdsku1.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_usbc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_usbc.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrdsku1.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_platform_info_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_qrd.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_platform_info_intcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_platform_info_intcodec.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
+$(AUDIO_HAL_DIR)/configs/holi/sound_trigger_mixer_paths_usbc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_usbc.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrd.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrdsku1.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/mixer_paths_usbc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_usbc.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrdsku1.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
+    $(AUDIO_HAL_DIR)/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
+    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/holi/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
 endif
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
+    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/r_submix_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usb_audio_policy_configuration.xml \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_qti_audio_policy_configuration.xml \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/bluetooth_qti_hearing_aid_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_qti_hearing_aid_audio_policy_configuration.xml
+    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_qti_audio_policy_configuration.xml \
+    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/bluetooth_qti_hearing_aid_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_qti_hearing_aid_audio_policy_configuration.xml
 
 #TODO: Delete xml's from obsolete paths
 # Audio configuration xml's related to Holi
@@ -164,35 +166,35 @@ QCV_FAMILY_SKUS := holi
 DEVICE_SKU := holi
 
 PRODUCT_COPY_FILES += \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_io_policy.conf \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_effects.conf \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_effects.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_platform_info.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_platform_info.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_platform_info_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_platform_info_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_platform_info_intcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_platform_info_intcodec.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths.xml \
-vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_mixer_paths_usbc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths_usbc.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths_qrdsku1.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_usbc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_usbc.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_qrdsku1.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/holi/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_tuning_mixer.txt
+    $(AUDIO_HAL_DIR)/configs/holi/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_io_policy.conf \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_effects.conf \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_effects.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_platform_info.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_platform_info.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_platform_info_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_platform_info_qrd.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_platform_info_intcodec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_platform_info_intcodec.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths.xml \
+$(AUDIO_HAL_DIR)/configs/holi/sound_trigger_mixer_paths_usbc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths_usbc.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths_qrd.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/sound_trigger_mixer_paths_qrdsku1.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/mixer_paths_usbc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_usbc.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_qrd.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/mixer_paths_qrdsku1.xml \
+    $(AUDIO_HAL_DIR)/configs/holi/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_tuning_mixer.txt
 
 # Audio configuration xml's common to Holi family
 PRODUCT_COPY_FILES += \
 $(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/media_codecs_vendor_audio.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_policy_configuration.xml \
+    $(AUDIO_HAL_DIR)/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/media_codecs_vendor_audio.xml \
+    $(AUDIO_HAL_DIR)/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_policy_configuration.xml \
     frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/a2dp_audio_policy_configuration.xml \
     frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_policy_volumes.xml \
     frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/default_volume_tables.xml \
     frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/r_submix_audio_policy_configuration.xml \
     frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/usb_audio_policy_configuration.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/bluetooth_qti_audio_policy_configuration.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/common/bluetooth_qti_hearing_aid_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/bluetooth_qti_hearing_aid_audio_policy_configuration.xml)
+    $(AUDIO_HAL_DIR)/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/bluetooth_qti_audio_policy_configuration.xml \
+    $(AUDIO_HAL_DIR)/configs/common/bluetooth_qti_hearing_aid_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/bluetooth_qti_hearing_aid_audio_policy_configuration.xml)
 
 # Audio permission xml's common to Holi family
 PRODUCT_COPY_FILES += \
