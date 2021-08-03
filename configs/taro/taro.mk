@@ -110,6 +110,7 @@ AUDIO_PAL += lib_bt_bundle
 AUDIO_PAL += lib_bt_aptx
 AUDIO_PAL += lib_bt_ble
 AUDIO_PAL += catf
+AUDIO_PAL += PalTest
 
 BOARD_SUPPORTS_OPENSOURCE_STHAL := true
 
