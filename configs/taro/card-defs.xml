@@ -275,13 +275,39 @@
 
     <pcm-device>
         <id>119</id>
-        <name>ExtEC119</name>
+        <name>PCM119</name>
         <pcm_plugin>
             <so-name>libagm_pcm_plugin.so</so-name>
         </pcm_plugin>
         <props>
             <playback>0</playback>
             <capture>1</capture>
+            <session_mode>1</session_mode>
+        </props>
+    </pcm-device>
+
+    <pcm-device>
+        <id>120</id>
+        <name>ExtEC120</name>
+        <pcm_plugin>
+            <so-name>libagm_pcm_plugin.so</so-name>
+        </pcm_plugin>
+        <props>
+            <playback>0</playback>
+            <capture>1</capture>
+            <session_mode>1</session_mode>
+        </props>
+    </pcm-device>
+
+    <pcm-device>
+        <id>121</id>
+        <name>PCM121</name>
+        <pcm_plugin>
+            <so-name>libagm_pcm_plugin.so</so-name>
+        </pcm_plugin>
+        <props>
+            <playback>1</playback>
+            <capture>0</capture>
             <session_mode>1</session_mode>
         </props>
     </pcm-device>
