@@ -1849,6 +1849,13 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
                 mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
                 mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
             }
+
+            if ((AudioExtn::audio_devices_cmp(mAndroidOutDevices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) &&
+                                   (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_SPEAKER)) {
+                strlcpy(mPalOutDevice[i].custom_config.custom_key, "speaker-safe",
+                        sizeof(mPalOutDevice[i].custom_config.custom_key));
+                AHAL_INFO("Setting custom key as %s", mPalOutDevice[i].custom_config.custom_key);
+            }
         }
 
         mAndroidOutDevices = new_devices;
@@ -2890,6 +2897,14 @@ StreamOutPrimary::StreamOutPrimary(
             mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
             mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
         }
+
+        if ((AudioExtn::audio_devices_cmp(mAndroidOutDevices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) &&
+                                   (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_SPEAKER)) {
+            strlcpy(mPalOutDevice[i].custom_config.custom_key, "speaker-safe",
+                     sizeof(mPalOutDevice[i].custom_config.custom_key));
+            AHAL_INFO("Setting custom key as %s", mPalOutDevice[i].custom_config.custom_key);
+        }
+
     }
 
     if (flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) {

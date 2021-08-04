@@ -1741,7 +1741,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_SPDIF, PAL_DEVICE_OUT_SPDIF));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_FM, PAL_DEVICE_OUT_FM));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_AUX_LINE, PAL_DEVICE_OUT_AUX_LINE));
-    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_SPEAKER_SAFE, PAL_DEVICE_OUT_SPEAKER_SAFE));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_SPEAKER_SAFE, PAL_DEVICE_OUT_SPEAKER));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_IP, PAL_DEVICE_OUT_IP));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BUS, PAL_DEVICE_OUT_BUS));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_PROXY, PAL_DEVICE_OUT_PROXY));
