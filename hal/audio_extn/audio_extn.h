@@ -98,6 +98,14 @@
 #define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x4000000
 #endif
 
+#ifndef AUDIO_DEVICE_IN_SPEAKER_MIC2
+#define AUDIO_DEVICE_IN_SPEAKER_MIC2 0x10000000
+#endif
+
+#ifndef AUDIO_DEVICE_IN_SPEAKER_MIC3
+#define AUDIO_DEVICE_IN_SPEAKER_MIC3 0x20000000
+#endif
+
 int audio_extn_parse_compress_metadata(struct stream_out *out,
                                        struct str_parms *parms);
 
