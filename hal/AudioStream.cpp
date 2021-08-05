@@ -207,6 +207,7 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
         }
         break;
     case PAL_STREAM_CBK_EVENT_ERROR:
+        AHAL_DBG("received PAL_STREAM_CBK_EVENT_ERROR event");
         event = STREAM_CBK_EVENT_ERROR;
         break;
     default:
@@ -214,8 +215,10 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
         return -EINVAL;
     }
 
-    if (astream_out && astream_out->client_callback)
+    if (astream_out && astream_out->client_callback) {
+        AHAL_VERBOSE("Callback to Framework");
         astream_out->client_callback(event, NULL, astream_out->client_cookie);
+    }
 
     return 0;
 }
