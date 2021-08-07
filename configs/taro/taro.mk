@@ -193,6 +193,7 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager.xml \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_qrd.xml \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_cdp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_cdp.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_cdp_wcd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_cdp_wcd.xml \
     $(CONFIG_PAL_SRC_DIR)/usecaseKvManager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usecaseKvManager.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
