@@ -486,6 +486,7 @@ public:
 
     ~StreamOutPrimary();
     bool sendGaplessMetadata = true;
+    bool sendNextTrackParams = false;
     int Standby();
     int SetVolume(float left, float right);
     uint64_t GetFramesWritten(struct timespec *timestamp);
