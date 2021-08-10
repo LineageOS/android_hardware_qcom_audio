@@ -756,7 +756,7 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
 
     if (str_parms_get_str(query, "supports_hw_suspend", value, sizeof(value)) >= 0) {
         //only low latency track supports suspend_resume
-        if (astream_out->flags_ & AUDIO_OUTPUT_FLAG_FAST)
+        if (astream_out->flags_ == (AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_PRIMARY))
             hal_output_suspend_supported = 1;
         str_parms_add_int(reply, "supports_hw_suspend", hal_output_suspend_supported);
         if (str)
