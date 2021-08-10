@@ -359,6 +359,7 @@ int AudioVoice::GetMatchingTxDevices(const std::set<audio_devices_t>& rx_devices
             case AUDIO_DEVICE_OUT_WIRED_HEADSET:
                 tx_devices.insert(AUDIO_DEVICE_IN_WIRED_HEADSET);
                 break;
+            case AUDIO_DEVICE_OUT_LINE:
             case AUDIO_DEVICE_OUT_WIRED_HEADPHONE:
                 tx_devices.insert(AUDIO_DEVICE_IN_BUILTIN_MIC);
                 break;
