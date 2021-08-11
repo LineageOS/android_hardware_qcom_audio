@@ -26,7 +26,7 @@
 #define ACDB_METAINFO_KEY_MODULE_NAME_LEN 100
 
 /* Audio calibration related functions */
-typedef void (*acdb_deallocate_t)();
+typedef void (*acdb_deallocate_t)(void);
 typedef int  (*acdb_init_v3_t)(const char *, char *, struct listnode *);
 typedef int  (*acdb_init_v2_cvd_t)(char *, char *, int);
 typedef int  (*acdb_init_v2_t)(char *);
