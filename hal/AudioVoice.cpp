@@ -77,12 +77,11 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
     bool slow_talk;
     bool hd_voice;
 
-    AHAL_DBG("Enter params: %s", kvpairs);
-
     parms = str_parms_create_str(kvpairs);
     if (!parms)
        return  -EINVAL;
 
+    AHAL_DBG("Enter params: %s", kvpairs);
     err = str_parms_get_int(parms, AUDIO_PARAMETER_KEY_VSID, &value);
     if (err >= 0) {
         uint32_t vsid = value;
@@ -258,14 +257,14 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
                 dir = PAL_AUDIO_OUTPUT;
             }
         } else {
-            ALOGE("direction key not found");
+            AHAL_ERR("direction key not found");
             ret = -EINVAL;
             goto done;
         }
         params = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
                                                 sizeof(pal_device_mute_t));
         if (!params) {
-            ALOGE("calloc failed for size %zu",
+            AHAL_ERR("calloc failed for size %zu",
                      sizeof(pal_param_payload) + sizeof(pal_device_mute_t));
         } else {
             params->payload_size = sizeof(pal_device_mute_t);
@@ -280,7 +279,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
                                          PAL_PARAM_ID_DEVICE_MUTE, params);
                 }
                 if (ret != 0) {
-                    ALOGE("%s: Failed to set mute err:%d", __func__, ret);
+                    AHAL_ERR("Failed to set mute err:%d", ret);
                     ret = -EINVAL;
                     goto done;
                 }
@@ -393,12 +392,13 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
     pal_device_id_t pal_tx_device = (pal_device_id_t) NULL;
     pal_device_id_t* pal_device_ids = NULL;
     uint16_t device_count = 0;
+    bool same_dev = false;
 
     AHAL_DBG("Enter");
 
     if (AudioExtn::audio_devices_empty(rx_devices)){
-        AHAL_ERR("Exit invalid routing device %d", AudioExtn::get_device_types(rx_devices));
-        return 0;
+        AHAL_ERR("invalid routing device %d", AudioExtn::get_device_types(rx_devices));
+        goto exit;
     }
 
     GetMatchingTxDevices(rx_devices, tx_devices);
@@ -406,8 +406,9 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
 
     pal_device_ids = (pal_device_id_t *)calloc(1, device_count * sizeof(pal_device_id_t));
     if (!pal_device_ids) {
-        AHAL_ERR("Exit fail to allocate memory for pal device array");
-        return -ENOMEM;
+        AHAL_ERR("fail to allocate memory for pal device array");
+        ret = -ENOMEM;
+        goto exit;
     }
 
     AHAL_DBG("Routing is %d", AudioExtn::get_device_types(rx_devices));
@@ -420,7 +421,7 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
         pal_tx_device = pal_device_ids[0];
     }
 
-    bool same_dev = pal_voice_rx_device_id_ == pal_rx_device;
+    same_dev = pal_voice_rx_device_id_ == pal_rx_device;
     pal_voice_rx_device_id_ = pal_rx_device;
     pal_voice_tx_device_id_ = pal_tx_device;
 
@@ -441,6 +442,7 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
     }
 
     free(pal_device_ids);
+exit:
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
@@ -722,7 +724,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
         param_payload = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
                                                sizeof(session->device_mute));
        if (!param_payload) {
-           ALOGE("calloc failed for size %zu",
+           AHAL_ERR("calloc failed for size %zu",
                     sizeof(pal_param_payload) + sizeof(session->device_mute));
        } else {
            param_payload->payload_size = sizeof(session->device_mute);
@@ -730,7 +732,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
            ret = pal_stream_set_param(session->pal_voice_handle, PAL_PARAM_ID_DEVICE_MUTE,
                                       param_payload);
            if (ret)
-               ALOGE("%s Voice Device mute failed %x", __func__, ret);
+               AHAL_ERR("Voice Device mute failed %x", ret);
            free(param_payload);
            param_payload = nullptr;
        }

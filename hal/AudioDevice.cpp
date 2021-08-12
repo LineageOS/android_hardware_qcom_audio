@@ -338,7 +338,7 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
 
     if (!handle || sources.empty() || sources.size() > AUDIO_PATCH_PORTS_MAX ||
         sinks.empty() || sinks.size() > AUDIO_PATCH_PORTS_MAX) {
-        AHAL_ERR("exit: Invalid patch arguments");
+        AHAL_ERR("Invalid patch arguments");
         ret = -EINVAL;
         goto exit;
     }
@@ -633,11 +633,11 @@ void adev_close_output_stream(struct audio_hw_device *dev,
         return;
     }
 
-    AHAL_DBG("enter:stream_handle(%p)", astream_out.get());
+    AHAL_DBG("Enter:stream_handle(%p)", astream_out.get());
 
     adevice->CloseStreamOut(astream_out);
 
-    AHAL_DBG("exit");
+    AHAL_DBG("Exit");
 }
 
 void adev_close_input_stream(struct audio_hw_device *dev,
@@ -656,11 +656,11 @@ void adev_close_input_stream(struct audio_hw_device *dev,
         return;
     }
 
-    AHAL_DBG("enter:stream_handle(%p)", astream_in.get());
+    AHAL_DBG("Enter:stream_handle(%p)", astream_in.get());
 
     adevice->CloseStreamIn(astream_in);
 
-    AHAL_DBG("exit");
+    AHAL_DBG("Exit");
 }
 
 static int adev_open_input_stream(struct audio_hw_device *dev,
@@ -899,7 +899,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
      *Once PAL init is sucessfull, register the PAL service
      *from HAL process context
      */
-    ALOGE("Register Pal service");
+    AHAL_DBG("Register Pal service");
     AudioExtn::audio_extn_hidl_init();
 
     adev_->device_.get()->common.tag = HARDWARE_DEVICE_TAG;
@@ -1084,16 +1084,18 @@ int AudioDevice::SetMicMute(bool state) {
     std::shared_ptr<StreamInPrimary> astream_in;
     mute_ = state;
 
-    ALOGD("%s: enter: %d", __func__, state);
+    AHAL_DBG("%s: enter: %d", __func__, state);
     if (voice_)
         ret = voice_->SetMicMute(state);
     for (int i = 0; i < stream_in_list_.size(); i++) {
          astream_in = stream_in_list_[i];
          if (astream_in) {
-             ALOGV("%s: Found existing stream associated with astream_in", __func__);
+             AHAL_VERBOSE("Found existing stream associated with astream_in");
              ret = astream_in->SetMicMute(state);
          }
     }
+
+    AHAL_DBG("exit: ret %d", ret);
     return 0;
 }
 
@@ -1161,7 +1163,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     parms = str_parms_create_str(kvpairs);
     if (!parms) {
         AHAL_ERR("Error in str_parms_create_str");
-        return 0;
+        ret = 0;
+        goto exit;
     }
     AudioExtn::audio_extn_set_parameters(adev_, parms);
 
@@ -1215,9 +1218,10 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 param_device_connection.device_config.usb_addr.card_id = atoi(value);
                 if ((usb_card_id_ == param_device_connection.device_config.usb_addr.card_id) &&
                     (audio_is_usb_in_device(device)) && (usb_input_dev_enabled == true)) {
-                    AHAL_INFO("Exit plugin card :%d device num=%d already added", usb_card_id_,
+                    AHAL_INFO("plugin card :%d device num=%d already added", usb_card_id_,
                           param_device_connection.device_config.usb_addr.device_num);
-                    return 0;
+                    ret = 0;
+                    goto exit;
                 }
 
                 usb_card_id_ = param_device_connection.device_config.usb_addr.card_id;
@@ -1247,8 +1251,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             ret = add_input_headset_if_usb_out_headset(&pal_device_count, &pal_device_ids);
             if (ret) {
                 free(pal_device_ids);
-                AHAL_ERR("Exit adding input headset failed, error:%d", ret);
-                return ret;
+                AHAL_ERR("adding input headset failed, error:%d", ret);
+                goto exit;
             }
             for (int i = 0; i < pal_device_count; i++) {
                 param_device_connection.connection_state = true;
@@ -1660,8 +1664,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
 
     str_parms_destroy(parms);
 
+exit:
     AHAL_DBG("exit: %s", kvpairs);
-    return 0;
+    return ret;
 }
 
 
@@ -1687,6 +1692,8 @@ char* AudioDevice::GetParameters(const char *keys) {
         AHAL_ERR("failed to create query or reply");
         return NULL;
     }
+
+    AHAL_VERBOSE("enter");
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_A2DP_RECONFIG_SUPPORTED,
                             value, sizeof(value));
@@ -1884,7 +1891,7 @@ hw_device_t* AudioDevice::GetAudioDeviceCommon()
 static int adev_open(const hw_module_t *module, const char *name __unused,
                      hw_device_t **device) {
     int32_t ret = 0;
-    AHAL_DBG("enter");
+    AHAL_DBG("Enter");
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
@@ -1909,7 +1916,7 @@ static int adev_open(const hw_module_t *module, const char *name __unused,
     }
     adevice->adev_init_mutex.unlock();
 exit:
-    AHAL_DBG("exit");
+    AHAL_DBG("Exit, status %d", ret);
     return 0;
 }
 

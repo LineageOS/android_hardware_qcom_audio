@@ -743,7 +743,7 @@ static int astream_out_set_parameters(struct audio_stream *stream,
     } else {
         ret = -EINVAL;
         AHAL_ERR("unable to get audio device");
-        goto exit;
+        return ret;
     }
 
     AHAL_DBG("enter: usecase(%d: %s) kvpairs: %s",
@@ -1292,7 +1292,7 @@ static int astream_in_standby(struct audio_stream *stream) {
     } else {
         AHAL_ERR("unable to get audio device");
         ret = -EINVAL;
-        goto exit;
+        return ret;
     }
 
     AHAL_DBG("enter: stream (%p) usecase(%d: %s)", astream_in.get(),
@@ -1718,7 +1718,8 @@ int StreamOutPrimary::Pause() {
 
     if (!pal_stream_handle_ || !stream_started_) {
         AHAL_DBG("Stream not started yet");
-        return -1;
+        ret = -EINVAL;
+        goto exit;
     }
 
     if (pal_stream_handle_) {
@@ -1730,6 +1731,7 @@ int StreamOutPrimary::Pause() {
         stream_paused_ = true;
     }
 
+exit:
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
@@ -1741,7 +1743,8 @@ int StreamOutPrimary::Resume() {
 
     if (!pal_stream_handle_ || !stream_started_) {
         AHAL_DBG("Stream not started yet");
-        return -1;
+        ret = -EINVAL;
+        goto exit;
     }
 
     if (pal_stream_handle_) {
@@ -1752,6 +1755,8 @@ int StreamOutPrimary::Resume() {
     else {
         stream_paused_ = false;
     }
+
+exit:
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
@@ -1815,7 +1820,8 @@ int StreamOutPrimary::Standby() {
         ret = pal_stream_stop(pal_stream_handle_);
         if (ret) {
             AHAL_ERR("failed to stop stream.");
-            return -EINVAL;
+            ret = -EINVAL;
+            goto exit;
         }
         if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS && pal_haptics_stream_handle) {
             ret = pal_stream_stop(pal_haptics_stream_handle);
@@ -1862,6 +1868,7 @@ int StreamOutPrimary::Standby() {
     if (ret)
         ret = -EINVAL;
 
+exit:
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
@@ -2953,7 +2960,7 @@ StreamOutPrimary::StreamOutPrimary(
         AHAL_ERR("No memory allocated for stream_");
         throw std::runtime_error("No memory allocated for stream_");
     }
-    AHAL_ERR("enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)\
+    AHAL_DBG("enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)\
           address(%s)", handle, config->format, config->sample_rate, config->channel_mask,
           mAndroidOutDevices.size(), flags, address);
 
@@ -3491,7 +3498,8 @@ int StreamInPrimary::Open() {
     AHAL_DBG("Enter InPrimary");
     if (!mInitialized) {
         AHAL_ERR("Not initialized, returning error");
-        return -EINVAL;
+        ret = -EINVAL;
+        goto exit;
     }
 
     handle = audio_extn_sound_trigger_check_and_get_session(this);
@@ -3504,7 +3512,8 @@ int StreamInPrimary::Open() {
     channels = audio_channel_count_from_in_mask(config_.channel_mask);
     if (channels == 0) {
        AHAL_ERR("invalid channel count");
-       return -EINVAL;
+       ret = -EINVAL;
+       goto exit;
     }
     //need to convert channel mask to pal channel mask
     if (channels == 8) {
@@ -3618,7 +3627,7 @@ int StreamInPrimary::Open() {
     if (ret) {
         AHAL_ERR("Pal Stream Open Error (%x)", ret);
         ret = -EINVAL;
-        goto error_open;
+        goto exit;
     }
 
 set_buff_size:
@@ -3647,7 +3656,7 @@ set_buff_size:
     fragments_ = inBufCount;
     fragment_size_ = inBufSize;
 
-error_open:
+exit:
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
@@ -3726,13 +3735,14 @@ int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_s
 
 int StreamInPrimary::SetMicMute(bool mute) {
     int ret = 0;
-    ALOGD("%s Enter mute %d for input session", __func__, mute);
+    AHAL_DBG("Enter mute %d for input session", mute);
     if (pal_stream_handle_) {
-        ALOGD("%s Enter if mute %d for input session", __func__, mute);
+        AHAL_DBG("Enter if mute %d for input session", mute);
         ret = pal_stream_set_mute(pal_stream_handle_, mute);
         if (ret)
-            ALOGE("%s Error applying mute %d for input session", __func__, mute);
+            AHAL_ERR("Error applying mute %d for input session", mute);
     }
+    AHAL_DBG("Exit");
     return ret;
 }
 
