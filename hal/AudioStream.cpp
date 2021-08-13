@@ -189,6 +189,7 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
             std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
             astream_out->drain_ready_ = true;
             astream_out->sendGaplessMetadata = false;
+            astream_out->sendNextTrackParams = false;
             AHAL_DBG("received DRAIN_READY event");
             (astream_out->drain_condition_).notify_all();
             event = STREAM_CBK_EVENT_DRAIN_READY;
@@ -199,6 +200,7 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
             std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
             astream_out->drain_ready_ = true;
             astream_out->sendGaplessMetadata = true;
+            astream_out->sendNextTrackParams = true;
             AHAL_DBG("received PARTIAL DRAIN_READY event");
             (astream_out->drain_condition_).notify_all();
             event = STREAM_CBK_EVENT_DRAIN_READY;
@@ -378,22 +380,24 @@ static size_t astream_out_get_buffer_size(const struct audio_stream *stream) {
 static audio_channel_mask_t astream_out_get_channels(const struct audio_stream *stream) {
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
-    std::shared_ptr<StreamOutPrimary> astream_out;
+    std::shared_ptr<StreamOutPrimary> astream_out = nullptr;
 
     AHAL_VERBOSE("stream_out(%p)", stream);
-    if (adevice != nullptr) {
-        astream_out = adevice->OutGetStream((audio_stream_t*)stream);
-    } else {
+
+    if (!adevice) {
         AHAL_ERR("unable to get audio device");
         return (audio_channel_mask_t) 0;
     }
+    astream_out = adevice->OutGetStream((audio_stream_t*)stream);
 
-    if (astream_out != nullptr && astream_out->GetChannelMask()) {
-        return astream_out->GetChannelMask();
-    } else {
+    if (!astream_out) {
         AHAL_ERR("unable to get audio stream");
         return (audio_channel_mask_t) 0;
     }
+
+    if (astream_out->GetChannelMask())
+        return astream_out->GetChannelMask();
+    return (audio_channel_mask_t) 0;
 }
 
 static int astream_pause(struct audio_stream_out *stream)
@@ -2554,11 +2558,39 @@ ssize_t StreamOutPrimary::configurePalOutputStream() {
         }
         ATRACE_END();
     }
-    if ((streamAttributes_.type == PAL_STREAM_COMPRESSED) && sendGaplessMetadata) {
+    if ((streamAttributes_.type == PAL_STREAM_COMPRESSED) && sendNextTrackParams) {
+        // Send codec params first.
         pal_param_payload *param_payload = nullptr;
         param_payload = (pal_param_payload *) calloc (1,
                                               sizeof(pal_param_payload) +
-                                              sizeof(struct pal_compr_gapless_mdata));
+                                              sizeof(pal_snd_dec_t));
+
+        if (param_payload) {
+            param_payload->payload_size = sizeof(pal_snd_dec_t);
+            memcpy(param_payload->payload, &palSndDec, param_payload->payload_size);
+
+            ret = pal_stream_set_param(pal_stream_handle_,
+                                       PAL_PARAM_ID_CODEC_CONFIGURATION,
+                                       param_payload);
+            if (ret) {
+                AHAL_INFO("Pal Set Param for codec configuration failed (%x)", ret);
+                ret = 0;
+            }
+            free(param_payload);
+
+        } else {
+            AHAL_ERR("calloc failed for size %zu",
+                   sizeof(pal_param_payload) + sizeof(pal_snd_dec_t));
+        }
+        sendNextTrackParams = false;
+    }
+
+    if ((streamAttributes_.type == PAL_STREAM_COMPRESSED) && sendGaplessMetadata) {
+        //Send gapless metadata
+        pal_param_payload *param_payload = nullptr;
+        param_payload = (pal_param_payload *) calloc (1,
+                                          sizeof(pal_param_payload) +
+                                          sizeof(struct pal_compr_gapless_mdata));
         if (param_payload) {
             AHAL_DBG("sending gapless metadata");
             param_payload->payload_size = sizeof(struct pal_compr_gapless_mdata);
@@ -2567,8 +2599,10 @@ ssize_t StreamOutPrimary::configurePalOutputStream() {
             ret = pal_stream_set_param(pal_stream_handle_,
                                        PAL_PARAM_ID_GAPLESS_MDATA,
                                        param_payload);
-            if (ret)
-                AHAL_ERR("PAL set param for gapless failed, error (%x)", ret);
+            if (ret) {
+                AHAL_INFO("PAL set param for gapless failed, error (%x)", ret);
+                ret = 0;
+            }
             free(param_payload);
         } else {
             AHAL_ERR("Failed to allocate gapless payload");
@@ -2733,6 +2767,14 @@ StreamOutPrimary::StreamOutPrimary(
     mInitialized = false;
     pal_stream_handle_ = nullptr;
     pal_haptics_stream_handle = nullptr;
+    mPalOutDeviceIds = nullptr;
+    mPalOutDevice = nullptr;
+    convertBuffer = NULL;
+    hapticBuffer = NULL;
+    hapticsBufSize = 0;
+    writeAt.tv_sec = 0;
+    writeAt.tv_nsec = 0;
+    mBytesWritten = 0;
     int noPalDevices = 0;
     int ret = 0;
 
@@ -2805,13 +2847,6 @@ StreamOutPrimary::StreamOutPrimary(
 
     fnp_visualizer_start_output_ = visualizer_start_output;
     fnp_visualizer_stop_output_ = visualizer_stop_output;
-
-    writeAt.tv_sec = 0;
-    writeAt.tv_nsec = 0;
-    mBytesWritten = 0;
-    convertBuffer = NULL;
-    hapticBuffer = NULL;
-    hapticsBufSize = 0;
 
     if (mAndroidOutDevices.empty())
         mAndroidOutDevices.insert(AUDIO_DEVICE_OUT_DEFAULT);

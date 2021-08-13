@@ -1134,7 +1134,7 @@ int AudioDevice::add_input_headset_if_usb_out_headset(int *device_count,
 int AudioDevice::SetParameters(const char *kvpairs) {
     int ret = 0, val = 0;
     struct str_parms *parms;
-    char value[32];
+    char value[256];
     int pal_device_count = 0;
     pal_device_id_t* pal_device_ids = NULL;
     char *test_r = NULL;
@@ -1472,12 +1472,21 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     ret = str_parms_get_str(parms, "BT_SCO", value, sizeof(value));
     if (ret >= 0) {
         pal_param_btsco_t param_bt_sco;
-        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0)
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
             param_bt_sco.bt_sco_on = true;
-        else
+        } else {
             param_bt_sco.bt_sco_on = false;
 
+            // turn off BLE voice bit during sco off
+            param_bt_sco.bt_lc3_speech_enabled = false;
+            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
+                                sizeof(pal_param_btsco_t));
+        }
+
+        // clear btsco_lc3_cfg whenever there's sco state change to
+        // avoid stale and partial cfg being used in next round
         memset(&btsco_lc3_cfg, 0, sizeof(btsco_lc3_cfg_t));
+
         AHAL_INFO("BTSCO on = %d", param_bt_sco.bt_sco_on);
         ret = pal_set_param(PAL_PARAM_ID_BT_SCO, (void *)&param_bt_sco,
                             sizeof(pal_param_btsco_t));
@@ -1515,7 +1524,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         if (!strcmp(key, "Codec") && !strcmp(value, "LC3")) {
             btsco_lc3_cfg.fields_map |= LC3_CODEC_BIT;
         } else if (!strcmp(key, "StreamMap")) {
-            strlcpy((char *)&(btsco_lc3_cfg.streamMap), value, PAL_LC3_MAX_STRING_LEN);
+            strlcpy(btsco_lc3_cfg.streamMap, value, PAL_LC3_MAX_STRING_LEN);
             btsco_lc3_cfg.fields_map |= LC3_STREAM_MAP_BIT;
         } else if (!strcmp(key, "FrameDuration")) {
             btsco_lc3_cfg.frame_duration = atoi(value);
@@ -1538,7 +1547,12 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     if ((btsco_lc3_cfg.fields_map & LC3_BIT_MASK) == LC3_BIT_VALID) {
         pal_param_btsco_t param_bt_sco;
         param_bt_sco.bt_lc3_speech_enabled = true;
-        strlcpy((char *)&(param_bt_sco.lc3_cfg), (char *)&btsco_lc3_cfg, sizeof(btsco_lc3_cfg_t));
+        param_bt_sco.lc3_cfg.frame_duration = btsco_lc3_cfg.frame_duration;
+        param_bt_sco.lc3_cfg.num_blocks = btsco_lc3_cfg.num_blocks;
+        param_bt_sco.lc3_cfg.rxconfig_index = btsco_lc3_cfg.rxconfig_index;
+        param_bt_sco.lc3_cfg.txconfig_index = btsco_lc3_cfg.txconfig_index;
+        param_bt_sco.lc3_cfg.api_version = btsco_lc3_cfg.api_version;
+        strlcpy(param_bt_sco.lc3_cfg.streamMap, btsco_lc3_cfg.streamMap, PAL_LC3_MAX_STRING_LEN);
 
         AHAL_INFO("BTSCO LC3 on = %d", param_bt_sco.bt_lc3_speech_enabled);
         ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
@@ -1582,6 +1596,20 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         AHAL_INFO("Setting Haptics Volume as %d", hIntensity.intensity);
         ret = pal_set_param(PAL_PARAM_ID_HAPTICS_INTENSITY, (void *)&hIntensity,
                  sizeof(pal_param_haptics_intensity_t));
+    }
+
+    ret = str_parms_get_str(parms, "A2dpCaptureSuspend", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_bta2dp_t param_bt_a2dp;
+
+        if (strncmp(value, "true", 4) == 0)
+            param_bt_a2dp.a2dp_capture_suspended = true;
+        else
+            param_bt_a2dp.a2dp_capture_suspended = false;
+
+        AHAL_INFO("BT A2DP Capture Suspended = %s, command received", value);
+        ret = pal_set_param(PAL_PARAM_ID_BT_A2DP_CAPTURE_SUSPENDED, (void*)&param_bt_a2dp,
+            sizeof(pal_param_bta2dp_t));
     }
 
     str_parms_destroy(parms);
@@ -1633,7 +1661,7 @@ char* AudioDevice::GetParameters(const char *keys) {
     }
 
     ret = str_parms_get_str(query, "get_ftm_param", value, sizeof(value));
-    if (ret >=0 ) {
+    if (ret >= 0) {
         char ftm_value[255];
         ret = pal_get_param(PAL_PARAM_ID_SP_MODE, (void **)&ftm_value, &size, nullptr);
         if (!ret) {
@@ -1644,6 +1672,19 @@ char* AudioDevice::GetParameters(const char *keys) {
                 AHAL_ERR("Error happened for getting FTM param");
         }
 
+    }
+
+    ret = str_parms_get_str(query, "get_spkr_cal", value, sizeof(value));
+    if (ret >= 0) {
+        char cal_value[255];
+        ret = pal_get_param(PAL_PARAM_ID_SP_GET_CAL, (void **)&cal_value, &size, nullptr);
+        if (!ret) {
+            if (size > 0) {
+                str_parms_add_str(reply, "get_spkr_cal", cal_value);
+            }
+            else
+                AHAL_ERR("Error happened for getting Cal param");
+        }
     }
 
     AudioExtn::audio_extn_get_parameters(adev_, query, reply);

@@ -296,15 +296,15 @@ done:
 
 void AudioVoice::VoiceGetParameters(struct str_parms *query, struct str_parms *reply)
 {
-    uint32_t tty_mode;
-    int i, ret;
+    uint32_t tty_mode = 0;
+    int ret = 0;
     char value[256]={0};
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_TTY_MODE,
                             value, sizeof(value));
     if (ret >= 0) {
-        for ( i = 0; i < max_voice_sessions_; i++) {
-            tty_mode = voice_.session[i].tty_mode;
+        for (int voiceSession_ind = 0; voiceSession_ind < max_voice_sessions_; voiceSession_ind++) {
+            tty_mode = voice_.session[voiceSession_ind].tty_mode;
         }
         if (tty_mode >= PAL_TTY_OFF || tty_mode <= PAL_TTY_FULL) {
             switch(tty_mode) {
