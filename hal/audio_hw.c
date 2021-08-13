@@ -967,6 +967,16 @@ static void check_and_configure_headphone(struct audio_device *adev,
                     enable_audio_route(adev, usecase);
                 }
             }
+            else if ((usecase->type != PCM_CAPTURE) && (usecase == uc_info)) {
+                usecase_backend_idx = platform_get_backend_index(usecase->out_snd_device);
+                if (((usecase_backend_idx == HEADPHONE_BACKEND) ||
+                    (usecase_backend_idx == HEADPHONE_44_1_BACKEND)) &&
+                    ((usecase->stream.out->sample_rate % OUTPUT_SAMPLING_RATE_44100) == 0)) {
+                    usecase->stream.out->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                    platform_check_and_set_codec_backend_cfg(adev, usecase,
+                                                            usecase->out_snd_device);
+                }
+            }
         }
     }
 }
@@ -3169,7 +3179,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                             &voip_out->app_type_cfg.gain[0]);
     }
 
-    ALOGV("%s: done",__func__);
+    ALOGD("%s: done",__func__);
 
     return status;
 }
