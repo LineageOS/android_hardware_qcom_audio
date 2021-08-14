@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <log/log.h>
