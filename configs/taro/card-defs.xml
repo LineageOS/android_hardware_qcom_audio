@@ -27,7 +27,7 @@
 <defs>
 <card>
     <id>100</id>
-    <name>waipiomtpsndcar,waipioqrdsndcar,waipiocdpsndcar</name>
+    <name>waipiovirtualsndcard</name>
 
     <pcm-device>
         <id>100</id>
