@@ -842,8 +842,7 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
     return adevice->CreateAudioPatch(handle, source_vec, sink_vec);
 }
 
-int adev_get_audio_port(struct audio_hw_device *dev,
-                        struct audio_port *config) {
+int get_audio_port_v7(struct audio_hw_device *dev, struct audio_port_v7 *config) {
     std::ignore = dev;
     std::ignore = config;
 
@@ -859,8 +858,13 @@ int adev_set_audio_port_config(struct audio_hw_device *dev,
     return 0;
 }
 
-static int adev_dump(const audio_hw_device_t *device __unused, int fd __unused)
+static int adev_dump(const audio_hw_device_t *device, int fd)
 {
+    dprintf(fd, " \n");
+    dprintf(fd, "PrimaryHal adev: \n");
+    int major =  (device->common.version >> 8) & 0xff;
+    int minor =   device->common.version & 0xff;
+    dprintf(fd, "Device API Version: %d.%d \n", major, minor);
     return 0;
 }
 
@@ -872,8 +876,6 @@ static int adev_get_microphones(const struct audio_hw_device *dev __unused,
 
 int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     int ret = 0;
-    /* default audio HAL major version */
-    uint32_t maj_version = 3;
     bool is_charging = false;
 
     ret = pal_init();
@@ -894,8 +896,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     AudioExtn::audio_extn_hidl_init();
 
     adev_->device_.get()->common.tag = HARDWARE_DEVICE_TAG;
-    adev_->device_.get()->common.version =
-                                HARDWARE_DEVICE_API_VERSION(maj_version, 0);
+    adev_->device_.get()->common.version = AUDIO_DEVICE_API_VERSION_3_2;
     adev_->device_.get()->common.close = adev_close;
     adev_->device_.get()->init_check = adev_init_check;
     adev_->device_.get()->set_voice_volume = adev_set_voice_volume;
@@ -915,7 +916,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     adev_->device_.get()->close_input_stream = adev_close_input_stream;
     adev_->device_.get()->create_audio_patch = adev_create_audio_patch;
     adev_->device_.get()->release_audio_patch = adev_release_audio_patch;
-    adev_->device_.get()->get_audio_port = adev_get_audio_port;
+    adev_->device_.get()->get_audio_port_v7 = get_audio_port_v7;
     adev_->device_.get()->set_audio_port_config = adev_set_audio_port_config;
     adev_->device_.get()->dump = adev_dump;
     adev_->device_.get()->get_microphones = adev_get_microphones;
@@ -1230,21 +1231,26 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             }
             AHAL_INFO("pal set param success  for device connection");
             /* check if capture profile is supported or not */
-            pal_param_device_capability_t *device_cap_query = new pal_param_device_capability_t();
-            dynamic_media_config_t dynamic_media_config;
-            size_t payload_size = 0;
-            device_cap_query->id = PAL_DEVICE_IN_USB_HEADSET;
-            device_cap_query->addr.card_id = usb_card_id_;
-            device_cap_query->addr.device_num = usb_dev_num_;
-            device_cap_query->config = &dynamic_media_config;
-            device_cap_query->is_playback = false;
-            ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
-                    (void **)&device_cap_query,
-                    &payload_size, nullptr);
-            if (dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
-                    dynamic_media_config.mask == 0)
-                usb_input_dev_enabled = false;
-            delete device_cap_query;
+            pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
+                                                          malloc(sizeof(pal_param_device_capability_t));
+            if (device_cap_query) {
+                dynamic_media_config_t dynamic_media_config;
+                size_t payload_size = 0;
+                device_cap_query->id = PAL_DEVICE_IN_USB_HEADSET;
+                device_cap_query->addr.card_id = usb_card_id_;
+                device_cap_query->addr.device_num = usb_dev_num_;
+                device_cap_query->config = &dynamic_media_config;
+                device_cap_query->is_playback = false;
+                ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
+                        (void **)&device_cap_query,
+                        &payload_size, nullptr);
+                if (dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
+                        dynamic_media_config.mask == 0)
+                    usb_input_dev_enabled = false;
+                free(device_cap_query);
+            } else {
+                    AHAL_ERR("Failed to allocate mem for device_cap_query");
+            }
             if (pal_device_ids) {
                 free(pal_device_ids);
                 pal_device_ids = NULL;
@@ -1577,15 +1583,16 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         struct pal_volume_data* volume = NULL;
         volume = (struct pal_volume_data *)malloc(sizeof(struct pal_volume_data)
                       +sizeof(struct pal_channel_vol_kv));
-        volume->no_of_volpair = 1;
-        //For haptics, there is only one channel (FL).
-        volume->volume_pair[0].channel_mask = 0x01;
-        volume->volume_pair[0].vol = atof(value);
-        AHAL_INFO("Setting Haptics Volume as %f", volume->volume_pair[0].vol);
-        ret = pal_set_param(PAL_PARAM_ID_HAPTICS_VOLUME, (void *)volume,
-                 sizeof(pal_volume_data));
-        if (volume)
+        if (volume) {
+            volume->no_of_volpair = 1;
+            //For haptics, there is only one channel (FL).
+            volume->volume_pair[0].channel_mask = 0x01;
+            volume->volume_pair[0].vol = atof(value);
+            AHAL_INFO("Setting Haptics Volume as %f", volume->volume_pair[0].vol);
+            ret = pal_set_param(PAL_PARAM_ID_HAPTICS_VOLUME, (void *)volume,
+                     sizeof(pal_volume_data));
             free(volume);
+        }
     }
 
     ret = str_parms_get_str(parms, "haptics_intensity", value, sizeof(value));
@@ -1617,6 +1624,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     AHAL_DBG("exit: %s", kvpairs);
     return 0;
 }
+
 
 int AudioDevice::SetVoiceVolume(float volume) {
     return voice_->SetVoiceVolume(volume);
@@ -1716,7 +1724,7 @@ void AudioDevice::FillAndroidDeviceMap() {
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_WIRED_HEADPHONE, PAL_DEVICE_OUT_WIRED_HEADPHONE));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO, PAL_DEVICE_OUT_BLUETOOTH_SCO));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET, PAL_DEVICE_OUT_BLUETOOTH_SCO));
-    //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT, PAL_DEVICE_OUT_BLUETOOTH_SCO_CARKIT));
+    android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT, PAL_DEVICE_OUT_BLUETOOTH_SCO));
     android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP, PAL_DEVICE_OUT_BLUETOOTH_A2DP));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES, PAL_DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES));
     //android_device_map_.insert(std::make_pair(AUDIO_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER, PAL_DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER));
