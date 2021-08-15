@@ -52,7 +52,7 @@
         </MediaCodec>
         <MediaCodec name="c2.qti.dsd.sw.decoder" type="audio/dsd" rank="0">
             <Limit name="channel-count" max="6" />
-            <Limit name="sample-rate" ranges="2822400-22579200" />
+            <Limit name="sample-rate" ranges="8000-22579200" />
             <Limit name="concurrent-instances" max="2" />
         </MediaCodec>
         <MediaCodec name="c2.qti.aac.hw.decoder" type="audio/mp4a-latm">
