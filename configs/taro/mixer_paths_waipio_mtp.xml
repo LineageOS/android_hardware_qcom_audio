@@ -2596,20 +2596,69 @@
         <path name="speaker-qmic-liquid" />
     </path>
 
+    <path name="handset-dual-dmic-quad-dec">
+        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
+        <ctl name="TX DMIC MUX1" value="DMIC1" />
+        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
+        <ctl name="TX DMIC MUX2" value="DMIC1" />
+        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
+        <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX_AIF1_CAP Mixer DEC4" value="1" />
+        <ctl name="TX DMIC MUX4" value="DMIC3" />
+    </path>
+
+    <path name="handset-dual-dmic-quad-dec-reverse">
+        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
+        <ctl name="TX DMIC MUX1" value="DMIC3" />
+        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
+        <ctl name="TX DMIC MUX2" value="DMIC3" />
+        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
+        <ctl name="TX DMIC MUX3" value="DMIC1" />
+        <ctl name="TX_AIF1_CAP Mixer DEC4" value="1" />
+        <ctl name="TX DMIC MUX4" value="DMIC1" />
+    </path>
+
     <path name="unprocessed-hdr-mic-landscape">
-        <path name="speaker-qmic" />
+        <path name="handset-dual-dmic-quad-dec" />
+        <ctl name="TX_DEC1 Volume" value="108" />
+        <ctl name="TX_DEC2 Volume" value="84" />
+        <ctl name="TX_DEC3 Volume" value="108" />
+        <ctl name="TX_DEC4 Volume" value="84" />
     </path>
 
     <path name="unprocessed-hdr-mic-inverted-landscape">
-        <path name="speaker-qmic" />
+        <path name="handset-dual-dmic-quad-dec-reverse" />
+        <ctl name="TX_DEC1 Volume" value="108" />
+        <ctl name="TX_DEC2 Volume" value="84" />
+        <ctl name="TX_DEC3 Volume" value="108" />
+        <ctl name="TX_DEC4 Volume" value="84" />
+    </path>
+
+    <path name="handset-single-dmic-quad-dec">
+        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
+        <ctl name="TX DMIC MUX1" value="DMIC3" />
+        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
+        <ctl name="TX DMIC MUX2" value="DMIC3" />
+        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
+        <ctl name="TX DMIC MUX3" value="DMIC3" />
+        <ctl name="TX_AIF1_CAP Mixer DEC4" value="1" />
+        <ctl name="TX DMIC MUX4" value="DMIC3" />
     </path>
 
     <path name="unprocessed-hdr-mic-portrait">
-        <path name="speaker-qmic" />
+        <path name="handset-single-dmic-quad-dec" />
+        <ctl name="TX_DEC1 Volume" value="102" />
+        <ctl name="TX_DEC2 Volume" value="102" />
+        <ctl name="TX_DEC3 Volume" value="102" />
+        <ctl name="TX_DEC4 Volume" value="102" />
     </path>
 
     <path name="unprocessed-hdr-mic-inverted-portrait">
-        <path name="speaker-qmic" />
+        <path name="handset-single-dmic-quad-dec" />
+        <ctl name="TX_DEC1 Volume" value="102" />
+        <ctl name="TX_DEC2 Volume" value="102" />
+        <ctl name="TX_DEC3 Volume" value="102" />
+        <ctl name="TX_DEC4 Volume" value="102" />
     </path>
 
     <path name="camcorder-main-mic">
