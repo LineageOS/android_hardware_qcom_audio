@@ -3432,6 +3432,7 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
     if (!parms)
         goto exit;
 
+    str_parms_destroy(parms);
 exit:
    AHAL_ERR("exit %d", ret);
    return ret;
