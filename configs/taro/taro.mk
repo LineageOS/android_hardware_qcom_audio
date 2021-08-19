@@ -423,6 +423,10 @@ debug.c2.use_dmabufheaps=1
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.qc2audio.suspend.enabled=true
 
+#Enable qc2 audio sw flac frame decode
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.qc2audio.per_frame.flac.dec.enabled=true
+
 ifneq ($(GENERIC_ODM_IMAGE),true)
 $(warning "Enabling codec2.0 SW only for non-generic odm build variant")
 #Rank OMX SW codecs lower than OMX HW codecs
