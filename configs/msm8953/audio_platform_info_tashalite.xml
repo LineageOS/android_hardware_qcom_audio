@@ -77,6 +77,7 @@
         <device name="SND_DEVICE_IN_HEADSET_MIC_FLUENCE" acdb_id="8"/>
     </acdb_ids>
     <backend_names>
+        <device name="SND_DEVICE_OUT_VOICE_HANDSET" backend="voice-handset" interface="SLIMBUS_0_RX"/>
         <device name="SND_DEVICE_OUT_BT_SCO_WB" interface="INT_BT_SCO_RX"/>
         <device name="SND_DEVICE_OUT_BT_SCO" interface="INT_BT_SCO_RX"/>
         <device name="SND_DEVICE_OUT_HEADPHONES" backend="headphones" interface="SLIMBUS_6_RX"/>
