@@ -1797,6 +1797,10 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
     struct pal_device* deviceIdConfigs;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
+    bool isHifiFilterEnabled = false;
+    bool *param_payload = &isHifiFilterEnabled;
+    size_t param_size = 0;
+
     if (!mInitialized) {
         AHAL_ERR("Not initialized, returning error");
         ret = -EINVAL;
@@ -1862,6 +1866,22 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
         }
 
         mAndroidOutDevices = new_devices;
+
+    ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
+                        (void **)&param_payload, &param_size, nullptr);
+
+    if (!ret && isHifiFilterEnabled &&
+        (mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADSET ||
+         mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADPHONE) &&
+        (streamAttributes_.out_media_config.sample_rate != 384000 &&
+         streamAttributes_.out_media_config.sample_rate != 352800)) {
+
+        AHAL_DBG("hifi-filter custom key sent(the filter is not applicable to ALL streams)\n");
+
+        strlcpy(mPalOutDevice->custom_config.custom_key,
+                "hifi-filter_custom_key",
+                sizeof(mPalOutDevice->custom_config.custom_key));
+    }
 
         if (pal_stream_handle_) {
             ret = pal_stream_set_device(pal_stream_handle_, noPalDevices, mPalOutDevice);
@@ -2153,6 +2173,10 @@ int StreamOutPrimary::Open() {
     uint32_t outBufCount = NO_OF_BUF;
     struct pal_buffer_config outBufCfg = {0, 0, 0};
 
+    bool isHifiFilterEnabled = false;
+    bool *param_payload = &isHifiFilterEnabled;
+    size_t param_size = 0;
+
     AHAL_DBG("Enter OutPrimary ");
 
     if (!mInitialized) {
@@ -2213,6 +2237,22 @@ int StreamOutPrimary::Open() {
     } else if ((streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) &&
             (usecase_ == USECASE_AUDIO_PLAYBACK_ULL)) {
         streamAttributes_.flags = (pal_stream_flags_t)(PAL_STREAM_FLAG_MMAP);
+    }
+
+    ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
+                        (void **)&param_payload, &param_size, nullptr);
+
+    if (!ret && isHifiFilterEnabled &&
+        (mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADSET ||
+         mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADPHONE) &&
+        (streamAttributes_.out_media_config.sample_rate != 384000 &&
+         streamAttributes_.out_media_config.sample_rate != 352800)) {
+
+        AHAL_DBG("hifi-filter custom key sent(the filter is not applicable to ALL streams)\n");
+
+        strlcpy(mPalOutDevice->custom_config.custom_key,
+                "hifi-filter_custom_key",
+                sizeof(mPalOutDevice->custom_config.custom_key));
     }
 
     AHAL_DBG("channels %d samplerate %d format id %d, stream type %d  stream bitwidth %d",
