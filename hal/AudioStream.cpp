@@ -2193,6 +2193,37 @@ static int voip_get_buffer_size(uint32_t sample_rate)
 
 }
 
+static bool period_size_is_plausible_for_low_latency(int period_size)
+{
+     switch (period_size) {
+     case LL_PERIOD_SIZE_FRAMES_160:
+     case LL_PERIOD_SIZE_FRAMES_192:
+     case LL_PERIOD_SIZE_FRAMES_240:
+     case LL_PERIOD_SIZE_FRAMES_320:
+     case LL_PERIOD_SIZE_FRAMES_480:
+         return true;
+     default:
+         return false;
+     }
+}
+
+uint32_t StreamOutPrimary::GetBufferSizeForLowLatency() {
+    int trial = 0;
+    char value[PROPERTY_VALUE_MAX] = {0};
+    int configured_low_latency_period_size = LOW_LATENCY_PLAYBACK_PERIOD_SIZE;
+
+    if (property_get("vendor.audio_hal.period_size", value, NULL) > 0) {
+        trial = atoi(value);
+        if (period_size_is_plausible_for_low_latency(trial))
+            configured_low_latency_period_size = trial;
+    }
+
+    return configured_low_latency_period_size *
+           audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+}
+
 uint32_t StreamOutPrimary::GetBufferSize() {
     struct pal_stream_attributes streamAttributes_;
 
@@ -2205,10 +2236,7 @@ uint32_t StreamOutPrimary::GetBufferSize() {
     } else if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD) {
         return get_pcm_buffer_size();
     } else if (streamAttributes_.type == PAL_STREAM_LOW_LATENCY) {
-        return LOW_LATENCY_PLAYBACK_PERIOD_SIZE *
-            audio_bytes_per_frame(
-                    audio_channel_count_from_out_mask(config_.channel_mask),
-                    config_.format);
+        return GetBufferSizeForLowLatency();
     } else if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
         return ULL_PERIOD_SIZE * ULL_PERIOD_MULTIPLIER *
             audio_bytes_per_frame(
