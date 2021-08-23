@@ -54,6 +54,9 @@
 #define MAX_READ_RETRY_COUNT 25
 
 #define AFE_PROXY_RECORD_PERIOD_SIZE  768
+
+static bool karaoke = false;
+
 static bool is_pcm_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_PCM_16_BIT ||
@@ -1696,7 +1699,6 @@ int StreamOutPrimary::Stop() {
 
 int StreamOutPrimary::Start() {
     int ret = -ENOSYS;
-
     AHAL_DBG("Enter");
     if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP &&
             pal_stream_handle_ && !stream_started_) {
@@ -1705,6 +1707,8 @@ int StreamOutPrimary::Start() {
         if (ret == 0)
             stream_started_ = true;
     }
+    if (karaoke)
+        AudExtn.karaoke_start();
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
@@ -1841,6 +1845,19 @@ int StreamOutPrimary::Standby() {
                 hapticBuffer = NULL;
             }
             hapticsBufSize = 0;
+        }
+    }
+    if (karaoke) {
+        ret = AudExtn.karaoke_stop();
+        if (ret) {
+            AHAL_ERR("failed to stop karaoke path.");
+            ret = 0;
+        } else {
+            ret = AudExtn.karaoke_close();
+            if (ret) {
+                AHAL_ERR("failed to close karaoke path.");
+                ret = 0;
+            }
         }
     }
 
@@ -2393,6 +2410,13 @@ int StreamOutPrimary::Open() {
             AHAL_ERR("Pal Haptics Stream Open Error (%x)", ret);
         }
     }
+    if (karaoke) {
+        ret = AudExtn.karaoke_open(mPalOutDevice[mAndroidOutDevices.size()-1].id, &pal_callback, ch_info);
+        if (ret) {
+            AHAL_ERR("Karaoke Open Error (%x)", ret);
+            karaoke = false;
+        }
+    }
 
     //TODO: Remove below code, once pal_stream_open is moved to
     //adev_open_output_stream
@@ -2685,6 +2709,15 @@ ssize_t StreamOutPrimary::configurePalOutputStream() {
                 pal_stream_close(pal_haptics_stream_handle);
                 pal_haptics_stream_handle = NULL;
                 return -EINVAL;
+            }
+        }
+        if (karaoke) {
+            ret = AudExtn.karaoke_start();
+            if (ret) {
+                AHAL_ERR("failed to start karaoke stream. ret=%d", ret);
+                AudExtn.karaoke_close();
+                karaoke = false;
+                ret = 0; // Not fatal error
             }
         }
         stream_started_ = true;

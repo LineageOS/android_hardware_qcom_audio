@@ -549,6 +549,7 @@ protected:
     //Haptics Usecase
     struct pal_stream_attributes hapticsStreamAttributes;
     pal_stream_handle_t* pal_haptics_stream_handle;
+    AudioExtn AudExtn;
     struct pal_device* hapticsDevice;
     uint8_t* hapticBuffer;
     size_t hapticsBufSize;
