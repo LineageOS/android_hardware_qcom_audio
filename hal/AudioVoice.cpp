@@ -359,6 +359,7 @@ int AudioVoice::GetMatchingTxDevices(const std::set<audio_devices_t>& rx_devices
             case AUDIO_DEVICE_OUT_WIRED_HEADSET:
                 tx_devices.insert(AUDIO_DEVICE_IN_WIRED_HEADSET);
                 break;
+            case AUDIO_DEVICE_OUT_LINE:
             case AUDIO_DEVICE_OUT_WIRED_HEADPHONE:
                 tx_devices.insert(AUDIO_DEVICE_IN_BUILTIN_MIC);
                 break;
@@ -370,6 +371,7 @@ int AudioVoice::GetMatchingTxDevices(const std::set<audio_devices_t>& rx_devices
                 break;
             case AUDIO_DEVICE_OUT_BLUETOOTH_SCO:
             case AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
+            case AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT:
                 tx_devices.insert(AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET);
                 break;
             case AUDIO_DEVICE_OUT_HEARING_AID:
@@ -700,7 +702,7 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     } else {
         if (!session->pal_voice_handle || !session->pal_vol_data)
             AHAL_ERR("Invalid voice handle or volume data");
-        if (session->pal_vol_data->volume_pair[0].vol == -1.0)
+        if (session->pal_vol_data && session->pal_vol_data->volume_pair[0].vol == -1.0)
             AHAL_DBG("session volume is not set");
     }
 
@@ -803,7 +805,7 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
         palDevices[0].id = PAL_DEVICE_IN_HANDSET_MIC;  //overwrite the device for VCO
     }
 
-    if (session->volume_boost) {
+    if (session && session->volume_boost) {
             /* volume boost if device is not supported */
             param_payload = (pal_param_payload *)calloc(1, sizeof(pal_param_payload) +
                                                sizeof(session->volume_boost));

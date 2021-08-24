@@ -27,7 +27,7 @@
 <defs>
 <card>
     <id>100</id>
-    <name>waipiomtpsndcar,waipioqrdsndcar,waipiocdpsndcar</name>
+    <name>waipiovirtualsndcard</name>
 
     <pcm-device>
         <id>100</id>
@@ -288,7 +288,7 @@
 
     <pcm-device>
         <id>120</id>
-        <name>ExtEC120</name>
+        <name>PCM120</name>
         <pcm_plugin>
             <so-name>libagm_pcm_plugin.so</so-name>
         </pcm_plugin>
@@ -302,6 +302,32 @@
     <pcm-device>
         <id>121</id>
         <name>PCM121</name>
+        <pcm_plugin>
+            <so-name>libagm_pcm_plugin.so</so-name>
+        </pcm_plugin>
+        <props>
+            <playback>0</playback>
+            <capture>1</capture>
+            <session_mode>1</session_mode>
+        </props>
+    </pcm-device>
+
+    <pcm-device>
+        <id>122</id>
+        <name>ExtEC122</name>
+        <pcm_plugin>
+            <so-name>libagm_pcm_plugin.so</so-name>
+        </pcm_plugin>
+        <props>
+            <playback>0</playback>
+            <capture>1</capture>
+            <session_mode>1</session_mode>
+        </props>
+    </pcm-device>
+
+    <pcm-device>
+        <id>123</id>
+        <name>PCM123</name>
         <pcm_plugin>
             <so-name>libagm_pcm_plugin.so</so-name>
         </pcm_plugin>

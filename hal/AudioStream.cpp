@@ -207,6 +207,7 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
         }
         break;
     case PAL_STREAM_CBK_EVENT_ERROR:
+        AHAL_DBG("received PAL_STREAM_CBK_EVENT_ERROR event");
         event = STREAM_CBK_EVENT_ERROR;
         break;
     default:
@@ -214,8 +215,10 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
         return -EINVAL;
     }
 
-    if (astream_out && astream_out->client_callback)
+    if (astream_out && astream_out->client_callback) {
+        AHAL_VERBOSE("Callback to Framework");
         astream_out->client_callback(event, NULL, astream_out->client_cookie);
+    }
 
     return 0;
 }
@@ -756,7 +759,7 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
 
     if (str_parms_get_str(query, "supports_hw_suspend", value, sizeof(value)) >= 0) {
         //only low latency track supports suspend_resume
-        if (astream_out->flags_ & AUDIO_OUTPUT_FLAG_FAST)
+        if (astream_out->flags_ == (AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_PRIMARY))
             hal_output_suspend_supported = 1;
         str_parms_add_int(reply, "supports_hw_suspend", hal_output_suspend_supported);
         if (str)
@@ -1794,6 +1797,10 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
     struct pal_device* deviceIdConfigs;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
+    bool isHifiFilterEnabled = false;
+    bool *param_payload = &isHifiFilterEnabled;
+    size_t param_size = 0;
+
     if (!mInitialized) {
         AHAL_ERR("Not initialized, returning error");
         ret = -EINVAL;
@@ -1849,9 +1856,32 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) 
                 mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
                 mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
             }
+
+            if ((AudioExtn::audio_devices_cmp(mAndroidOutDevices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) &&
+                                   (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_SPEAKER)) {
+                strlcpy(mPalOutDevice[i].custom_config.custom_key, "speaker-safe",
+                        sizeof(mPalOutDevice[i].custom_config.custom_key));
+                AHAL_INFO("Setting custom key as %s", mPalOutDevice[i].custom_config.custom_key);
+            }
         }
 
         mAndroidOutDevices = new_devices;
+
+    ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
+                        (void **)&param_payload, &param_size, nullptr);
+
+    if (!ret && isHifiFilterEnabled &&
+        (mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADSET ||
+         mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADPHONE) &&
+        (streamAttributes_.out_media_config.sample_rate != 384000 &&
+         streamAttributes_.out_media_config.sample_rate != 352800)) {
+
+        AHAL_DBG("hifi-filter custom key sent(the filter is not applicable to ALL streams)\n");
+
+        strlcpy(mPalOutDevice->custom_config.custom_key,
+                "hifi-filter_custom_key",
+                sizeof(mPalOutDevice->custom_config.custom_key));
+    }
 
         if (pal_stream_handle_) {
             ret = pal_stream_set_device(pal_stream_handle_, noPalDevices, mPalOutDevice);
@@ -2143,6 +2173,10 @@ int StreamOutPrimary::Open() {
     uint32_t outBufCount = NO_OF_BUF;
     struct pal_buffer_config outBufCfg = {0, 0, 0};
 
+    bool isHifiFilterEnabled = false;
+    bool *param_payload = &isHifiFilterEnabled;
+    size_t param_size = 0;
+
     AHAL_DBG("Enter OutPrimary ");
 
     if (!mInitialized) {
@@ -2203,6 +2237,22 @@ int StreamOutPrimary::Open() {
     } else if ((streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) &&
             (usecase_ == USECASE_AUDIO_PLAYBACK_ULL)) {
         streamAttributes_.flags = (pal_stream_flags_t)(PAL_STREAM_FLAG_MMAP);
+    }
+
+    ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
+                        (void **)&param_payload, &param_size, nullptr);
+
+    if (!ret && isHifiFilterEnabled &&
+        (mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADSET ||
+         mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADPHONE) &&
+        (streamAttributes_.out_media_config.sample_rate != 384000 &&
+         streamAttributes_.out_media_config.sample_rate != 352800)) {
+
+        AHAL_DBG("hifi-filter custom key sent(the filter is not applicable to ALL streams)\n");
+
+        strlcpy(mPalOutDevice->custom_config.custom_key,
+                "hifi-filter_custom_key",
+                sizeof(mPalOutDevice->custom_config.custom_key));
     }
 
     AHAL_DBG("channels %d samplerate %d format id %d, stream type %d  stream bitwidth %d",
@@ -2482,10 +2532,11 @@ ssize_t StreamOutPrimary::splitAndWriteAudioHapticsStream(const void *buffer, si
      return ret;
 }
 
-ssize_t StreamOutPrimary::onWriteError(size_t bytes) {
+ssize_t StreamOutPrimary::onWriteError(size_t bytes, size_t ret) {
     // standby streams upon write failures and sleep for buffer duration.
-    AHAL_ERR("write error");
+    AHAL_ERR("write error %d usecase(%d: %s)", ret, GetUseCase(), use_case_table[GetUseCase()]);
     Standby();
+
     if (streamAttributes_.type != PAL_STREAM_COMPRESSED) {
         uint32_t byteWidth = streamAttributes_.out_media_config.bit_width / 8;
         uint32_t sampleRate = streamAttributes_.out_media_config.sample_rate;
@@ -2497,9 +2548,11 @@ ssize_t StreamOutPrimary::onWriteError(size_t bytes) {
             return -EINVAL;
         } else {
             usleep((uint64_t)bytes * 1000000 / frameSize / sampleRate);
+            return bytes;
         }
     }
-    return bytes;
+    // Return error in case of compress offload.
+    return ret;
 }
 
 ssize_t StreamOutPrimary::configurePalOutputStream() {
@@ -2667,7 +2720,7 @@ exit:
     }
     clock_gettime(CLOCK_MONOTONIC, &writeAt);
 
-    return (ret < 0 ? onWriteError(bytes) : ret);
+    return (ret < 0 ? onWriteError(bytes, ret) : ret);
 }
 
 bool StreamOutPrimary::CheckOffloadEffectsType(pal_stream_type_t pal_stream_type) {
@@ -2887,6 +2940,14 @@ StreamOutPrimary::StreamOutPrimary(
             mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
             mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
         }
+
+        if ((AudioExtn::audio_devices_cmp(mAndroidOutDevices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) &&
+                                   (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_SPEAKER)) {
+            strlcpy(mPalOutDevice[i].custom_config.custom_key, "speaker-safe",
+                     sizeof(mPalOutDevice[i].custom_config.custom_key));
+            AHAL_INFO("Setting custom key as %s", mPalOutDevice[i].custom_config.custom_key);
+        }
+
     }
 
     if (flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) {
@@ -3534,9 +3595,9 @@ int StreamInPrimary::SetMicMute(bool mute) {
     return ret;
 }
 
-ssize_t StreamInPrimary::onReadError(size_t bytes) {
+ssize_t StreamInPrimary::onReadError(size_t bytes, size_t ret) {
     // standby streams upon read failures and sleep for buffer duration.
-    AHAL_ERR("read failed");
+    AHAL_ERR("read failed %d usecase(%d: %s)", ret, GetUseCase(), use_case_table[GetUseCase()]);
     Standby();
     uint32_t byteWidth = streamAttributes_.in_media_config.bit_width / 8;
     uint32_t sampleRate = streamAttributes_.in_media_config.sample_rate;
@@ -3648,7 +3709,7 @@ exit:
     }
     clock_gettime(CLOCK_MONOTONIC, &readAt);
 
-    return (ret < 0 ? onReadError(bytes) : bytes);
+    return (ret < 0 ? onReadError(bytes, ret) : bytes);
 }
 
 int StreamInPrimary::FillHalFnPtrs() {
