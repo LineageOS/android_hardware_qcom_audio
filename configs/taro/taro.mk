@@ -164,6 +164,7 @@ PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.10.pmd
 PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.36_enpu2_comp.pmd
 PRODUCT_PACKAGES += fai__2.0.0_0.1__3.0.0_0.0__eai_1.36_enpu2.pmd
 PRODUCT_PACKAGES += fai__2.7.2_0.0__3.0.0_0.0__eai_1.36_enpu2.pmd
+PRODUCT_PACKAGES += fai__2.7.20_0.0__3.0.0_0.0__eai_1.36_enpu2.pmd
 PRODUCT_PACKAGES += fai__3.0.0_0.0__eai_1.36_enpu2.pmd
 PRODUCT_PACKAGES += libfmpal
 PRODUCT_PACKAGES += event.eai
