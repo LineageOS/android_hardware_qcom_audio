@@ -1923,6 +1923,9 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
     bool forceRouting = false;
     pal_device_id_t * deviceId;
     struct pal_device* deviceIdConfigs;
+    pal_param_device_capability_t *device_cap_query;
+    size_t payload_size = 0;
+    dynamic_media_config_t dynamic_media_config;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     bool isHifiFilterEnabled = false;
@@ -1972,17 +1975,35 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
             goto done;
         }
 
+        pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
+                malloc(sizeof(pal_param_device_capability_t));
+
         for (int i = 0; i < noPalDevices; i++) {
             mPalOutDevice[i].id = mPalOutDeviceIds[i];
+            if (((mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_DEVICE) ||
+               (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_HEADSET)) && device_cap_query) {
+
+                mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
+                mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
+                device_cap_query->id = mPalOutDeviceIds[i];
+                device_cap_query->addr.card_id = adevice->usb_card_id_;
+                device_cap_query->addr.device_num = adevice->usb_dev_num_;
+                device_cap_query->config = &dynamic_media_config;
+                device_cap_query->is_playback = true;
+                ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,(void **)&device_cap_query,
+                        &payload_size, nullptr);
+
+                if (ret<0){
+                    mPalOutDevice[i].id =  PAL_DEVICE_OUT_SPEAKER;
+                    mPalOutDevice[i].address.card_id = 0;
+                    mPalOutDevice[i].address.device_num = 0;
+                }
+            }
+
             mPalOutDevice[i].config.sample_rate = mPalOutDevice[0].config.sample_rate;
             mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
             mPalOutDevice[i].config.ch_info = {0, {0}};
             mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
-            if ((mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_DEVICE) ||
-               (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_HEADSET)) {
-                mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
-                mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
-            }
             strlcpy(mPalOutDevice[i].custom_config.custom_key, "",
                     sizeof(mPalOutDevice[i].custom_config.custom_key));
 
@@ -1994,6 +2015,10 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
             }
         }
 
+        if (device_cap_query) {
+            free(device_cap_query);
+            device_cap_query = NULL;
+        }
         mAndroidOutDevices = new_devices;
 
         ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
