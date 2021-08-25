@@ -2276,11 +2276,6 @@ int StreamOutPrimary::Open() {
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
 
     if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
-        AHAL_INFO("Haptics Usecase");
-        /* Setting flag here as no flag is being set for haptics from AudioPolicyManager
-         * so that audio stream runs as low latency stream.
-         */
-        flags_ = AUDIO_OUTPUT_FLAG_FAST;
         channels = audio_channel_count_from_out_mask(config_.channel_mask & ~AUDIO_CHANNEL_HAPTIC_ALL);
     }
     ch_info.channels = channels;
@@ -2616,7 +2611,7 @@ ssize_t StreamOutPrimary::splitAndWriteAudioHapticsStream(const void *buffer, si
      // write haptics data
      ret = pal_stream_write(pal_haptics_stream_handle, &hapticBuf);
 
-     return ret;
+     return (ret < 0 ? ret : bytes);
 }
 
 ssize_t StreamOutPrimary::onWriteError(size_t bytes, size_t ret) {
@@ -3043,6 +3038,15 @@ StreamOutPrimary::StreamOutPrimary(
         stream_.get()->create_mmap_buffer = astream_out_create_mmap_buffer;
         stream_.get()->get_mmap_position = astream_out_get_mmap_position;
     }
+
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+        AHAL_INFO("Haptics Usecase");
+        /* Setting flag here as no flag is being set for haptics from AudioPolicyManager
+         * so that audio stream runs as low latency stream.
+         */
+        flags_ = AUDIO_OUTPUT_FLAG_FAST;
+    }
+
     (void)FillHalFnPtrs();
     mInitialized = true;
     for(auto dev : mAndroidOutDevices)
