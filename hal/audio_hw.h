@@ -47,13 +47,33 @@
 #include <tinycompress/tinycompress.h>
 
 #include <audio_route/audio_route.h>
+#ifndef LINUX_ENABLED
 #include <audio_utils/ErrorLog.h>
+#else
+typedef int error_log_t;
+#define error_log_dump(error_log, fd, prefix, lines, limit_ns)                 (0)
+#define error_log_create(entries, aggregate_ns)                                (0)
+#define error_log_destroy(error_log)                                           (0)
+#endif
+#ifndef LINUX_ENABLED
 #include <audio_utils/Statistics.h>
 #include <audio_utils/clock.h>
+#endif
 #include "audio_defs.h"
 #include "voice.h"
 #include "audio_hw_extn_api.h"
 #include "device_utils.h"
+
+#if LINUX_ENABLED
+typedef struct {
+   int64_t n;
+   double min;
+   double max;
+   double last;
+   double mean;
+} simple_stats_t;
+#define NANOS_PER_SECOND    1000000000LL
+#endif
 
 #if LINUX_ENABLED
 #if defined(__LP64__)
@@ -483,8 +503,9 @@ struct stream_out {
     mix_matrix_params_t downmix_params;
     bool set_dual_mono;
     bool prev_card_status_offline;
-
+#ifndef LINUX_ENABLED
     error_log_t *error_log;
+#endif
     bool pspd_coeff_sent;
 
     int car_audio_stream; /* handle for car_audio_stream */
@@ -559,8 +580,9 @@ struct stream_in {
     int64_t frames_read; /* total frames read, not cleared when entering standby */
     int64_t frames_muted; /* total frames muted, not cleared when entering standby */
 
+#ifndef LINUX_ENABLED
     error_log_t *error_log;
-
+#endif
     simple_stats_t start_latency_ms;
 
     int car_audio_stream; /* handle for car_audio_stream*/
