@@ -4961,7 +4961,10 @@ int route_output_stream(struct stream_out *out,
     if (is_usb_out_device_type(&out->device_list) &&
             list_empty(&new_devices) &&
             !audio_extn_usb_connected(NULL)) {
-        reassign_device_list(&new_devices, AUDIO_DEVICE_OUT_SPEAKER, "");
+        if (adev->mode == AUDIO_MODE_IN_CALL || adev->mode == AUDIO_MODE_IN_COMMUNICATION)
+            reassign_device_list(&new_devices, AUDIO_DEVICE_OUT_EARPIECE, "");
+        else
+            reassign_device_list(&new_devices, AUDIO_DEVICE_OUT_SPEAKER, "");
     }
     /* To avoid a2dp to sco overlapping / BT device improper state
      * check with BT lib about a2dp streaming support before routing
