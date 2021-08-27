@@ -2000,9 +2000,11 @@ int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_WMA:
         id = SND_AUDIOCODEC_WMA;
         break;
+#ifndef AUDIO_DISABLE_COMPRESS_FORMAT
     case AUDIO_FORMAT_WMA_PRO:
         id = SND_AUDIOCODEC_WMA_PRO;
         break;
+#endif
     case AUDIO_FORMAT_MP2:
         id = SND_AUDIOCODEC_MP2;
         break;
@@ -2023,12 +2025,14 @@ int get_snd_codec_id(audio_format_t format)
     case AUDIO_FORMAT_IEC61937:
         id = SND_AUDIOCODEC_IEC61937;
         break;
+#ifndef AUDIO_DISABLE_COMPRESS_FORMAT
     case AUDIO_FORMAT_DSD:
         id = SND_AUDIOCODEC_DSD;
         break;
     case AUDIO_FORMAT_APTX:
         id = SND_AUDIOCODEC_APTX;
         break;
+#endif
     default:
         ALOGE("%s: Unsupported audio format :%x", __func__, format);
     }
