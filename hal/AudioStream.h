@@ -446,6 +446,8 @@ public:
                                  int *device_num);
     int GetLookupTableIndex(const struct string_to_enum *table,
                                         const int table_size, int value);
+    bool GetSupportedConfig(bool isOutStream,
+                            struct str_parms *query, struct str_parms *reply);
     virtual int RouteStream(const std::set<audio_devices_t>&) = 0;
 protected:
     struct pal_stream_attributes streamAttributes_;

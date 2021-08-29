@@ -1231,26 +1231,29 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             }
             AHAL_INFO("pal set param success  for device connection");
             /* check if capture profile is supported or not */
-            pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
+           if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
+                pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
                                                           malloc(sizeof(pal_param_device_capability_t));
-            if (device_cap_query) {
-                dynamic_media_config_t dynamic_media_config;
-                size_t payload_size = 0;
-                device_cap_query->id = PAL_DEVICE_IN_USB_HEADSET;
-                device_cap_query->addr.card_id = usb_card_id_;
-                device_cap_query->addr.device_num = usb_dev_num_;
-                device_cap_query->config = &dynamic_media_config;
-                device_cap_query->is_playback = false;
-                ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
-                        (void **)&device_cap_query,
-                        &payload_size, nullptr);
-                if (dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
-                        dynamic_media_config.mask == 0)
-                    usb_input_dev_enabled = false;
-                free(device_cap_query);
-            } else {
+                if (device_cap_query) {
+                    dynamic_media_config_t dynamic_media_config;
+                    size_t payload_size = 0;
+                    device_cap_query->id = PAL_DEVICE_IN_USB_HEADSET;
+                    device_cap_query->addr.card_id = usb_card_id_;
+                    device_cap_query->addr.device_num = usb_dev_num_;
+                    device_cap_query->config = &dynamic_media_config;
+                    device_cap_query->is_playback = false;
+                    ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
+                            (void **)&device_cap_query,
+                            &payload_size, nullptr);
+                    if (dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
+                            dynamic_media_config.mask == 0)
+                        usb_input_dev_enabled = false;
+                    free(device_cap_query);
+                } else {
                     AHAL_ERR("Failed to allocate mem for device_cap_query");
+                }
             }
+
             if (pal_device_ids) {
                 free(pal_device_ids);
                 pal_device_ids = NULL;
