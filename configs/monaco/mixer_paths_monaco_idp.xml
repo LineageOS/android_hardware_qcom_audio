@@ -110,6 +110,8 @@
     <ctl name="RX INT1 DEM MUX" value="NORMAL_DSM_OUT" />
     <ctl name="RX_COMP1 Switch" value="0" />
     <ctl name="RX_COMP2 Switch" value="0" />
+    <ctl name="SWR DAC_Port Switch" value="0" />
+    <ctl name="VISENSE Switch" value="0" />
 
     <!-- TX Controls -->
     <ctl name="ADC2_MIXER Switch" value="0" />
@@ -274,7 +276,7 @@
         <path name="speaker-mono" />
     </path>
 
-   <path name="sidetone-iir">
+    <path name="sidetone-iir">
         <ctl name="IIR0 Enable Band1" value="1" />
         <ctl name="IIR0 Enable Band2" value="1" />
         <ctl name="IIR0 Enable Band3" value="1" />
@@ -373,15 +375,12 @@
     </path>
 
     <path name="voice-speaker-fluid">
-        <path name="speaker-fluid" />
     </path>
 
     <path name="voice-speaker-vbat">
-        <path name="speaker-vbat-mono" />
     </path>
 
     <path name="voice-speaker-2-vbat">
-        <path name="speaker-vbat-mono-2" />
     </path>
 
     <path name="voice-speaker-mic">
