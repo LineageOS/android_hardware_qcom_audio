@@ -203,7 +203,7 @@ library_includedir = $(includedir)
 lib_LTLIBRARIES = audio.primary.default.la
 audio_primary_default_la_SOURCES = $(c_sources)
 audio_primary_default_la_LIBADD = $(GLIB_LIBS) -llog -lcutils -ltinyalsa
-audio_primary_default_la_LIBADD += -ltinycompress -laudioroute -ldl -lexpat -laudioutils
+audio_primary_default_la_LIBADD += -ltinycompress -laudioroute -ldl -lexpat -laudioutils -lutils
 audio_primary_default_la_LIBADD += -lm -lc -lresolv
 if AUDIO_PARSER
 audio_primary_default_la_LIBADD += -laudioparsers
