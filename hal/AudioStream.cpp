@@ -168,9 +168,11 @@ bool StreamPrimary::GetSupportedConfig(bool isOutStream,
         table_size = sizeof(formats_name_to_enum_table) / sizeof(struct string_to_enum);
         index = GetLookupTableIndex(formats_name_to_enum_table,
                                     table_size, stream_format);
-        strlcat(value, formats_name_to_enum_table[index].name, sizeof(value));
-        str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value);
-        found = true;
+        if (index >= 0) {
+            strlcat(value, formats_name_to_enum_table[index].name, sizeof(value));
+            str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value);
+            found = true;
+        }
     }
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value, sizeof(value));
