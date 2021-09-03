@@ -2193,6 +2193,37 @@ static int voip_get_buffer_size(uint32_t sample_rate)
 
 }
 
+static bool period_size_is_plausible_for_low_latency(int period_size)
+{
+     switch (period_size) {
+     case LL_PERIOD_SIZE_FRAMES_160:
+     case LL_PERIOD_SIZE_FRAMES_192:
+     case LL_PERIOD_SIZE_FRAMES_240:
+     case LL_PERIOD_SIZE_FRAMES_320:
+     case LL_PERIOD_SIZE_FRAMES_480:
+         return true;
+     default:
+         return false;
+     }
+}
+
+uint32_t StreamOutPrimary::GetBufferSizeForLowLatency() {
+    int trial = 0;
+    char value[PROPERTY_VALUE_MAX] = {0};
+    int configured_low_latency_period_size = LOW_LATENCY_PLAYBACK_PERIOD_SIZE;
+
+    if (property_get("vendor.audio_hal.period_size", value, NULL) > 0) {
+        trial = atoi(value);
+        if (period_size_is_plausible_for_low_latency(trial))
+            configured_low_latency_period_size = trial;
+    }
+
+    return configured_low_latency_period_size *
+           audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+}
+
 uint32_t StreamOutPrimary::GetBufferSize() {
     struct pal_stream_attributes streamAttributes_;
 
@@ -2205,10 +2236,7 @@ uint32_t StreamOutPrimary::GetBufferSize() {
     } else if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD) {
         return get_pcm_buffer_size();
     } else if (streamAttributes_.type == PAL_STREAM_LOW_LATENCY) {
-        return LOW_LATENCY_PLAYBACK_PERIOD_SIZE *
-            audio_bytes_per_frame(
-                    audio_channel_count_from_out_mask(config_.channel_mask),
-                    config_.format);
+        return GetBufferSizeForLowLatency();
     } else if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
         return ULL_PERIOD_SIZE * ULL_PERIOD_MULTIPLIER *
             audio_bytes_per_frame(
@@ -2248,11 +2276,6 @@ int StreamOutPrimary::Open() {
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
 
     if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
-        AHAL_INFO("Haptics Usecase");
-        /* Setting flag here as no flag is being set for haptics from AudioPolicyManager
-         * so that audio stream runs as low latency stream.
-         */
-        flags_ = AUDIO_OUTPUT_FLAG_FAST;
         channels = audio_channel_count_from_out_mask(config_.channel_mask & ~AUDIO_CHANNEL_HAPTIC_ALL);
     }
     ch_info.channels = channels;
@@ -2588,7 +2611,7 @@ ssize_t StreamOutPrimary::splitAndWriteAudioHapticsStream(const void *buffer, si
      // write haptics data
      ret = pal_stream_write(pal_haptics_stream_handle, &hapticBuf);
 
-     return ret;
+     return (ret < 0 ? ret : bytes);
 }
 
 ssize_t StreamOutPrimary::onWriteError(size_t bytes, size_t ret) {
@@ -3015,6 +3038,15 @@ StreamOutPrimary::StreamOutPrimary(
         stream_.get()->create_mmap_buffer = astream_out_create_mmap_buffer;
         stream_.get()->get_mmap_position = astream_out_get_mmap_position;
     }
+
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+        AHAL_INFO("Haptics Usecase");
+        /* Setting flag here as no flag is being set for haptics from AudioPolicyManager
+         * so that audio stream runs as low latency stream.
+         */
+        flags_ = AUDIO_OUTPUT_FLAG_FAST;
+    }
+
     (void)FillHalFnPtrs();
     mInitialized = true;
     for(auto dev : mAndroidOutDevices)
@@ -3404,6 +3436,7 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
     if (!parms)
         goto exit;
 
+    str_parms_destroy(parms);
 exit:
    AHAL_ERR("exit %d", ret);
    return ret;

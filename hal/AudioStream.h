@@ -93,6 +93,12 @@
 #define CODEC_BACKEND_DEFAULT_BIT_WIDTH 16
 #define AUDIO_CAPTURE_PERIOD_DURATION_MSEC 20
 
+#define LL_PERIOD_SIZE_FRAMES_160 160
+#define LL_PERIOD_SIZE_FRAMES_192 192
+#define LL_PERIOD_SIZE_FRAMES_240 240
+#define LL_PERIOD_SIZE_FRAMES_320 320
+#define LL_PERIOD_SIZE_FRAMES_480 480
+
 #define DIV_ROUND_UP(x, y) (((x) + (y) - 1)/(y))
 #define ALIGN(x, y) ((y) * DIV_ROUND_UP((x), (y)))
 
@@ -429,6 +435,7 @@ public:
     virtual ~StreamPrimary();
     uint32_t        GetSampleRate();
     uint32_t        GetBufferSize();
+    uint32_t        GetBufferSizeForLowLatency();
     audio_format_t  GetFormat();
     audio_channel_mask_t GetChannelMask();
     int getPalDeviceIds(const std::set<audio_devices_t> &halDeviceIds, pal_device_id_t* palOutDeviceIds);
@@ -503,6 +510,7 @@ public:
     int Open();
     void GetStreamHandle(audio_stream_out** stream);
     uint32_t GetBufferSize();
+    uint32_t GetBufferSizeForLowLatency();
     int GetFrames(uint64_t *frames);
     static pal_stream_type_t GetPalStreamType(audio_output_flags_t halStreamFlags);
     static int64_t GetRenderLatency(audio_output_flags_t halStreamFlags);
