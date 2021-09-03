@@ -435,7 +435,6 @@ public:
     virtual ~StreamPrimary();
     uint32_t        GetSampleRate();
     uint32_t        GetBufferSize();
-    uint32_t        GetBufferSizeForLowLatency();
     audio_format_t  GetFormat();
     audio_channel_mask_t GetChannelMask();
     int getPalDeviceIds(const std::set<audio_devices_t> &halDeviceIds, pal_device_id_t* palOutDeviceIds);
@@ -585,6 +584,7 @@ public:
     int SetMicMute(bool mute);
     ssize_t read(const void *buffer, size_t bytes);
     uint32_t GetBufferSize();
+    uint32_t GetBufferSizeForLowLatencyRecord();
     pal_stream_type_t GetPalStreamType(audio_input_flags_t halStreamFlags,
             uint32_t sample_rate);
     int GetInputUseCase(audio_input_flags_t halStreamFlags, audio_source_t source);
