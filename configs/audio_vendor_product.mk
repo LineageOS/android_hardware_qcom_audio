@@ -165,9 +165,6 @@ PRODUCT_PACKAGES_DEBUG += $(MM_AUDIO_DBG)
 TARGET_USES_AOSP := true
 TARGET_USES_AOSP_FOR_AUDIO := true
 
-#Audio sample file for early services
-PRODUCT_COPY_FILES += device/qcom/$(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)/bike_bell.wav:$(TARGET_COPY_OUT_VENDOR)/etc/bike_bell.wav
-
 # Audio configuration file
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/$(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)/$(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX).mk
 
