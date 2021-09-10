@@ -454,7 +454,7 @@ public:
                                         const int table_size, int value);
     bool GetSupportedConfig(bool isOutStream,
                             struct str_parms *query, struct str_parms *reply);
-    virtual int RouteStream(const std::set<audio_devices_t>&) = 0;
+    virtual int RouteStream(const std::set<audio_devices_t>&, bool force_device_switch = false) = 0;
 protected:
     struct pal_stream_attributes streamAttributes_;
     pal_stream_handle_t*      pal_stream_handle_;
@@ -523,7 +523,7 @@ public:
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
     int GetMmapPosition(struct audio_mmap_position *position);
     bool isDeviceAvailable(pal_device_id_t deviceId);
-    int RouteStream(const std::set<audio_devices_t>&);
+    int RouteStream(const std::set<audio_devices_t>&, bool force_device_switch = false);
     ssize_t splitAndWriteAudioHapticsStream(const void *buffer, size_t bytes);
 protected:
     struct timespec writeAt;
@@ -596,7 +596,7 @@ public:
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
     int GetMmapPosition(struct audio_mmap_position *position);
     bool isDeviceAvailable(pal_device_id_t deviceId);
-    int RouteStream(const std::set<audio_devices_t>& new_devices);
+    int RouteStream(const std::set<audio_devices_t>& new_devices, bool force_device_switch = false);
     int64_t GetSourceLatency(audio_input_flags_t halStreamFlags);
     uint64_t GetFramesRead(int64_t *time);
 protected:

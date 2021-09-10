@@ -57,16 +57,17 @@
 
 card_status_t AudioDevice::sndCardState = CARD_STATUS_ONLINE;
 
-static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
+static bool hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
     struct str_parms *parms) {
 
     if (adev == nullptr || parms == nullptr) {
         AHAL_ERR("%s Invalid arguments", __func__);
-        return;
+        return false;
     }
 
     int ret = 0, val = 0;
     char value[32];
+    bool changes = false;
 
     /* HDR Audio Parameters */
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HDR, value,
@@ -77,6 +78,7 @@ static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
         else
             adev->hdr_record_enabled = false;
 
+        changes = true;
         AHAL_INFO("HDR Enabled: %d", adev->hdr_record_enabled);
     }
 
@@ -110,6 +112,7 @@ static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
         else if (strncmp(value, "portrait", 8) == 0)
             adev->orientation_landscape = false;
 
+        changes = true;
         AHAL_INFO("Orientation %s",
             adev->orientation_landscape ? "landscape" : "portrait");
     }
@@ -122,6 +125,7 @@ static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
         else
             adev->inverted = false;
 
+        changes = true;
         AHAL_INFO("Orientation inverted: %d", adev->inverted);
     }
 
@@ -136,6 +140,7 @@ static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
         else if (strncmp(value, "none", 4) == 0)
             adev->facing = 0;
 
+        changes = true;
         AHAL_INFO("Device facing %s", value);
     }
 
@@ -160,6 +165,8 @@ static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
             adev->hdr_sample_rate = val;
         }
     }
+
+    return changes;
 }
 
 static void hdr_get_parameters(std::shared_ptr<AudioDevice> adev,
@@ -1140,6 +1147,11 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     pal_device_id_t* pal_device_ids = NULL;
     char *test_r = NULL;
     char *cfg_str = NULL;
+    bool changes_done = false;
+    audio_stream_in* stream_in = NULL;
+    std::shared_ptr<StreamInPrimary> astream_in = NULL;
+    uint8_t channels = 0;
+    std::set<audio_devices_t> new_devices;
 
     AHAL_DBG("enter: %s", kvpairs);
     ret = voice_->VoiceSetParameters(kvpairs);
@@ -1153,8 +1165,28 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     }
     AudioExtn::audio_extn_set_parameters(adev_, parms);
 
-    if (property_get_bool("vendor.audio.hdr.record.enable", false))
-        hdr_set_parameters(adev_, parms);
+    if (property_get_bool("vendor.audio.hdr.record.enable", false)) {
+        changes_done = hdr_set_parameters(adev_, parms);
+        if (changes_done) {
+            for (int i = 0; i < stream_in_list_.size(); i++) {
+                stream_in_list_[i]->GetStreamHandle(&stream_in);
+                astream_in = adev_->InGetStream((audio_stream_t*)stream_in);
+                if ( (astream_in->source_ == AUDIO_SOURCE_UNPROCESSED) &&
+                   (astream_in->config_.sample_rate == 48000) ) {
+                    AHAL_DBG("Forcing PAL device switch for HDR");
+                    channels =
+                        audio_channel_count_from_in_mask(astream_in->config_.channel_mask);
+                    if (channels == 4) {
+                        if (adev_->hdr_record_enabled) {
+                            new_devices = astream_in->mAndroidInDevices;
+                            astream_in->RouteStream(new_devices, true);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
 
     ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
     if (ret >= 0) {

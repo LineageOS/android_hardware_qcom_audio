@@ -1866,7 +1866,7 @@ int StreamOutPrimary::Standby() {
     return ret;
 }
 
-int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
+int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, bool force_device_switch __unused) {
     int ret = 0, noPalDevices = 0;
     bool forceRouting = false;
     pal_device_id_t * deviceId;
@@ -3372,7 +3372,7 @@ done:
     return ret;
 }
 
-int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
+int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, bool force_device_switch) {
     bool is_empty, is_input;
     int ret = 0, noPalDevices = 0;
     pal_device_id_t * deviceId;
@@ -3404,7 +3404,8 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices) {
     is_input = AudioExtn::audio_devices_cmp(new_devices, audio_is_input_device);
 
     /* If its the same device as what was already routed to, dont bother */
-    if (!is_empty && is_input && mAndroidInDevices != new_devices) {
+    if (!is_empty && is_input
+            && ((mAndroidInDevices != new_devices) || force_device_switch)) {
         //re-allocate mPalOutDevice and mPalOutDeviceIds
         if (new_devices.size() != mAndroidInDevices.size()) {
             deviceId = (pal_device_id_t*) realloc(mPalInDeviceIds,
