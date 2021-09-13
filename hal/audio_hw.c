@@ -2828,6 +2828,9 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                                      AUDIO_DEVICE_IN_USB_HEADSET) &&
                                  is_single_device_type_equal(&vc_usecase->device_list,
                                                         AUDIO_DEVICE_OUT_USB_HEADSET))||
+                                (is_single_device_type_equal(&usecase->device_list,
+                                                     AUDIO_DEVICE_IN_USB_HEADSET) &&
+                                 is_codec_backend_out_device_type(&vc_usecase->device_list)) ||
                                  (is_single_device_type_equal(&usecase->device_list,
                                                      AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) &&
                                  is_codec_backend_out_device_type(&vc_usecase->device_list)))) {
