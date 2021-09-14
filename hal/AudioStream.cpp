@@ -1536,7 +1536,7 @@ pal_stream_type_t StreamOutPrimary::GetPalStreamType(
     } else if (halStreamFlags ==
                     (AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_RAW)) {
         palStreamType = PAL_STREAM_RAW;
-    } else if (halStreamFlags == AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
+    } else if (halStreamFlags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
         palStreamType = PAL_STREAM_DEEP_BUFFER;
     } else if (halStreamFlags ==
                     (AUDIO_OUTPUT_FLAG_DIRECT|AUDIO_OUTPUT_FLAG_MMAP_NOIRQ)) {
