@@ -166,5 +166,10 @@ TARGET_USES_AOSP := true
 TARGET_USES_AOSP_FOR_AUDIO := true
 
 # Audio configuration file
--include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/$(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)/$(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX).mk
-
+ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),msmnile_au)
+-include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk
+else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),msmnile_gvmq)
+-include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk
+else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),sm6150_au)
+-include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe_au/msmsteppe_au.mk
+endif
