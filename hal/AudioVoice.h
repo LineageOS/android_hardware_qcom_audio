@@ -78,6 +78,7 @@ public:
             bool hd_voice;
             struct pal_volume_data *pal_vol_data;
             pal_device_mute_t device_mute;
+            bool hac;
     };
     struct voice_t {
             voice_session_t session[MAX_VOICE_SESSIONS];
