@@ -171,7 +171,7 @@ bool StreamPrimary::GetSupportedConfig(bool isOutStream,
         table_size = sizeof(formats_name_to_enum_table) / sizeof(struct string_to_enum);
         index = GetLookupTableIndex(formats_name_to_enum_table,
                                     table_size, stream_format);
-        if (index >= 0) {
+        if (index >= 0 && index < table_size) {
             strlcat(value, formats_name_to_enum_table[index].name, sizeof(value));
             str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value);
             found = true;
@@ -182,9 +182,6 @@ bool StreamPrimary::GetSupportedConfig(bool isOutStream,
     if (ret >= 0) {
         int stream_chn_mask = GetChannelMask();
 
-        table_size = sizeof(channels_name_to_enum_table) / sizeof(struct string_to_enum);
-        index = GetLookupTableIndex(channels_name_to_enum_table,
-                                    table_size, stream_chn_mask);
         value[0] = '\0';
 
         if (isOutStream)
