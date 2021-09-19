@@ -245,6 +245,10 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.audio_hal.period_size=192
 
+# period multiplier for low latency capture tracks
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.audio.ull_record_period_multiplier=2
+
 ##Ambisonic Capture
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.ambisonic.capture=false \

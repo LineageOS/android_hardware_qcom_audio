@@ -3650,6 +3650,21 @@ error_open:
     return ret;
 }
 
+uint32_t StreamInPrimary::GetBufferSizeForLowLatencyRecord() {
+     int trial = 0;
+     char value[PROPERTY_VALUE_MAX] = {0};
+     int configured_low_latency_record_multiplier = ULL_PERIOD_MULTIPLIER;
+
+     if (property_get("vendor.audio.ull_record_period_multiplier", value, NULL) > 0) {
+         trial = atoi(value);
+         if(trial < ULL_PERIOD_MULTIPLIER && trial > 0)
+             configured_low_latency_record_multiplier = trial;
+     }
+     return ULL_PERIOD_SIZE * configured_low_latency_record_multiplier *
+            audio_bytes_per_frame(
+                    audio_channel_count_from_in_mask(config_.channel_mask),
+                    config_.format);
+}
 
 /* in bytes */
 uint32_t StreamInPrimary::GetBufferSize() {
@@ -3665,10 +3680,7 @@ uint32_t StreamInPrimary::GetBufferSize() {
                     audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
-        return ULL_PERIOD_SIZE * ULL_PERIOD_MULTIPLIER *
-            audio_bytes_per_frame(
-                    audio_channel_count_from_in_mask(config_.channel_mask),
-                    config_.format);
+        return GetBufferSizeForLowLatencyRecord();
     } else if (streamAttributes_.type == PAL_STREAM_DEEP_BUFFER ||
                streamAttributes_.type == PAL_STREAM_VOICE_CALL_RECORD) {
         return (config_.sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC/ 1000) *
