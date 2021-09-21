@@ -31,6 +31,8 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include "AudioExtn.h"
+#include "AudioDevice.h"
+#include "PalApi.h"
 #include <cutils/properties.h>
 #include "AudioCommon.h"
 #define AUDIO_OUTPUT_BIT_WIDTH ((config_->offload_info.bit_width == 32) ? 24:config_->offload_info.bit_width)
@@ -564,6 +566,95 @@ bool AudioExtn::audio_devices_empty(const std::set<audio_devices_t>& devs){
     return devs.empty();
 }
 // END: DEVICE UTILS ===============================================================
+
+// START: KARAOKE ==================================================================
+int AudioExtn::karaoke_open(pal_device_id_t device_out, pal_stream_callback pal_callback, pal_channel_info ch_info) {
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    const int num_pal_devs = 2;
+    struct pal_device pal_devs[num_pal_devs];
+    karaoke_stream_handle = NULL;
+    pal_device_id_t device_in;
+    dynamic_media_config_t dynamic_media_config;
+    size_t payload_size = 0;
+
+    // Configuring Hostless Loopback
+    if (device_out == PAL_DEVICE_OUT_WIRED_HEADSET)
+        device_in = PAL_DEVICE_IN_WIRED_HEADSET;
+    else if (device_out == PAL_DEVICE_OUT_USB_HEADSET) {
+        device_in = PAL_DEVICE_IN_USB_HEADSET;
+        // get capability from device of USB
+    } else
+        return 0;
+
+    sattr.type = PAL_STREAM_LOOPBACK;
+    sattr.info.opt_stream_info.loopback_type = PAL_STREAM_LOOPBACK_KARAOKE;
+    sattr.direction = PAL_AUDIO_INPUT_OUTPUT;
+    sattr.in_media_config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+    sattr.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    sattr.in_media_config.ch_info = ch_info;
+    sattr.in_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    sattr.out_media_config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+    sattr.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+    sattr.out_media_config.ch_info = ch_info;
+    sattr.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+    for (int i = 0; i < num_pal_devs; ++i) {
+        pal_devs[i].id = i ? device_in : device_out;
+        if (device_out == PAL_DEVICE_OUT_USB_HEADSET || device_in == PAL_DEVICE_IN_USB_HEADSET) {
+            //Configure USB Digital Headset parameters
+            pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
+                                                       malloc(sizeof(pal_param_device_capability_t));
+            if (!device_cap_query) {
+                AHAL_ERR("Failed to allocate mem for device_cap_query");
+                return 0;
+            }
+
+            if (pal_devs[i].id == PAL_DEVICE_OUT_USB_HEADSET) {
+                device_cap_query->id = PAL_DEVICE_OUT_USB_DEVICE;
+                device_cap_query->is_playback = true;
+            } else {
+                device_cap_query->id = PAL_DEVICE_IN_USB_DEVICE;
+                device_cap_query->is_playback = false;
+            }
+            device_cap_query->addr.card_id = adevice->usb_card_id_;
+            device_cap_query->addr.device_num = adevice->usb_dev_num_;
+            device_cap_query->config = &dynamic_media_config;
+            pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
+                                 (void **)&device_cap_query,
+                                 &payload_size, nullptr);
+            pal_devs[i].address.card_id = adevice->usb_card_id_;
+            pal_devs[i].address.device_num = adevice->usb_dev_num_;
+            pal_devs[i].config.sample_rate = dynamic_media_config.sample_rate;
+            pal_devs[i].config.ch_info = ch_info;
+            pal_devs[i].config.aud_fmt_id = (pal_audio_fmt_t)dynamic_media_config.format;
+            free(device_cap_query);
+        } else {
+            pal_devs[i].config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+            pal_devs[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+            pal_devs[i].config.ch_info = ch_info;
+            pal_devs[i].config.aud_fmt_id = PAL_AUDIO_FMT_DEFAULT_PCM;
+        }
+    }
+    return pal_stream_open(&sattr,
+            num_pal_devs, pal_devs,
+            0,
+            NULL,
+            pal_callback,
+            (uint64_t) this,
+            &karaoke_stream_handle);
+}
+
+int AudioExtn::karaoke_start() {
+    return pal_stream_start(karaoke_stream_handle);
+}
+
+int AudioExtn::karaoke_stop() {
+    return pal_stream_stop(karaoke_stream_handle);
+}
+
+int AudioExtn::karaoke_close(){
+    return pal_stream_close(karaoke_stream_handle);
+}
+// END: KARAOKE ====================================================================
 
 // START: PAL HIDL =================================================
 

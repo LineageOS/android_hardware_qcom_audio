@@ -35,6 +35,7 @@
 #include "audio_defs.h"
 #include <log/log.h>
 #include "battery_listener.h"
+#define DEFAULT_OUTPUT_SAMPLING_RATE 48000
 
 typedef void (*batt_listener_init_t)(battery_status_change_fn_t);
 typedef void (*batt_listener_deinit_t)();
@@ -95,6 +96,12 @@ public:
     static void audio_extn_fm_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *params);
     static void audio_extn_fm_get_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *query, struct str_parms *reply);
 
+    //Karaoke
+    int karaoke_open(pal_device_id_t device_out, pal_stream_callback pal_callback, pal_channel_info ch_info);
+    int karaoke_start();
+    int karaoke_stop();
+    int karaoke_close();
+
     /* start kpi optimize perf apis */
     static void audio_extn_kpi_optimize_feature_init(bool is_feature_enabled);
     static int audio_extn_perf_lock_init(void);
@@ -102,6 +109,9 @@ public:
             int *perf_lock_opts, int size);
     static void audio_extn_perf_lock_release(int *handle);
     /* end kpi optimize perf apis */
+protected:
+    pal_stream_handle_t *karaoke_stream_handle;
+    struct pal_stream_attributes sattr;
 
 };
 

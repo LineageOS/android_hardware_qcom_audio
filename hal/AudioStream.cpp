@@ -54,6 +54,9 @@
 #define MAX_READ_RETRY_COUNT 25
 
 #define AFE_PROXY_RECORD_PERIOD_SIZE  768
+
+static bool karaoke = false;
+
 static bool is_pcm_format(audio_format_t format)
 {
     if (format == AUDIO_FORMAT_PCM_16_BIT ||
@@ -149,6 +152,64 @@ audio_io_handle_t StreamPrimary::GetHandle()
 int StreamPrimary::GetUseCase()
 {
     return usecase_;
+}
+
+bool StreamPrimary::GetSupportedConfig(bool isOutStream,
+        struct str_parms *query,
+        struct str_parms *reply)
+{
+    char value[256];
+    int ret = 0;
+    bool found = false;
+    int index = 0;
+    int table_size = 0;
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value, sizeof(value));
+    if (ret >= 0) {
+        value[0] = '\0';
+        int stream_format = GetFormat();
+        table_size = sizeof(formats_name_to_enum_table) / sizeof(struct string_to_enum);
+        index = GetLookupTableIndex(formats_name_to_enum_table,
+                                    table_size, stream_format);
+        if (index >= 0) {
+            strlcat(value, formats_name_to_enum_table[index].name, sizeof(value));
+            str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value);
+            found = true;
+        }
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value, sizeof(value));
+    if (ret >= 0) {
+        int stream_chn_mask = GetChannelMask();
+
+        table_size = sizeof(channels_name_to_enum_table) / sizeof(struct string_to_enum);
+        index = GetLookupTableIndex(channels_name_to_enum_table,
+                                    table_size, stream_chn_mask);
+        value[0] = '\0';
+
+        if (isOutStream)
+            strlcat(value, "AUDIO_CHANNEL_OUT_STEREO", sizeof(value));
+        else
+            strlcat(value, "AUDIO_CHANNEL_IN_STEREO", sizeof(value));
+        str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value);
+        found = true;
+    }
+
+    ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES, value, sizeof(value));
+    if (ret >= 0) {
+        value[0] = '\0';
+        int stream_sample_rate = GetSampleRate();
+        int cursor = 0;
+        int avail = sizeof(value) - cursor;
+        ret = snprintf(value + cursor, avail, "%s%d",
+                       cursor > 0 ? "|" : "",
+                       stream_sample_rate);
+        str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES,
+                          value);
+        found = true;
+    }
+
+    return found;
 }
 
 #if 0
@@ -718,16 +779,6 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
     std::shared_ptr<StreamOutPrimary> astream_out;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     struct str_parms *reply = str_parms_create();
-    //int index = 0;
-    //int table_size = 0;
-
-    if (adevice) {
-        astream_out = adevice->OutGetStream((audio_stream_t*)stream);
-    } else {
-        ret = -EINVAL;
-        AHAL_ERR("unable to get audio device");
-        goto exit;
-    }
 
     if (!query || !reply) {
         if (reply)
@@ -736,6 +787,18 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
             str_parms_destroy(query);
         AHAL_ERR("out_get_parameters: failed to allocate mem for query or reply");
         return nullptr;
+    }
+
+    if (adevice) {
+        astream_out = adevice->OutGetStream((audio_stream_t*)stream);
+    } else {
+        AHAL_ERR("unable to get audio device");
+        goto error;
+    }
+
+    if (!astream_out) {
+        AHAL_ERR("unable to get audio stream");
+        goto error;
     }
     AHAL_DBG("keys: %s", keys);
 
@@ -765,54 +828,17 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
         if (str)
             free(str);
         str = str_parms_to_str(reply);
-        AHAL_ERR("exit: returns - %s", str);
-        return str;
     }
 
-#if 0
-    ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value, sizeof(value));
-    if (ret >= 0) {
-        value[0] = '\0';
-        int stream_format = astream_out->GetFormat();
-        table_size = sizeof(formats_name_to_enum_table) / sizeof(struct string_to_enum);
-        index = astream_out->GetLookupTableIndex(formats_name_to_enum_table,
-                                    table_size, stream_format);
-        strlcat(value, formats_name_to_enum_table[index].name, sizeof(value));
-        str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value);
-    }
+    if (astream_out->GetSupportedConfig(true, query, reply))
+        str = str_parms_to_str(reply);
 
-    ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value, sizeof(value));
-    if (ret >= 0) {
-        int stream_chn_mask = astream_out->GetChannelMask();
+error:
+    str_parms_destroy(query);
+    str_parms_destroy(reply);
 
-        table_size = sizeof(channels_name_to_enum_table) / sizeof(struct string_to_enum);
-        index = astream_out->GetLookupTableIndex(channels_name_to_enum_table,
-                                    table_size, stream_chn_mask);
-        value[0] = '\0';
-        strlcat(value, "AUDIO_CHANNEL_OUT_STEREO", sizeof(value));
-        str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value);
-    }
-
-    ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES, value, sizeof(value));
-    if (ret >= 0) {
-        value[0] = '\0';
-        int stream_sample_rate = astream_out->GetSampleRate();
-        int cursor = 0;
-        int avail = sizeof(value) - cursor;
-        ret = snprintf(value + cursor, avail, "%s%d",
-                       cursor > 0 ? "|" : "",
-                       stream_sample_rate);
-        str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES,
-                          value);
-    }
-
-exit:
-    /* do we need new hooks inside pal? */
-    str = str_parms_to_str(reply);
+    AHAL_ERR("exit: returns - %s", str);
     return str;
-#endif
-exit:
-    return 0;
 }
 
 static int astream_out_set_volume(struct audio_stream_out *stream,
@@ -1316,8 +1342,46 @@ static char* astream_in_get_parameters(const struct audio_stream *stream,
                                        const char *keys) {
     std::ignore = stream;
     std::ignore = keys;
-    AHAL_DBG("function not implemented");
-    return 0;
+    struct str_parms *query = str_parms_create_str(keys);
+    char value[256];
+    char *str = (char*) nullptr;
+    std::shared_ptr<StreamInPrimary> astream_in;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    struct str_parms *reply = str_parms_create();
+    int ret = 0;
+
+
+    if (!query || !reply) {
+        if (reply)
+            str_parms_destroy(reply);
+        if (query)
+            str_parms_destroy(query);
+        AHAL_ERR("in_get_parameters: failed to allocate mem for query or reply");
+        return nullptr;
+    }
+
+    if (adevice) {
+        astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    } else {
+        AHAL_ERR("unable to get audio device");
+        goto error;
+    }
+
+    if (!astream_in) {
+        AHAL_ERR("unable to get audio stream");
+        goto error;
+    }
+    AHAL_DBG("keys: %s", keys);
+
+    if (astream_in->GetSupportedConfig(false, query, reply))
+        str = str_parms_to_str(reply);
+
+error:
+    str_parms_destroy(query);
+    str_parms_destroy(reply);
+
+    AHAL_ERR("exit: returns - %s", str);
+    return str;
 }
 
 static int astream_in_set_gain(struct audio_stream_in *stream, float gain) {
@@ -1635,7 +1699,6 @@ int StreamOutPrimary::Stop() {
 
 int StreamOutPrimary::Start() {
     int ret = -ENOSYS;
-
     AHAL_DBG("Enter");
     if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP &&
             pal_stream_handle_ && !stream_started_) {
@@ -1644,6 +1707,8 @@ int StreamOutPrimary::Start() {
         if (ret == 0)
             stream_started_ = true;
     }
+    if (karaoke)
+        AudExtn.karaoke_start();
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
 }
@@ -1780,6 +1845,19 @@ int StreamOutPrimary::Standby() {
                 hapticBuffer = NULL;
             }
             hapticsBufSize = 0;
+        }
+    }
+    if (karaoke) {
+        ret = AudExtn.karaoke_stop();
+        if (ret) {
+            AHAL_ERR("failed to stop karaoke path.");
+            ret = 0;
+        } else {
+            ret = AudExtn.karaoke_close();
+            if (ret) {
+                AHAL_ERR("failed to close karaoke path.");
+                ret = 0;
+            }
         }
     }
 
@@ -2134,6 +2212,37 @@ static int voip_get_buffer_size(uint32_t sample_rate)
 
 }
 
+static bool period_size_is_plausible_for_low_latency(int period_size)
+{
+     switch (period_size) {
+     case LL_PERIOD_SIZE_FRAMES_160:
+     case LL_PERIOD_SIZE_FRAMES_192:
+     case LL_PERIOD_SIZE_FRAMES_240:
+     case LL_PERIOD_SIZE_FRAMES_320:
+     case LL_PERIOD_SIZE_FRAMES_480:
+         return true;
+     default:
+         return false;
+     }
+}
+
+uint32_t StreamOutPrimary::GetBufferSizeForLowLatency() {
+    int trial = 0;
+    char value[PROPERTY_VALUE_MAX] = {0};
+    int configured_low_latency_period_size = LOW_LATENCY_PLAYBACK_PERIOD_SIZE;
+
+    if (property_get("vendor.audio_hal.period_size", value, NULL) > 0) {
+        trial = atoi(value);
+        if (period_size_is_plausible_for_low_latency(trial))
+            configured_low_latency_period_size = trial;
+    }
+
+    return configured_low_latency_period_size *
+           audio_bytes_per_frame(
+                    audio_channel_count_from_out_mask(config_.channel_mask),
+                    config_.format);
+}
+
 uint32_t StreamOutPrimary::GetBufferSize() {
     struct pal_stream_attributes streamAttributes_;
 
@@ -2146,10 +2255,7 @@ uint32_t StreamOutPrimary::GetBufferSize() {
     } else if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD) {
         return get_pcm_buffer_size();
     } else if (streamAttributes_.type == PAL_STREAM_LOW_LATENCY) {
-        return LOW_LATENCY_PLAYBACK_PERIOD_SIZE *
-            audio_bytes_per_frame(
-                    audio_channel_count_from_out_mask(config_.channel_mask),
-                    config_.format);
+        return GetBufferSizeForLowLatency();
     } else if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
         return ULL_PERIOD_SIZE * ULL_PERIOD_MULTIPLIER *
             audio_bytes_per_frame(
@@ -2189,11 +2295,6 @@ int StreamOutPrimary::Open() {
     channels = audio_channel_count_from_out_mask(config_.channel_mask);
 
     if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
-        AHAL_INFO("Haptics Usecase");
-        /* Setting flag here as no flag is being set for haptics from AudioPolicyManager
-         * so that audio stream runs as low latency stream.
-         */
-        flags_ = AUDIO_OUTPUT_FLAG_FAST;
         channels = audio_channel_count_from_out_mask(config_.channel_mask & ~AUDIO_CHANNEL_HAPTIC_ALL);
     }
     ch_info.channels = channels;
@@ -2307,6 +2408,13 @@ int StreamOutPrimary::Open() {
                           &pal_haptics_stream_handle);
         if (ret) {
             AHAL_ERR("Pal Haptics Stream Open Error (%x)", ret);
+        }
+    }
+    if (karaoke) {
+        ret = AudExtn.karaoke_open(mPalOutDevice[mAndroidOutDevices.size()-1].id, &pal_callback, ch_info);
+        if (ret) {
+            AHAL_ERR("Karaoke Open Error (%x)", ret);
+            karaoke = false;
         }
     }
 
@@ -2529,7 +2637,7 @@ ssize_t StreamOutPrimary::splitAndWriteAudioHapticsStream(const void *buffer, si
      // write haptics data
      ret = pal_stream_write(pal_haptics_stream_handle, &hapticBuf);
 
-     return ret;
+     return (ret < 0 ? ret : bytes);
 }
 
 ssize_t StreamOutPrimary::onWriteError(size_t bytes, size_t ret) {
@@ -2601,6 +2709,15 @@ ssize_t StreamOutPrimary::configurePalOutputStream() {
                 pal_stream_close(pal_haptics_stream_handle);
                 pal_haptics_stream_handle = NULL;
                 return -EINVAL;
+            }
+        }
+        if (karaoke) {
+            ret = AudExtn.karaoke_start();
+            if (ret) {
+                AHAL_ERR("failed to start karaoke stream. ret=%d", ret);
+                AudExtn.karaoke_close();
+                karaoke = false;
+                ret = 0; // Not fatal error
             }
         }
         stream_started_ = true;
@@ -2956,6 +3073,15 @@ StreamOutPrimary::StreamOutPrimary(
         stream_.get()->create_mmap_buffer = astream_out_create_mmap_buffer;
         stream_.get()->get_mmap_position = astream_out_get_mmap_position;
     }
+
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
+        AHAL_INFO("Haptics Usecase");
+        /* Setting flag here as no flag is being set for haptics from AudioPolicyManager
+         * so that audio stream runs as low latency stream.
+         */
+        flags_ = AUDIO_OUTPUT_FLAG_FAST;
+    }
+
     (void)FillHalFnPtrs();
     mInitialized = true;
     for(auto dev : mAndroidOutDevices)
@@ -3345,6 +3471,7 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
     if (!parms)
         goto exit;
 
+    str_parms_destroy(parms);
 exit:
    AHAL_ERR("exit %d", ret);
    return ret;

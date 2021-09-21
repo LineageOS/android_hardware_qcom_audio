@@ -154,8 +154,10 @@ PRODUCT_PACKAGES += audioadsprpcd
 PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
 PRODUCT_PACKAGES += android.hardware.audio.service
 PRODUCT_PACKAGES += android.hardware.audio.service.rc
-PRODUCT_PACKAGES += IDP_acdb_cal.acdb
-PRODUCT_PACKAGES += IDP_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += MTP_acdb_cal.acdb
+PRODUCT_PACKAGES += MTP_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += CDP_acdb_cal.acdb
+PRODUCT_PACKAGES += CDP_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.10.pmd
@@ -177,12 +179,12 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/mixer_paths_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_cdp.xml \
-    vendor/qcom/opensource/pal/configs/lahaina/resourcemanager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager.xml \
-    vendor/qcom/opensource/pal/configs/lahaina/resourcemanager_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_qrd.xml \
-    vendor/qcom/opensource/pal/configs/lahaina/resourcemanager_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_cdp.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/mixer_paths_lahaina_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_lahaina_qrd.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/mixer_paths_lahaina_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_lahaina_mtp.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/mixer_paths_lahaina_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_lahaina_cdp.xml \
+    vendor/qcom/opensource/pal/configs/lahaina/resourcemanager_lahaina_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_lahaina_qrd.xml \
+    vendor/qcom/opensource/pal/configs/lahaina/resourcemanager_lahaina_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_lahaina_mtp.xml \
+    vendor/qcom/opensource/pal/configs/lahaina/resourcemanager_lahaina_cdp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_lahaina_cdp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
