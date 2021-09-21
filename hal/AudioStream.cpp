@@ -250,7 +250,6 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
             std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
             astream_out->drain_ready_ = true;
             astream_out->sendGaplessMetadata = false;
-            astream_out->sendNextTrackParams = false;
             AHAL_DBG("received DRAIN_READY event");
             (astream_out->drain_condition_).notify_all();
             event = STREAM_CBK_EVENT_DRAIN_READY;
@@ -261,7 +260,6 @@ static int32_t pal_callback(pal_stream_handle_t *stream_handle,
             std::lock_guard<std::mutex> drain_guard (astream_out->drain_wait_mutex_);
             astream_out->drain_ready_ = true;
             astream_out->sendGaplessMetadata = true;
-            astream_out->sendNextTrackParams = true;
             AHAL_DBG("received PARTIAL DRAIN_READY event");
             (astream_out->drain_condition_).notify_all();
             event = STREAM_CBK_EVENT_DRAIN_READY;
@@ -2003,6 +2001,8 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     if (ret) {
         AHAL_ERR("parse_compress_metadata Error (%x)", ret);
         goto error;
+    } else {
+        isCompressMetadataAvail = true;
     }
 
     ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
@@ -2015,6 +2015,7 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
         gaplessMeta.encoderPadding = atoi(value);
         AHAL_DBG("padding %u", gaplessMeta.encoderPadding);
     }
+    sendGaplessMetadata = true;
 error:
     AHAL_ERR("exit %d", ret);
     return ret;
@@ -2439,8 +2440,8 @@ int StreamOutPrimary::Open() {
             if (ret)
                 AHAL_ERR("Pal Set Param Error (%x)", ret);
             free(param_payload);
-
         }
+        isCompressMetadataAvail = false;
     }
 
     if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP) {
@@ -2728,7 +2729,7 @@ ssize_t StreamOutPrimary::configurePalOutputStream() {
         }
         ATRACE_END();
     }
-    if ((streamAttributes_.type == PAL_STREAM_COMPRESSED) && sendNextTrackParams) {
+    if ((streamAttributes_.type == PAL_STREAM_COMPRESSED) && isCompressMetadataAvail) {
         // Send codec params first.
         pal_param_payload *param_payload = nullptr;
         param_payload = (pal_param_payload *) calloc (1,
@@ -2752,7 +2753,7 @@ ssize_t StreamOutPrimary::configurePalOutputStream() {
             AHAL_ERR("calloc failed for size %zu",
                    sizeof(pal_param_payload) + sizeof(pal_snd_dec_t));
         }
-        sendNextTrackParams = false;
+        isCompressMetadataAvail = false;
     }
 
     if ((streamAttributes_.type == PAL_STREAM_COMPRESSED) && sendGaplessMetadata) {

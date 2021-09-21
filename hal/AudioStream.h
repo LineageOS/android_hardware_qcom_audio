@@ -493,8 +493,8 @@ public:
                      visualizer_hal_stop_output fnp_visualizer_stop_output_);
 
     ~StreamOutPrimary();
-    bool sendGaplessMetadata = true;
-    bool sendNextTrackParams = false;
+    bool sendGaplessMetadata = false;
+    bool isCompressMetadataAvail = false;
     int Standby();
     int SetVolume(float left, float right);
     uint64_t GetFramesWritten(struct timespec *timestamp);
