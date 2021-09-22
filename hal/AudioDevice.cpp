@@ -1570,6 +1570,20 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                             sizeof(pal_param_btsco_t));
     }
 
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_NREC, value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_btsco_t param_bt_sco;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
+            AHAL_INFO("BTSCO NREC mode = ON");
+            param_bt_sco.bt_sco_nrec = true;
+        } else {
+            AHAL_INFO("BTSCO NREC mode = OFF");
+            param_bt_sco.bt_sco_nrec = false;
+        }
+        ret = pal_set_param(PAL_PARAM_ID_BT_SCO_NREC, (void *)&param_bt_sco,
+                            sizeof(pal_param_btsco_t));
+    }
+
     for (auto& key : lc3_reserved_params) {
         ret = str_parms_get_str(parms, key, value, sizeof(value));
         if (ret < 0)
