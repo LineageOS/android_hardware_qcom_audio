@@ -41,6 +41,8 @@
 #include <hardware/audio.h>
 #include <system/audio.h>
 
+#include <expat.h>
+
 #include "AudioStream.h"
 #include "AudioVoice.h"
 #include "PalDefs.h"
@@ -60,6 +62,44 @@
 #define AUDIO_PARAMETER_KEY_FACING "facing"
 #define AUDIO_PARAMETER_KEY_HDR_CHANNELS "hdr_audio_channel_count"
 #define AUDIO_PARAMETER_KEY_HDR_SAMPLERATE "hdr_audio_sampling_rate"
+
+#define AUDIO_MAKE_STRING_FROM_ENUM(X)   { #X, X }
+#define PAL_MAX_INPUT_DEVICES (PAL_DEVICE_IN_MAX - (PAL_DEVICE_IN_MIN + 1))
+#define MIC_INFO_MAP_INDEX(X) (X - (PAL_DEVICE_IN_MIN + 1))
+#define XML_READ_BUFFER_SIZE 1024
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
+typedef enum {
+    TAG_MICROPHONE_CHARACTERISTIC,
+    TAG_SND_DEVICES,
+    TAG_INPUT_SND_DEVICE,
+    TAG_INPUT_SND_DEVICE_TO_MIC_MAPPING,
+    TAG_SND_DEV,
+    TAG_MIC_INFO
+} mic_xml_tags_t;
+
+typedef struct xml_userdata_t {
+    char data_buf[XML_READ_BUFFER_SIZE];
+    size_t offs;
+    mic_xml_tags_t tag;
+} xml_userdata_t;
+
+typedef struct microphone_characteristics_t
+{
+    uint32_t declared_mic_count;
+    struct audio_microphone_characteristic_t microphone[AUDIO_MICROPHONE_MAX_COUNT];
+} microphone_characteristics_t;
+
+typedef struct mic_info_t {
+    char device_id[AUDIO_MICROPHONE_ID_MAX_LEN];
+    uint32_t channel_count;
+    audio_microphone_channel_mapping_t channel_mapping[AUDIO_CHANNEL_COUNT_MAX];
+} mic_info_t;
+
+typedef struct snd_device_to_mic_map_t {
+    mic_info_t microphones[AUDIO_MICROPHONE_MAX_COUNT];
+    uint32_t mic_count;
+} snd_device_to_mic_map_t;
 
 class AudioPatch{
     public:
@@ -150,6 +190,27 @@ public:
     int  hdr_sample_rate = 0;
     int cameraOrientation = CAMERA_DEFAULT;
     bool usb_input_dev_enabled = false;
+    static bool mic_characteristics_available;
+    static microphone_characteristics_t microphones;
+    static snd_device_to_mic_map_t microphone_maps[PAL_MAX_INPUT_DEVICES];
+    static bool find_enum_by_string(const struct audio_string_to_enum * table, const char * name,
+                                    int32_t len, unsigned int *value);
+    static bool set_microphone_characteristic(struct audio_microphone_characteristic_t mic);
+    static int32_t get_microphones(struct audio_microphone_characteristic_t *mic_array, size_t *mic_count);
+    static void process_microphone_characteristics(const XML_Char **attr);
+    static bool is_input_pal_dev_id(int deviceId);
+    static void process_snd_dev(const XML_Char **attr);
+    static bool set_microphone_map(pal_device_id_t in_snd_device, const mic_info_t *info);
+    static bool is_built_in_input_dev(pal_device_id_t deviceId);
+    static void process_mic_info(const XML_Char **attr);
+    int32_t get_active_microphones(uint32_t channels, pal_device_id_t id,
+                                          struct audio_microphone_characteristic_t *mic_array,
+                                          uint32_t *mic_count);
+    static void xml_start_tag(void *userdata, const XML_Char *tag_name,
+                             const XML_Char **attr);
+    static void xml_end_tag(void *userdata, const XML_Char *tag_name);
+    static void xml_char_data_handler(void *userdata, const XML_Char *s, int len);
+    static int parse_xml();
 protected:
     AudioDevice() {}
     std::shared_ptr<AudioVoice> VoiceInit();

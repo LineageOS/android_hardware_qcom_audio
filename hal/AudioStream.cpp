@@ -52,7 +52,7 @@
 #define FLAC_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
 
 #define MAX_READ_RETRY_COUNT 25
-
+#define MAX_ACTIVE_MICROPHONES_TO_SUPPORT 10
 #define AFE_PROXY_RECORD_PERIOD_SIZE  768
 
 static bool karaoke = false;
@@ -1222,11 +1222,57 @@ static int astream_in_get_active_microphones(
                         const struct audio_stream_in *stream,
                         struct audio_microphone_characteristic_t *mic_array,
                         size_t *mic_count) {
-    std::ignore = stream;
-    std::ignore = mic_array;
-    std::ignore = mic_count;
-    AHAL_VERBOSE("get active mics not currently supported in pal");
-    return 0;
+    int noPalDevices = 0;
+    pal_device_id_t palDevs[MAX_ACTIVE_MICROPHONES_TO_SUPPORT];
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+    std::shared_ptr<StreamInPrimary> astream_in;
+    uint32_t channels = 0;
+    uint32_t in_mic_count = 0;
+    uint32_t out_mic_count = 0;
+    uint32_t total_mic_count = 0;
+    int ret = 0;
+
+    if (mic_count == NULL) {
+        AHAL_ERR("Invalid mic_count!!!");
+        ret = -EINVAL;
+        goto done;
+    }
+    if (mic_array == NULL) {
+        AHAL_ERR("Invalid mic_array!!!");
+        ret = -EINVAL;
+        goto done;
+    }
+    if (*mic_count == 0) {
+        AHAL_INFO("mic_count is ZERO!!!");
+        goto done;
+    }
+
+    in_mic_count = (uint32_t)(*mic_count);
+
+    if (adevice) {
+        astream_in = adevice->InGetStream((audio_stream_t*)stream);
+    } else {
+        AHAL_INFO("unable to get audio device");
+        goto done;
+    }
+
+    if (astream_in) {
+        channels = astream_in->GetChannelMask();
+        memset(palDevs, 0, MAX_ACTIVE_MICROPHONES_TO_SUPPORT*sizeof(pal_device_id_t));
+        if (!(astream_in->GetPalDeviceIds(palDevs, &noPalDevices))) {
+            for (int i = 0; i < noPalDevices; i++) {
+                if (total_mic_count < in_mic_count) {
+                    out_mic_count = in_mic_count - total_mic_count;
+                    if (!adevice->get_active_microphones((uint32_t)channels, palDevs[i],
+                                                        &mic_array[total_mic_count], &out_mic_count))
+                            total_mic_count += out_mic_count;
+                }
+            }
+        }
+    }
+done:
+    *mic_count = total_mic_count;
+    return ret;
 }
 
 static uint32_t astream_in_get_sample_rate(const struct audio_stream *stream) {
@@ -3136,6 +3182,24 @@ bool StreamInPrimary::isDeviceAvailable(pal_device_id_t deviceId)
     }
 
     return false;
+}
+
+int StreamInPrimary::GetPalDeviceIds(pal_device_id_t *palDevIds, int *numPalDevs)
+{
+    int noPalDevices;
+
+    if (!palDevIds || !numPalDevs)
+        return -EINVAL;
+
+    noPalDevices = getPalDeviceIds(mAndroidInDevices, mPalInDeviceIds);
+    if (noPalDevices > MAX_ACTIVE_MICROPHONES_TO_SUPPORT)
+        return -EINVAL;
+
+    *numPalDevs = noPalDevices;
+    for(int i = 0; i < noPalDevices; i++)
+        palDevIds[i] = mPalInDeviceIds[i];
+
+    return 0;
 }
 
 int StreamInPrimary::Stop() {
