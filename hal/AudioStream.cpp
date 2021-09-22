@@ -1189,16 +1189,16 @@ static uint32_t astream_in_get_input_frames_lost(
     return 0;
 }
 
-static void in_update_sink_metadata(
+static void in_update_sink_metadata_v7(
                                 struct audio_stream_in *stream,
-                                const struct sink_metadata *sink_metadata) {
+                                const struct sink_metadata_v7 *sink_metadata) {
     if (stream == NULL
             || sink_metadata == NULL
             || sink_metadata->tracks == NULL) {
         AHAL_ERR("%s: stream or sink_metadata is NULL", __func__);
         return;
     }
-    audio_devices_t device = sink_metadata->tracks->dest_device;
+    audio_devices_t device = sink_metadata->tracks->base.dest_device;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     int ret = 0;
 
@@ -3877,7 +3877,7 @@ int StreamInPrimary::FillHalFnPtrs() {
                                             astream_in_set_microphone_direction;
     stream_.get()->set_microphone_field_dimension =
                                             in_set_microphone_field_dimension;
-    stream_.get()->update_sink_metadata = in_update_sink_metadata;
+    stream_.get()->update_sink_metadata_v7 = in_update_sink_metadata_v7;
 
     return ret;
 }
