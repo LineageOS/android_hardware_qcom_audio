@@ -3028,6 +3028,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     if (usecase->out_snd_device != SND_DEVICE_NONE) {
         disable_audio_route(adev, usecase);
         disable_snd_device(adev, usecase->out_snd_device);
+        if (usecase->id == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS)
+            disable_snd_device(adev, SND_DEVICE_OUT_HAPTICS);
     }
 
     if (usecase->in_snd_device != SND_DEVICE_NONE) {
