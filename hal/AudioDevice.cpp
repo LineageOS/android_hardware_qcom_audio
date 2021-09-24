@@ -1926,7 +1926,7 @@ static int adev_open(const hw_module_t *module, const char *name __unused,
     adevice->adev_init_mutex.unlock();
 exit:
     AHAL_DBG("Exit, status %d", ret);
-    return 0;
+    return ret;
 }
 
 static struct hw_module_methods_t hal_module_methods = {
