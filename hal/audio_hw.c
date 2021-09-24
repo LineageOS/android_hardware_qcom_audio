@@ -2825,6 +2825,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                  is_single_device_type_equal(&usecase->device_list,
                                                      AUDIO_DEVICE_IN_VOICE_CALL) ||
                                  (is_single_device_type_equal(&usecase->device_list,
+                                                      AUDIO_DEVICE_IN_BUILTIN_MIC) &&
+                                  is_single_device_type_equal(&vc_usecase->device_list,
+                                                          AUDIO_DEVICE_OUT_USB_HEADSET)) ||
+                                 (is_single_device_type_equal(&usecase->device_list,
                                                      AUDIO_DEVICE_IN_USB_HEADSET) &&
                                  is_single_device_type_equal(&vc_usecase->device_list,
                                                         AUDIO_DEVICE_OUT_USB_HEADSET))||
