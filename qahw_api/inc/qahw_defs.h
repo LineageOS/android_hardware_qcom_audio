@@ -202,6 +202,9 @@ __BEGIN_DECLS
 #define QAHW_PCM_CHANNEL_RLC  15  /* Rear left of center.                          */
 #define QAHW_PCM_CHANNEL_RRC  16  /* Rear right of center.                         */
 
+/* Adapt update_device_list API */
+#define QAHW_UPDATE_DEVICE_LIST_ENABLED
+
 /* type of asynchronous write callback events. Mutually exclusive */
 typedef enum {
     QAHW_STREAM_CBK_EVENT_WRITE_READY, /* non blocking write completed */
