@@ -1522,10 +1522,19 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         } else {
             param_bt_sco.bt_sco_on = false;
 
-            // turn off BLE voice bit during sco off
+            // turn off wideband, super-wideband and BLE voice bit during sco off
+            param_bt_sco.bt_wb_speech_enabled = false;
+            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
+                                sizeof(pal_param_btsco_t));
+
             param_bt_sco.bt_lc3_speech_enabled = false;
             ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
                                 sizeof(pal_param_btsco_t));
+
+            param_bt_sco.bt_swb_speech_mode = 0xFFFF;
+            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_SWB, (void *)&param_bt_sco,
+                                sizeof(pal_param_btsco_t));
+
         }
 
         // clear btsco_lc3_cfg whenever there's sco state change to
