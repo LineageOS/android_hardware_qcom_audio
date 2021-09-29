@@ -152,8 +152,9 @@ int32_t fm_start(std::shared_ptr<AudioDevice> adev __unused, int device_id)
         return -EINVAL;
     }
 
-    ch_info.channels = 1;
+    ch_info.channels = CHANNELS;
     ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
+    ch_info.ch_map[1] = PAL_CHMAP_CHANNEL_FR;
 
     stream_attr.type = PAL_STREAM_LOOPBACK;
     stream_attr.info.opt_stream_info.loopback_type = PAL_STREAM_LOOPBACK_FM;
