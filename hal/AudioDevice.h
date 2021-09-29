@@ -234,4 +234,38 @@ protected:
     int add_input_headset_if_usb_out_headset(int *device_count,  pal_device_id_t** pal_device_ids);
 };
 
+static inline uint32_t lcm(uint32_t num1, uint32_t num2)
+{
+    uint32_t high = num1, low = num2, temp = 0;
+
+    if (!num1 || !num2)
+        return 0;
+
+    if (num1 < num2) {
+         high = num2;
+         low = num1;
+    }
+
+    while (low != 0) {
+        temp = low;
+        low = high % low;
+        high = temp;
+    }
+    return (num1 * num2)/high;
+}
+
+static inline uint32_t nearest_multiple(uint32_t num, uint32_t multiplier)
+{
+    uint32_t remainder = 0;
+
+    if (!multiplier)
+        return num;
+
+    remainder = num % multiplier;
+    if (remainder)
+        num += (multiplier - remainder);
+
+    return num;
+}
+
 #endif //ANDROID_HARDWARE_AHAL_ADEVICE_H_
