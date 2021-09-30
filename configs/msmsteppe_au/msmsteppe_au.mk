@@ -287,7 +287,7 @@ vendor.audio.use.sw.ape.decoder=true
 
 #enable hw aac encoder by default
 PRODUCT_PROPERTY_OVERRIDES += \
-vendor.audio.hw.aac.encoder=true
+vendor.audio.hw.aac.encoder=false
 
 #force offload using hardware decoders for FLAC, WMA & APE
 PRODUCT_PROPERTY_OVERRIDES += \
