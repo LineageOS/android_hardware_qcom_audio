@@ -2031,12 +2031,12 @@
         <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
     </path>
 
-   <path name="speaker-vbat-mono">
+   <path name="speaker-mono-vbat">
        <path name="speaker-mono" />
        <ctl name="WSA_RX INT0 VBAT WSA RX0 VBAT Enable" value="1" />
    </path>
 
-   <path name="speaker-vbat-mono-2">
+   <path name="speaker-mono-2-vbat">
        <path name="speaker-mono-2" />
        <ctl name="WSA_RX INT1 VBAT WSA RX1 VBAT Enable" value="1" />
    </path>
@@ -2061,6 +2061,22 @@
 
     <path name="speaker-safe">
         <path name="speaker-mono"/>
+    </path>
+
+    <path name="speaker-hdk-vbat">
+        <path name="speaker-mono-vbat" />
+    </path>
+
+    <path name="speaker-fluid-vbat">
+        <path name="speaker-mono-vbat" />
+    </path>
+
+    <path name="speaker-liquid-vbat">
+        <path name="speaker-vbat" />
+    </path>
+
+    <path name="speaker-safe-vbat">
+        <path name="speaker-mono-vbat"/>
     </path>
 
    <path name="sidetone-iir">
@@ -2135,6 +2151,10 @@
     <path name="voice-speaker-2-protected-vbat">
         <path name="voice-speaker-2-protected" />
         <ctl name="WSA_RX INT1 VBAT WSA RX1 VBAT Enable" value="1" />
+    </path>
+
+    <path name="voice-speaker-stereo-protected-vbat">
+        <path name="speaker-protected-vbat" />
     </path>
 
     <path name="vi-feedback">
@@ -2294,11 +2314,23 @@
     </path>
 
     <path name="voice-speaker-vbat">
-        <path name="speaker-vbat-mono" />
+        <path name="speaker-mono-vbat" />
+    </path>
+
+    <path name="voice-speaker-stereo-vbat">
+        <path name="speaker-vbat" />
     </path>
 
     <path name="voice-speaker-2-vbat">
-        <path name="speaker-vbat-mono-2" />
+        <path name="speaker-mono-2-vbat" />
+    </path>
+
+    <path name="voice-speaker-hdk">
+        <path name="speaker-mono-vbat" />
+    </path>
+
+    <path name="voice-speaker-fluid">
+        <path name="speaker-fluid-vbat" />
     </path>
 
     <path name="voice-speaker-mic">
