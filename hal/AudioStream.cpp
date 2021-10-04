@@ -1268,7 +1268,8 @@ static int astream_in_get_active_microphones(
         }
     }
 done:
-    *mic_count = total_mic_count;
+    if (NULL != mic_count)
+        *mic_count = total_mic_count;
     return ret;
 }
 

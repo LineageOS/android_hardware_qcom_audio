@@ -1159,7 +1159,7 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* strea
 }
 
 int AudioDevice::SetMicMute(bool state) {
-    int ret;
+    int ret = 0;
     std::shared_ptr<StreamInPrimary> astream_in;
     mute_ = state;
 
@@ -1175,7 +1175,7 @@ int AudioDevice::SetMicMute(bool state) {
     }
 
     AHAL_DBG("exit: ret %d", ret);
-    return 0;
+    return ret;
 }
 
 int AudioDevice::GetMicMute(bool *state) {
