@@ -17,6 +17,13 @@ MM_AUDIO += liblsmclient
 MM_AUDIO += libcapiv2svacnn
 MM_AUDIO += libcapiv2vop
 MM_AUDIO += libcapiv2svarnn
+MM_AUDIO += liblistensoundmodel2vendor
+MM_AUDIO += libsvacnnvendor
+MM_AUDIO += libsvarnncnnvendor
+MM_AUDIO += libcapiv2svacnnvendor
+MM_AUDIO += libcapiv2vopvendor
+MM_AUDIO += libcapiv2svarnnvendor
+MM_AUDIO += libpdksvavendor
 MM_AUDIO += liblisten
 MM_AUDIO += liblistenhardware
 MM_AUDIO += STApp
@@ -82,6 +89,24 @@ MM_AUDIO += libmediaplayerservice
 MM_AUDIO += libaudiohal_deathhandler
 MM_AUDIO += libstagefright_httplive
 MM_AUDIO += libautohal
+MM_AUDIO += MTP_Bluetooth_cal.acdb
+MM_AUDIO += MTP_Codec_cal.acdb
+MM_AUDIO += MTP_General_cal.acdb
+MM_AUDIO += MTP_Global_cal.acdb
+MM_AUDIO += MTP_Handset_cal.acdb
+MM_AUDIO += MTP_Hdmi_cal.acdb
+MM_AUDIO += MTP_Headset_cal.acdb
+MM_AUDIO += MTP_Speaker_cal.acdb
+MM_AUDIO += MTP_workspaceFile.qwsp
+MM_AUDIO += QRD_Bluetooth_cal.acdb
+MM_AUDIO += QRD_Codec_cal.acdb
+MM_AUDIO += QRD_General_cal.acdb
+MM_AUDIO += QRD_Global_cal.acdb
+MM_AUDIO += QRD_Handset_cal.acdb
+MM_AUDIO += QRD_Hdmi_cal.acdb
+MM_AUDIO += QRD_Headset_cal.acdb
+MM_AUDIO += QRD_Speaker_cal.acdb
+MM_AUDIO += QRD_workspaceFile.qwsp
 ifeq ($(TARGET_BOARD_AUTO),true)
 MM_AUDIO += adsp_avs_config.acdb
 MM_AUDIO += Bluetooth_cal.acdb
@@ -164,6 +189,12 @@ PRODUCT_PACKAGES_DEBUG += $(MM_AUDIO_DBG)
 # ------
 TARGET_USES_AOSP := true
 TARGET_USES_AOSP_FOR_AUDIO := true
+
+# sdm845 specific rules
+ifeq ($(TARGET_BOARD_PLATFORM),sdm845)
+TARGET_USES_AOSP := false
+TARGET_USES_AOSP_FOR_AUDIO := false
+endif
 
 # Audio configuration file
 ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),msmnile_au)
