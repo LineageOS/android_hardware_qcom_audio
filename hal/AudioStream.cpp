@@ -337,11 +337,11 @@ static int astream_out_create_mmap_buffer(const struct audio_stream_out *stream,
     }
 
     if (info == NULL || !(min_size_frames > 0 && min_size_frames < INT32_MAX)) {
-        AHAL_ERR("info = %p, min_size_frames = %d", info, min_size_frames);
+        AHAL_ERR("invalid field info = %p, min_size_frames = %d", info, min_size_frames);
         return -EINVAL;
     }
     if (astream_out->GetUseCase() != USECASE_AUDIO_PLAYBACK_MMAP) {
-         AHAL_ERR("usecase = %d", astream_out->GetUseCase());
+         AHAL_ERR("invalid usecase = %d", astream_out->GetUseCase());
          return -ENOSYS;
     }
 
@@ -369,7 +369,7 @@ static int astream_out_get_mmap_position(const struct audio_stream_out *stream,
         return -EINVAL;
     }
     if (astream_out->GetUseCase() != USECASE_AUDIO_PLAYBACK_MMAP) {
-         AHAL_ERR("usecase = %d", astream_out->GetUseCase());
+         AHAL_ERR("invalid usecase = %d", astream_out->GetUseCase());
          return -ENOSYS;
     }
 
@@ -542,7 +542,7 @@ static int astream_set_callback(struct audio_stream_out *stream, stream_callback
     std::shared_ptr<StreamOutPrimary> astream_out;
 
     if (!callback) {
-        AHAL_ERR("NULL Callback passed");
+        AHAL_ERR("error: NULL Callback passed");
         return -EINVAL;
     }
 
@@ -670,7 +670,7 @@ static int astream_out_get_presentation_position(
         return -EINVAL;
     }
     if (!timestamp) {
-       AHAL_ERR("timestamp NULL");
+       AHAL_ERR("error: timestamp NULL");
        return -EINVAL;
     }
     if (astream_out) {
@@ -775,6 +775,8 @@ static char* astream_out_get_parameters(const struct audio_stream *stream,
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     struct str_parms *reply = str_parms_create();
 
+    AHAL_DBG("enter");
+
     if (!query || !reply) {
         if (reply)
             str_parms_destroy(reply);
@@ -832,7 +834,7 @@ error:
     str_parms_destroy(query);
     str_parms_destroy(reply);
 
-    AHAL_ERR("exit: returns - %s", str);
+    AHAL_DBG("exit: returns - %s", str);
     return str;
 }
 
@@ -970,11 +972,11 @@ static int astream_in_create_mmap_buffer(const struct audio_stream_in *stream,
     }
 
     if (info == NULL || !(min_size_frames > 0 && min_size_frames < INT32_MAX)) {
-        AHAL_ERR("info = %p, min_size_frames = %d", info, min_size_frames);
+        AHAL_ERR("invalid field info = %p, min_size_frames = %d", info, min_size_frames);
         return -EINVAL;
     }
     if (astream_in->GetUseCase() != USECASE_AUDIO_RECORD_MMAP) {
-         AHAL_ERR("usecase = %d", astream_in->GetUseCase());
+         AHAL_ERR("invalid usecase = %d", astream_in->GetUseCase());
          return -ENOSYS;
     }
 
@@ -1276,7 +1278,6 @@ done:
 static uint32_t astream_in_get_sample_rate(const struct audio_stream *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
-    AHAL_ERR("Inside");
 
     if (adevice) {
         astream_in = adevice->InGetStream((audio_stream_t*)stream);
@@ -1392,7 +1393,7 @@ static char* astream_in_get_parameters(const struct audio_stream *stream,
     struct str_parms *reply = str_parms_create();
     int ret = 0;
 
-
+    AHAL_DBG("enter");
     if (!query || !reply) {
         if (reply)
             str_parms_destroy(reply);
@@ -1422,7 +1423,7 @@ error:
     str_parms_destroy(query);
     str_parms_destroy(reply);
 
-    AHAL_ERR("exit: returns - %s", str);
+    AHAL_DBG("exit: returns - %s", str);
     return str;
 }
 
@@ -1556,7 +1557,7 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
             AUDIO_INPUT_FLAG_SYNC        = 0x8,
             AUDIO_INPUT_FLAG_HW_AV_SYNC = 0x40,
             */
-            AHAL_ERR("flag %#x is not supported from PAL." ,
+            AHAL_ERR("error flag %#x is not supported from PAL." ,
                       halStreamFlags);
             break;
     }
@@ -1656,7 +1657,7 @@ int StreamOutPrimary::GetMmapPosition(struct audio_mmap_position *position)
     int32_t ret = 0;
 
     if (pal_stream_handle_ == nullptr) {
-        AHAL_ERR("pal handle is null\n");
+        AHAL_ERR("error pal handle is null\n");
         return -EINVAL;
     }
 
@@ -1697,7 +1698,7 @@ int StreamOutPrimary::CreateMmapBuffer(int32_t min_size_frames,
     struct pal_mmap_buffer palMmapBuf;
 
     if (pal_stream_handle_) {
-        AHAL_ERR("pal handle already created\n");
+        AHAL_ERR("error pal handle already created\n");
         return -EINVAL;
     }
 
@@ -2044,7 +2045,7 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     if (ret >= 0) {
         adevice->dp_controller = controller;
         adevice->dp_stream = stream;
-        AHAL_ERR("plugin device cont %d stream %d",controller, stream);
+        AHAL_ERR("error %d, plugin device cont %d stream %d", ret, controller, stream);
     }
 
     //TBD: check if its offload and check call the following
@@ -2068,7 +2069,7 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     }
     sendGaplessMetadata = true;
 error:
-    AHAL_ERR("exit %d", ret);
+    AHAL_DBG("exit %d", ret);
     return ret;
 }
 
@@ -2704,7 +2705,7 @@ ssize_t StreamOutPrimary::onWriteError(size_t bytes, size_t ret) {
         uint32_t frameSize = byteWidth * channelCount;
 
         if (frameSize == 0 || sampleRate == 0) {
-            AHAL_ERR("frameSize=%d, sampleRate=%d", frameSize, sampleRate);
+            AHAL_ERR("invalid frameSize=%d, sampleRate=%d", frameSize, sampleRate);
             return -EINVAL;
         } else {
             usleep((uint64_t)bytes * 1000000 / frameSize / sampleRate);
@@ -2747,7 +2748,7 @@ ssize_t StreamOutPrimary::configurePalOutputStream() {
             ATRACE_END();
             if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS &&
                 pal_haptics_stream_handle) {
-                AHAL_ERR("Close haptics stream");
+                AHAL_DBG("Close haptics stream");
                 pal_stream_close(pal_haptics_stream_handle);
                 pal_haptics_stream_handle = NULL;
             }
@@ -2911,7 +2912,7 @@ int StreamOutPrimary::StartOffloadEffects(
             AHAL_ERR("failed to start offload effect.");
         }
     } else {
-        AHAL_ERR("function pointer is null.");
+        AHAL_ERR("error function pointer is null.");
         return -EINVAL;
     }
 
@@ -2928,7 +2929,7 @@ int StreamOutPrimary::StopOffloadEffects(
             AHAL_ERR("failed to stop offload effect.\n");
         }
     } else {
-        AHAL_ERR("function pointer is null.");
+        AHAL_ERR("error function pointer is null.");
         return -EINVAL;
     }
 
@@ -3236,7 +3237,7 @@ int StreamInPrimary::CreateMmapBuffer(int32_t min_size_frames,
     struct pal_mmap_buffer palMmapBuf;
 
     if (pal_stream_handle_) {
-        AHAL_ERR("pal handle already created\n");
+        AHAL_ERR("error pal handle already created\n");
         return -EINVAL;
     }
 
@@ -3267,7 +3268,7 @@ int StreamInPrimary::GetMmapPosition(struct audio_mmap_position *position)
     int32_t ret = 0;
 
     if (pal_stream_handle_ == nullptr) {
-        AHAL_ERR("pal handle is null\n");
+        AHAL_ERR("error pal handle is null\n");
         return -EINVAL;
     }
 
@@ -3544,7 +3545,7 @@ int StreamInPrimary::SetParameters(const char* kvpairs) {
 
     str_parms_destroy(parms);
 exit:
-   AHAL_ERR("exit %d", ret);
+   AHAL_DBG("exit %d", ret);
    return ret;
 }
 
@@ -3818,7 +3819,7 @@ ssize_t StreamInPrimary::onReadError(size_t bytes, size_t ret) {
     uint32_t frameSize = byteWidth * channelCount;
 
     if (frameSize == 0 || sampleRate == 0) {
-        AHAL_ERR("frameSize=%d, sampleRate=%d", frameSize, sampleRate);
+        AHAL_ERR("invalid frameSize=%d, sampleRate=%d", frameSize, sampleRate);
         return -EINVAL;
     } else {
         usleep((uint64_t)bytes * 1000000 / frameSize / sampleRate);
@@ -4106,7 +4107,7 @@ StreamPrimary::StreamPrimary(audio_io_handle_t handle,
 {
     memset(&streamAttributes_, 0, sizeof(streamAttributes_));
     memset(&address_, 0, sizeof(address_));
-    AHAL_ERR("handle: %d channel_mask: %d ", handle_, config_.channel_mask);
+    AHAL_DBG("handle: %d channel_mask: %d ", handle_, config_.channel_mask);
 }
 
 StreamPrimary::~StreamPrimary(void)

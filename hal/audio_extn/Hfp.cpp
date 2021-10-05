@@ -87,11 +87,11 @@ static int32_t hfp_set_volume(float value)
     hfpmod.hfp_volume = value;
 
     if (value < 0.0) {
-        ALOGW("(%f) Under 0.0, assuming 0.0\n", value);
+        AHAL_DBG("(%f) Under 0.0, assuming 0.0\n", value);
         value = 0.0;
     } else {
         value = ((value > 15.000000) ? 1.0 : (value / 15));
-        ALOGW("Volume brought with in range (%f)\n", value);
+        AHAL_DBG("Volume brought with in range (%f)\n", value);
     }
     vol  = lrint((value * 0x2000) + 0.5);
 
@@ -137,11 +137,11 @@ static int hfp_set_mic_volume(float value)
     }
 
     if (value < 0.0) {
-        ALOGW("(%f) Under 0.0, assuming 0.0\n", value);
+        AHAL_DBG("(%f) Under 0.0, assuming 0.0\n", value);
         value = 0.0;
     } else if (value > CAPTURE_VOLUME_DEFAULT) {
         value = CAPTURE_VOLUME_DEFAULT;
-        ALOGW("Volume brought within range (%f)\n", value);
+        AHAL_DBG("Volume brought within range (%f)\n", value);
     }
 
     value = value / CAPTURE_VOLUME_DEFAULT;

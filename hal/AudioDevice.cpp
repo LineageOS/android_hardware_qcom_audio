@@ -375,7 +375,7 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::CreateStreamOut(
     astream->GetStreamHandle(stream_out);
     out_list_mutex.lock();
     stream_out_list_.push_back(astream);
-    AHAL_ERR("output stream %d %p",(int)stream_out_list_.size(), stream_out);
+    AHAL_DBG("output stream %d %p",(int)stream_out_list_.size(), stream_out);
     if (flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
         if (voice_)
             voice_->stream_out_primary_ = astream;
@@ -418,7 +418,7 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
     }
 
     if (sources.size() > 1) {
-        AHAL_ERR("Multiple sources are not supported");
+        AHAL_ERR("error multiple sources are not supported");
         ret = -EINVAL;
         goto exit;
     }
@@ -440,7 +440,7 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
                   This space will need changes if audio HAL
                   handles device to device patches in the future.*/
                 patch_type = AudioPatch::PATCH_DEVICE_LOOPBACK;
-                AHAL_ERR("Device to device patches not supported");
+                AHAL_ERR("error device to device patches not supported");
                 ret = -ENOSYS;
                 goto exit;
             }
@@ -527,7 +527,7 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle) {
     patch_map_mutex.lock();
     auto patch_it = patch_map_.find(handle);
     if (patch_it == patch_map_.end() || !patch_it->second) {
-        AHAL_ERR("Patch info not found with handle %d", handle);
+        AHAL_ERR("error patch info not found with handle %d", handle);
         patch_map_mutex.unlock();
         return -EINVAL;
     }
@@ -674,7 +674,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     if (AudioDevice::sndCardState == CARD_STATUS_OFFLINE &&
         (flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD ||
         flags & AUDIO_OUTPUT_FLAG_DIRECT)) {
-        AHAL_ERR("sound card offline");
+        AHAL_ERR("error: sound card offline");
         ret = -ENODEV;
         goto exit;
     }
@@ -1407,7 +1407,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         }
         break;
         default:
-            AHAL_ERR("unexpected rotation of %d", val);
+            AHAL_ERR("error unexpected rotation of %d", val);
             isRotationReq = -EINVAL;
         }
         if (1 == isRotationReq) {
@@ -1807,7 +1807,7 @@ char* AudioDevice::GetParameters(const char *keys) {
                             (void **)&param_bt_a2dp, &size, nullptr);
         if (!ret) {
             if (size < sizeof(pal_param_bta2dp_t)) {
-                AHAL_ERR("Size returned is smaller for BT_A2DP_RECONFIG_SUPPORTED");
+                AHAL_ERR("size returned is smaller for BT_A2DP_RECONFIG_SUPPORTED");
                 goto exit;
             }
             val = param_bt_a2dp->reconfig_supported;
@@ -1948,7 +1948,7 @@ int AudioDevice::GetPalDeviceIds(const std::set<audio_devices_t>& hal_device_ids
                     it->first, it->second);
             if (it->second == PAL_DEVICE_OUT_AUX_DIGITAL ||
                     it->second == PAL_DEVICE_OUT_HDMI) {
-               AHAL_ERR("dp_controller: %d dp_stream: %d",
+               AHAL_DBG("dp_controller: %d dp_stream: %d",
                        dp_controller, dp_stream);
                if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
                   pal_device_id[device_count] = PAL_DEVICE_OUT_AUX_DIGITAL_1;

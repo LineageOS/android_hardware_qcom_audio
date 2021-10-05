@@ -90,7 +90,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
         if (err >= 0) {
             call_state = value;
         } else {
-            AHAL_ERR("call_state key not found");
+            AHAL_ERR("error call_state key not found");
             ret = -EINVAL;
             goto done;
         }
@@ -257,7 +257,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
                 dir = PAL_AUDIO_OUTPUT;
             }
         } else {
-            AHAL_ERR("direction key not found");
+            AHAL_ERR("error direction key not found");
             ret = -EINVAL;
             goto done;
         }
