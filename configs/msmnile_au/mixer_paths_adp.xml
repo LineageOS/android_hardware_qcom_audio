@@ -1336,6 +1336,7 @@
     <path name="audio-record">
         <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
         <ctl name="MultiMedia1 Mixer TERT_TDM_TX_0" value="1" />
+        <ctl name="TERT_TDM_TX_0 ADM Channels" value="Four" />
     </path>
 
     <path name="front-passenger-record">
@@ -1647,12 +1648,14 @@
     </path>
 
     <path name="hfp-sco bt-sco">
-        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
+        <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
+        <ctl name="TERT_TDM_TX_0 ADM Channels" value="One" />
         <path name="hfp-sco" />
     </path>
 
     <path name="hfp-sco bt-sco-mmsecns">
         <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
+        <ctl name="TERT_TDM_TX_0 ADM Channels" value="Four" />
         <path name="hfp-sco" />
     </path>
 
@@ -1662,12 +1665,14 @@
     </path>
 
     <path name="hfp-sco-wb bt-sco-wb">
-        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
+        <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
+        <ctl name="TERT_TDM_TX_0 ADM Channels" value="One" />
         <path name="hfp-sco-wb" />
     </path>
 
     <path name="hfp-sco-wb bt-sco-mmsecns">
         <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
+        <ctl name="TERT_TDM_TX_0 ADM Channels" value="Four" />
         <path name="hfp-sco-wb" />
     </path>
 
