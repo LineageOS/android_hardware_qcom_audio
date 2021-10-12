@@ -203,11 +203,11 @@
     <ctl name="HPHL Volume" value="20" />
     <ctl name="HPHR Volume" value="20" />
 
-    <ctl name="TX_DEC0 Volume" value="96" />
-    <ctl name="TX_DEC1 Volume" value="96" />
-    <ctl name="TX_DEC2 Volume" value="96" />
-    <ctl name="TX_DEC3 Volume" value="96" />
-    <ctl name="TX_DEC4 Volume" value="96" />
+    <ctl name="TX_DEC0 Volume" value="84" />
+    <ctl name="TX_DEC1 Volume" value="84" />
+    <ctl name="TX_DEC2 Volume" value="84" />
+    <ctl name="TX_DEC3 Volume" value="84" />
+    <ctl name="TX_DEC4 Volume" value="84" />
     <ctl name="TX_DEC5 Volume" value="84" />
     <ctl name="TX_DEC6 Volume" value="84" />
     <ctl name="TX_DEC7 Volume" value="84" />
@@ -1374,15 +1374,15 @@
     <path name="audio-record usb-headset-mic">
     </path>
 
-    <path name="audio-record bt-sco">
+    <path name="audio-record bt-sco-mic">
     </path>
 
-    <path name="audio-record bt-sco-wb">
-        <path name="audio-record bt-sco" />
+    <path name="audio-record bt-sco-mic-wb">
+        <path name="audio-record bt-sco-mic" />
     </path>
 
-    <path name="audio-record bt-sco-swb">
-        <path name="audio-record bt-sco" />
+    <path name="audio-record bt-sco-mic-swb">
+        <path name="audio-record bt-sco-mic" />
     </path>
 
     <path name="audio-record headset-mic">
@@ -1394,15 +1394,15 @@
     <path name="audio-record-compress">
     </path>
 
-    <path name="audio-record-compress bt-sco">
+    <path name="audio-record-compress bt-sco-mic">
     </path>
 
-    <path name="audio-record-compress bt-sco-wb">
-        <path name="audio-record-compress bt-sco" />
+    <path name="audio-record-compress bt-sco-mic-wb">
+        <path name="audio-record-compress bt-sco-mic" />
     </path>
 
-    <path name="audio-record-compress bt-sco-swb">
-        <path name="audio-record-compress bt-sco" />
+    <path name="audio-record-compress bt-sco-mic-swb">
+        <path name="audio-record-compress bt-sco-mic" />
     </path>
 
     <path name="audio-record-compress usb-headset-mic">
@@ -1414,15 +1414,15 @@
     <path name="audio-record-compress2">
     </path>
 
-    <path name="audio-record-compress2 bt-sco">
+    <path name="audio-record-compress2 bt-sco-mic">
     </path>
 
-    <path name="audio-record-compress2 bt-sco-wb">
-        <path name="audio-record-compress2 bt-sco" />
+    <path name="audio-record-compress2 bt-sco-mic-wb">
+        <path name="audio-record-compress2 bt-sco-mic" />
     </path>
 
-    <path name="audio-record-compress2 bt-sco-swb">
-        <path name="audio-record-compress2 bt-sco" />
+    <path name="audio-record-compress2 bt-sco-mic-swb">
+        <path name="audio-record-compress2 bt-sco-mic" />
     </path>
 
     <path name="audio-record-compress2 usb-headset-mic">
@@ -1434,15 +1434,15 @@
     <path name="low-latency-record">
     </path>
 
-    <path name="low-latency-record bt-sco">
+    <path name="low-latency-record bt-sco-mic">
     </path>
 
-    <path name="low-latency-record bt-sco-wb">
-        <path name="low-latency-record bt-sco" />
+    <path name="low-latency-record bt-sco-mic-wb">
+        <path name="low-latency-record bt-sco-mic" />
     </path>
 
-    <path name="low-latency-record bt-sco-swb">
-        <path name="low-latency-record bt-sco" />
+    <path name="low-latency-record bt-sco-mic-swb">
+        <path name="low-latency-record bt-sco-mic" />
     </path>
 
     <path name="low-latency-record usb-headset-mic">
@@ -1470,15 +1470,15 @@
     <path name="incall-rec-uplink">
     </path>
 
-    <path name="incall-rec-uplink bt-sco">
+    <path name="incall-rec-uplink bt-sco-mic">
         <path name="incall-rec-uplink" />
     </path>
 
-    <path name="incall-rec-uplink bt-sco-wb">
+    <path name="incall-rec-uplink bt-sco-mic-wb">
         <path name="incall-rec-uplink" />
     </path>
 
-    <path name="incall-rec-uplink bt-sco-swb">
+    <path name="incall-rec-uplink bt-sco-mic-swb">
         <path name="incall-rec-uplink" />
     </path>
 
@@ -1501,15 +1501,15 @@
     <path name="incall-rec-uplink-compress">
     </path>
 
-    <path name="incall-rec-uplink-compress bt-sco">
+    <path name="incall-rec-uplink-compress bt-sco-mic">
         <path name="incall-rec-uplink-compress" />
     </path>
 
-    <path name="incall-rec-uplink-compress bt-sco-wb">
+    <path name="incall-rec-uplink-compress bt-sco-mic-wb">
         <path name="incall-rec-uplink-compress" />
     </path>
 
-    <path name="incall-rec-uplink-compress bt-sco-swb">
+    <path name="incall-rec-uplink-compress bt-sco-mic-swb">
         <path name="incall-rec-uplink-compress" />
     </path>
 
@@ -1528,15 +1528,15 @@
     <path name="incall-rec-downlink">
     </path>
 
-    <path name="incall-rec-downlink bt-sco">
+    <path name="incall-rec-downlink bt-sco-mic">
         <path name="incall-rec-downlink" />
     </path>
 
-    <path name="incall-rec-downlink bt-sco-wb">
+    <path name="incall-rec-downlink bt-sco-mic-wb">
         <path name="incall-rec-downlink" />
     </path>
 
-    <path name="incall-rec-downlink bt-sco-swb">
+    <path name="incall-rec-downlink bt-sco-mic-swb">
         <path name="incall-rec-downlink" />
     </path>
 
@@ -1559,15 +1559,15 @@
     <path name="incall-rec-downlink-compress">
     </path>
 
-    <path name="incall-rec-downlink-compress bt-sco">
+    <path name="incall-rec-downlink-compress bt-sco-mic">
         <path name="incall-rec-downlink-compress" />
     </path>
 
-    <path name="incall-rec-downlink-compress bt-sco-wb">
+    <path name="incall-rec-downlink-compress bt-sco-mic-wb">
         <path name="incall-rec-downlink-compress" />
     </path>
 
-    <path name="incall-rec-downlink-compress bt-sco-swb">
+    <path name="incall-rec-downlink-compress bt-sco-mic-swb">
         <path name="incall-rec-downlink-compress" />
     </path>
 
@@ -1588,15 +1588,15 @@
         <path name="incall-rec-downlink" />
     </path>
 
-    <path name="incall-rec-uplink-and-downlink bt-sco">
+    <path name="incall-rec-uplink-and-downlink bt-sco-mic">
         <path name="incall-rec-uplink-and-downlink" />
     </path>
 
-    <path name="incall-rec-uplink-and-downlink bt-sco-wb">
+    <path name="incall-rec-uplink-and-downlink bt-sco-mic-wb">
         <path name="incall-rec-uplink-and-downlink" />
     </path>
 
-    <path name="incall-rec-uplink-and-downlink bt-sco-swb">
+    <path name="incall-rec-uplink-and-downlink bt-sco-mic-swb">
         <path name="incall-rec-uplink-and-downlink" />
     </path>
 
@@ -1621,15 +1621,15 @@
         <path name="incall-rec-downlink-compress" />
     </path>
 
-    <path name="incall-rec-uplink-and-downlink-compress bt-sco">
+    <path name="incall-rec-uplink-and-downlink-compress bt-sco-mic">
         <path name="incall-rec-uplink-and-downlink-compress" />
     </path>
 
-    <path name="incall-rec-uplink-and-downlink-compress bt-sco-wb">
+    <path name="incall-rec-uplink-and-downlink-compress bt-sco-mic-wb">
         <path name="incall-rec-uplink-and-downlink-compress" />
     </path>
 
-    <path name="incall-rec-uplink-and-downlink-compress bt-sco-swb">
+    <path name="incall-rec-uplink-and-downlink-compress bt-sco-mic-swb">
         <path name="incall-rec-uplink-and-downlink-compress" />
     </path>
 
@@ -1842,15 +1842,15 @@
     <path name="audio-record-voip usb-headset-mic">
     </path>
 
-    <path name="audio-record-voip bt-sco">
+    <path name="audio-record-voip bt-sco-mic">
     </path>
 
-    <path name="audio-record-voip bt-sco-wb">
-        <path name="audio-record-voip bt-sco" />
+    <path name="audio-record-voip bt-sco-mic-wb">
+        <path name="audio-record-voip bt-sco-mic" />
     </path>
 
-    <path name="audio-record-voip bt-sco-swb">
-        <path name="audio-record-voip bt-sco" />
+    <path name="audio-record-voip bt-sco-mic-swb">
+        <path name="audio-record-voip bt-sco-mic" />
     </path>
 
     <path name="audio-record-voip headset-mic">
@@ -2008,12 +2008,12 @@
         <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
     </path>
 
-    <path name="speaker-vbat-mono">
+    <path name="speaker-mono-vbat">
        <path name="speaker-mono" />
        <ctl name="WSA_RX INT0 VBAT WSA RX0 VBAT Enable" value="1" />
     </path>
 
-    <path name="speaker-vbat-mono-2">
+    <path name="speaker-mono-2-vbat">
        <path name="speaker-mono-2" />
        <ctl name="WSA_RX INT1 VBAT WSA RX1 VBAT Enable" value="1" />
     </path>
@@ -2038,6 +2038,22 @@
 
     <path name="speaker-safe">
         <path name="speaker-mono"/>
+    </path>
+
+    <path name="speaker-hdk-vbat">
+        <path name="speaker-mono-vbat" />
+    </path>
+
+    <path name="speaker-fluid-vbat">
+        <path name="speaker-mono-vbat" />
+    </path>
+
+    <path name="speaker-liquid-vbat">
+        <path name="speaker-vbat" />
+    </path>
+
+    <path name="speaker-safe-vbat">
+        <path name="speaker-mono-vbat"/>
     </path>
 
     <path name="sidetone-iir">
@@ -2113,6 +2129,10 @@
     <path name="voice-speaker-2-protected-vbat">
         <path name="voice-speaker-2-protected" />
         <ctl name="WSA_RX INT1 VBAT WSA RX1 VBAT Enable" value="1" />
+    </path>
+
+    <path name="voice-speaker-stereo-protected-vbat">
+        <path name="speaker-protected-vbat" />
     </path>
 
     <path name="vi-feedback">
@@ -2257,11 +2277,24 @@
     </path>
 
     <path name="voice-speaker-vbat">
-        <path name="speaker-vbat-mono" />
+        <path name="speaker-mono-vbat" />
+    </path>
+
+    <path name="voice-speaker-stereo-vbat">
+        <ctl name="WSA_RX0 Digital Volume" value="60" />
+        <path name="speaker-vbat" />
     </path>
 
     <path name="voice-speaker-2-vbat">
-        <path name="speaker-vbat-mono-2" />
+        <path name="speaker-mono-2-vbat" />
+    </path>
+
+    <path name="voice-speaker-hdk-vbat">
+        <path name="speaker-mono-vbat" />
+    </path>
+
+    <path name="voice-speaker-fluid-vbat">
+        <path name="speaker-fluid-vbat" />
     </path>
 
     <path name="voice-speaker-mic">
@@ -2361,19 +2394,19 @@
         <path name="handset-mic" />
     </path>
 
-    <path name="bt-sco-headset">
+    <path name="bt-sco">
     </path>
 
     <path name="bt-sco-mic">
     </path>
 
-    <path name="bt-sco-headset-wb">
+    <path name="bt-sco-wb">
     </path>
 
     <path name="bt-sco-mic-wb">
     </path>
 
-    <path name="bt-sco-headset-swb">
+    <path name="bt-sco-swb">
     </path>
 
     <path name="bt-sco-mic-swb">
@@ -3003,6 +3036,9 @@
     <path name="bt-a2dp">
     </path>
 
+    <path name="bt-a2dp-mic">
+    </path>
+
     <path name="speaker-and-bt-a2dp">
         <path name="speaker" />
         <path name="bt-a2dp" />
@@ -3211,15 +3247,15 @@
     <path name="mmap-record">
     </path>
 
-    <path name="mmap-record bt-sco">
+    <path name="mmap-record bt-sco-mic">
     </path>
 
-    <path name="mmap-record bt-sco-wb">
-        <path name="mmap-record bt-sco" />
+    <path name="mmap-record bt-sco-mic-wb">
+        <path name="mmap-record bt-sco-mic" />
     </path>
 
-    <path name="mmap-record bt-sco-swb">
-        <path name="mmap-record bt-sco" />
+    <path name="mmap-record bt-sco-mic-swb">
+        <path name="mmap-record bt-sco-mic" />
     </path>
 
     <path name="mmap-record capture-fm">

@@ -412,7 +412,7 @@ int AudioExtn::hfp_feature_init(bool is_feature_enabled)
         hfp_lib_handle = dlopen(HFP_LIB_PATH, RTLD_NOW);
 
         if (!hfp_lib_handle) {
-            ALOGE("%s: dlopen failed with: %s", __func__, dlerror());
+            AHAL_ERR("dlopen failed with: %s", dlerror());
             goto feature_disabled;
         }
 
@@ -663,14 +663,14 @@ int AudioExtn::audio_extn_hidl_init() {
 #ifdef PAL_HIDL_ENABLED
    /* register audio PAL HIDL */
     sp<IPAL> service = new PAL();
-    ALOGE("Register PAL service");
+    AHAL_ERR("Register PAL service");
     /*
      *We request for more threads as the same number of threads would be divided
      *between PAL and audio HAL HIDL
      */
     configureRpcThreadpool(32, false /*callerWillJoin*/);
     if(android::OK !=  service->registerAsService())
-        ALOGW("Could not register AHAL extension");
+        AHAL_ERR("Could not register AHAL extension");
 #endif
     /* to register other hidls */
     return 0;
@@ -685,14 +685,14 @@ static void* libfm;
 void AudioExtn::audio_extn_fm_init(bool enabled)
 {
 
-    ALOGD("%s: Enter: enabled: %d", __func__, enabled);
+    AHAL_DBG("Enter: enabled: %d", enabled);
 
     if(enabled){
         if(!libfm)
             libfm = dlopen(FM_LIB_PATH, RTLD_NOW);
 
         if (!libfm) {
-            ALOGE("%s: dlopen failed with: %s", __func__, dlerror());
+            AHAL_ERR("dlopen failed with: %s", dlerror());
             return;
         }
 
@@ -700,10 +700,11 @@ void AudioExtn::audio_extn_fm_init(bool enabled)
         fm_get_params = (get_parameters_t) dlsym(libfm, "fm_get_parameters");
 
         if(!fm_set_params || !fm_get_params){
-            ALOGE("%s: %s", __func__, dlerror());
+            AHAL_ERR("%s", dlerror());
             dlclose(libfm);
         }
     }
+    AHAL_DBG("Exit");
 }
 
 
@@ -721,7 +722,7 @@ void AudioExtn::audio_extn_fm_get_parameters(std::shared_ptr<AudioDevice> adev, 
 void AudioExtn::audio_extn_kpi_optimize_feature_init(bool is_feature_enabled)
 {
     audio_extn_kpi_optimize_feature_enabled = is_feature_enabled;
-    ALOGD(":: %s: ---- Feature KPI_OPTIMIZE is %s ----", __func__, is_feature_enabled? "ENABLED": " NOT ENABLED");
+    AHAL_DBG("---- Feature KPI_OPTIMIZE is %s ----", is_feature_enabled? "ENABLED": " NOT ENABLED");
 }
 
 typedef int (*perf_lock_acquire_t)(int, int, int*, int);
@@ -744,19 +745,19 @@ int AudioExtn::audio_extn_perf_lock_init(void)
     if (qcopt_handle == NULL) {
         if (property_get("ro.vendor.extension_library",
                          opt_lib_path, NULL) <= 0) {
-            ALOGE("%s: Failed getting perf property \n", __func__);
+            AHAL_ERR("Failed getting perf property");
             ret = -EINVAL;
             goto err;
         }
         if ((qcopt_handle = dlopen(opt_lib_path, RTLD_NOW)) == NULL) {
-            ALOGE("%s: Failed to open perf handle \n", __func__);
+            AHAL_ERR("Failed to open perf handle");
             ret = -EINVAL;
             goto err;
         } else {
             perf_lock_acq = (perf_lock_acquire_t)dlsym(qcopt_handle,
                                                        "perf_lock_acq");
             if (perf_lock_acq == NULL) {
-                ALOGE("%s: Perf lock Acquire NULL \n", __func__);
+                AHAL_ERR("Perf lock Acquire NULL");
                 dlclose(qcopt_handle);
                 ret = -EINVAL;
                 goto err;
@@ -764,7 +765,7 @@ int AudioExtn::audio_extn_perf_lock_init(void)
             perf_lock_rel = (perf_lock_release_t)dlsym(qcopt_handle,
                                                        "perf_lock_rel");
             if (perf_lock_rel == NULL) {
-                ALOGE("%s: Perf lock Release NULL \n", __func__);
+                AHAL_ERR("Perf lock Release NULL");
                 dlclose(qcopt_handle);
                 ret = -EINVAL;
                 goto err;
@@ -782,8 +783,7 @@ void AudioExtn::audio_extn_perf_lock_acquire(int *handle, int duration,
     if (audio_extn_kpi_optimize_feature_enabled)
     {
         if (!perf_lock_opts || !size || !perf_lock_acq || !handle) {
-            ALOGE("%s: Incorrect params, Failed to acquire perf lock, err ",
-                  __func__);
+            AHAL_ERR("Incorrect params, Failed to acquire perf lock, err ");
             return;
         }
         /*
@@ -793,8 +793,7 @@ void AudioExtn::audio_extn_perf_lock_acquire(int *handle, int duration,
          */
         *handle = perf_lock_acq(*handle, duration, perf_lock_opts, size);
         if (*handle <= 0)
-            ALOGE("%s: Failed to acquire perf lock, err: %d\n",
-                  __func__, *handle);
+            AHAL_ERR("Failed to acquire perf lock, err: %d\n", *handle);
     }
 }
 
@@ -805,7 +804,7 @@ void AudioExtn::audio_extn_perf_lock_release(int *handle)
             perf_lock_rel(*handle);
             *handle = 0;
         } else
-            ALOGE("%s: Perf lock release error \n", __func__);
+            AHAL_ERR("Perf lock release error");
     }
 }
 

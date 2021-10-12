@@ -55,18 +55,93 @@
 #include "audio_extn.h"
 #include "battery_listener.h"
 
+#define MIC_CHARACTERISTICS_XML_FILE "/vendor/etc/microphone_characteristics.xml"
+static pal_device_id_t in_snd_device = PAL_DEVICE_NONE;
+microphone_characteristics_t AudioDevice::microphones;
+snd_device_to_mic_map_t AudioDevice::microphone_maps[PAL_MAX_INPUT_DEVICES];
+bool AudioDevice::mic_characteristics_available = false;
+
 card_status_t AudioDevice::sndCardState = CARD_STATUS_ONLINE;
 
-static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
+struct audio_string_to_enum {
+    const char* name;
+    unsigned int value;
+};
+
+static const struct audio_string_to_enum mic_locations[AUDIO_MICROPHONE_LOCATION_CNT] = {
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_LOCATION_UNKNOWN),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_LOCATION_MAINBODY),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_LOCATION_MAINBODY_MOVABLE),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_LOCATION_PERIPHERAL),
+};
+
+static const struct audio_string_to_enum mic_directionalities[AUDIO_MICROPHONE_DIRECTIONALITY_CNT] = {
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_OMNI),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_BI_DIRECTIONAL),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_UNKNOWN),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_CARDIOID),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_HYPER_CARDIOID),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_DIRECTIONALITY_SUPER_CARDIOID),
+};
+
+static const struct audio_string_to_enum mic_channel_mapping[AUDIO_MICROPHONE_CHANNEL_MAPPING_CNT] = {
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_CHANNEL_MAPPING_UNUSED),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_CHANNEL_MAPPING_DIRECT),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_MICROPHONE_CHANNEL_MAPPING_PROCESSED),
+};
+
+static const struct audio_string_to_enum device_in_types[] = {
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_AMBIENT),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_COMMUNICATION),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BUILTIN_MIC),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_WIRED_HEADSET),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_AUX_DIGITAL),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_HDMI),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_VOICE_CALL),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_TELEPHONY_RX),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BACK_MIC),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_REMOTE_SUBMIX),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_ANLG_DOCK_HEADSET),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_DGTL_DOCK_HEADSET),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_USB_ACCESSORY),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_USB_DEVICE),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_FM_TUNER),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_TV_TUNER),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_LINE),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_SPDIF),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BLUETOOTH_A2DP),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_LOOPBACK),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_IP),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BUS),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_PROXY),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_USB_HEADSET),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_BLUETOOTH_BLE),
+    AUDIO_MAKE_STRING_FROM_ENUM(AUDIO_DEVICE_IN_DEFAULT),
+};
+
+enum {
+    AUDIO_MICROPHONE_CHARACTERISTIC_NONE = 0u, // 0x0
+    AUDIO_MICROPHONE_CHARACTERISTIC_SENSITIVITY = 1u, // 0x1
+    AUDIO_MICROPHONE_CHARACTERISTIC_MAX_SPL = 2u, // 0x2
+    AUDIO_MICROPHONE_CHARACTERISTIC_MIN_SPL = 4u, // 0x4
+    AUDIO_MICROPHONE_CHARACTERISTIC_ORIENTATION = 8u, // 0x8
+    AUDIO_MICROPHONE_CHARACTERISTIC_GEOMETRIC_LOCATION = 16u, // 0x10
+    AUDIO_MICROPHONE_CHARACTERISTIC_ALL = 31u, /* ((((SENSITIVITY | MAX_SPL) | MIN_SPL)
+                                                  | ORIENTATION) | GEOMETRIC_LOCATION) */
+};
+
+static bool hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
     struct str_parms *parms) {
 
     if (adev == nullptr || parms == nullptr) {
         AHAL_ERR("%s Invalid arguments", __func__);
-        return;
+        return false;
     }
 
     int ret = 0, val = 0;
     char value[32];
+    bool changes = false;
 
     /* HDR Audio Parameters */
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HDR, value,
@@ -77,6 +152,7 @@ static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
         else
             adev->hdr_record_enabled = false;
 
+        changes = true;
         AHAL_INFO("HDR Enabled: %d", adev->hdr_record_enabled);
     }
 
@@ -110,6 +186,7 @@ static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
         else if (strncmp(value, "portrait", 8) == 0)
             adev->orientation_landscape = false;
 
+        changes = true;
         AHAL_INFO("Orientation %s",
             adev->orientation_landscape ? "landscape" : "portrait");
     }
@@ -122,6 +199,7 @@ static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
         else
             adev->inverted = false;
 
+        changes = true;
         AHAL_INFO("Orientation inverted: %d", adev->inverted);
     }
 
@@ -136,6 +214,7 @@ static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
         else if (strncmp(value, "none", 4) == 0)
             adev->facing = 0;
 
+        changes = true;
         AHAL_INFO("Device facing %s", value);
     }
 
@@ -160,6 +239,8 @@ static void hdr_set_parameters(std::shared_ptr<AudioDevice> adev,
             adev->hdr_sample_rate = val;
         }
     }
+
+    return changes;
 }
 
 static void hdr_get_parameters(std::shared_ptr<AudioDevice> adev,
@@ -294,7 +375,7 @@ std::shared_ptr<StreamOutPrimary> AudioDevice::CreateStreamOut(
     astream->GetStreamHandle(stream_out);
     out_list_mutex.lock();
     stream_out_list_.push_back(astream);
-    AHAL_ERR("output stream %d %p",(int)stream_out_list_.size(), stream_out);
+    AHAL_DBG("output stream %d %p",(int)stream_out_list_.size(), stream_out);
     if (flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
         if (voice_)
             voice_->stream_out_primary_ = astream;
@@ -331,13 +412,13 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
 
     if (!handle || sources.empty() || sources.size() > AUDIO_PATCH_PORTS_MAX ||
         sinks.empty() || sinks.size() > AUDIO_PATCH_PORTS_MAX) {
-        AHAL_ERR("exit: Invalid patch arguments");
+        AHAL_ERR("Invalid patch arguments");
         ret = -EINVAL;
         goto exit;
     }
 
     if (sources.size() > 1) {
-        AHAL_ERR("Multiple sources are not supported");
+        AHAL_ERR("error multiple sources are not supported");
         ret = -EINVAL;
         goto exit;
     }
@@ -359,7 +440,7 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
                   This space will need changes if audio HAL
                   handles device to device patches in the future.*/
                 patch_type = AudioPatch::PATCH_DEVICE_LOOPBACK;
-                AHAL_ERR("Device to device patches not supported");
+                AHAL_ERR("error device to device patches not supported");
                 ret = -ENOSYS;
                 goto exit;
             }
@@ -446,7 +527,7 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle) {
     patch_map_mutex.lock();
     auto patch_it = patch_map_.find(handle);
     if (patch_it == patch_map_.end() || !patch_it->second) {
-        AHAL_ERR("Patch info not found with handle %d", handle);
+        AHAL_ERR("error patch info not found with handle %d", handle);
         patch_map_mutex.unlock();
         return -EINVAL;
     }
@@ -593,7 +674,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     if (AudioDevice::sndCardState == CARD_STATUS_OFFLINE &&
         (flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD ||
         flags & AUDIO_OUTPUT_FLAG_DIRECT)) {
-        AHAL_ERR("sound card offline");
+        AHAL_ERR("error: sound card offline");
         ret = -ENODEV;
         goto exit;
     }
@@ -626,11 +707,11 @@ void adev_close_output_stream(struct audio_hw_device *dev,
         return;
     }
 
-    AHAL_DBG("enter:stream_handle(%p)", astream_out.get());
+    AHAL_DBG("Enter:stream_handle(%p)", astream_out.get());
 
     adevice->CloseStreamOut(astream_out);
 
-    AHAL_DBG("exit");
+    AHAL_DBG("Exit");
 }
 
 void adev_close_input_stream(struct audio_hw_device *dev,
@@ -649,11 +730,11 @@ void adev_close_input_stream(struct audio_hw_device *dev,
         return;
     }
 
-    AHAL_DBG("enter:stream_handle(%p)", astream_in.get());
+    AHAL_DBG("Enter:stream_handle(%p)", astream_in.get());
 
     adevice->CloseStreamIn(astream_in);
 
-    AHAL_DBG("exit");
+    AHAL_DBG("Exit");
 }
 
 static int adev_open_input_stream(struct audio_hw_device *dev,
@@ -869,9 +950,9 @@ static int adev_dump(const audio_hw_device_t *device, int fd)
 }
 
 static int adev_get_microphones(const struct audio_hw_device *dev __unused,
-                struct audio_microphone_characteristic_t *mic_array __unused,
-                size_t *mic_count __unused) {
-    return -ENOSYS;
+                struct audio_microphone_characteristic_t *mic_array,
+                size_t *mic_count) {
+    return AudioDevice::get_microphones(mic_array, mic_count);
 }
 
 int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
@@ -892,7 +973,7 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
      *Once PAL init is sucessfull, register the PAL service
      *from HAL process context
      */
-    ALOGE("Register Pal service");
+    AHAL_DBG("Register Pal service");
     AudioExtn::audio_extn_hidl_init();
 
     adev_->device_.get()->common.tag = HARDWARE_DEVICE_TAG;
@@ -986,6 +1067,11 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     audio_extn_gef_init(adev_);
     adev_init_ref_count += 1;
 
+    memset(&microphones, 0, sizeof(microphone_characteristics_t));
+    memset(&microphone_maps, 0, sizeof(PAL_MAX_INPUT_DEVICES*sizeof(snd_device_to_mic_map_t)));
+    if (!parse_xml())
+        mic_characteristics_available = true;
+
     return ret;
 }
 
@@ -1073,21 +1159,23 @@ std::shared_ptr<StreamInPrimary> AudioDevice::InGetStream (audio_stream_t* strea
 }
 
 int AudioDevice::SetMicMute(bool state) {
-    int ret;
+    int ret = 0;
     std::shared_ptr<StreamInPrimary> astream_in;
     mute_ = state;
 
-    ALOGD("%s: enter: %d", __func__, state);
+    AHAL_DBG("%s: enter: %d", __func__, state);
     if (voice_)
         ret = voice_->SetMicMute(state);
     for (int i = 0; i < stream_in_list_.size(); i++) {
          astream_in = stream_in_list_[i];
          if (astream_in) {
-             ALOGV("%s: Found existing stream associated with astream_in", __func__);
+             AHAL_VERBOSE("Found existing stream associated with astream_in");
              ret = astream_in->SetMicMute(state);
          }
     }
-    return 0;
+
+    AHAL_DBG("exit: ret %d", ret);
+    return ret;
 }
 
 int AudioDevice::GetMicMute(bool *state) {
@@ -1140,6 +1228,11 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     pal_device_id_t* pal_device_ids = NULL;
     char *test_r = NULL;
     char *cfg_str = NULL;
+    bool changes_done = false;
+    audio_stream_in* stream_in = NULL;
+    std::shared_ptr<StreamInPrimary> astream_in = NULL;
+    uint8_t channels = 0;
+    std::set<audio_devices_t> new_devices;
 
     AHAL_DBG("enter: %s", kvpairs);
     ret = voice_->VoiceSetParameters(kvpairs);
@@ -1149,12 +1242,33 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     parms = str_parms_create_str(kvpairs);
     if (!parms) {
         AHAL_ERR("Error in str_parms_create_str");
-        return 0;
+        ret = 0;
+        goto exit;
     }
     AudioExtn::audio_extn_set_parameters(adev_, parms);
 
-    if (property_get_bool("vendor.audio.hdr.record.enable", false))
-        hdr_set_parameters(adev_, parms);
+    if (property_get_bool("vendor.audio.hdr.record.enable", false)) {
+        changes_done = hdr_set_parameters(adev_, parms);
+        if (changes_done) {
+            for (int i = 0; i < stream_in_list_.size(); i++) {
+                stream_in_list_[i]->GetStreamHandle(&stream_in);
+                astream_in = adev_->InGetStream((audio_stream_t*)stream_in);
+                if ( (astream_in->source_ == AUDIO_SOURCE_UNPROCESSED) &&
+                   (astream_in->config_.sample_rate == 48000) ) {
+                    AHAL_DBG("Forcing PAL device switch for HDR");
+                    channels =
+                        audio_channel_count_from_in_mask(astream_in->config_.channel_mask);
+                    if (channels == 4) {
+                        if (adev_->hdr_record_enabled) {
+                            new_devices = astream_in->mAndroidInDevices;
+                            astream_in->RouteStream(new_devices, true);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
 
     ret = str_parms_get_str(parms, "screen_state", value, sizeof(value));
     if (ret >= 0) {
@@ -1183,9 +1297,10 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 param_device_connection.device_config.usb_addr.card_id = atoi(value);
                 if ((usb_card_id_ == param_device_connection.device_config.usb_addr.card_id) &&
                     (audio_is_usb_in_device(device)) && (usb_input_dev_enabled == true)) {
-                    AHAL_INFO("Exit plugin card :%d device num=%d already added", usb_card_id_,
+                    AHAL_INFO("plugin card :%d device num=%d already added", usb_card_id_,
                           param_device_connection.device_config.usb_addr.device_num);
-                    return 0;
+                    ret = 0;
+                    goto exit;
                 }
 
                 usb_card_id_ = param_device_connection.device_config.usb_addr.card_id;
@@ -1215,8 +1330,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             ret = add_input_headset_if_usb_out_headset(&pal_device_count, &pal_device_ids);
             if (ret) {
                 free(pal_device_ids);
-                AHAL_ERR("Exit adding input headset failed, error:%d", ret);
-                return ret;
+                AHAL_ERR("adding input headset failed, error:%d", ret);
+                goto exit;
             }
             for (int i = 0; i < pal_device_count; i++) {
                 param_device_connection.connection_state = true;
@@ -1292,7 +1407,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         }
         break;
         default:
-            AHAL_ERR("unexpected rotation of %d", val);
+            AHAL_ERR("error unexpected rotation of %d", val);
             isRotationReq = -EINVAL;
         }
         if (1 == isRotationReq) {
@@ -1486,10 +1601,19 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         } else {
             param_bt_sco.bt_sco_on = false;
 
-            // turn off BLE voice bit during sco off
+            // turn off wideband, super-wideband and BLE voice bit during sco off
+            param_bt_sco.bt_wb_speech_enabled = false;
+            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
+                                sizeof(pal_param_btsco_t));
+
             param_bt_sco.bt_lc3_speech_enabled = false;
             ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
                                 sizeof(pal_param_btsco_t));
+
+            param_bt_sco.bt_swb_speech_mode = 0xFFFF;
+            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_SWB, (void *)&param_bt_sco,
+                                sizeof(pal_param_btsco_t));
+
         }
 
         // clear btsco_lc3_cfg whenever there's sco state change to
@@ -1522,6 +1646,20 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         param_bt_sco.bt_swb_speech_mode = val;
         AHAL_INFO("BTSCO SWB mode = 0x%x", val);
         ret = pal_set_param(PAL_PARAM_ID_BT_SCO_SWB, (void *)&param_bt_sco,
+                            sizeof(pal_param_btsco_t));
+    }
+
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_NREC, value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_btsco_t param_bt_sco;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
+            AHAL_INFO("BTSCO NREC mode = ON");
+            param_bt_sco.bt_sco_nrec = true;
+        } else {
+            AHAL_INFO("BTSCO NREC mode = OFF");
+            param_bt_sco.bt_sco_nrec = false;
+        }
+        ret = pal_set_param(PAL_PARAM_ID_BT_SCO_NREC, (void *)&param_bt_sco,
                             sizeof(pal_param_btsco_t));
     }
 
@@ -1628,8 +1766,9 @@ int AudioDevice::SetParameters(const char *kvpairs) {
 
     str_parms_destroy(parms);
 
+exit:
     AHAL_DBG("exit: %s", kvpairs);
-    return 0;
+    return ret;
 }
 
 
@@ -1656,6 +1795,8 @@ char* AudioDevice::GetParameters(const char *keys) {
         return NULL;
     }
 
+    AHAL_VERBOSE("enter");
+
     ret = str_parms_get_str(query, AUDIO_PARAMETER_A2DP_RECONFIG_SUPPORTED,
                             value, sizeof(value));
     if (ret >= 0) {
@@ -1666,7 +1807,7 @@ char* AudioDevice::GetParameters(const char *keys) {
                             (void **)&param_bt_a2dp, &size, nullptr);
         if (!ret) {
             if (size < sizeof(pal_param_bta2dp_t)) {
-                AHAL_ERR("Size returned is smaller for BT_A2DP_RECONFIG_SUPPORTED");
+                AHAL_ERR("size returned is smaller for BT_A2DP_RECONFIG_SUPPORTED");
                 goto exit;
             }
             val = param_bt_a2dp->reconfig_supported;
@@ -1807,7 +1948,7 @@ int AudioDevice::GetPalDeviceIds(const std::set<audio_devices_t>& hal_device_ids
                     it->first, it->second);
             if (it->second == PAL_DEVICE_OUT_AUX_DIGITAL ||
                     it->second == PAL_DEVICE_OUT_HDMI) {
-               AHAL_ERR("dp_controller: %d dp_stream: %d",
+               AHAL_DBG("dp_controller: %d dp_stream: %d",
                        dp_controller, dp_stream);
                if (dp_controller * MAX_STREAMS_PER_CONTROLLER + dp_stream) {
                   pal_device_id[device_count] = PAL_DEVICE_OUT_AUX_DIGITAL_1;
@@ -1852,7 +1993,7 @@ hw_device_t* AudioDevice::GetAudioDeviceCommon()
 static int adev_open(const hw_module_t *module, const char *name __unused,
                      hw_device_t **device) {
     int32_t ret = 0;
-    AHAL_DBG("enter");
+    AHAL_DBG("Enter");
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
@@ -1877,8 +2018,8 @@ static int adev_open(const hw_module_t *module, const char *name __unused,
     }
     adevice->adev_init_mutex.unlock();
 exit:
-    AHAL_DBG("exit");
-    return 0;
+    AHAL_DBG("Exit, status %d", ret);
+    return ret;
 }
 
 static struct hw_module_methods_t hal_module_methods = {
@@ -1911,4 +2052,582 @@ AudioPatch::AudioPatch(PatchType patch_type,
         static std::mutex patch_lock;
         std::lock_guard<std::mutex> lock(patch_lock);
         handle = AudioPatch::generate_patch_handle_l();
+}
+
+bool AudioDevice::find_enum_by_string(const struct audio_string_to_enum * table, const char * name,
+        int32_t len, unsigned int *value)
+{
+    if (table == NULL) {
+        ALOGE("%s: table is NULL", __func__);
+        return false;
+    }
+
+    if (name == NULL) {
+        ALOGE("null key");
+        return false;
+    }
+
+    for (int i = 0; i < len; i++) {
+        if (!strcmp(table[i].name, name)) {
+            *value = table[i].value;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool AudioDevice::set_microphone_characteristic(struct audio_microphone_characteristic_t mic)
+{
+    if (microphones.declared_mic_count >= AUDIO_MICROPHONE_MAX_COUNT) {
+        AHAL_ERR("mic number is more than maximum number");
+        return false;
+    }
+    for (size_t ch = 0; ch < AUDIO_CHANNEL_COUNT_MAX; ch++) {
+        mic.channel_mapping[ch] = AUDIO_MICROPHONE_CHANNEL_MAPPING_UNUSED;
+    }
+    microphones.microphone[microphones.declared_mic_count++] = mic;
+    return true;
+}
+
+int32_t AudioDevice::get_microphones(struct audio_microphone_characteristic_t *mic_array, size_t *mic_count)
+{
+    if (!mic_characteristics_available)
+        return -EIO;
+
+    if (mic_count == NULL) {
+        AHAL_ERR("Invalid mic_count!!!");
+        return -EINVAL;
+    }
+    if (mic_array == NULL) {
+        AHAL_ERR("Invalid mic_array!!!");
+        return -EINVAL;
+    }
+
+    if (*mic_count == 0) {
+        AHAL_INFO("mic_count is ZERO");
+        return 0;
+    }
+
+    size_t max_mic_count = *mic_count;
+    size_t actual_mic_count = 0;
+    for (size_t i = 0; i < max_mic_count && i < microphones.declared_mic_count; i++) {
+        mic_array[i] = microphones.microphone[i];
+        actual_mic_count++;
+    }
+    *mic_count = actual_mic_count;
+    return 0;
+}
+
+void AudioDevice::process_microphone_characteristics(const XML_Char **attr)
+{
+    struct audio_microphone_characteristic_t microphone;
+    uint32_t curIdx = 0;
+    uint32_t valid_mask;
+
+    if (strcmp(attr[curIdx++], "valid_mask")) {
+        AHAL_ERR("valid_mask not found");
+        goto done;
+    }
+    valid_mask = atoi(attr[curIdx++]);
+
+    if (strcmp(attr[curIdx++], "device_id")) {
+        AHAL_ERR("device_id not found");
+        goto done;
+    }
+    if (strlen(attr[curIdx]) > AUDIO_MICROPHONE_ID_MAX_LEN) {
+        AHAL_ERR("device_id is too long : %s ", attr[curIdx]);
+        goto done;
+    }
+    strlcpy(microphone.device_id, attr[curIdx++], sizeof(microphone.device_id));
+
+    if (strcmp(attr[curIdx++], "type")) {
+        AHAL_ERR("device type not found");
+        goto done;
+    }
+    if (!find_enum_by_string(device_in_types, (char*)attr[curIdx++],
+                ARRAY_SIZE(device_in_types), (unsigned int *)(&microphone.device))) {
+        AHAL_ERR("device type: %s not found", attr[--curIdx]);
+        goto done;
+    }
+    if (strcmp(attr[curIdx++], "address")) {
+        AHAL_ERR("address not found");
+        goto done;
+    }
+    if (strlen(attr[curIdx]) > AUDIO_DEVICE_MAX_ADDRESS_LEN) {
+        AHAL_ERR("address %s is too long", attr[curIdx]);
+        goto done;
+    }
+    strlcpy(microphone.address, attr[curIdx++], sizeof(microphone.address));
+    if (strlen(microphone.address) == 0) {
+        // If the address is empty, populate the address according to device type.
+        if (microphone.device == AUDIO_DEVICE_IN_BUILTIN_MIC) {
+            strlcpy(microphone.address, AUDIO_BOTTOM_MICROPHONE_ADDRESS, sizeof(microphone.address));
+        } else if (microphone.device == AUDIO_DEVICE_IN_BACK_MIC) {
+            strlcpy(microphone.address, AUDIO_BACK_MICROPHONE_ADDRESS, sizeof(microphone.address));
+        }
+    }
+
+    if (strcmp(attr[curIdx++], "location")) {
+        AHAL_ERR("location not found");
+        goto done;
+    }
+    if (!find_enum_by_string(mic_locations, (char*)attr[curIdx++],
+                AUDIO_MICROPHONE_LOCATION_CNT, (unsigned int *)(&microphone.location))) {
+        AHAL_ERR("location: %s not found", attr[--curIdx]);
+        goto done;
+    }
+
+    if (strcmp(attr[curIdx++], "group")) {
+        AHAL_ERR("group not found");
+        goto done;
+    }
+    microphone.group = atoi(attr[curIdx++]);
+
+    if (strcmp(attr[curIdx++], "index_in_the_group")) {
+        AHAL_ERR("index_in_the_group not found");
+        goto done;
+    }
+    microphone.index_in_the_group = atoi(attr[curIdx++]);
+
+    if (strcmp(attr[curIdx++], "directionality")) {
+        AHAL_ERR("directionality not found");
+        goto done;
+    }
+    if (!find_enum_by_string(mic_directionalities, (char*)attr[curIdx++],
+                AUDIO_MICROPHONE_DIRECTIONALITY_CNT, (unsigned int *)(&microphone.directionality))) {
+        AHAL_ERR("directionality : %s not found", attr[--curIdx]);
+        goto done;
+    }
+
+    if (strcmp(attr[curIdx++], "num_frequency_responses")) {
+        AHAL_ERR("num_frequency_responses not found");
+        goto done;
+    }
+    microphone.num_frequency_responses = atoi(attr[curIdx++]);
+    if (microphone.num_frequency_responses > AUDIO_MICROPHONE_MAX_FREQUENCY_RESPONSES) {
+        AHAL_ERR("num_frequency_responses is too large");
+        goto done;
+    }
+    if (microphone.num_frequency_responses > 0) {
+        if (strcmp(attr[curIdx++], "frequencies")) {
+            AHAL_ERR("frequencies not found");
+            goto done;
+        }
+        char *context = NULL;
+        char *token = strtok_r((char *)attr[curIdx++], " ", &context);
+        uint32_t num_frequencies = 0;
+        while (token) {
+            microphone.frequency_responses[0][num_frequencies++] = atof(token);
+            if (num_frequencies >= AUDIO_MICROPHONE_MAX_FREQUENCY_RESPONSES) {
+                break;
+            }
+            token = strtok_r(NULL, " ", &context);
+        }
+
+        if (strcmp(attr[curIdx++], "responses")) {
+            AHAL_ERR("responses not found");
+            goto done;
+        }
+        token = strtok_r((char *)attr[curIdx++], " ", &context);
+        uint32_t num_responses = 0;
+        while (token) {
+            microphone.frequency_responses[1][num_responses++] = atof(token);
+            if (num_responses >= AUDIO_MICROPHONE_MAX_FREQUENCY_RESPONSES) {
+                break;
+            }
+            token = strtok_r(NULL, " ", &context);
+        }
+
+        if (num_frequencies != num_responses
+                || num_frequencies != microphone.num_frequency_responses) {
+            AHAL_ERR("num of frequency and response not match: %u, %u, %u",
+                    num_frequencies, num_responses, microphone.num_frequency_responses);
+            goto done;
+        }
+    }
+
+    if (valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_SENSITIVITY) {
+        if (strcmp(attr[curIdx++], "sensitivity")) {
+            AHAL_ERR("sensitivity not found");
+            goto done;
+        }
+        microphone.sensitivity = atof(attr[curIdx++]);
+    } else {
+        microphone.sensitivity = AUDIO_MICROPHONE_SENSITIVITY_UNKNOWN;
+    }
+
+    if (valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_MAX_SPL) {
+        if (strcmp(attr[curIdx++], "max_spl")) {
+            AHAL_ERR("max_spl not found");
+            goto done;
+        }
+        microphone.max_spl = atof(attr[curIdx++]);
+    } else {
+        microphone.max_spl = AUDIO_MICROPHONE_SPL_UNKNOWN;
+    }
+
+    if (valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_MIN_SPL) {
+        if (strcmp(attr[curIdx++], "min_spl")) {
+            AHAL_ERR("min_spl not found");
+            goto done;
+        }
+        microphone.min_spl = atof(attr[curIdx++]);
+    } else {
+        microphone.min_spl = AUDIO_MICROPHONE_SPL_UNKNOWN;
+    }
+
+    if (valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_ORIENTATION) {
+        if (strcmp(attr[curIdx++], "orientation")) {
+            AHAL_ERR("orientation not found");
+            goto done;
+        }
+        char *context = NULL;
+        char *token = strtok_r((char *)attr[curIdx++], " ", &context);
+        float orientation[3];
+        uint32_t idx = 0;
+        while (token) {
+            orientation[idx++] = atof(token);
+            if (idx >= 3) {
+                break;
+            }
+            token = strtok_r(NULL, " ", &context);
+        }
+        if (idx != 3) {
+            AHAL_ERR("orientation invalid");
+            goto done;
+        }
+        microphone.orientation.x = orientation[0];
+        microphone.orientation.y = orientation[1];
+        microphone.orientation.z = orientation[2];
+    } else {
+        microphone.orientation.x = 0.0f;
+        microphone.orientation.y = 0.0f;
+        microphone.orientation.z = 0.0f;
+    }
+
+    if (valid_mask & AUDIO_MICROPHONE_CHARACTERISTIC_GEOMETRIC_LOCATION) {
+        if (strcmp(attr[curIdx++], "geometric_location")) {
+            AHAL_ERR("geometric_location not found");
+            goto done;
+        }
+        char *context = NULL;
+        char *token = strtok_r((char *)attr[curIdx++], " ", &context);
+        float geometric_location[3];
+        uint32_t idx = 0;
+        while (token) {
+            geometric_location[idx++] = atof(token);
+            if (idx >= 3) {
+                break;
+            }
+            token = strtok_r(NULL, " ", &context);
+        }
+        if (idx != 3) {
+            AHAL_ERR("geometric_location invalid");
+            goto done;
+        }
+        microphone.geometric_location.x = geometric_location[0];
+        microphone.geometric_location.y = geometric_location[1];
+        microphone.geometric_location.z = geometric_location[2];
+    } else {
+        microphone.geometric_location.x = AUDIO_MICROPHONE_COORDINATE_UNKNOWN;
+        microphone.geometric_location.y = AUDIO_MICROPHONE_COORDINATE_UNKNOWN;
+        microphone.geometric_location.z = AUDIO_MICROPHONE_COORDINATE_UNKNOWN;
+    }
+
+    set_microphone_characteristic(microphone);
+
+done:
+    return;
+}
+
+bool AudioDevice::is_input_pal_dev_id(int deviceId)
+{
+    if ((deviceId > PAL_DEVICE_IN_MIN) && (deviceId < PAL_DEVICE_IN_MAX))
+        return true;
+
+    return false;
+}
+
+void AudioDevice::process_snd_dev(const XML_Char **attr)
+{
+    uint32_t curIdx = 0;
+    in_snd_device = PAL_DEVICE_NONE;
+
+    if (strcmp(attr[curIdx++], "in_snd_device")) {
+        AHAL_ERR("snd_device not found");
+        return;
+    }
+    in_snd_device = deviceIdLUT.at((char *)attr[curIdx++]);
+    if (!is_input_pal_dev_id(in_snd_device)) {
+        AHAL_ERR("Sound device not valid");
+        in_snd_device = PAL_DEVICE_NONE;
+    }
+    return;
+}
+
+bool AudioDevice::set_microphone_map(pal_device_id_t in_snd_device,
+                                         const mic_info_t *info)
+{
+    uint32_t map_idx;
+    uint32_t count;
+
+    if (!is_input_pal_dev_id(in_snd_device)) {
+        AHAL_ERR("Sound device not valid");
+        return false;
+    }
+
+    map_idx = (MIC_INFO_MAP_INDEX(in_snd_device));
+    count = microphone_maps[map_idx].mic_count++;
+    if (count >= AUDIO_MICROPHONE_MAX_COUNT) {
+        AHAL_ERR("Microphone count is greater than max allowed value");
+        microphone_maps[map_idx].mic_count--;
+        return false;
+    }
+    microphone_maps[map_idx].microphones[count] = *info;
+    return true;
+}
+
+bool AudioDevice::is_built_in_input_dev(pal_device_id_t deviceId)
+{
+    if ((PAL_DEVICE_IN_HANDSET_MIC == deviceId) || (PAL_DEVICE_IN_SPEAKER_MIC == deviceId) ||
+        (PAL_DEVICE_IN_HANDSET_VA_MIC == deviceId) || (PAL_DEVICE_IN_ULTRASOUND_MIC == deviceId))
+        return true;
+
+    return false;
+}
+
+void AudioDevice::process_mic_info(const XML_Char **attr)
+{
+    uint32_t curIdx = 0;
+    mic_info_t microphone;
+    char *context = NULL;
+    uint32_t idx = 0;
+    const char *token;
+
+    memset(&microphone.channel_mapping, AUDIO_MICROPHONE_CHANNEL_MAPPING_UNUSED,
+                   sizeof(microphone.channel_mapping));
+
+    if (strcmp(attr[curIdx++], "mic_device_id")) {
+        AHAL_ERR("mic_device_id not found");
+        goto on_error;
+    }
+    strlcpy(microphone.device_id, (char *)attr[curIdx++],
+                            AUDIO_MICROPHONE_ID_MAX_LEN);
+
+    if (strcmp(attr[curIdx++], "channel_mapping")) {
+        AHAL_ERR("channel_mapping not found");
+        goto on_error;
+    }
+    token = strtok_r((char *)attr[curIdx++], " ", &context);
+    while (token) {
+        if (!find_enum_by_string(mic_channel_mapping, token,
+                    AUDIO_MICROPHONE_CHANNEL_MAPPING_CNT,
+                    (unsigned int *)(&(microphone.channel_mapping[idx++])))) {
+            AHAL_ERR("channel_mapping: %s not found", attr[--curIdx]);
+            goto on_error;
+        }
+        token = strtok_r(NULL, " ", &context);
+    }
+    microphone.channel_count = idx;
+
+    set_microphone_map(in_snd_device, &microphone);
+    return;
+
+on_error:
+    in_snd_device = PAL_DEVICE_NONE;
+    return;
+}
+
+int32_t AudioDevice::get_active_microphones(uint32_t channels, pal_device_id_t id,
+                                            struct audio_microphone_characteristic_t *mic_array,
+                                            uint32_t *mic_count)
+{
+    uint32_t actual_mic_count = 0;
+    mic_info_t *m_info;
+    uint32_t count = 0;
+    uint32_t idx;
+    uint32_t max_mic_count = microphones.declared_mic_count;
+
+    if (!mic_characteristics_available)
+        return -EIO;
+
+    if (mic_count == NULL) {
+        AHAL_ERR("Invalid mic_count!!!");
+        return -EINVAL;
+    }
+    if (mic_array == NULL) {
+        AHAL_ERR("Invalid mic_array!!!");
+        return -EINVAL;
+    }
+
+    if (!is_input_pal_dev_id(id)) {
+        AHAL_ERR("Invalid input sound device!!!");
+        return -EINVAL;
+    }
+
+    if (*mic_count == 0) {
+        AHAL_INFO("mic_count is ZERO");
+        return 0;
+    }
+
+    if (is_input_pal_dev_id(id)) {
+        idx = MIC_INFO_MAP_INDEX(id);
+        count = microphone_maps[idx].mic_count;
+        m_info = microphone_maps[idx].microphones;
+        for (size_t i = 0; i < count; i++) {
+            unsigned int channels_for_active_mic = channels;
+            if (channels_for_active_mic > m_info[i].channel_count) {
+                channels_for_active_mic = m_info[i].channel_count;
+            }
+            for (size_t j = 0; j < max_mic_count; j++) {
+                if (strcmp(microphones.microphone[j].device_id,
+                            m_info[i].device_id) == 0) {
+                    mic_array[actual_mic_count] = microphones.microphone[j];
+                    for (size_t ch = 0; ch < channels_for_active_mic; ch++) {
+                        mic_array[actual_mic_count].channel_mapping[ch] =
+                            m_info[i].channel_mapping[ch];
+                    }
+                    actual_mic_count++;
+                    break;
+                }
+            }
+        }
+    }
+    *mic_count = actual_mic_count;
+    return 0;
+}
+
+void AudioDevice::xml_start_tag(void *userdata, const XML_Char *tag_name,
+                         const XML_Char **attr)
+{
+    xml_userdata_t *data = (xml_userdata_t *)userdata;
+
+    if (!strcmp(tag_name, "microphone")) {
+        if (TAG_MICROPHONE_CHARACTERISTIC != data->tag) {
+            AHAL_ERR("microphone tag only supported with MICROPHONE_CHARACTERISTIC section");
+            return;
+        }
+        process_microphone_characteristics(attr);
+        return;
+    } else if (!strcmp(tag_name, "snd_dev")) {
+        if (TAG_INPUT_SND_DEVICE_TO_MIC_MAPPING != data->tag) {
+            AHAL_ERR("snd_dev tag only supported with INPUT_SND_DEVICE_TO_MIC_MAPPING section");
+            return;
+        }
+        process_snd_dev(attr);
+        return;
+    } else if (!strcmp(tag_name, "mic_info")) {
+        if (TAG_INPUT_SND_DEVICE_TO_MIC_MAPPING != data->tag) {
+            AHAL_ERR("mic_info tag only supported with INPUT_SND_DEVICE_TO_MIC_MAPPING section");
+            return;
+        }
+        if (PAL_DEVICE_NONE == in_snd_device) {
+            AHAL_ERR("Error in previous tags, do not process mic info");
+            return;
+        }
+        process_mic_info(attr);
+        return;
+    }
+
+    if (!strcmp(tag_name, "microphone_characteristics")) {
+        data->tag = TAG_MICROPHONE_CHARACTERISTIC;
+    } else if (!strcmp(tag_name, "snd_devices")) {
+        data->tag = TAG_SND_DEVICES;
+    } else if (!strcmp(tag_name, "input_snd_device")) {
+        if (TAG_SND_DEVICES != data->tag) {
+            AHAL_ERR("input_snd_device tag only supported with SND_DEVICES section");
+            return;
+        }
+        data->tag = TAG_INPUT_SND_DEVICE;
+    } else if (!strcmp(tag_name, "input_snd_device_mic_mapping")) {
+        if (TAG_INPUT_SND_DEVICE != data->tag) {
+            AHAL_ERR("input_snd_device_mic_mapping tag only supported with INPUT_SND_DEVICE section");
+            return;
+        }
+        data->tag = TAG_INPUT_SND_DEVICE_TO_MIC_MAPPING;;
+    }
+}
+
+void AudioDevice::xml_end_tag(void *userdata, const XML_Char *tag_name)
+{
+    xml_userdata_t *data = (xml_userdata_t *)userdata;
+
+    if (!strcmp(tag_name, "input_snd_device"))
+        data->tag = TAG_SND_DEVICES;
+    else if (!strcmp(tag_name, "input_snd_device_mic_mapping"))
+        data->tag = TAG_INPUT_SND_DEVICE;
+}
+
+void AudioDevice::xml_char_data_handler(void *userdata, const XML_Char *s, int len)
+{
+   xml_userdata_t *data = (xml_userdata_t *)userdata;
+
+   if (len + data->offs >= sizeof(data->data_buf) ) {
+       data->offs += len;
+       /* string length overflow, return */
+       return;
+   } else {
+       memcpy(data->data_buf + data->offs, s, len);
+       data->offs += len;
+   }
+}
+
+int AudioDevice::parse_xml()
+{
+    XML_Parser parser;
+    FILE *file = NULL;
+    int ret = 0;
+    int bytes_read;
+    void *buf = NULL;
+    xml_userdata_t xml_user_data;
+    memset(&xml_user_data, 0, sizeof(xml_user_data));
+
+    file = fopen(MIC_CHARACTERISTICS_XML_FILE, "r");
+    if(!file) {
+        ret = -EIO;
+        AHAL_ERR("Failed to open xml file name %s", MIC_CHARACTERISTICS_XML_FILE);
+        goto done;
+    }
+
+    parser = XML_ParserCreate(NULL);
+    if (!parser) {
+        ret = -EINVAL;
+        AHAL_ERR("Failed to create XML parser ret %d", ret);
+        goto closeFile;
+    }
+    XML_SetUserData(parser, &xml_user_data);
+    XML_SetElementHandler(parser, xml_start_tag, xml_end_tag);
+    XML_SetCharacterDataHandler(parser, xml_char_data_handler);
+
+    while (1) {
+        buf = XML_GetBuffer(parser, XML_READ_BUFFER_SIZE);
+        if(buf == NULL) {
+            ret = -EINVAL;
+            AHAL_ERR("XML_Getbuffer failed ret %d", ret);
+            goto freeParser;
+        }
+
+        bytes_read = fread(buf, 1, XML_READ_BUFFER_SIZE, file);
+        if(bytes_read < 0) {
+            ret = -EINVAL;
+            AHAL_ERR("fread failed ret %d", ret);
+            goto freeParser;
+        }
+
+        if(XML_ParseBuffer(parser, bytes_read, bytes_read == 0) == XML_STATUS_ERROR) {
+            ret = -EINVAL;
+            AHAL_ERR("XML ParseBuffer failed for %s file ret %d", MIC_CHARACTERISTICS_XML_FILE, ret);
+            goto freeParser;
+        }
+        if (bytes_read == 0)
+            break;
+    }
+
+freeParser:
+    XML_ParserFree(parser);
+closeFile:
+    fclose(file);
+    file = NULL;
+done:
+    return ret;
 }

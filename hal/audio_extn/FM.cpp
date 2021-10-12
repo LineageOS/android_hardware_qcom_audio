@@ -37,6 +37,7 @@
 #include <cutils/properties.h>
 #include "PalApi.h"
 #include "AudioDevice.h"
+#include "AudioCommon.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -84,13 +85,13 @@ int32_t fm_set_volume(float value, bool persist=false)
     int32_t vol, ret = 0;
     struct pal_volume_data *pal_volume = NULL;
 
-    ALOGD("%s: Enter: volume = %f, persist: %d", __func__, value, persist);
+    AHAL_DBG("Enter: volume = %f, persist: %d", value, persist);
 
     if (value < 0.0) {
-        ALOGW("%s: (%f) Under 0.0, assuming 0.0\n", __func__, value);
+       AHAL_DBG("(%f) Under 0.0, assuming 0.0", value);
         value = 0.0;
     } else if (value > 1.0) {
-        ALOGW("%s: (%f) Over 1.0, assuming 1.0\n", __func__, value);
+        AHAL_DBG("(%f) Over 1.0, assuming 1.0", value);
         value = 1.0;
     }
 
@@ -99,16 +100,16 @@ int32_t fm_set_volume(float value, bool persist=false)
         fm.volume = value;
 
     if (fm.muted && vol > 0) {
-        ALOGD("%s: fm is muted, applying '0' volume instead of '%d'.", __func__, vol);
+        AHAL_DBG("fm is muted, applying '0' volume instead of '%d'.", vol);
         vol = 0;
     }
 
     if (!fm.running) {
-        ALOGV("%s: FM not active, ignoring set_volume call", __func__);
+        AHAL_VERBOSE(" FM not active, ignoring set_volume call");
         return -EIO;
     }
 
-    ALOGD("%s: Setting FM volume to %d", __func__, vol);
+    AHAL_DBG("Setting FM volume to %d", vol);
 
     pal_volume = (struct pal_volume_data *) malloc(sizeof(struct pal_volume_data) + sizeof(struct pal_channel_vol_kv));
 
@@ -121,10 +122,10 @@ int32_t fm_set_volume(float value, bool persist=false)
 
     ret = pal_stream_set_volume(fm.stream_handle, pal_volume);
     if (ret)
-        ALOGE("%s: set volume failed: %d \n", __func__, ret);
+        AHAL_ERR("set volume failed: %d", ret);
 
     free(pal_volume);
-    ALOGV("%s: exit", __func__);
+    AHAL_DBG("exit");
     return ret;
 }
 
@@ -137,7 +138,7 @@ int32_t fm_start(std::shared_ptr<AudioDevice> adev __unused, int device_id)
     struct pal_device pal_devs[num_pal_devs];
     pal_device_id_t pal_device_id = PAL_DEVICE_OUT_SPEAKER;
 
-    ALOGD("%s: Enter", __func__);
+    AHAL_DBG("Enter");
 
     if(device_id == AUDIO_DEVICE_OUT_SPEAKER)
         pal_device_id = PAL_DEVICE_OUT_SPEAKER;
@@ -147,12 +148,13 @@ int32_t fm_start(std::shared_ptr<AudioDevice> adev __unused, int device_id)
         pal_device_id = PAL_DEVICE_OUT_WIRED_HEADPHONE;
     else
     {
-        ALOGD("%s: Unsupported device_id %d", __func__, device_id);
+        AHAL_ERR("Unsupported device_id %d",device_id);
         return -EINVAL;
     }
 
-    ch_info.channels = 1;
+    ch_info.channels = CHANNELS;
     ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
+    ch_info.ch_map[1] = PAL_CHMAP_CHANNEL_FR;
 
     stream_attr.type = PAL_STREAM_LOOPBACK;
     stream_attr.info.opt_stream_info.loopback_type = PAL_STREAM_LOOPBACK_FM;
@@ -186,28 +188,29 @@ int32_t fm_start(std::shared_ptr<AudioDevice> adev __unused, int device_id)
             &fm.stream_handle);
 
     if (ret) {
-        ALOGE("%s: stream open failed with: %d", __func__, ret);
+        AHAL_ERR("stream open failed with: %d", ret);
         return ret;
     }
 
     ret = pal_stream_start(fm.stream_handle);
     if (ret) {
-        ALOGE("%s: stream start failed with %d", __func__, ret);
+        AHAL_ERR("stream start failed with %d", ret);
         pal_stream_close(fm.stream_handle);
         return ret;
     }
 
     fm.running = true;
     fm_set_volume(fm.volume, true);
+    AHAL_DBG("Exit");
     return ret;
 }
 
 int32_t fm_stop()
 {
-    ALOGD("%s: enter", __func__);
+    AHAL_DBG("enter");
 
     if(!fm.running){
-        ALOGE("%s: FM not in running state...", __func__);
+        AHAL_ERR("FM not in running state...");
         return -EINVAL;
     }
 
@@ -217,6 +220,7 @@ int32_t fm_stop()
     }
     fm.stream_handle = NULL;
     fm.running = false;
+    AHAL_DBG("exit");
     return 0;
 }
 
@@ -225,13 +229,14 @@ void fm_get_parameters(std::shared_ptr<AudioDevice> adev __unused, struct str_pa
     int ret;
     char value[32] = {0};
 
-    ALOGD("%s: enter", __func__);
+    AHAL_DBG("enter");
 
     if(query && reply){
         ret = str_parms_get_str(query, AUDIO_PARAMETER_KEY_FM_STATUS, value, sizeof(value));
         if (ret >= 0)
             str_parms_add_int(reply, AUDIO_PARAMETER_KEY_FM_STATUS, fm.running);
     }
+    AHAL_DBG("exit");
 }
 
 inline void hal2vec(audio_devices_t hdev, std::vector<audio_devices_t>& hdevs){
@@ -255,11 +260,13 @@ void fm_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parm
     float vol = 0.0;
     const char* p = str_parms_to_str(parms);
 
+    AHAL_DBG("Enter");
+
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HANDLE_FM,
                             value, sizeof(value));
     if (ret >= 0) {
         val = atoi(value);
-        ALOGD("%s: FM usecase", __func__);
+        AHAL_DBG("FM usecase");
         if (val)
         {
             if(val & AUDIO_DEVICE_OUT_FM && !fm.running)
@@ -275,7 +282,7 @@ void fm_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parm
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FM_ROUTING, value, sizeof(value));
     if (ret >= 0 && fm.running) {
         val = atoi(value);
-        ALOGD("%s: FM usecase", __func__);
+       AHAL_DBG("FM usecase");
         if (val && (val & AUDIO_DEVICE_OUT_FM)){
             fm_set_volume(0, false);
             fm_stop();
@@ -286,9 +293,9 @@ void fm_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parm
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FM_VOLUME, value, sizeof(value));
     if (ret >= 0) {
-        ALOGD("%s: Param: set volume", __func__);
+       AHAL_DBG("Param: set volume");
         if (sscanf(value, "%f", &vol) != 1){
-            ALOGE("%s: error in retrieving fm volume", __func__);
+            AHAL_ERR("error in retrieving fm volume");
             return;
         }
         fm_set_volume(vol, true);
@@ -296,7 +303,7 @@ void fm_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parm
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FM_MUTE, value, sizeof(value));
     if (ret >= 0) {
-        ALOGD("%s: Param: mute", __func__);
+        AHAL_DBG("Param: mute");
         fm.muted = (value[0] == '1');
         if(fm.muted)
            fm_set_volume(0);
@@ -306,12 +313,12 @@ void fm_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parm
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_FM_RESTORE_VOLUME, value, sizeof(value));
     if (ret >= 0) {
-        ALOGD("%s: Param: restore volume", __func__);
+       AHAL_DBG("Param: restore volume");
         if (value[0] == '1')
             fm_set_volume(fm.volume);
     }
 
-    ALOGD("%s: exit", __func__);
+    AHAL_DBG("exit");
 }
 
 #ifdef __cplusplus
