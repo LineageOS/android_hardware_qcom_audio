@@ -2471,7 +2471,7 @@
     </path>
 
     <path name="mmap-record">
-      <ctl name="MultiMedia16 Mixer SLIM_0_TX" value="1" />
+      <ctl name="MultiMedia16 Mixer TERT_TDM_TX_0" value="1" />
     </path>
 
     <path name="mmap-record bt-sco">
