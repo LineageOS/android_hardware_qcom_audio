@@ -2286,6 +2286,10 @@
         <path name="handset" />
     </path>
 
+    <path name="voice-handset-hac">
+        <path name="handset" />
+    </path>
+
     <path name="voice-handset-hdk">
         <path name="handset" />
     </path>
