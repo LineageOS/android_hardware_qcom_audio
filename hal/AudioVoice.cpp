@@ -659,7 +659,8 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     streamAttributes.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
 
     /*set custom key for hac mode*/
-    if (session->hac && palDevices[1].id == PAL_DEVICE_OUT_HANDSET) {
+    if (session && session->hac && palDevices[1].id == 
+        PAL_DEVICE_OUT_HANDSET) {
         strlcpy(palDevices[0].custom_config.custom_key, "HAC",
                     sizeof(palDevices[0].custom_config.custom_key));
         strlcpy(palDevices[1].custom_config.custom_key, "HAC",
@@ -896,7 +897,8 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
             }
     }
     /*set or remove custom key for hac mode*/
-    if (session->hac && palDevices[1].id == PAL_DEVICE_OUT_HANDSET) {
+    if (session && session->hac && palDevices[1].id == 
+        PAL_DEVICE_OUT_HANDSET) {
         strlcpy(palDevices[0].custom_config.custom_key, "HAC",
                     sizeof(palDevices[0].custom_config.custom_key));
         strlcpy(palDevices[1].custom_config.custom_key, "HAC",
