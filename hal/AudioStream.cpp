@@ -2585,6 +2585,10 @@ int StreamOutPrimary::GetFrames(uint64_t *frames)
     int ret = 0;
     pal_session_time tstamp;
     uint64_t timestamp = 0;
+    uint64_t dsp_frames = 0;
+    uint64_t offset = 0;
+    size_t size = 0;
+    pal_param_bta2dp_t *param_bt_a2dp = NULL;
 
     if (!pal_stream_handle_) {
         AHAL_VERBOSE("pal_stream_handle_ NULL");
@@ -2608,7 +2612,20 @@ int StreamOutPrimary::GetFrames(uint64_t *frames)
     AHAL_VERBOSE("session timespec %lld", ((long long) timestamp));
     timestamp *= (streamAttributes_.out_media_config.sample_rate);
     AHAL_VERBOSE("timestamp %lld", ((long long) timestamp));
-    *frames = timestamp/1000000;
+    dsp_frames = timestamp/1000000;
+
+    // Adjustment accounts for A2dp encoder latency with offload usecases
+    // Note: Encoder latency is returned in ms.
+    if (isDeviceAvailable(PAL_DEVICE_OUT_BLUETOOTH_A2DP)) {
+        ret = pal_get_param(PAL_PARAM_ID_BT_A2DP_ENCODER_LATENCY,
+                            (void **)&param_bt_a2dp, &size, nullptr);
+        if (!ret && param_bt_a2dp) {
+            offset = param_bt_a2dp->latency *
+                (streamAttributes_.out_media_config.sample_rate) / 1000;
+            dsp_frames = (dsp_frames > offset) ? (dsp_frames - offset) : 0;
+        }
+    }
+    *frames = dsp_frames;
 exit:
     return ret;
 }
