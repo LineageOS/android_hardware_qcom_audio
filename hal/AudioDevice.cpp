@@ -1355,6 +1355,22 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         }
     }
 
+    ret = str_parms_get_str(parms, "UHQA", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_uhqa_t param_uhqa_flag;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
+            param_uhqa_flag.uhqa_state = true;
+            AHAL_DBG(" - UHQA = on");
+            ret = pal_set_param(PAL_PARAM_ID_UHQA_FLAG, (void*)&param_uhqa_flag,
+                          sizeof(pal_param_uhqa_t));
+        } else {
+            param_uhqa_flag.uhqa_state = false;
+            AHAL_DBG(" - UHQA = false");
+            ret = pal_set_param(PAL_PARAM_ID_UHQA_FLAG, (void*)&param_uhqa_flag,
+                          sizeof(pal_param_uhqa_t));
+        }
+    }
+
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_CONNECT,
                             value, sizeof(value));
     if (ret >= 0) {
