@@ -417,6 +417,22 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
     }
 
     GetMatchingTxDevices(rx_devices, tx_devices);
+
+    /**
+     * if device_none is in Tx/Rx devices,
+     * which is invalid, teardown the usecase.
+     */
+    if (tx_devices.find(AUDIO_DEVICE_NONE) != tx_devices.end() ||
+        rx_devices.find(AUDIO_DEVICE_NONE) != rx_devices.end()) {
+        if (tx_devices.find(AUDIO_DEVICE_NONE) != tx_devices.end()) {
+            AHAL_ERR("Invalid Tx device");
+        } else {
+            AHAL_ERR("Invalid Rx device");
+        }
+        ret = -EINVAL;
+        goto exit;
+    }
+
     device_count = tx_devices.size() > rx_devices.size() ? tx_devices.size() : rx_devices.size();
 
     pal_device_ids = (pal_device_id_t *)calloc(1, device_count * sizeof(pal_device_id_t));
