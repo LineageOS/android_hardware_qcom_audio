@@ -2234,11 +2234,15 @@ int StreamOutPrimary::get_pcm_buffer_size()
 {
     uint8_t channels = audio_channel_count_from_out_mask(config_.channel_mask);
     uint8_t bytes_per_sample = audio_bytes_per_sample(config_.format);
+    audio_format_t src_format = config_.format;
+    audio_format_t dst_format = (audio_format_t)(getAlsaSupportedFmt.at(src_format));
+    uint32_t hal_op_bytes_per_sample = audio_bytes_per_sample(dst_format);
+    uint32_t hal_ip_bytes_per_sample = audio_bytes_per_sample(src_format);
     uint32_t fragment_size = 0;
 
-    AHAL_DBG("config_ format:%x, SR %d ch_mask 0x%x",
+    AHAL_DBG("config_ format:%x, SR %d ch_mask 0x%x, out format:%x",
             config_.format, config_.sample_rate,
-            config_.channel_mask);
+            config_.channel_mask, dst_format);
     fragment_size = PCM_OFFLOAD_OUTPUT_PERIOD_DURATION *
         config_.sample_rate * bytes_per_sample * channels;
     fragment_size /= 1000;
@@ -2249,6 +2253,16 @@ int StreamOutPrimary::get_pcm_buffer_size()
         fragment_size = MAX_PCM_FRAGMENT_SIZE;
 
     fragment_size = ALIGN(fragment_size, (bytes_per_sample * channels * 32));
+
+    if ((src_format != dst_format) &&
+         hal_op_bytes_per_sample != hal_ip_bytes_per_sample) {
+
+        fragment_size =
+                  (fragment_size * hal_ip_bytes_per_sample) /
+                   hal_op_bytes_per_sample;
+        AHAL_INFO("enable conversion hal_input_fragment_size: src_format %x dst_format %x",
+               src_format, dst_format);
+    }
 
     AHAL_DBG("fragment size: %d", fragment_size);
     return fragment_size;
@@ -2534,18 +2548,12 @@ int StreamOutPrimary::Open() {
         outBufCount = DEEP_BUFFER_PLAYBACK_PERIOD_COUNT;
 
     if (halInputFormat != halOutputFormat) {
-        convertBufSize =  PCM_OFFLOAD_OUTPUT_PERIOD_DURATION *
-                         config_.sample_rate * audio_bytes_per_frame(
-                         audio_channel_count_from_out_mask(config_.channel_mask),
-                         halOutputFormat);
-        convertBufSize /= 1000;
-        convertBuffer = realloc(convertBuffer, convertBufSize);
+        convertBuffer = realloc(convertBuffer, outBufSize);
         if (!convertBuffer) {
             ret = -ENOMEM;
             AHAL_ERR("convert Buffer allocation failed. ret %d", ret);
             goto error_open;
         }
-        outBufSize = convertBufSize;
         AHAL_DBG("convert buffer allocated for size %d", convertBufSize);
     }
 
