@@ -959,7 +959,7 @@ void *hw_info_init(const char *snd_card_name)
         ALOGV("SDX - variant soundcard");
         update_hardware_info_sdx(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "pahu") || strstr(snd_card_name, "tavil") ||
-            strstr(snd_card_name, "sa8155")) {
+            strstr(snd_card_name, "sa8155") || strstr(snd_card_name, "sa8295")) {
         ALOGV("MSMNILE - variant soundcard");
         update_hardware_info_msmnile(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "sda845")) {

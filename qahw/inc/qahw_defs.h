@@ -234,6 +234,9 @@ __BEGIN_DECLS
 #define QAHW_PCM_CUSTOM_CHANNEL_MAP_15  62
 #define QAHW_PCM_CUSTOM_CHANNEL_MAP_16  63
 
+/* Adapt update_device_list API */
+#define QAHW_UPDATE_DEVICE_LIST_ENABLED
+
 /* type of asynchronous write callback events. Mutually exclusive */
 typedef enum {
     QAHW_STREAM_CBK_EVENT_WRITE_READY, /* non blocking write completed */
