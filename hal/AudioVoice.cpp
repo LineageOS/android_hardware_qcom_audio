@@ -231,7 +231,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
                 voice_.session[i].hd_voice = hd_voice;
                 if (IsCallActive(&voice_.session[i])) {
                     pal_stream_set_param(voice_.session[i].pal_voice_handle,
-                                         PAL_PARAM_ID_SLOW_TALK, params);
+                                         PAL_PARAM_ID_HD_VOICE, params);
                 }
             }
             free(params);
