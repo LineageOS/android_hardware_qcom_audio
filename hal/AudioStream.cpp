@@ -2374,7 +2374,17 @@ int StreamOutPrimary::Open() {
             streamAttributes_.out_media_config.sample_rate = msample_rate;
         if (mchannels)
             streamAttributes_.out_media_config.ch_info.channels = mchannels;
-        streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
+        if (getAlsaSupportedFmt.find(config_.format) != getAlsaSupportedFmt.end()) {
+            halInputFormat = config_.format;
+            halOutputFormat = (audio_format_t)(getAlsaSupportedFmt.at(config_.format));
+            streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(halOutputFormat);
+            streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[halOutputFormat];
+            if (streamAttributes_.out_media_config.bit_width == 0)
+                streamAttributes_.out_media_config.bit_width = 16;
+            streamAttributes_.type = PAL_STREAM_PCM_OFFLOAD;
+        }
+        else
+          streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
     } else if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD ||
                streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
         halInputFormat = config_.format;

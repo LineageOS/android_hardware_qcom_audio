@@ -76,6 +76,7 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
     bool volume_boost;
     bool slow_talk;
     bool hd_voice;
+    bool hac;
 
     parms = str_parms_create_str(kvpairs);
     if (!parms)
@@ -282,6 +283,20 @@ int AudioVoice::VoiceSetParameters(const char *kvpairs) {
                     AHAL_ERR("Failed to set mute err:%d", ret);
                     ret = -EINVAL;
                     goto done;
+                }
+            }
+        }
+    }
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HAC, c_value, sizeof(c_value));
+    if (err >= 0) {
+        hac = false;
+        if (strcmp(c_value, AUDIO_PARAMETER_VALUE_HAC_ON) == 0)
+            hac = true;
+        for ( i = 0; i < max_voice_sessions_; i++) {
+            if (voice_.session[i].hac != hac) {
+                voice_.session[i].hac = hac;
+                if (IsCallActive(&voice_.session[i])) {
+                    ret = VoiceSetDevice(&voice_.session[i]);
                 }
             }
         }
@@ -643,6 +658,16 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
     streamAttributes.out_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
     streamAttributes.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE; // TODO: need to convert this from output format
 
+    /*set custom key for hac mode*/
+    if (session && session->hac && palDevices[1].id == 
+        PAL_DEVICE_OUT_HANDSET) {
+        strlcpy(palDevices[0].custom_config.custom_key, "HAC",
+                    sizeof(palDevices[0].custom_config.custom_key));
+        strlcpy(palDevices[1].custom_config.custom_key, "HAC",
+                    sizeof(palDevices[1].custom_config.custom_key));
+        AHAL_INFO("Setting custom key as %s", palDevices[0].custom_config.custom_key);
+    }
+
     //streamAttributes.in_media_config.ch_info = ch_info;
     ret = pal_stream_open(&streamAttributes,
                           2,
@@ -871,6 +896,18 @@ int AudioVoice::VoiceSetDevice(voice_session_t *session) {
                 param_payload = nullptr;
             }
     }
+    /*set or remove custom key for hac mode*/
+    if (session && session->hac && palDevices[1].id == 
+        PAL_DEVICE_OUT_HANDSET) {
+        strlcpy(palDevices[0].custom_config.custom_key, "HAC",
+                    sizeof(palDevices[0].custom_config.custom_key));
+        strlcpy(palDevices[1].custom_config.custom_key, "HAC",
+                    sizeof(palDevices[1].custom_config.custom_key));
+            AHAL_INFO("Setting custom key as %s", palDevices[0].custom_config.custom_key);
+    } else {
+        strlcpy(palDevices[0].custom_config.custom_key, "",
+                sizeof(palDevices[0].custom_config.custom_key));
+    }
 
     if (session && session->pal_voice_handle) {
         ret = pal_stream_set_device(session->pal_voice_handle, 2, palDevices);
@@ -963,6 +1000,7 @@ AudioVoice::AudioVoice() {
         voice_.session[i].pal_vol_data = pal_vol_;
         voice_.session[i].device_mute.dir = PAL_AUDIO_OUTPUT;
         voice_.session[i].device_mute.mute = false;
+        voice_.session[i].hac = false;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
@@ -987,6 +1025,7 @@ AudioVoice::~AudioVoice() {
         voice_.session[i].pal_voice_handle = NULL;
         voice_.session[i].hd_voice = false;
         voice_.session[i].pal_vol_data = NULL;
+        voice_.session[i].hac = false;
     }
 
     voice_.session[MMODE1_SESS_IDX].vsid = VOICEMMODE1_VSID;
