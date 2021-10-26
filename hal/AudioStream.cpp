@@ -1945,8 +1945,7 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
     forceRouting = AudioExtn::audio_devices_cmp(new_devices, audio_is_a2dp_out_device);
 
     /* Ignore routing to same device unless it's forced */
-    if ((!AudioExtn::audio_devices_empty(new_devices) && (mAndroidOutDevices != new_devices))
-            || forceRouting) {
+    if (!AudioExtn::audio_devices_empty(new_devices) || forceRouting) {
         // re-allocate mPalOutDevice and mPalOutDeviceIds
         if (new_devices.size() != mAndroidOutDevices.size()) {
             deviceId = (pal_device_id_t*) realloc(mPalOutDeviceIds,
