@@ -1105,7 +1105,6 @@ int64_t StreamInPrimary::GetSourceLatency(audio_input_flags_t halStreamFlags)
 uint64_t StreamInPrimary::GetFramesRead(int64_t* time)
 {
     uint64_t signed_frames = 0;
-    uint64_t read_frames = 0;
     uint64_t kernel_frames = 0;
     size_t kernel_buffer_size = 0;
     int64_t dsp_latency = 0;
@@ -1120,22 +1119,9 @@ uint64_t StreamInPrimary::GetFramesRead(int64_t* time)
      */
     dsp_latency = StreamInPrimary::GetSourceLatency(flags_);
 
-    read_frames = mBytesRead / audio_bytes_per_frame(
+    signed_frames = mBytesRead / audio_bytes_per_frame(
         audio_channel_count_from_in_mask(config_.channel_mask),
         config_.format);
-
-    /* not querying actual state of buffering in kernel as it would involve an ioctl call
-     * which then needs protection, this causes delay in TS query for pcm_offload usecase
-     * hence only estimate.
-     */
-    kernel_buffer_size = fragment_size_ * fragments_;
-    kernel_frames = kernel_buffer_size /
-        audio_bytes_per_frame(
-            audio_channel_count_from_in_mask(config_.channel_mask),
-            config_.format);
-
-
-    signed_frames = read_frames + kernel_frames;
 
     *time = (readAt.tv_sec * 1000000000LL) + readAt.tv_nsec - (dsp_latency * 1000LL);
 
@@ -1153,8 +1139,7 @@ uint64_t StreamInPrimary::GetFramesRead(int64_t* time)
         }
     }
 
-    AHAL_VERBOSE("signed frames %lld read frames %lld kernel frames %lld",
-        (long long)signed_frames, (long long)read_frames, (long long)kernel_frames);
+    AHAL_VERBOSE("signed frames %lld", (long long)signed_frames);
 
     return signed_frames;
 }
