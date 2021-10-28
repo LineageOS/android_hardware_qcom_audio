@@ -2068,7 +2068,7 @@ done:
 
 int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     char value[64];
-    int ret =  -EINVAL, controller = -1, stream = -1;
+    int ret =  0, controller = -1, stream = -1;
     int ret1 = 0;
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
@@ -2085,26 +2085,27 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
         AHAL_ERR("error %d, plugin device cont %d stream %d", ret, controller, stream);
     }
 
-    //TBD: check if its offload and check call the following
-    ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &palSndDec, parms, &msample_rate, &mchannels);
-    if (ret) {
-        AHAL_ERR("parse_compress_metadata Error (%x)", ret);
-        goto error;
-    } else {
-        isCompressMetadataAvail = true;
-    }
+    //Parse below metadata only if it is compress offload usecase.
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &palSndDec, parms,
+                                         &msample_rate, &mchannels, &isCompressMetadataAvail);
+        if (ret) {
+            AHAL_ERR("parse_compress_metadata Error (%x)", ret);
+            goto error;
+        }
 
-    ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
-    if (ret1 >= 0 ) {
-        gaplessMeta.encoderDelay = atoi(value);
-        AHAL_DBG("new encoder delay %u", gaplessMeta.encoderDelay);
+        ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
+        if (ret1 >= 0 ) {
+            gaplessMeta.encoderDelay = atoi(value);
+            AHAL_DBG("new encoder delay %u", gaplessMeta.encoderDelay);
+        }
+        ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
+        if (ret1 >= 0) {
+            gaplessMeta.encoderPadding = atoi(value);
+            AHAL_DBG("padding %u", gaplessMeta.encoderPadding);
+        }
+        sendGaplessMetadata = true;
     }
-    ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
-    if (ret1 >= 0) {
-        gaplessMeta.encoderPadding = atoi(value);
-        AHAL_DBG("padding %u", gaplessMeta.encoderPadding);
-    }
-    sendGaplessMetadata = true;
 error:
     AHAL_DBG("exit %d", ret);
     return ret;
