@@ -699,14 +699,16 @@ int AudioExtn::audio_extn_hidl_init() {
 #ifdef PAL_HIDL_ENABLED
    /* register audio PAL HIDL */
     sp<IPAL> service = new PAL();
-    AHAL_ERR("Register PAL service");
     /*
      *We request for more threads as the same number of threads would be divided
      *between PAL and audio HAL HIDL
      */
     configureRpcThreadpool(32, false /*callerWillJoin*/);
-    if(android::OK !=  service->registerAsService())
-        AHAL_ERR("Could not register AHAL extension");
+    if(android::OK !=  service->registerAsService()) {
+        AHAL_ERR("Could not register PAL service");
+    } else {
+        AHAL_DBG("successfully registered PAL service");
+    }
 #endif
     /* to register other hidls */
     return 0;
