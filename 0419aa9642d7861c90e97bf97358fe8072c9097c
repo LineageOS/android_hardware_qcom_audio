@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "6f881313_76ccf8c2",
+        "filename": "hal/audio_extn/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 134,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2021-10-29T16:00:11Z",
+      "side": 1,
+      "message": "it\u0027s already here",
+      "range": {
+        "startLine": 131,
+        "startChar": 0,
+        "endLine": 134,
+        "endChar": 0
+      },
+      "revId": "0419aa9642d7861c90e97bf97358fe8072c9097c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
