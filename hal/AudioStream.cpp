@@ -2405,44 +2405,54 @@ int StreamOutPrimary::Open() {
     streamAttributes_.out_media_config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
     streamAttributes_.out_media_config.ch_info = ch_info;
 
-    if (streamAttributes_.type == PAL_STREAM_COMPRESSED) {
-        streamAttributes_.flags = (pal_stream_flags_t)(PAL_STREAM_FLAG_NON_BLOCKING);
-        if (config_.offload_info.format == 0)
-            config_.offload_info.format = config_.format;
-        if (config_.offload_info.sample_rate == 0)
-            config_.offload_info.sample_rate = config_.sample_rate;
-        streamAttributes_.out_media_config.sample_rate = config_.offload_info.sample_rate;
-        if (msample_rate)
-            streamAttributes_.out_media_config.sample_rate = msample_rate;
-        if (mchannels)
-            streamAttributes_.out_media_config.ch_info.channels = mchannels;
-        if (getAlsaSupportedFmt.find(config_.format) != getAlsaSupportedFmt.end()) {
+    switch(streamAttributes_.type) {
+        case PAL_STREAM_COMPRESSED:
+            streamAttributes_.flags = (pal_stream_flags_t)(PAL_STREAM_FLAG_NON_BLOCKING);
+            if (config_.offload_info.format == 0)
+                config_.offload_info.format = config_.format;
+            if (config_.offload_info.sample_rate == 0)
+                config_.offload_info.sample_rate = config_.sample_rate;
+                streamAttributes_.out_media_config.sample_rate = config_.offload_info.sample_rate;
+            if (msample_rate)
+                streamAttributes_.out_media_config.sample_rate = msample_rate;
+            if (mchannels)
+                streamAttributes_.out_media_config.ch_info.channels = mchannels;
+            if (getAlsaSupportedFmt.find(config_.format) != getAlsaSupportedFmt.end()) {
+                halInputFormat = config_.format;
+                halOutputFormat = (audio_format_t)(getAlsaSupportedFmt.at(config_.format));
+                streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(halOutputFormat);
+                streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[halOutputFormat];
+                if (streamAttributes_.out_media_config.bit_width == 0)
+                    streamAttributes_.out_media_config.bit_width = 16;
+                streamAttributes_.type = PAL_STREAM_PCM_OFFLOAD;
+            } else {
+                streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
+            }
+            break;
+        case PAL_STREAM_LOW_LATENCY:
+        case PAL_STREAM_ULTRA_LOW_LATENCY:
+        case PAL_STREAM_DEEP_BUFFER:
+        case PAL_STREAM_GENERIC:
+        case PAL_STREAM_PCM_OFFLOAD:
             halInputFormat = config_.format;
-            halOutputFormat = (audio_format_t)(getAlsaSupportedFmt.at(config_.format));
+            halOutputFormat = (audio_format_t)(getAlsaSupportedFmt.at(halInputFormat));
             streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(halOutputFormat);
             streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[halOutputFormat];
+            AHAL_DBG("halInputFormat %d halOutputFormat %d palformat %d", halInputFormat,
+                     halOutputFormat, streamAttributes_.out_media_config.aud_fmt_id);
             if (streamAttributes_.out_media_config.bit_width == 0)
                 streamAttributes_.out_media_config.bit_width = 16;
-            streamAttributes_.type = PAL_STREAM_PCM_OFFLOAD;
-        }
-        else
-          streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(config_.format & AUDIO_FORMAT_MAIN_MASK);
-    } else if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD ||
-               streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
-        halInputFormat = config_.format;
-        halOutputFormat = (audio_format_t)(getAlsaSupportedFmt.at(halInputFormat));
-        streamAttributes_.out_media_config.aud_fmt_id = getFormatId.at(halOutputFormat);
-        streamAttributes_.out_media_config.bit_width = format_to_bitwidth_table[halOutputFormat];
-        AHAL_DBG("halInputFormat %d halOutputFormat %d palformat %d", halInputFormat,
-                 halOutputFormat, streamAttributes_.out_media_config.aud_fmt_id);
-        if (streamAttributes_.out_media_config.bit_width == 0)
-            streamAttributes_.out_media_config.bit_width = 16;
-    } else if ((streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) &&
-            (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP)) {
-        streamAttributes_.flags = (pal_stream_flags_t)(PAL_STREAM_FLAG_MMAP_NO_IRQ);
-    } else if ((streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) &&
-            (usecase_ == USECASE_AUDIO_PLAYBACK_ULL)) {
-        streamAttributes_.flags = (pal_stream_flags_t)(PAL_STREAM_FLAG_MMAP);
+
+            if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
+                if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP) {
+                    streamAttributes_.flags = (pal_stream_flags_t)(PAL_STREAM_FLAG_MMAP_NO_IRQ);
+                } else if (usecase_ == USECASE_AUDIO_PLAYBACK_ULL) {
+                    streamAttributes_.flags = (pal_stream_flags_t)(PAL_STREAM_FLAG_MMAP);
+                }
+            }
+            break;
+        default:
+            break;
     }
 
     ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
