@@ -634,7 +634,7 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
         latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
         break;
     case USECASE_AUDIO_PLAYBACK_VOIP:
-        latency += (VOIP_PERIOD_COUNT_DEFAULT * DEFAULT_VOIP_BUF_DURATION_MS * DEFAULT_VOIP_BIT_DEPTH_BYTE)/2;
+        latency += VOIP_PERIOD_COUNT_DEFAULT * DEFAULT_VOIP_BUF_DURATION_MS;
         break;
     default:
         latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
@@ -2319,19 +2319,6 @@ int StreamOutPrimary::get_pcm_buffer_size()
     return fragment_size;
 }
 
-static int voip_get_buffer_size(uint32_t sample_rate)
-{
-    if (sample_rate == 48000)
-        return COMPRESS_VOIP_IO_BUF_SIZE_FB;
-    else if (sample_rate == 32000)
-        return COMPRESS_VOIP_IO_BUF_SIZE_SWB;
-    else if (sample_rate == 16000)
-        return COMPRESS_VOIP_IO_BUF_SIZE_WB;
-    else
-        return COMPRESS_VOIP_IO_BUF_SIZE_NB;
-
-}
-
 static bool period_size_is_plausible_for_low_latency(int period_size)
 {
      switch (period_size) {
@@ -2369,7 +2356,10 @@ uint32_t StreamOutPrimary::GetBufferSize() {
     streamAttributes_.type = StreamOutPrimary::GetPalStreamType(flags_);
     AHAL_DBG("type %d", streamAttributes_.type);
     if (streamAttributes_.type == PAL_STREAM_VOIP_RX) {
-        return voip_get_buffer_size(config_.sample_rate);
+        return (DEFAULT_VOIP_BUF_DURATION_MS * config_.sample_rate / 1000) *
+               audio_bytes_per_frame(
+                       audio_channel_count_from_out_mask(config_.channel_mask),
+                       config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_COMPRESSED) {
         return get_compressed_buffer_size();
     } else if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD) {
@@ -2660,6 +2650,8 @@ int StreamOutPrimary::Open() {
         outBufCount = PCM_OFFLOAD_PLAYBACK_PERIOD_COUNT;
     else if (usecase_ == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)
         outBufCount = DEEP_BUFFER_PLAYBACK_PERIOD_COUNT;
+    else if (usecase_ == USECASE_AUDIO_PLAYBACK_VOIP)
+        outBufCount = VOIP_PERIOD_COUNT_DEFAULT;
 
     if (halInputFormat != halOutputFormat) {
         convertBuffer = realloc(convertBuffer, outBufSize);
@@ -3966,6 +3958,10 @@ set_buff_size:
         inBufCount = ULL_PERIOD_COUNT_DEFAULT;
     } else
         inBufSize = StreamInPrimary::GetBufferSize();
+
+    if (usecase_ == USECASE_AUDIO_RECORD_VOIP)
+        inBufCount = VOIP_PERIOD_COUNT_DEFAULT;
+
     if (!handle) {
         inBufCfg.buf_size = inBufSize;
         inBufCfg.buf_count = inBufCount;
@@ -4007,7 +4003,10 @@ uint32_t StreamInPrimary::GetBufferSize() {
     streamAttributes_.type = StreamInPrimary::GetPalStreamType(flags_,
             config_.sample_rate);
     if (streamAttributes_.type == PAL_STREAM_VOIP_TX) {
-        return voip_get_buffer_size(config_.sample_rate);
+        return (DEFAULT_VOIP_BUF_DURATION_MS * config_.sample_rate / 1000) *
+               audio_bytes_per_frame(
+                       audio_channel_count_from_in_mask(config_.channel_mask),
+                       config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_LOW_LATENCY) {
         return LOW_LATENCY_CAPTURE_PERIOD_SIZE *
             audio_bytes_per_frame(
