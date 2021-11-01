@@ -151,6 +151,7 @@ MM_AUDIO += autoeffects
 MM_AUDIO += autoeffects.xml
 MM_AUDIO += audcalparam_commands.cfg
 MM_AUDIO += libsynth
+MM_AUDIO += libicc
 
 MM_AUDIO += android.hardware.automotive.audiocontrol-service.example
 MM_AUDIO += libaudiopowerpolicy
