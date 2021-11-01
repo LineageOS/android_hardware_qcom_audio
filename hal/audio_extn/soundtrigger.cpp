@@ -316,7 +316,6 @@ void* audio_extn_sound_trigger_check_and_get_session(StreamInPrimary *in_stream)
         if (st_ses_info->st_ses.capture_handle == in_stream->GetHandle()) {
             handle = st_ses_info->st_ses.p_ses;
             in_stream->is_st_session = true;
-            in_stream->is_st_session_active = true;
             AHAL_DBG("capture_handle %d is sound trigger",
                   in_stream->GetHandle());
             break;
@@ -348,7 +347,7 @@ bool audio_extn_sound_trigger_check_session_activity(StreamInPrimary *in_stream)
     list_for_each(node, &st_dev->st_ses_list) {
         st_ses_info = node_to_item(node, struct sound_trigger_info, list);
         if (st_ses_info->st_ses.capture_handle == in_stream->GetHandle()) {
-            AHAL_DBG("sound trigger session available for capture_handle %d",
+            AHAL_VERBOSE("sound trigger session available for capture_handle %d",
                   in_stream->GetHandle());
             st_session_available = true;
             break;

@@ -4160,6 +4160,8 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     int ret = 0;
     readAt.tv_sec = 0;
     readAt.tv_nsec = 0;
+    void *st_handle = nullptr;
+    pal_param_payload *payload = nullptr;
 
     AHAL_DBG("enter: handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%zu) flags(%#x)"\
           , handle, config->format, config->sample_rate, config->channel_mask,
@@ -4194,13 +4196,53 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
         }
     }
 
-            /* this is required for USB otherwise adev_open_input_stream is failed */
+    /* this is required for USB otherwise adev_open_input_stream is failed */
     if (!config_.sample_rate)
         config_.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
     if (!config_.channel_mask)
         config_.channel_mask = AUDIO_CHANNEL_IN_MONO;
     if (!config_.format)
         config_.format = AUDIO_FORMAT_PCM_16_BIT;
+
+    /*
+     * Audio config set from client may not be same as config used in pal,
+     * update audio config here so that AudioFlinger can acquire correct
+     * config used in pal/hal and configure record buffer converter properly.
+     */
+    st_handle = audio_extn_sound_trigger_check_and_get_session(this);
+    if (st_handle) {
+        AHAL_VERBOSE("Found existing pal stream handle associated with capture handle");
+        pal_stream_handle_ = (pal_stream_handle_t *)st_handle;
+        payload = (pal_param_payload *)calloc(1,
+            sizeof(pal_param_payload) + sizeof(struct pal_stream_attributes));
+        if (!payload) {
+            AHAL_ERR("Failed to allocate memory for stream attributes");
+            goto error;
+        }
+        payload->payload_size = sizeof(struct pal_stream_attributes);
+        ret = pal_stream_get_param(pal_stream_handle_, PAL_PARAM_ID_STREAM_ATTRIBUTES, &payload);
+        if (ret) {
+            AHAL_ERR("Failed to get pal stream attributes, ret = %d", ret);
+            if (payload)
+                free(payload);
+            goto error;
+        }
+        memcpy(&streamAttributes_, payload->payload, payload->payload_size);
+
+        if (streamAttributes_.in_media_config.ch_info.channels == 1)
+            config_.channel_mask = AUDIO_CHANNEL_IN_MONO;
+        else if (streamAttributes_.in_media_config.ch_info.channels == 2)
+            config_.channel_mask = AUDIO_CHANNEL_IN_STEREO;
+        config_.format = AUDIO_FORMAT_PCM_16_BIT;
+
+        /*
+         * reset pal_stream_handle in case standby come before
+         * read as anyway it will be updated in StreamInPrimary::Open
+         */
+        if (payload)
+            free(payload);
+        pal_stream_handle_ = nullptr;
+    }
 
     AHAL_DBG("local : handle (%x) format(%#x) sample_rate(%d) channel_mask(%#x) devices(%#x) flags(%#x)"\
           , handle, config_.format, config_.sample_rate, config_.channel_mask,
