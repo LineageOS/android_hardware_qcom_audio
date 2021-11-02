@@ -8761,15 +8761,14 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             struct listnode *node;
             list_for_each(node, &adev->usecase_list) {
                 usecase = node_to_item(node, struct audio_usecase, list);
-                if (usecase->stream.in && (usecase->type == PCM_CAPTURE ||
-                                           usecase->type == VOICE_CALL) &&
-                    (!is_btsco_device(SND_DEVICE_NONE, usecase->in_snd_device))) {
+                if (usecase->stream.in && (usecase->type == PCM_CAPTURE) &&
+                    (!is_btsco_device(SND_DEVICE_NONE, usecase->in_snd_device)) && (is_sco_in_device_type(&usecase->stream.in->device_list))) {
                     ALOGD("BT_SCO ON, switch all in use case to it");
                     select_devices(adev, usecase->id);
                     }
                 if (usecase->stream.out && (usecase->type == PCM_PLAYBACK ||
                                             usecase->type == VOICE_CALL) &&
-                    (!is_btsco_device(usecase->out_snd_device, SND_DEVICE_NONE))) {
+                    (!is_btsco_device(usecase->out_snd_device, SND_DEVICE_NONE)) && (is_sco_out_device_type(&usecase->stream.out->device_list))) {
                      ALOGD("BT_SCO ON, switch all out use case to it");
                      select_devices(adev, usecase->id);
                     }
