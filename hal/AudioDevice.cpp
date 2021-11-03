@@ -1693,25 +1693,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             param_bt_sco.bt_sco_on = true;
         } else {
             param_bt_sco.bt_sco_on = false;
-
-            // turn off wideband, super-wideband and BLE voice bit during sco off
-            param_bt_sco.bt_wb_speech_enabled = false;
-            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
-                                sizeof(pal_param_btsco_t));
-
-            param_bt_sco.bt_lc3_speech_enabled = false;
-            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
-                                sizeof(pal_param_btsco_t));
-
-            param_bt_sco.bt_swb_speech_mode = 0xFFFF;
-            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_SWB, (void *)&param_bt_sco,
-                                sizeof(pal_param_btsco_t));
-
         }
-
-        // clear btsco_lc3_cfg whenever there's sco state change to
-        // avoid stale and partial cfg being used in next round
-        memset(&btsco_lc3_cfg, 0, sizeof(btsco_lc3_cfg_t));
 
         AHAL_INFO("BTSCO on = %d", param_bt_sco.bt_sco_on);
         ret = pal_set_param(PAL_PARAM_ID_BT_SCO, (void *)&param_bt_sco,
@@ -1740,6 +1722,32 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         AHAL_INFO("BTSCO SWB mode = 0x%x", val);
         ret = pal_set_param(PAL_PARAM_ID_BT_SCO_SWB, (void *)&param_bt_sco,
                             sizeof(pal_param_btsco_t));
+    }
+
+    ret = str_parms_get_str(parms, "bt_ble", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_btsco_t param_bt_sco;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
+            bt_lc3_speech_enabled = true;
+
+            // turn off wideband, super-wideband
+            param_bt_sco.bt_wb_speech_enabled = false;
+            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_WB, (void *)&param_bt_sco,
+                                sizeof(pal_param_btsco_t));
+
+            param_bt_sco.bt_swb_speech_mode = 0xFFFF;
+            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_SWB, (void *)&param_bt_sco,
+                                sizeof(pal_param_btsco_t));
+        } else {
+            bt_lc3_speech_enabled = false;
+            param_bt_sco.bt_lc3_speech_enabled = false;
+            ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
+                                sizeof(pal_param_btsco_t));
+
+            // clear btsco_lc3_cfg to avoid stale and partial cfg being used in next round
+            memset(&btsco_lc3_cfg, 0, sizeof(btsco_lc3_cfg_t));
+        }
+        AHAL_INFO("BTSCO LC3 mode = %d", bt_lc3_speech_enabled);
     }
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_NREC, value, sizeof(value));
@@ -1787,18 +1795,19 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         }
     }
 
-    if ((btsco_lc3_cfg.fields_map & LC3_BIT_MASK) == LC3_BIT_VALID) {
+    if (((btsco_lc3_cfg.fields_map & LC3_BIT_MASK) == LC3_BIT_VALID) &&
+           (bt_lc3_speech_enabled == true)) {
         pal_param_btsco_t param_bt_sco;
-        param_bt_sco.bt_lc3_speech_enabled = true;
+        param_bt_sco.bt_lc3_speech_enabled  = bt_lc3_speech_enabled;
         param_bt_sco.lc3_cfg.frame_duration = btsco_lc3_cfg.frame_duration;
-        param_bt_sco.lc3_cfg.num_blocks = btsco_lc3_cfg.num_blocks;
+        param_bt_sco.lc3_cfg.num_blocks     = btsco_lc3_cfg.num_blocks;
         param_bt_sco.lc3_cfg.rxconfig_index = btsco_lc3_cfg.rxconfig_index;
         param_bt_sco.lc3_cfg.txconfig_index = btsco_lc3_cfg.txconfig_index;
-        param_bt_sco.lc3_cfg.api_version = btsco_lc3_cfg.api_version;
+        param_bt_sco.lc3_cfg.api_version    = btsco_lc3_cfg.api_version;
         strlcpy(param_bt_sco.lc3_cfg.streamMap, btsco_lc3_cfg.streamMap, PAL_LC3_MAX_STRING_LEN);
         strlcpy(param_bt_sco.lc3_cfg.vendor, btsco_lc3_cfg.vendor, PAL_LC3_MAX_STRING_LEN);
 
-        AHAL_INFO("BTSCO LC3 on = %d", param_bt_sco.bt_lc3_speech_enabled);
+        AHAL_INFO("BTSCO LC3 mode = on, sending..");
         ret = pal_set_param(PAL_PARAM_ID_BT_SCO_LC3, (void *)&param_bt_sco,
                             sizeof(pal_param_btsco_t));
 
