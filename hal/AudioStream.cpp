@@ -2863,7 +2863,13 @@ ssize_t StreamOutPrimary::configurePalOutputStream() {
                 pal_haptics_stream_handle = NULL;
             }
             return -EINVAL;
+        } else {
+            AHAL_INFO("notify GEF client of device config");
+            for(auto dev : mAndroidOutDevices)
+                audio_extn_gef_notify_device_config(dev, config_.channel_mask,
+                    config_.sample_rate, flags_);
         }
+
         if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS) {
             ret = pal_stream_start(pal_haptics_stream_handle);
             if (ret) {
