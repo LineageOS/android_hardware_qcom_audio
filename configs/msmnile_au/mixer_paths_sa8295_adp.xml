@@ -279,9 +279,9 @@
     <ctl name="AFE_PCM_RX Audio Mixer MultiMedia3" value="0" />
 
     <!-- hfp-sco -->
-    <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia21" value="0" />
-    <ctl name="MultiMedia21 Mixer AUX_PCM_UL_TX" value="0" />
-    <ctl name="AUX_PCM_RX Audio Mixer MultiMedia6" value="0" />
+    <ctl name="PRI_TDM_RX_2 Audio Mixer MultiMedia21" value="0" />
+    <ctl name="MultiMedia21 Mixer SEN_TDM_TX_1" value="0" />
+    <ctl name="SEN_TDM_RX_1 Audio Mixer MultiMedia6" value="0" />
     <ctl name="MultiMedia6 Mixer TERT_TDM_TX_0" value="0" />
 
     <!-- icc-call and anc-loopback -->
@@ -297,7 +297,7 @@
     <!-- EC Reference end -->
 
     <path name="echo-reference">
-        <ctl name="AUDIO_REF_EC_UL1 MUX" value="TERT_TDM_RX_2" />
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="PRI_TDM_RX_2" />
         <ctl name="EC Reference Channels" value="One" />
         <ctl name="EC Reference Bit Format" value="S16_LE" />
         <ctl name="EC Reference SampleRate" value="48000" />
@@ -1708,6 +1708,11 @@
 
     <path name="hfp-sco">
         <path name="auto-record" />
+        <ctl name="SEN_TDM SlotWidth" value="16" />
+        <ctl name="SEN_TDM SlotNumber" value="Eight" />
+        <ctl name="SEN_TDM_RX_1 Channels" value="One" />
+        <ctl name="SEN_TDM_RX_1 SlotMapping" id ="0" value="0" />
+        <ctl name="SEN_TDM_RX_1 SlotMapping" id ="1" value="65535" />
         <ctl name="SEN_TDM_RX_1 Audio Mixer MultiMedia6" value="1" />
         <ctl name="MultiMedia6 Mixer TERT_TDM_TX_0" value="1" />
     </path>
@@ -1723,7 +1728,7 @@
     </path>
 
     <path name="hfp-sco-wb">
-        <ctl name="PRIM_AUX_PCM_RX SampleRate" value="KHZ_16" />
+        <ctl name="SEN_TDM_RX_1 SampleRate" value="KHZ_16" />
         <path name="hfp-sco" />
     </path>
 
@@ -1744,6 +1749,12 @@
 
     <path name="hfp-sco-downlink">
         <path name="auto-playback" />
+        <ctl name="SEN_TDM SlotWidth" value="16" />
+        <ctl name="SEN_TDM SlotNumber" value="Eight" />
+        <ctl name="SEN_TDM_TX_1 Channels" value="One" />
+        <ctl name="SEN_TDM_TX_1 SlotMapping" id ="0" value="0" />
+        <ctl name="SEN_TDM_TX_1 SlotMapping" id ="1" value="65535" />
+        <ctl name="PRI_TDM_RX_2 Channels" value="One" />
         <ctl name="PRI_TDM_RX_2 SampleRate" value="KHZ_48" />
         <ctl name="PRI_TDM_RX_2 SlotMapping" id ="0" value="28" />
         <ctl name="PRI_TDM_RX_2 SlotMapping" id ="1" value="65535" />
@@ -1752,7 +1763,7 @@
     </path>
 
     <path name="hfp-sco-wb-downlink">
-        <ctl name="PRIM_AUX_PCM_TX SampleRate" value="KHZ_16" />
+        <ctl name="SEN_TDM_TX_1 SampleRate" value="KHZ_16" />
         <path name="hfp-sco-downlink" />
     </path>
 
