@@ -566,6 +566,10 @@
         <path name="handset" />
     </path>
 
+    <path name="voice-handset-hac">
+        <path name="handset" />
+    </path>
+
     <path name="voice-handset-hdk">
         <path name="handset" />
     </path>
@@ -665,6 +669,13 @@
     </path>
 
 
+    <path name="voice-rec-mic">
+        <path name="handset-mic" />
+    </path>
+
+    <path name="camcorder-mic">
+        <path name="handset-mic" />
+    </path>
 
     <path name="va-mic-mono">
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
@@ -688,9 +699,9 @@
         <ctl name="TX2 MODE" value="ADC_LP" />
         <ctl name="ADC3 MUX" value="INP4" />
         <ctl name="VA SMIC MUX0" value="SWR_MIC4" />
-        <ctl name="VA SMIC MUX1" value="SWR_MIC9" />
+        <ctl name="VA SMIC MUX1" value="SWR_MIC8" />
         <ctl name="ADC1 ChMap" value="SWRM_TX2_CH1" />
-        <ctl name="ADC3 ChMap" value="SWRM_TX3_CH2" />
+        <ctl name="ADC3 ChMap" value="SWRM_TX3_CH1" />
         <ctl name="ADC1_MIXER Switch" value="1" />
         <ctl name="ADC3_MIXER Switch" value="1" />
         <ctl name="VA_AMIC1_MIXER Switch" value="1" />
