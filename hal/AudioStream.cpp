@@ -1945,8 +1945,7 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
     forceRouting = AudioExtn::audio_devices_cmp(new_devices, audio_is_a2dp_out_device);
 
     /* Ignore routing to same device unless it's forced */
-    if ((!AudioExtn::audio_devices_empty(new_devices) && (mAndroidOutDevices != new_devices))
-            || forceRouting) {
+    if (!AudioExtn::audio_devices_empty(new_devices) || forceRouting) {
         // re-allocate mPalOutDevice and mPalOutDeviceIds
         if (new_devices.size() != mAndroidOutDevices.size()) {
             deviceId = (pal_device_id_t*) realloc(mPalOutDeviceIds,
@@ -1984,6 +1983,8 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
                 mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
                 mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
             }
+            strlcpy(mPalOutDevice[i].custom_config.custom_key, "",
+                    sizeof(mPalOutDevice[i].custom_config.custom_key));
 
             if ((AudioExtn::audio_devices_cmp(mAndroidOutDevices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) &&
                                    (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_SPEAKER)) {
@@ -1995,21 +1996,21 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
 
         mAndroidOutDevices = new_devices;
 
-    ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
-                        (void **)&param_payload, &param_size, nullptr);
+        ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
+                            (void **)&param_payload, &param_size, nullptr);
 
-    if (!ret && isHifiFilterEnabled &&
-        (mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADSET ||
-         mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADPHONE) &&
-        (streamAttributes_.out_media_config.sample_rate != 384000 &&
-         streamAttributes_.out_media_config.sample_rate != 352800)) {
+        if (!ret && isHifiFilterEnabled &&
+            (mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADSET ||
+             mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADPHONE) &&
+            (streamAttributes_.out_media_config.sample_rate != 384000 &&
+             streamAttributes_.out_media_config.sample_rate != 352800)) {
 
-        AHAL_DBG("hifi-filter custom key sent(the filter is not applicable to ALL streams)\n");
+            AHAL_DBG("hifi-filter custom key sent(the filter is not applicable to ALL streams)\n");
 
-        strlcpy(mPalOutDevice->custom_config.custom_key,
-                "hifi-filter_custom_key",
-                sizeof(mPalOutDevice->custom_config.custom_key));
-    }
+            strlcpy(mPalOutDevice->custom_config.custom_key,
+                    "hifi-filter_custom_key",
+                    sizeof(mPalOutDevice->custom_config.custom_key));
+        }
 
         if (pal_stream_handle_) {
             ret = pal_stream_set_device(pal_stream_handle_, noPalDevices, mPalOutDevice);
@@ -2232,11 +2233,15 @@ int StreamOutPrimary::get_pcm_buffer_size()
 {
     uint8_t channels = audio_channel_count_from_out_mask(config_.channel_mask);
     uint8_t bytes_per_sample = audio_bytes_per_sample(config_.format);
+    audio_format_t src_format = config_.format;
+    audio_format_t dst_format = (audio_format_t)(getAlsaSupportedFmt.at(src_format));
+    uint32_t hal_op_bytes_per_sample = audio_bytes_per_sample(dst_format);
+    uint32_t hal_ip_bytes_per_sample = audio_bytes_per_sample(src_format);
     uint32_t fragment_size = 0;
 
-    AHAL_DBG("config_ format:%x, SR %d ch_mask 0x%x",
+    AHAL_DBG("config_ format:%x, SR %d ch_mask 0x%x, out format:%x",
             config_.format, config_.sample_rate,
-            config_.channel_mask);
+            config_.channel_mask, dst_format);
     fragment_size = PCM_OFFLOAD_OUTPUT_PERIOD_DURATION *
         config_.sample_rate * bytes_per_sample * channels;
     fragment_size /= 1000;
@@ -2247,6 +2252,16 @@ int StreamOutPrimary::get_pcm_buffer_size()
         fragment_size = MAX_PCM_FRAGMENT_SIZE;
 
     fragment_size = ALIGN(fragment_size, (bytes_per_sample * channels * 32));
+
+    if ((src_format != dst_format) &&
+         hal_op_bytes_per_sample != hal_ip_bytes_per_sample) {
+
+        fragment_size =
+                  (fragment_size * hal_ip_bytes_per_sample) /
+                   hal_op_bytes_per_sample;
+        AHAL_INFO("enable conversion hal_input_fragment_size: src_format %x dst_format %x",
+               src_format, dst_format);
+    }
 
     AHAL_DBG("fragment size: %d", fragment_size);
     return fragment_size;
@@ -2425,7 +2440,7 @@ int StreamOutPrimary::Open() {
            streamAttributes_.out_media_config.bit_width);
     AHAL_DBG("msample_rate %d mchannels %d", msample_rate, mchannels);
     AHAL_DBG("mNoOfOutDevices %zu", mAndroidOutDevices.size());
-    ret = pal_stream_open (&streamAttributes_,
+    ret = pal_stream_open(&streamAttributes_,
                           mAndroidOutDevices.size(),
                           mPalOutDevice,
                           0,
@@ -2532,18 +2547,12 @@ int StreamOutPrimary::Open() {
         outBufCount = DEEP_BUFFER_PLAYBACK_PERIOD_COUNT;
 
     if (halInputFormat != halOutputFormat) {
-        convertBufSize =  PCM_OFFLOAD_OUTPUT_PERIOD_DURATION *
-                         config_.sample_rate * audio_bytes_per_frame(
-                         audio_channel_count_from_out_mask(config_.channel_mask),
-                         halOutputFormat);
-        convertBufSize /= 1000;
-        convertBuffer = realloc(convertBuffer, convertBufSize);
+        convertBuffer = realloc(convertBuffer, outBufSize);
         if (!convertBuffer) {
             ret = -ENOMEM;
             AHAL_ERR("convert Buffer allocation failed. ret %d", ret);
             goto error_open;
         }
-        outBufSize = convertBufSize;
         AHAL_DBG("convert buffer allocated for size %d", convertBufSize);
     }
 
@@ -2585,6 +2594,10 @@ int StreamOutPrimary::GetFrames(uint64_t *frames)
     int ret = 0;
     pal_session_time tstamp;
     uint64_t timestamp = 0;
+    uint64_t dsp_frames = 0;
+    uint64_t offset = 0;
+    size_t size = 0;
+    pal_param_bta2dp_t *param_bt_a2dp = NULL;
 
     if (!pal_stream_handle_) {
         AHAL_VERBOSE("pal_stream_handle_ NULL");
@@ -2608,7 +2621,20 @@ int StreamOutPrimary::GetFrames(uint64_t *frames)
     AHAL_VERBOSE("session timespec %lld", ((long long) timestamp));
     timestamp *= (streamAttributes_.out_media_config.sample_rate);
     AHAL_VERBOSE("timestamp %lld", ((long long) timestamp));
-    *frames = timestamp/1000000;
+    dsp_frames = timestamp/1000000;
+
+    // Adjustment accounts for A2dp encoder latency with offload usecases
+    // Note: Encoder latency is returned in ms.
+    if (isDeviceAvailable(PAL_DEVICE_OUT_BLUETOOTH_A2DP)) {
+        ret = pal_get_param(PAL_PARAM_ID_BT_A2DP_ENCODER_LATENCY,
+                            (void **)&param_bt_a2dp, &size, nullptr);
+        if (!ret && param_bt_a2dp) {
+            offset = param_bt_a2dp->latency *
+                (streamAttributes_.out_media_config.sample_rate) / 1000;
+            dsp_frames = (dsp_frames > offset) ? (dsp_frames - offset) : 0;
+        }
+    }
+    *frames = dsp_frames;
 exit:
     return ret;
 }
@@ -3120,6 +3146,8 @@ StreamOutPrimary::StreamOutPrimary(
             mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
             mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
         }
+        strlcpy(mPalOutDevice[i].custom_config.custom_key, "",
+                sizeof(mPalOutDevice[i].custom_config.custom_key));
 
         if ((AudioExtn::audio_devices_cmp(mAndroidOutDevices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) &&
                                    (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_SPEAKER)) {
@@ -3486,7 +3514,7 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
     /* If its the same device as what was already routed to, dont bother */
     if (!is_empty && is_input
             && ((mAndroidInDevices != new_devices) || force_device_switch)) {
-        //re-allocate mPalOutDevice and mPalOutDeviceIds
+        //re-allocate mPalInDevice and mPalOutDeviceIds
         if (new_devices.size() != mAndroidInDevices.size()) {
             deviceId = (pal_device_id_t*) realloc(mPalInDeviceIds,
                     new_devices.size() * sizeof(pal_device_id_t));
@@ -3519,6 +3547,9 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
                 mPalInDevice[i].address.card_id = adevice->usb_card_id_;
                 mPalInDevice[i].address.device_num = adevice->usb_dev_num_;
             }
+            strlcpy(mPalInDevice[i].custom_config.custom_key, "",
+                    sizeof(mPalInDevice[i].custom_config.custom_key));
+
             /* HDR use case check */
             if (is_hdr_mode_enabled())
                 setup_hdr_usecase(&mPalInDevice[i]);
@@ -3532,13 +3563,13 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
 
         mAndroidInDevices = new_devices;
 
-        if(pal_stream_handle_)
+        if (pal_stream_handle_)
             ret = pal_stream_set_device(pal_stream_handle_, noPalDevices, mPalInDevice);
     }
 
 done:
-   AHAL_DBG("exit %d", ret);
-   return ret;
+    AHAL_DBG("exit %d", ret);
+    return ret;
 }
 
 int StreamInPrimary::SetParameters(const char* kvpairs) {
@@ -3901,6 +3932,10 @@ ssize_t StreamInPrimary::read(const void *buffer, size_t bytes) {
                 AHAL_ERR("Pal Stream volume Error (%x)", ret);
             }
         }
+        /*apply cached mic mute*/
+        if (adevice->mute_) {
+            pal_stream_set_mute(pal_stream_handle_, adevice->mute_);
+        }
     }
 
     if (!effects_applied_) {
@@ -4047,7 +4082,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
         AHAL_ERR("mismatched pal %d and hal devices %zu", noPalDevices, mAndroidInDevices.size());
         goto error;
     }
-    mPalInDevice = new pal_device [mAndroidInDevices.size()];
+    mPalInDevice = new pal_device[mAndroidInDevices.size()];
     if (!mPalInDevice) {
         goto error;
     }
@@ -4064,10 +4099,12 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
             mPalInDevice[i].address.card_id = adevice->usb_card_id_;
             mPalInDevice[i].address.device_num = adevice->usb_dev_num_;
         }
+        strlcpy(mPalInDevice[i].custom_config.custom_key, "",
+                sizeof(mPalInDevice[i].custom_config.custom_key));
 
         /* HDR use case check */
-        if ( (source_ == AUDIO_SOURCE_UNPROCESSED) &&
-           (config_.sample_rate == 48000) ) {
+        if ((source_ == AUDIO_SOURCE_UNPROCESSED) &&
+                (config_.sample_rate == 48000)) {
             uint8_t channels =
                 audio_channel_count_from_in_mask(config_.channel_mask);
             if (channels == 4) {

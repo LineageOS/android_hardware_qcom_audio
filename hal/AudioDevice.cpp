@@ -37,6 +37,10 @@
 
 #define LOG_TAG "AHAL: AudioDevice"
 #define ATRACE_TAG (ATRACE_TAG_AUDIO|ATRACE_TAG_HAL)
+#define AUDIO_CAPTURE_PERIOD_DURATION_MSEC 20
+#define MIN_CHANNEL_COUNT 1
+#define MAX_CHANNEL_COUNT 8
+
 #include "AudioCommon.h"
 
 #include "AudioDevice.h"
@@ -47,6 +51,7 @@
 
 #include <vector>
 #include <map>
+#include<algorithm>
 
 #include "PalApi.h"
 #include "PalDefs.h"
@@ -883,10 +888,76 @@ static char* adev_get_parameters(const struct audio_hw_device *dev,
     return adevice->GetParameters(keys);
 }
 
+static int check_input_parameters(uint32_t sample_rate,
+                                  audio_format_t format,
+                                  int channel_count)
+{
+
+    int ret = 0;
+    static std::vector<int> channel_counts_supported = {1,2,3,4,6,8,10,12,14};
+    static std::vector<uint32_t> sample_rate_supported = {8000,11025,12000,16000,
+                                                    22050,24000,32000,44100,48000,
+                                                    88200,96000,176400,192000 };
+
+    if (((format != AUDIO_FORMAT_PCM_16_BIT) && (format != AUDIO_FORMAT_PCM_8_24_BIT) &&
+        (format != AUDIO_FORMAT_PCM_24_BIT_PACKED) && (format != AUDIO_FORMAT_PCM_32_BIT) &&
+        (format != AUDIO_FORMAT_PCM_FLOAT))) {
+            AHAL_ERR("format not supported!!! format:%d", format);
+            return -EINVAL;
+    }
+
+    if ((channel_count < MIN_CHANNEL_COUNT) || (channel_count > MAX_CHANNEL_COUNT)) {
+        ALOGE("%s: unsupported channel count (%d) passed  Min / Max (%d / %d)", __func__,
+                channel_count, MIN_CHANNEL_COUNT, MAX_CHANNEL_COUNT);
+        return -EINVAL;
+    }
+
+    if ( std::find(channel_counts_supported.begin(),
+                   channel_counts_supported.end(),
+                   channel_count) == channel_counts_supported.end() ) {
+        AHAL_ERR("channel count not supported!!! chanel count:%d", channel_count);
+        return -EINVAL;
+    }
+
+    if ( std::find(sample_rate_supported.begin(), sample_rate_supported.end(),
+                   sample_rate) == sample_rate_supported.end() ) {
+        AHAL_ERR("sample rate not supported!!! sample_rate:%d", sample_rate);
+        return -EINVAL;
+    }
+
+    return ret;
+ }
+
 static size_t adev_get_input_buffer_size(
                                 const struct audio_hw_device *dev __unused,
-                                const struct audio_config *config __unused) {
-    return BUF_SIZE_CAPTURE * NO_OF_BUF;
+                                const struct audio_config *config ) {
+
+    size_t size = 0;
+    uint32_t bytes_per_period_sample = 0;
+    if (config != NULL) {
+        int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
+
+        /* Don't know if USB HIFI in this context so use true to be conservative */
+        if (check_input_parameters(config->sample_rate, config->format, channel_count) != 0) {
+            AHAL_ERR("input parameters not supported!!!");
+            return 0;
+        }
+
+        size = (config->sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC) / 1000;
+        bytes_per_period_sample = audio_bytes_per_sample(config->format) * channel_count;
+        size *= bytes_per_period_sample;
+    }
+         /* make sure the size is multiple of 32 bytes and additionally multiple of
+          * the frame_size (required for 24bit samples and non-power-of-2 channel counts)
+          * At 48 kHz mono 16-bit PCM:
+          *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
+          *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
+          * Also, make sure the size is multiple of bytes per period sample
+          */
+    size = nearest_multiple(size, lcm(32, bytes_per_period_sample));
+
+    return size;
+
 }
 
 int adev_release_audio_patch(struct audio_hw_device *dev,
@@ -1281,6 +1352,22 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             AHAL_DBG(" - screen = off");
             param_screen_st.screen_state = false;
             ret = pal_set_param( PAL_PARAM_ID_SCREEN_STATE, (void*)&param_screen_st, sizeof(pal_param_screen_state_t));
+        }
+    }
+
+    ret = str_parms_get_str(parms, "UHQA", value, sizeof(value));
+    if (ret >= 0) {
+        pal_param_uhqa_t param_uhqa_flag;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_ON) == 0) {
+            param_uhqa_flag.uhqa_state = true;
+            AHAL_DBG(" - UHQA = on");
+            ret = pal_set_param(PAL_PARAM_ID_UHQA_FLAG, (void*)&param_uhqa_flag,
+                          sizeof(pal_param_uhqa_t));
+        } else {
+            param_uhqa_flag.uhqa_state = false;
+            AHAL_DBG(" - UHQA = false");
+            ret = pal_set_param(PAL_PARAM_ID_UHQA_FLAG, (void*)&param_uhqa_flag,
+                          sizeof(pal_param_uhqa_t));
         }
     }
 

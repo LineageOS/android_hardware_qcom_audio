@@ -783,6 +783,11 @@ int AudioVoice::VoiceStart(voice_session_t *session) {
            param_payload = nullptr;
        }
    }
+   /*apply cached mic mute*/
+   if (adevice->mute_) {
+       pal_stream_set_mute(session->pal_voice_handle, adevice->mute_);
+   }
+
 
 error_open:
     AHAL_DBG("Exit ret: %d", ret);
