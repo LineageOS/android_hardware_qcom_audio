@@ -715,18 +715,27 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     if (astream_out) {
         switch (astream_out->GetPalStreamType(astream_out->flags_)) {
         case PAL_STREAM_COMPRESSED:
-           ret = astream_out->GetFrames(&frames);
-           if (ret != 0) {
-              AHAL_ERR("Get DSP Frames failed %d", ret);
-              return ret;
-           }
-           *dsp_frames = (uint32_t) frames;
-           break;
+            ret = astream_out->GetFrames(&frames);
+            if (ret != 0) {
+                AHAL_ERR("Get DSP Frames failed %d", ret);
+                return ret;
+            }
+            *dsp_frames = (uint32_t) frames;
+            break;
+        case PAL_STREAM_PCM_OFFLOAD:
+        case PAL_STREAM_LOW_LATENCY:
+        case PAL_STREAM_DEEP_BUFFER:
+            ret =  astream_out->GetFramesWritten(NULL);
+            if (ret < 0) {
+                AHAL_ERR("Get DSP Frames failed %d", ret);
+                return ret;
+            }
+            *dsp_frames = ret;
+            break;
         default:
-           break;
+            break;
         }
     }
-
     return 0;
 }
 
@@ -2205,10 +2214,6 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
     dsp_frames = StreamOutPrimary::GetRenderLatency(flags_) *
         (streamAttributes_.out_media_config.sample_rate) / 1000000LL;
 
-    if (!timestamp) {
-       AHAL_ERR("timestamp NULL");
-       return 0;
-    }
     written_frames = mBytesWritten / audio_bytes_per_frame(
         audio_channel_count_from_out_mask(config_.channel_mask),
         config_.format);
@@ -2243,9 +2248,10 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
     }
 
     if (signed_frames <= 0) {
-       clock_gettime(CLOCK_MONOTONIC, timestamp);
        signed_frames = 0;
-    } else {
+       if (timestamp != NULL)
+           clock_gettime(CLOCK_MONOTONIC, timestamp);
+    } else if (timestamp != NULL) {
        *timestamp = writeAt;
     }
 
