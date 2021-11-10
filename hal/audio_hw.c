@@ -9627,6 +9627,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
        in audio_policy_configuration.xml for mmap_no_irq_in */
     bool valid_mmap_record_rate = (config->sample_rate == 8000 ||
                                 config->sample_rate == 16000 ||
+                                config->sample_rate == 24000 ||
                                 config->sample_rate == 32000 ||
                                 config->sample_rate == 48000);
     if (valid_mmap_record_rate &&
