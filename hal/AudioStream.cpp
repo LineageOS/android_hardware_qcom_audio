@@ -3923,7 +3923,7 @@ int StreamInPrimary::Open() {
                  AUDIO_DEVICE_IN_USB_HEADSET);
              if (it != mAndroidInDevices.end())
                  mAndroidInDevices.erase(it);
-             mPalInDevice->id == PAL_DEVICE_IN_SPEAKER_MIC;
+             mPalInDevice->id = PAL_DEVICE_IN_SPEAKER_MIC;
              mAndroidInDevices.insert(AUDIO_DEVICE_IN_BUILTIN_MIC);
              mPalInDevice->address.card_id = 0;
              mPalInDevice->address.device_num = 0;
