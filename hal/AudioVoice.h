@@ -102,6 +102,7 @@ public:
     int VoiceStart(voice_session_t *session);
     int VoiceStop(voice_session_t *session);
     int VoiceSetDevice(voice_session_t *session);
+    int SetDeviceMute(voice_session_t *session);
     int UpdateCallState(uint32_t vsid, int call_state);
     int UpdateCalls(voice_session_t *pSession);
     int SetMicMute(bool mute);
