@@ -1863,7 +1863,6 @@ int StreamOutPrimary::Standby() {
         if (ret) {
             AHAL_ERR("failed to stop stream.");
             ret = -EINVAL;
-            goto exit;
         }
         if (usecase_ == USECASE_AUDIO_PLAYBACK_WITH_HAPTICS && pal_haptics_stream_handle) {
             ret = pal_stream_stop(pal_haptics_stream_handle);
