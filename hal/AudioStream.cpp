@@ -1919,9 +1919,9 @@ exit:
 int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, bool force_device_switch __unused) {
     int ret = 0, noPalDevices = 0;
     bool forceRouting = false;
-    pal_device_id_t * deviceId;
-    struct pal_device* deviceIdConfigs;
-    pal_param_device_capability_t *device_cap_query;
+    pal_device_id_t * deviceId = nullptr;
+    struct pal_device* deviceIdConfigs = nullptr;
+    pal_param_device_capability_t *device_cap_query = nullptr;
     size_t payload_size = 0;
     dynamic_media_config_t dynamic_media_config;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
@@ -1954,10 +1954,15 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
             deviceIdConfigs = (struct pal_device*) realloc(mPalOutDevice,
                     new_devices.size() * sizeof(struct pal_device));
             if (!deviceId || !deviceIdConfigs) {
-                AHAL_ERR("Failed to allocate PalOutDeviceIds!");
+                AHAL_ERR("Failed to allocate PalOutDeviceIds or deviceIdConfigs!");
                 ret = -ENOMEM;
                 goto done;
             }
+
+            // init deviceId and deviceIdConfigs
+            memset(deviceId, 0, new_devices.size() * sizeof(pal_device_id_t));
+            memset(deviceIdConfigs, 0, new_devices.size() * sizeof(struct pal_device));
+
             mPalOutDeviceIds = deviceId;
             mPalOutDevice = deviceIdConfigs;
         }
@@ -1976,6 +1981,11 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
 
         pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
                 malloc(sizeof(pal_param_device_capability_t));
+        if (!device_cap_query) {
+                AHAL_ERR("Failed to allocate device_cap_query!");
+                ret = -ENOMEM;
+                goto done;
+        }
 
         for (int i = 0; i < noPalDevices; i++) {
             mPalOutDevice[i].id = mPalOutDeviceIds[i];
@@ -2070,6 +2080,10 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
     }
 
 done:
+    if (deviceId)
+        free(deviceId);
+    if (deviceIdConfigs)
+        free(deviceIdConfigs);
     AHAL_DBG("exit %d", ret);
     return ret;
 }
@@ -2836,7 +2850,7 @@ ssize_t StreamOutPrimary::splitAndWriteAudioHapticsStream(const void *buffer, si
      return (ret < 0 ? ret : bytes);
 }
 
-ssize_t StreamOutPrimary::onWriteError(size_t bytes, size_t ret) {
+ssize_t StreamOutPrimary::onWriteError(size_t bytes, ssize_t ret) {
     // standby streams upon write failures and sleep for buffer duration.
     AHAL_ERR("write error %d usecase(%d: %s)", ret, GetUseCase(), use_case_table[GetUseCase()]);
     Standby();
@@ -3618,9 +3632,9 @@ done:
 int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, bool force_device_switch) {
     bool is_empty, is_input;
     int ret = 0, noPalDevices = 0;
-    pal_device_id_t * deviceId;
-    struct pal_device* deviceIdConfigs;
-    pal_param_device_capability_t *device_cap_query;
+    pal_device_id_t * deviceId = nullptr;
+    struct pal_device* deviceIdConfigs = nullptr;
+    pal_param_device_capability_t *device_cap_query = nullptr;
     size_t payload_size = 0;
     dynamic_media_config_t dynamic_media_config;
     struct pal_channel_info ch_info = {0, {0}};
@@ -3652,16 +3666,22 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
     /* If its the same device as what was already routed to, dont bother */
     if (!is_empty && is_input
             && ((mAndroidInDevices != new_devices) || force_device_switch)) {
-        //re-allocate mPalInDevice and mPalOutDeviceIds
+        //re-allocate mPalInDevice and mPalInDeviceIds
         if (new_devices.size() != mAndroidInDevices.size()) {
             deviceId = (pal_device_id_t*) realloc(mPalInDeviceIds,
                     new_devices.size() * sizeof(pal_device_id_t));
             deviceIdConfigs = (struct pal_device*) realloc(mPalInDevice,
                     new_devices.size() * sizeof(struct pal_device));
             if (!deviceId || !deviceIdConfigs) {
+                AHAL_ERR("Failed to allocate PalOutDeviceIds or deviceIdConfigs!");
                 ret = -ENOMEM;
                 goto done;
             }
+
+            // init deviceId and deviceIdConfigs
+            memset(deviceId, 0, new_devices.size() * sizeof(pal_device_id_t));
+            memset(deviceIdConfigs, 0, new_devices.size() * sizeof(struct pal_device));
+
             mPalInDeviceIds = deviceId;
             mPalInDevice = deviceIdConfigs;
         }
@@ -3677,6 +3697,11 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
 
         pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
                 malloc(sizeof(pal_param_device_capability_t));
+        if (!device_cap_query) {
+                AHAL_ERR("Failed to allocate device_cap_query!");
+                ret = -ENOMEM;
+                goto done;
+        }
 
         for (int i = 0; i < noPalDevices; i++) {
             mPalInDevice[i].id = mPalInDeviceIds[i];
@@ -3742,6 +3767,10 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
     }
 
 done:
+    if (deviceId)
+        free(deviceId);
+    if (deviceIdConfigs)
+        free(deviceIdConfigs);
     AHAL_DBG("exit %d", ret);
     return ret;
 }

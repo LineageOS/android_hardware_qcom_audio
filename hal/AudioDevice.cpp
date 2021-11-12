@@ -2220,7 +2220,7 @@ int32_t AudioDevice::get_microphones(struct audio_microphone_characteristic_t *m
 
 void AudioDevice::process_microphone_characteristics(const XML_Char **attr)
 {
-    struct audio_microphone_characteristic_t microphone;
+    struct audio_microphone_characteristic_t microphone = {};
     uint32_t curIdx = 0;
     uint32_t valid_mask;
 

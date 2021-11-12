@@ -475,7 +475,7 @@ private:
     // Helper function for write to open pal stream & configure.
     ssize_t configurePalOutputStream();
     //Helper method to standby streams upon write failures and sleep for buffer duration.
-    ssize_t onWriteError(size_t bytes, size_t ret);
+    ssize_t onWriteError(size_t bytes, ssize_t ret);
     struct pal_device* mPalOutDevice;
     pal_device_id_t* mPalOutDeviceIds;
     std::set<audio_devices_t> mAndroidOutDevices;
