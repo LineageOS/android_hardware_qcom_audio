@@ -1923,6 +1923,9 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
     bool forceRouting = false;
     pal_device_id_t * deviceId;
     struct pal_device* deviceIdConfigs;
+    pal_param_device_capability_t *device_cap_query;
+    size_t payload_size = 0;
+    dynamic_media_config_t dynamic_media_config;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     bool isHifiFilterEnabled = false;
@@ -1972,17 +1975,46 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
             goto done;
         }
 
+        pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
+                malloc(sizeof(pal_param_device_capability_t));
+
         for (int i = 0; i < noPalDevices; i++) {
             mPalOutDevice[i].id = mPalOutDeviceIds[i];
             mPalOutDevice[i].config.sample_rate = mPalOutDevice[0].config.sample_rate;
             mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
             mPalOutDevice[i].config.ch_info = {0, {0}};
             mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
-            if ((mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_DEVICE) ||
-               (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_HEADSET)) {
+            if (((mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_DEVICE) ||
+               (mPalOutDeviceIds[i] == PAL_DEVICE_OUT_USB_HEADSET)) && device_cap_query) {
+
                 mPalOutDevice[i].address.card_id = adevice->usb_card_id_;
                 mPalOutDevice[i].address.device_num = adevice->usb_dev_num_;
+                device_cap_query->id = mPalOutDeviceIds[i];
+                device_cap_query->addr.card_id = adevice->usb_card_id_;
+                device_cap_query->addr.device_num = adevice->usb_dev_num_;
+                device_cap_query->config = &dynamic_media_config;
+                device_cap_query->is_playback = true;
+                ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,(void **)&device_cap_query,
+                        &payload_size, nullptr);
+
+                if (ret<0){
+                    AHAL_DBG("USB device failed, falling back to Speaker");
+                    auto it = std::find(mAndroidOutDevices.begin(),mAndroidOutDevices.end(),
+                        AUDIO_DEVICE_OUT_USB_DEVICE);
+                    if (it != mAndroidOutDevices.end())
+                        mAndroidOutDevices.erase(it);
+                    mPalOutDevice[i].id =  PAL_DEVICE_OUT_SPEAKER;
+                    mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+                    mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
+                    mPalOutDevice[i].config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                    mPalOutDevice[i].config.ch_info.channels = 2;
+                    mPalOutDevice[i].config.ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
+                    mPalOutDevice[i].config.ch_info.ch_map[1] = PAL_CHMAP_CHANNEL_FR;
+                    mPalOutDevice[i].address.card_id = 0;
+                    mPalOutDevice[i].address.device_num = 0;
+                }
             }
+
             strlcpy(mPalOutDevice[i].custom_config.custom_key, "",
                     sizeof(mPalOutDevice[i].custom_config.custom_key));
 
@@ -1994,6 +2026,10 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
             }
         }
 
+        if (device_cap_query) {
+            free(device_cap_query);
+            device_cap_query = NULL;
+        }
         mAndroidOutDevices = new_devices;
 
         ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
@@ -2032,7 +2068,7 @@ done:
 
 int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     char value[64];
-    int ret =  -EINVAL, controller = -1, stream = -1;
+    int ret =  0, controller = -1, stream = -1;
     int ret1 = 0;
 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
@@ -2049,26 +2085,27 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
         AHAL_ERR("error %d, plugin device cont %d stream %d", ret, controller, stream);
     }
 
-    //TBD: check if its offload and check call the following
-    ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &palSndDec, parms, &msample_rate, &mchannels);
-    if (ret) {
-        AHAL_ERR("parse_compress_metadata Error (%x)", ret);
-        goto error;
-    } else {
-        isCompressMetadataAvail = true;
-    }
+    //Parse below metadata only if it is compress offload usecase.
+    if (usecase_ == USECASE_AUDIO_PLAYBACK_OFFLOAD) {
+        ret = AudioExtn::audio_extn_parse_compress_metadata(&config_, &palSndDec, parms,
+                                         &msample_rate, &mchannels, &isCompressMetadataAvail);
+        if (ret) {
+            AHAL_ERR("parse_compress_metadata Error (%x)", ret);
+            goto error;
+        }
 
-    ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
-    if (ret1 >= 0 ) {
-        gaplessMeta.encoderDelay = atoi(value);
-        AHAL_DBG("new encoder delay %u", gaplessMeta.encoderDelay);
+        ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_DELAY_SAMPLES, value, sizeof(value));
+        if (ret1 >= 0 ) {
+            gaplessMeta.encoderDelay = atoi(value);
+            AHAL_DBG("new encoder delay %u", gaplessMeta.encoderDelay);
+        }
+        ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
+        if (ret1 >= 0) {
+            gaplessMeta.encoderPadding = atoi(value);
+            AHAL_DBG("padding %u", gaplessMeta.encoderPadding);
+        }
+        sendGaplessMetadata = true;
     }
-    ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
-    if (ret1 >= 0) {
-        gaplessMeta.encoderPadding = atoi(value);
-        AHAL_DBG("padding %u", gaplessMeta.encoderPadding);
-    }
-    sendGaplessMetadata = true;
 error:
     AHAL_DBG("exit %d", ret);
     return ret;
@@ -2347,6 +2384,11 @@ int StreamOutPrimary::Open() {
     uint32_t outBufCount = NO_OF_BUF;
     struct pal_buffer_config outBufCfg = {0, 0, 0};
 
+    pal_param_device_capability_t *device_cap_query;
+    size_t payload_size = 0;
+    dynamic_media_config_t dynamic_media_config;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+
     bool isHifiFilterEnabled = false;
     bool *param_payload = &isHifiFilterEnabled;
     size_t param_size = 0;
@@ -2432,6 +2474,43 @@ int StreamOutPrimary::Open() {
         strlcpy(mPalOutDevice->custom_config.custom_key,
                 "hifi-filter_custom_key",
                 sizeof(mPalOutDevice->custom_config.custom_key));
+    }
+
+    device_cap_query = (pal_param_device_capability_t *)malloc(sizeof(pal_param_device_capability_t));
+
+    if ((mPalOutDevice->id == PAL_DEVICE_OUT_USB_DEVICE || mPalOutDevice->id ==
+        PAL_DEVICE_OUT_USB_HEADSET) && device_cap_query && adevice) {
+
+        device_cap_query->id = mPalOutDevice->id;
+        device_cap_query->addr.card_id = adevice->usb_card_id_;
+        device_cap_query->addr.device_num = adevice->usb_dev_num_;
+        device_cap_query->config = &dynamic_media_config;
+        device_cap_query->is_playback = true;
+        ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,(void **)&device_cap_query,
+                &payload_size, nullptr);
+
+        if (ret<0) {
+            AHAL_DBG("USB device failed, falling back to Speaker");
+            auto it = std::find(mAndroidOutDevices.begin(),mAndroidOutDevices.end(),
+                AUDIO_DEVICE_OUT_USB_DEVICE);
+            if (it != mAndroidOutDevices.end())
+                mAndroidOutDevices.erase(it);
+            mPalOutDevice->id == PAL_DEVICE_OUT_SPEAKER;
+            mAndroidOutDevices.insert(AUDIO_DEVICE_OUT_SPEAKER);
+            mPalOutDevice->address.card_id = 0;
+            mPalOutDevice->address.device_num = 0;
+            mPalOutDevice->config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+            mPalOutDevice->config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+            mPalOutDevice->config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
+            mPalOutDevice->config.ch_info.channels = 2;
+            mPalOutDevice->config.ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
+            mPalOutDevice->config.ch_info.ch_map[1] = PAL_CHMAP_CHANNEL_FR;
+        }
+    }
+
+    if (device_cap_query) {
+        free(device_cap_query);
+        device_cap_query = NULL;
     }
 
     AHAL_DBG("channels %d samplerate %d format id %d, stream type %d  stream bitwidth %d",
@@ -3485,6 +3564,9 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
     int ret = 0, noPalDevices = 0;
     pal_device_id_t * deviceId;
     struct pal_device* deviceIdConfigs;
+    pal_param_device_capability_t *device_cap_query;
+    size_t payload_size = 0;
+    dynamic_media_config_t dynamic_media_config;
     struct pal_channel_info ch_info = {0, {0}};
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
@@ -3536,8 +3618,35 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
             goto done;
         }
 
+        pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
+                malloc(sizeof(pal_param_device_capability_t));
+
         for (int i = 0; i < noPalDevices; i++) {
             mPalInDevice[i].id = mPalInDeviceIds[i];
+            if (((mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_DEVICE) ||
+               (mPalInDeviceIds[i] == PAL_DEVICE_IN_USB_HEADSET)) && device_cap_query) {
+
+                mPalInDevice[i].address.card_id = adevice->usb_card_id_;
+                mPalInDevice[i].address.device_num = adevice->usb_dev_num_;
+                device_cap_query->id = mPalInDeviceIds[i];
+                device_cap_query->addr.card_id = adevice->usb_card_id_;
+                device_cap_query->addr.device_num = adevice->usb_dev_num_;
+                device_cap_query->config = &dynamic_media_config;
+                device_cap_query->is_playback = true;
+                ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,(void **)&device_cap_query,
+                        &payload_size, nullptr);
+
+                if (ret<0) {
+                    AHAL_DBG("USB device failed, falling back to Speaker-mic");
+                    auto it = std::find(mAndroidInDevices.begin(),mAndroidInDevices.end(),
+                        AUDIO_DEVICE_IN_USB_DEVICE);
+                    if (it != mAndroidInDevices.end())
+                        mAndroidInDevices.erase(it);
+                    mPalInDevice[i].id = PAL_DEVICE_IN_SPEAKER_MIC;
+                    mPalInDevice[i].address.card_id = 0;
+                    mPalInDevice[i].address.device_num = 0;
+                }
+            }
             mPalInDevice[i].config.sample_rate = mPalInDevice[0].config.sample_rate;
             mPalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
             mPalInDevice[i].config.ch_info = ch_info;
@@ -3561,6 +3670,10 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
             }
         }
 
+        if (device_cap_query) {
+            free(device_cap_query);
+            device_cap_query = NULL;
+        }
         mAndroidInDevices = new_devices;
 
         if (pal_stream_handle_)
@@ -3598,6 +3711,10 @@ int StreamInPrimary::Open() {
     uint32_t inBufCount = NO_OF_BUF;
     struct pal_buffer_config inBufCfg = {0, 0, 0};
     void *handle = nullptr;
+    pal_param_device_capability_t *device_cap_query;
+    size_t payload_size = 0;
+    dynamic_media_config_t dynamic_media_config;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     AHAL_DBG("Enter InPrimary");
     if (!mInitialized) {
@@ -3715,6 +3832,36 @@ int StreamInPrimary::Open() {
             streamAttributes_.info.opt_stream_info.tx_proxy_type = PAL_STREAM_PROXY_TX_TELEPHONY_RX;
     }
 
+    device_cap_query = (pal_param_device_capability_t *)malloc(sizeof(pal_param_device_capability_t));
+
+    if ((mPalInDevice->id == PAL_DEVICE_IN_USB_DEVICE || mPalInDevice->id ==
+        PAL_DEVICE_IN_USB_HEADSET) && device_cap_query && adevice) {
+
+        device_cap_query->id = mPalInDevice->id;
+        device_cap_query->addr.card_id = adevice->usb_card_id_;
+        device_cap_query->addr.device_num = adevice->usb_dev_num_;
+        device_cap_query->config = &dynamic_media_config;
+        device_cap_query->is_playback = true;
+        ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,(void **)&device_cap_query,
+                &payload_size, nullptr);
+
+         if (ret<0) {
+             AHAL_DBG("USB device failed, falling back to Speaker-mic");
+             auto it = std::find(mAndroidInDevices.begin(),mAndroidInDevices.end(),
+                 AUDIO_DEVICE_IN_USB_DEVICE);
+             if (it != mAndroidInDevices.end())
+                 mAndroidInDevices.erase(it);
+             mPalInDevice->id == PAL_DEVICE_IN_SPEAKER_MIC;
+             mAndroidInDevices.insert(AUDIO_DEVICE_IN_BUILTIN_MIC);
+             mPalInDevice->address.card_id = 0;
+             mPalInDevice->address.device_num = 0;
+         }
+    }
+
+    if (device_cap_query) {
+        free(device_cap_query);
+        device_cap_query = NULL;
+    }
     AHAL_DBG("(%x:ret)", ret);
 
     ret = pal_stream_open(&streamAttributes_,
