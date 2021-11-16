@@ -4241,9 +4241,9 @@ ssize_t StreamInPrimary::read(const void *buffer, size_t bytes) {
 
     if (is_st_session) {
         ATRACE_BEGIN("hal: lab read");
+        memset(palBuffer.buffer, 0, palBuffer.size);
         if (!audio_extn_sound_trigger_check_session_activity(this)) {
             AHAL_DBG("sound trigger session not available");
-            memset(palBuffer.buffer, 0, palBuffer.size);
             ATRACE_END();
             goto exit;
         }
@@ -4252,14 +4252,20 @@ ssize_t StreamInPrimary::read(const void *buffer, size_t bytes) {
             stream_started_ = true;
         }
         while (retry_count--) {
-            size = pal_stream_read(pal_stream_handle_, &palBuffer);
-            if (size < 0) {
+            ret = pal_stream_read(pal_stream_handle_, &palBuffer);
+            if (ret < 0) {
                 memset(palBuffer.buffer, 0, palBuffer.size);
                 AHAL_ERR("error, failed to read data from PAL");
                 ATRACE_END();
                 goto exit;
-            } else if (size > 0) {
-                break;
+            } else {
+                size += ret;
+                if (ret < palBuffer.size) {
+                    palBuffer.buffer += ret;
+                    palBuffer.size -= ret;
+                } else {
+                    break;
+                }
             }
         }
         ATRACE_END();
@@ -4320,7 +4326,7 @@ exit:
     stream_mutex_.unlock();
     clock_gettime(CLOCK_MONOTONIC, &readAt);
 
-    return (ret < 0 ? onReadError(bytes, ret) : bytes);
+    return (ret < 0 ? onReadError(bytes, ret) : (size > 0 ? size : bytes));
 }
 
 int StreamInPrimary::FillHalFnPtrs() {
