@@ -3209,6 +3209,7 @@ StreamOutPrimary::StreamOutPrimary(
 
     /* TODO: how to update based on stream parameters and see if device is supported */
     for (int i = 0; i < mAndroidOutDevices.size(); i++) {
+        memset(mPalOutDevice[i].custom_config.custom_key, 0, sizeof(mPalOutDevice[i].custom_config.custom_key));
         mPalOutDevice[i].id = mPalOutDeviceIds[i];
         if (AudioExtn::audio_devices_cmp(mAndroidOutDevices, audio_is_usb_out_device))
             mPalOutDevice[i].config.sample_rate = config_.sample_rate;
@@ -4278,6 +4279,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     }
 
     for (int i = 0; i < mAndroidInDevices.size(); i++) {
+        memset(mPalInDevice[i].custom_config.custom_key, 0, sizeof(mPalInDevice[i].custom_config.custom_key));
         mPalInDevice[i].id = mPalInDeviceIds[i];
         mPalInDevice[i].config.sample_rate = config->sample_rate;
         mPalInDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
