@@ -3158,7 +3158,7 @@ StreamOutPrimary::StreamOutPrimary(
 
     //TODO: check if USB device is connected or not
     if (AudioExtn::audio_devices_cmp(mAndroidOutDevices, audio_is_usb_out_device)){
-        if (!config->sample_rate) {
+        if (!config->sample_rate || !config->format || !config->channel_mask) {
             // get capability from device of USB
             pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
                                                       malloc(sizeof(pal_param_device_capability_t));
@@ -3181,6 +3181,12 @@ StreamOutPrimary::StreamOutPrimary(
             config->sample_rate = dynamic_media_config.sample_rate;
             config->channel_mask = (audio_channel_mask_t) dynamic_media_config.mask;
             config->format = (audio_format_t)dynamic_media_config.format;
+            if (config->sample_rate == 0)
+                config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+            if (config->channel_mask == AUDIO_CHANNEL_NONE)
+                config->channel_mask = AUDIO_CHANNEL_OUT_STEREO;
+            if (config->format == AUDIO_FORMAT_DEFAULT)
+                config->format = AUDIO_FORMAT_PCM_16_BIT;
             memcpy(&config_, config, sizeof(struct audio_config));
             AHAL_INFO("sample rate = %#x channel_mask=%#x fmt=%#x",
                       config->sample_rate, config->channel_mask,
