@@ -40,6 +40,18 @@ MM_AUDIO += libApeSwDec
 MM_AUDIO += libMpeghSwEnc
 MM_AUDIO += libdsd2pcm
 MM_AUDIO += audioflacapp
+ifeq ($(TARGET_BOARD_PLATFORM),sdm845)
+MM_AUDIO += libOmxQcelp13Dec
+MM_AUDIO += libOmxEvrcDec
+MM_AUDIO += libOmxWmaDec
+MM_AUDIO += libOmxAlacDec
+MM_AUDIO += libOmxApeDec
+MM_AUDIO += libOmxDsdDec
+MM_AUDIO += libOmxAmrwbplusDec
+MM_AUDIO += libOmxAmrDec
+MM_AUDIO += libOmxAlacDecSw
+MM_AUDIO += libOmxApeDecSw
+endif
 MM_AUDIO += libqct_resampler
 MM_AUDIO += libaudiodevarb
 MM_AUDIO += audiod
