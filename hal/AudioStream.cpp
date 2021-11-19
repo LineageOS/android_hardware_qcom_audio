@@ -2067,7 +2067,9 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     if (ret >= 0) {
         adevice->dp_controller = controller;
         adevice->dp_stream = stream;
-        AHAL_ERR("error %d, plugin device cont %d stream %d", ret, controller, stream);
+        AHAL_INFO("ret %d, plugin device cont %d stream %d", ret, controller, stream);
+    } else {
+        AHAL_ERR("error %d, failed to get stream and controller", ret);
     }
 
     //Parse below metadata only if it is compress offload usecase.
