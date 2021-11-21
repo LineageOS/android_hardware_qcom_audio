@@ -852,6 +852,13 @@ static void update_hardware_info_sdm439(struct hardware_info *hw_info, const cha
     }
 }
 
+static void update_hardware_info_msm8920(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "msm8920-sku7-snd-card")) {
+        strlcpy(hw_info->name, "msm8920", sizeof(hw_info->name));
+    }
+}
+
 static void update_hardware_info_msm8937(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strcmp(snd_card_name, "msm8937-snd-card-mtp")) {
@@ -979,6 +986,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if(strstr(snd_card_name, "sdm439") || strstr(snd_card_name, "sdm429w")) {
         ALOGV("SDM439 - variant soundcard");
         update_hardware_info_sdm439(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "msm8920")) {
+        ALOGV("MSM8920 - variant soundcard");
+        update_hardware_info_msm8920(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "msm8937")) {
         ALOGV("MSM8937 - variant soundcard");
         update_hardware_info_msm8937(hw_info, snd_card_name);
