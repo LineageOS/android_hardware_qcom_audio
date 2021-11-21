@@ -124,6 +124,7 @@ $(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_tasha.xml:$(TARGET_COPY_OUT_VENDO
 $(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_tashalite.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_tashalite.xml \
 $(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_mtp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_mtp.xml \
 $(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_sku1.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_sku1.xml \
+$(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_sku1.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_sku7.xml \
 $(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_sdm429w.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wtp.xml \
 $(PRIMARYHAL_PATH)/configs/msm8937/mixer_paths_sdm429w_dvt2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wtp_newport.xml \
 $(PRIMARYHAL_PATH)/configs/msm8937/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
