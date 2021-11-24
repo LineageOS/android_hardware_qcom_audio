@@ -1537,6 +1537,9 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
     if (source_ == AUDIO_SOURCE_UNPROCESSED) {
         palStreamType = PAL_STREAM_RAW;
         return palStreamType;
+    } else if (source_ == AUDIO_SOURCE_VOICE_RECOGNITION) {
+        palStreamType = PAL_STREAM_VOICE_RECOGNITION;
+        return palStreamType;
     }
 
     switch (halStreamFlags) {
