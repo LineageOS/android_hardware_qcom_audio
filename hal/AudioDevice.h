@@ -193,7 +193,7 @@ public:
     static snd_device_to_mic_map_t microphone_maps[PAL_MAX_INPUT_DEVICES];
     static bool find_enum_by_string(const struct audio_string_to_enum * table, const char * name,
                                     int32_t len, unsigned int *value);
-    static bool set_microphone_characteristic(struct audio_microphone_characteristic_t mic);
+    static bool set_microphone_characteristic(struct audio_microphone_characteristic_t *mic);
     static int32_t get_microphones(struct audio_microphone_characteristic_t *mic_array, size_t *mic_count);
     static void process_microphone_characteristics(const XML_Char **attr);
     static bool is_input_pal_dev_id(int deviceId);

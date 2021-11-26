@@ -2176,16 +2176,16 @@ bool AudioDevice::find_enum_by_string(const struct audio_string_to_enum * table,
     return false;
 }
 
-bool AudioDevice::set_microphone_characteristic(struct audio_microphone_characteristic_t mic)
+bool AudioDevice::set_microphone_characteristic(struct audio_microphone_characteristic_t *mic)
 {
     if (microphones.declared_mic_count >= AUDIO_MICROPHONE_MAX_COUNT) {
         AHAL_ERR("mic number is more than maximum number");
         return false;
     }
     for (size_t ch = 0; ch < AUDIO_CHANNEL_COUNT_MAX; ch++) {
-        mic.channel_mapping[ch] = AUDIO_MICROPHONE_CHANNEL_MAPPING_UNUSED;
+        mic->channel_mapping[ch] = AUDIO_MICROPHONE_CHANNEL_MAPPING_UNUSED;
     }
-    microphones.microphone[microphones.declared_mic_count++] = mic;
+    microphones.microphone[microphones.declared_mic_count++] = *mic;
     return true;
 }
 
@@ -2434,7 +2434,7 @@ void AudioDevice::process_microphone_characteristics(const XML_Char **attr)
         microphone.geometric_location.z = AUDIO_MICROPHONE_COORDINATE_UNKNOWN;
     }
 
-    set_microphone_characteristic(microphone);
+    set_microphone_characteristic(&microphone);
 
 done:
     return;
