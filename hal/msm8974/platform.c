@@ -1876,6 +1876,14 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("msm8920-sku7-snd-card")) ||
          !strncmp(snd_card_name, "msm8937-snd-card-mtp",
                    sizeof("msm8937-snd-card-mtp")) ||
+         !strncmp(snd_card_name, "msm8952-snd-card-mtp",
+                   sizeof("msm8952-snd-card-mtp")) ||
+         !strncmp(snd_card_name, "msm8952-skum-snd-card",
+                   sizeof("msm8952-skum-snd-card")) ||
+         !strncmp(snd_card_name, "msm8952-sku1-snd-card",
+                   sizeof("msm8952-sku1-snd-card")) ||
+         !strncmp(snd_card_name, "msm8952-sku2-snd-card",
+                   sizeof("msm8952-sku2-snd-card")) ||
          !strncmp(snd_card_name, "msm8953-snd-card-mtp",
                    sizeof("msm8953-snd-card-mtp")) ||
          !strncmp(snd_card_name, "msm8953-sku4-snd-card",
