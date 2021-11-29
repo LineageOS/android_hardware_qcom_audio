@@ -1954,7 +1954,7 @@
         <ctl name="MultiMedia17 Mixer SLIM_7_TX" value="1" />
     </path>
 
-    <path name="audio-record-compress bt-sco-wb">
+    <path name="audio-record-compress2 bt-sco-wb">
         <ctl name="BT SampleRate" value="KHZ_16" />
         <path name="audio-record-compress2 bt-sco" />
     </path>
