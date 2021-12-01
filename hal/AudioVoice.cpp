@@ -424,12 +424,8 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
      */
     if (tx_devices.find(AUDIO_DEVICE_NONE) != tx_devices.end() ||
         rx_devices.find(AUDIO_DEVICE_NONE) != rx_devices.end()) {
-        if (tx_devices.find(AUDIO_DEVICE_NONE) != tx_devices.end()) {
-            AHAL_ERR("Invalid Tx device");
-        } else {
-            AHAL_ERR("Invalid Rx device");
-        }
-        ret = -EINVAL;
+        AHAL_ERR("Invalid Tx/Rx device");
+        ret = 0;
         goto exit;
     }
 
