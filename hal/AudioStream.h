@@ -436,6 +436,7 @@ public:
     int             GetUseCase();
     std::mutex write_wait_mutex_;
     std::condition_variable write_condition_;
+    std::mutex stream_mutex_;
     bool write_ready_;
     std::mutex drain_wait_mutex_;
     std::condition_variable drain_condition_;
