@@ -171,7 +171,9 @@ public:
     pal_speaker_rotation_type current_rotation;
     static card_status_t sndCardState;
     std::mutex adev_init_mutex;
+    std::mutex adev_perf_mutex;
     uint32_t adev_init_ref_count = 0;
+    int32_t perf_lock_acquire_cnt = 0;
     hw_device_t *GetAudioDeviceCommon();
     int perf_lock_handle;
     int perf_lock_opts[MAX_PERF_LOCK_OPTS];

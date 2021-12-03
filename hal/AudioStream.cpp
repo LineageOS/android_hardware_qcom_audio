@@ -113,15 +113,32 @@ class AutoPerfLock {
 public :
     AutoPerfLock() {
         std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
-        if (adevice)
-            AudioExtn::audio_extn_perf_lock_acquire(&adevice->perf_lock_handle, 0,
-                    adevice->perf_lock_opts, adevice->perf_lock_opts_size);
+        if (adevice) {
+            adevice->adev_perf_mutex.lock();
+            ++adevice->perf_lock_acquire_cnt;
+            if (adevice->perf_lock_acquire_cnt == 1)
+                AudioExtn::audio_extn_perf_lock_acquire(&adevice->perf_lock_handle, 0,
+                        adevice->perf_lock_opts, adevice->perf_lock_opts_size);
+            AHAL_DBG("(Acquired) perf_lock_handle: 0x%x, count: %d",
+                    adevice->perf_lock_handle, adevice->perf_lock_acquire_cnt);
+            adevice->adev_perf_mutex.unlock();
+        }
     }
 
     ~AutoPerfLock() {
         std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
-        if (adevice)
-            AudioExtn::audio_extn_perf_lock_release(&adevice->perf_lock_handle);
+        if (adevice) {
+            adevice->adev_perf_mutex.lock();
+            AHAL_DBG("(release) perf_lock_handle: 0x%x, count: %d",
+                    adevice->perf_lock_handle, adevice->perf_lock_acquire_cnt);
+            if (adevice->perf_lock_acquire_cnt > 0)
+                --adevice->perf_lock_acquire_cnt;
+            if (adevice->perf_lock_acquire_cnt == 0) {
+                AHAL_DBG("Releasing perf_lock_handle: 0x%x", adevice->perf_lock_handle);
+                AudioExtn::audio_extn_perf_lock_release(&adevice->perf_lock_handle);
+            }
+            adevice->adev_perf_mutex.unlock();
+        }
     }
 };
 
