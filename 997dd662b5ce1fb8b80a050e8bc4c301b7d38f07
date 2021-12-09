@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7fbb0a61_f5bf503d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 21290
+      },
+      "writtenOn": "2021-12-09T21:20:39Z",
+      "side": 1,
+      "message": "Verified on nubia sm8150 (TP1803) and unofficial xiaomi sm6150.\n\n",
+      "revId": "997dd662b5ce1fb8b80a050e8bc4c301b7d38f07",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
