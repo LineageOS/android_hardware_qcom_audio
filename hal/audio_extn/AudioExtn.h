@@ -61,7 +61,8 @@ private:
             struct str_parms *query, struct str_parms *reply);
 
 public:
-    static int audio_extn_parse_compress_metadata(struct audio_config *config_, pal_snd_dec_t *pal_snd_dec, str_parms *parms, uint32_t *sr, uint16_t *ch);
+    static int audio_extn_parse_compress_metadata(struct audio_config *config_, pal_snd_dec_t *pal_snd_dec,
+                                                  str_parms *parms, uint32_t *sr, uint16_t *ch, bool *isCompressMetadataAvail);
     static void audio_extn_get_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *query, struct str_parms *reply);
     static void audio_extn_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *params);
     static int get_controller_stream_from_params(struct str_parms *parms, int *controller, int *stream);

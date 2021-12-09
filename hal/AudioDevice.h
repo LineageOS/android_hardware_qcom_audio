@@ -222,6 +222,7 @@ protected:
     std::mutex in_list_mutex;
     std::mutex patch_map_mutex;
     btsco_lc3_cfg_t btsco_lc3_cfg;
+    bool bt_lc3_speech_enabled;
     void *offload_effects_lib_;
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;
