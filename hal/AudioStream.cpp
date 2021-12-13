@@ -1797,6 +1797,14 @@ int StreamOutPrimary::Pause() {
         ret = -1;
         goto exit;
     }
+    // only direct stream will receive pause/resume cmd from AudioFlinger,
+    // VOIP RX is specified to direct output in qcom audio policy config,
+    // which doesn't need pause/resume actually.
+    if (streamAttributes_.type == PAL_STREAM_VOIP_RX) {
+        AHAL_DBG("no need to pause for VOIP RX: %d");
+        ret = -1;
+        goto exit;
+    }
 
     if (pal_stream_handle_) {
         ret = pal_stream_pause(pal_stream_handle_);
