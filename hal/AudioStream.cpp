@@ -1110,7 +1110,9 @@ exit:
 
 int64_t StreamInPrimary::GetSourceLatency(audio_input_flags_t halStreamFlags)
 {
-    struct pal_stream_attributes streamAttributes_;
+    // check how to get dsp_latency value from platform info xml instead of hardcoding
+    return 0;
+    /*struct pal_stream_attributes streamAttributes_;
     streamAttributes_.type = StreamInPrimary::GetPalStreamType(halStreamFlags,
         config_.sample_rate);
     AHAL_VERBOSE(" type %d", streamAttributes_.type);
@@ -1126,7 +1128,7 @@ int64_t StreamInPrimary::GetSourceLatency(audio_input_flags_t halStreamFlags)
         //TODO: Add more streamtypes if available in pal
     default:
         return 0;
-    }
+    }*/
 }
 
 uint64_t StreamInPrimary::GetFramesRead(int64_t* time)
@@ -1141,9 +1143,7 @@ uint64_t StreamInPrimary::GetFramesRead(int64_t* time)
         return 0;
     }
 
-    /* This adjustment accounts for buffering after app processor
-     * It is based on estimated DSP latency per use case, rather than exact.
-     */
+    //TODO: need to get this latency from xml instead of hardcoding
     dsp_latency = StreamInPrimary::GetSourceLatency(flags_);
 
     signed_frames = mBytesRead / audio_bytes_per_frame(
