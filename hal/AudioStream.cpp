@@ -1988,7 +1988,7 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     bool isHifiFilterEnabled = false;
-    bool *param_payload = &isHifiFilterEnabled;
+    bool *payload_hifiFilter = &isHifiFilterEnabled;
     size_t param_size = 0;
 
     stream_mutex_.lock();
@@ -2053,6 +2053,9 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
                 goto done;
         }
 
+        ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
+                            (void **)&payload_hifiFilter, &param_size, nullptr);
+
         for (int i = 0; i < noPalDevices; i++) {
             mPalOutDevice[i].id = mPalOutDeviceIds[i];
             mPalOutDevice[i].config.sample_rate = mPalOutDevice[0].config.sample_rate;
@@ -2103,6 +2106,18 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
                         sizeof(mPalOutDevice[i].custom_config.custom_key));
                 AHAL_INFO("Setting custom key as %s", mPalOutDevice[i].custom_config.custom_key);
             }
+
+            if (!ret && isHifiFilterEnabled &&
+                (mPalOutDevice[i].id == PAL_DEVICE_OUT_WIRED_HEADSET ||
+                 mPalOutDevice[i].id == PAL_DEVICE_OUT_WIRED_HEADPHONE) &&
+                (config_.sample_rate != 384000 && config_.sample_rate != 352800)) {
+
+                AHAL_DBG("hifi-filter custom key sent to PAL (only applicable to certain streams)\n");
+
+                strlcpy(mPalOutDevice[i].custom_config.custom_key,
+                       "hifi-filter_custom_key",
+                       sizeof(mPalOutDevice[i].custom_config.custom_key));
+            }
         }
 
         if (device_cap_query) {
@@ -2110,22 +2125,6 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
             device_cap_query = NULL;
         }
         mAndroidOutDevices = new_devices;
-
-        ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
-                            (void **)&param_payload, &param_size, nullptr);
-
-        if (!ret && isHifiFilterEnabled &&
-            (mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADSET ||
-             mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADPHONE) &&
-            (streamAttributes_.out_media_config.sample_rate != 384000 &&
-             streamAttributes_.out_media_config.sample_rate != 352800)) {
-
-            AHAL_DBG("hifi-filter custom key sent(the filter is not applicable to ALL streams)\n");
-
-            strlcpy(mPalOutDevice->custom_config.custom_key,
-                    "hifi-filter_custom_key",
-                    sizeof(mPalOutDevice->custom_config.custom_key));
-        }
 
     if (hac_voip && (mPalOutDevice->id == PAL_DEVICE_OUT_HANDSET)) {
          strlcpy(mPalOutDevice->custom_config.custom_key, "HAC",
@@ -2476,7 +2475,7 @@ int StreamOutPrimary::Open() {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
     bool isHifiFilterEnabled = false;
-    bool *param_payload = &isHifiFilterEnabled;
+    bool *payload_hifiFilter = &isHifiFilterEnabled;
     size_t param_size = 0;
 
     AHAL_DBG("Enter OutPrimary ");
@@ -2557,7 +2556,7 @@ int StreamOutPrimary::Open() {
     }
 
     ret = pal_get_param(PAL_PARAM_ID_HIFI_PCM_FILTER,
-                        (void **)&param_payload, &param_size, nullptr);
+                        (void **)&payload_hifiFilter, &param_size, nullptr);
 
     if (!ret && isHifiFilterEnabled &&
         (mPalOutDevice->id == PAL_DEVICE_OUT_WIRED_HEADSET ||
@@ -2565,7 +2564,7 @@ int StreamOutPrimary::Open() {
         (streamAttributes_.out_media_config.sample_rate != 384000 &&
          streamAttributes_.out_media_config.sample_rate != 352800)) {
 
-        AHAL_DBG("hifi-filter custom key sent(the filter is not applicable to ALL streams)\n");
+        AHAL_DBG("hifi-filter custom key sent to PAL (only applicable to certain streams)\n");
 
         strlcpy(mPalOutDevice->custom_config.custom_key,
                 "hifi-filter_custom_key",
