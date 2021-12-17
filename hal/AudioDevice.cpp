@@ -565,8 +565,6 @@ int AudioDevice::ReleaseAudioPatch(audio_patch_handle_t handle) {
     }
 
     ret = stream->RouteStream({AUDIO_DEVICE_NONE});
-    if (patch_type == AudioPatch::PATCH_PLAYBACK)
-        ret |= voice_->RouteStream({AUDIO_DEVICE_NONE});
 
     if (ret)
         AHAL_ERR("Stream routing failed for io_handle %d", io_handle);
