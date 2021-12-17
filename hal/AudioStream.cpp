@@ -2002,6 +2002,10 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
                         AUDIO_DEVICE_OUT_USB_DEVICE);
                     if (it != mAndroidOutDevices.end())
                         mAndroidOutDevices.erase(it);
+                    it = std::find(mAndroidOutDevices.begin(),mAndroidOutDevices.end(),
+                        AUDIO_DEVICE_OUT_USB_HEADSET);
+                    if (it != mAndroidOutDevices.end())
+                        mAndroidOutDevices.erase(it);
                     mPalOutDevice[i].id =  PAL_DEVICE_OUT_SPEAKER;
                     mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
                     mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
@@ -2514,6 +2518,10 @@ int StreamOutPrimary::Open() {
             AHAL_DBG("USB device failed, falling back to Speaker");
             auto it = std::find(mAndroidOutDevices.begin(),mAndroidOutDevices.end(),
                 AUDIO_DEVICE_OUT_USB_DEVICE);
+            if (it != mAndroidOutDevices.end())
+                mAndroidOutDevices.erase(it);
+            it = std::find(mAndroidOutDevices.begin(),mAndroidOutDevices.end(),
+                AUDIO_DEVICE_OUT_USB_HEADSET);
             if (it != mAndroidOutDevices.end())
                 mAndroidOutDevices.erase(it);
             mPalOutDevice->id == PAL_DEVICE_OUT_SPEAKER;
@@ -3684,6 +3692,10 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
                         AUDIO_DEVICE_IN_USB_DEVICE);
                     if (it != mAndroidInDevices.end())
                         mAndroidInDevices.erase(it);
+                    it = std::find(mAndroidInDevices.begin(),mAndroidInDevices.end(),
+                        AUDIO_DEVICE_IN_USB_HEADSET);
+                    if (it != mAndroidInDevices.end())
+                        mAndroidInDevices.erase(it);
                     mPalInDevice[i].id = PAL_DEVICE_IN_SPEAKER_MIC;
                     mPalInDevice[i].address.card_id = 0;
                     mPalInDevice[i].address.device_num = 0;
@@ -3891,6 +3903,10 @@ int StreamInPrimary::Open() {
              AHAL_DBG("USB device failed, falling back to Speaker-mic");
              auto it = std::find(mAndroidInDevices.begin(),mAndroidInDevices.end(),
                  AUDIO_DEVICE_IN_USB_DEVICE);
+             if (it != mAndroidInDevices.end())
+                 mAndroidInDevices.erase(it);
+             it = std::find(mAndroidInDevices.begin(),mAndroidInDevices.end(),
+                 AUDIO_DEVICE_IN_USB_HEADSET);
              if (it != mAndroidInDevices.end())
                  mAndroidInDevices.erase(it);
              mPalInDevice->id == PAL_DEVICE_IN_SPEAKER_MIC;
