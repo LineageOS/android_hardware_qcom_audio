@@ -3221,6 +3221,7 @@ StreamOutPrimary::StreamOutPrimary(
     mPalOutDeviceIds = nullptr;
     mPalOutDevice = nullptr;
     convertBuffer = NULL;
+    hapticsDevice = NULL;
     hapticBuffer = NULL;
     hapticsDevice = nullptr;
     hapticsBufSize = 0;
