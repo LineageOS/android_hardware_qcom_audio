@@ -7557,10 +7557,11 @@ snd_device_t platform_get_input_snd_device(void *platform,
         else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_DEVICE))
             reassign_device_list(&in_devices, AUDIO_DEVICE_IN_USB_DEVICE, address);
 
-        if (list_empty(out_devices))
+        if (adev->bt_sco_on == true)
+            reassign_device_list(&in_devices, AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET, address);
+        else if (list_empty(out_devices))
             reassign_device_list(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC,
                                  address);
-
         if (in)
             snd_device = get_snd_device_for_voice_comm(my_data, in, out_devices, &in_devices);
     } else if (source == AUDIO_SOURCE_MIC) {
