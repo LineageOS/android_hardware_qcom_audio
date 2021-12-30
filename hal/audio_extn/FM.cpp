@@ -105,7 +105,7 @@ int32_t fm_set_volume(float value, bool persist=false)
     }
 
     if (!fm.running) {
-        AHAL_VERBOSE(" FM not active, ignoring set_volume call");
+        AHAL_DBG(" FM not active, ignoring set_volume call");
         return -EIO;
     }
 
@@ -191,16 +191,17 @@ int32_t fm_start(std::shared_ptr<AudioDevice> adev __unused, int device_id)
         AHAL_ERR("stream open failed with: %d", ret);
         return ret;
     }
+    fm.running = true;
+    fm_set_volume(fm.volume, true);
 
     ret = pal_stream_start(fm.stream_handle);
     if (ret) {
         AHAL_ERR("stream start failed with %d", ret);
         pal_stream_close(fm.stream_handle);
+        fm.running = false;
         return ret;
     }
 
-    fm.running = true;
-    fm_set_volume(fm.volume, true);
     AHAL_DBG("Exit");
     return ret;
 }
