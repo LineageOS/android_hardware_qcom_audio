@@ -1745,6 +1745,7 @@ int StreamOutPrimary::CreateMmapBuffer(int32_t min_size_frames,
     info->buffer_size_frames = palMmapBuf.buffer_size_frames;
     info->burst_size_frames = palMmapBuf.burst_size_frames;
     info->flags = (audio_mmap_buffer_flag) AUDIO_MMAP_APPLICATION_SHAREABLE;
+    mmap_shared_memory_fd = info->shared_memory_fd;
 
     stream_mutex_.unlock();
     return ret;
@@ -1960,6 +1961,11 @@ int StreamOutPrimary::Standby() {
                 ret = 0;
             }
         }
+    }
+
+    if (mmap_shared_memory_fd >= 0) {
+        close(mmap_shared_memory_fd);
+        mmap_shared_memory_fd = -1;
     }
 
     if (ret)
@@ -3522,6 +3528,7 @@ int StreamInPrimary::CreateMmapBuffer(int32_t min_size_frames,
     info->buffer_size_frames = palMmapBuf.buffer_size_frames;
     info->burst_size_frames = palMmapBuf.burst_size_frames;
     info->flags = (audio_mmap_buffer_flag)palMmapBuf.flags;
+    mmap_shared_memory_fd = info->shared_memory_fd;
 
     stream_mutex_.unlock();
     return ret;
@@ -3575,6 +3582,11 @@ int StreamInPrimary::Standby() {
     if (pal_stream_handle_ && !is_st_session) {
         ret = pal_stream_close(pal_stream_handle_);
         pal_stream_handle_ = NULL;
+    }
+
+    if (mmap_shared_memory_fd >= 0) {
+        close(mmap_shared_memory_fd);
+        mmap_shared_memory_fd = -1;
     }
 
     if (ret)
@@ -4543,7 +4555,8 @@ StreamPrimary::StreamPrimary(audio_io_handle_t handle,
     pal_stream_handle_(NULL),
     handle_(handle),
     config_(*config),
-    volume_(NULL)
+    volume_(NULL),
+    mmap_shared_memory_fd(-1)
 {
     memset(&streamAttributes_, 0, sizeof(streamAttributes_));
     memset(&address_, 0, sizeof(address_));
