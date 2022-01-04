@@ -2,6 +2,9 @@
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Not a Contribution.
+ *
  * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1451,8 +1454,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
                             (void **)&device_cap_query,
                             &payload_size, nullptr);
-                    if (dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
-                            dynamic_media_config.mask == 0)
+                    if ((dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
+                            dynamic_media_config.mask == 0) || (dynamic_media_config.jack_status == false))
                         usb_input_dev_enabled = false;
                     free(device_cap_query);
                 } else {
