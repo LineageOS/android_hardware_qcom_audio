@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -1979,7 +1980,6 @@ exit:
 
 int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, bool force_device_switch __unused) {
     int ret = 0, noPalDevices = 0;
-    bool forceRouting = false;
     pal_device_id_t * deviceId = nullptr;
     struct pal_device* deviceIdConfigs = nullptr;
     pal_param_device_capability_t *device_cap_query = nullptr;
@@ -2005,10 +2005,7 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
              AudioExtn::get_device_types(mAndroidOutDevices),
              mAndroidOutDevices.size());
 
-    forceRouting = AudioExtn::audio_devices_cmp(new_devices, audio_is_a2dp_out_device);
-
-    /* Ignore routing to same device unless it's forced */
-    if (!AudioExtn::audio_devices_empty(new_devices) || forceRouting) {
+    if (!AudioExtn::audio_devices_empty(new_devices)) {
         // re-allocate mPalOutDevice and mPalOutDeviceIds
         if (new_devices.size() != mAndroidOutDevices.size()) {
             deviceId = (pal_device_id_t*) realloc(mPalOutDeviceIds,
