@@ -253,6 +253,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAF)),true)
     LOCAL_SRC_FILES += audio_extn/qaf.c
 endif
 
+# Concurrent capture
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_CONCURRENT_CAPTURE)),true)
+    LOCAL_CFLAGS += -DCONCURRENT_CAPTURE_ENABLED
+endif
+
 # Hardware specific feature
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAP)),true)
 LOCAL_CFLAGS += -DQAP_EXTN_ENABLED -Wno-tautological-pointer-compare
