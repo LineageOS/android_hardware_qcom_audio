@@ -423,7 +423,18 @@ cleanup:
 
 void audio_extn_sound_trigger_deinit(std::shared_ptr<AudioDevice> adev)
 {
+    struct sound_trigger_info *st_ses_info = NULL;
+    struct listnode *node, *temp;
+
     AHAL_INFO("Enter");
+    list_for_each_safe(node, temp, &st_dev->st_ses_list) {
+        st_ses_info = node_to_item(node, struct sound_trigger_info, list);
+        if (st_ses_info) {
+            list_remove(&st_ses_info->list);
+            free(st_ses_info);
+        }
+    }
+
     if (st_dev && (st_dev->adev == adev) && st_dev->lib_handle) {
         dlclose(st_dev->lib_handle);
         free(st_dev);

@@ -47,10 +47,6 @@
 #include "AudioVoice.h"
 #include "PalDefs.h"
 
-#define COMPRESS_VOIP_IO_BUF_SIZE_NB 320
-#define COMPRESS_VOIP_IO_BUF_SIZE_WB 640
-#define COMPRESS_VOIP_IO_BUF_SIZE_SWB 1280
-#define COMPRESS_VOIP_IO_BUF_SIZE_FB 1920
 #define MAX_PERF_LOCK_OPTS 20
 
 /* HDR Audio use case parameters */

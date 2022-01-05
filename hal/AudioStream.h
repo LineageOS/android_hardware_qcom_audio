@@ -77,7 +77,7 @@
 #define ULL_PERIOD_SIZE (DEFAULT_OUTPUT_SAMPLING_RATE / 1000) /** 1ms; frames */
 #define ULL_PERIOD_COUNT_DEFAULT 512
 #define ULL_PERIOD_MULTIPLIER 3
-#define BUF_SIZE_PLAYBACK 1024
+#define BUF_SIZE_PLAYBACK 960
 #define BUF_SIZE_CAPTURE 960
 #define NO_OF_BUF 4
 #define LOW_LATENCY_CAPTURE_SAMPLE_RATE 48000
@@ -475,7 +475,7 @@ private:
     // Helper function for write to open pal stream & configure.
     ssize_t configurePalOutputStream();
     //Helper method to standby streams upon write failures and sleep for buffer duration.
-    ssize_t onWriteError(size_t bytes, size_t ret);
+    ssize_t onWriteError(size_t bytes, ssize_t ret);
     struct pal_device* mPalOutDevice;
     pal_device_id_t* mPalOutDeviceIds;
     std::set<audio_devices_t> mAndroidOutDevices;
