@@ -488,7 +488,7 @@
     </path>
 
     <path name="handset-mic">
-        <path name="amic1" />
+        <path name="amic3" />
     </path>
 
     <path name="ultrasound-handset">
