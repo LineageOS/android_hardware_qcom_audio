@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "17033ba7_146f7f1f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 28232
+      },
+      "writtenOn": "2022-01-07T03:55:35Z",
+      "side": 1,
+      "message": "This one:https://source.codeaurora.org/quic/la/platform/hardware/qcom/audio/commit/?h\u003dLA.UM.9.6.2.c25-01800-89xx.0\u0026id\u003db4f1bc2a14103fa346196b2df83c04d91128672e taken from 8953\u0027s CAF source seems to be more appropriate at least for caf-8996 branch.",
+      "revId": "0fc4528a2b10fe4faf8a9c4959417957d264d419",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
