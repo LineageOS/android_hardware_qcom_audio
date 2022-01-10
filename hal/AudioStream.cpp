@@ -2075,24 +2075,9 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
                         &payload_size, nullptr);
 
                 if (ret<0){
-                    AHAL_DBG("USB device failed, falling back to Speaker");
-                    auto it = std::find(mAndroidOutDevices.begin(),mAndroidOutDevices.end(),
-                        AUDIO_DEVICE_OUT_USB_DEVICE);
-                    if (it != mAndroidOutDevices.end())
-                        mAndroidOutDevices.erase(it);
-                    it = std::find(mAndroidOutDevices.begin(),mAndroidOutDevices.end(),
-                        AUDIO_DEVICE_OUT_USB_HEADSET);
-                    if (it != mAndroidOutDevices.end())
-                        mAndroidOutDevices.erase(it);
-                    mPalOutDevice[i].id =  PAL_DEVICE_OUT_SPEAKER;
-                    mPalOutDevice[i].config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-                    mPalOutDevice[i].config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
-                    mPalOutDevice[i].config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-                    mPalOutDevice[i].config.ch_info.channels = 2;
-                    mPalOutDevice[i].config.ch_info.ch_map[0] = PAL_CHMAP_CHANNEL_FL;
-                    mPalOutDevice[i].config.ch_info.ch_map[1] = PAL_CHMAP_CHANNEL_FR;
-                    mPalOutDevice[i].address.card_id = 0;
-                    mPalOutDevice[i].address.device_num = 0;
+                    AHAL_ERR("Error usb device is not connected");
+                    ret = -ENOSYS;
+                    goto done;
                 }
             }
 
@@ -2119,10 +2104,6 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
             }
         }
 
-        if (device_cap_query) {
-            free(device_cap_query);
-            device_cap_query = NULL;
-        }
         mAndroidOutDevices = new_devices;
 
     if (hac_voip && (mPalOutDevice->id == PAL_DEVICE_OUT_HANDSET)) {
@@ -2144,6 +2125,10 @@ int StreamOutPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, 
     }
 
 done:
+    if (device_cap_query) {
+        free(device_cap_query);
+        device_cap_query = NULL;
+    }
     stream_mutex_.unlock();
     AHAL_DBG("exit %d", ret);
     return ret;
