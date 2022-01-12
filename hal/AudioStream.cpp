@@ -1514,6 +1514,8 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
                                         audio_input_flags_t halStreamFlags,
                                         uint32_t sample_rate) {
     pal_stream_type_t palStreamType = PAL_STREAM_LOW_LATENCY;
+    std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
+
     if ((halStreamFlags & AUDIO_INPUT_FLAG_VOIP_TX)!=0) {
          palStreamType = PAL_STREAM_VOIP_TX;
          return palStreamType;
@@ -1559,15 +1561,19 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
             break;
         case AUDIO_INPUT_FLAG_HW_HOTWORD:
         case AUDIO_INPUT_FLAG_NONE:
-            if (isDeviceAvailable(PAL_DEVICE_IN_TELEPHONY_RX)) {
-                if (source_ == AUDIO_SOURCE_VOICE_UPLINK ||
-                    source_ == AUDIO_SOURCE_VOICE_DOWNLINK ||
-                    source_ == AUDIO_SOURCE_VOICE_CALL) {
+            palStreamType = PAL_STREAM_DEEP_BUFFER;
+            if (source_ == AUDIO_SOURCE_VOICE_UPLINK ||
+                source_ == AUDIO_SOURCE_VOICE_DOWNLINK ||
+                source_ == AUDIO_SOURCE_VOICE_CALL) {
+                if (isDeviceAvailable(PAL_DEVICE_IN_TELEPHONY_RX) ||
+                   (adevice && adevice->voice_ && adevice->voice_->IsAnyCallActive())) {
                     palStreamType = PAL_STREAM_VOICE_CALL_RECORD;
-                } else
+                }
+            } else {
+                if (isDeviceAvailable(PAL_DEVICE_IN_TELEPHONY_RX)) {
                     palStreamType = PAL_STREAM_PROXY;
-            } else
-                palStreamType = PAL_STREAM_DEEP_BUFFER;
+                }
+            }
             break;
         default:
             /*
@@ -4146,9 +4152,13 @@ uint32_t StreamInPrimary::GetBufferSize() {
                     config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
         return GetBufferSizeForLowLatencyRecord();
-    } else if (streamAttributes_.type == PAL_STREAM_DEEP_BUFFER ||
-               streamAttributes_.type == PAL_STREAM_VOICE_CALL_RECORD) {
+    } else if (streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
         return (config_.sample_rate/ 1000) * AUDIO_CAPTURE_PERIOD_DURATION_MSEC *
+            audio_bytes_per_frame(
+                    audio_channel_count_from_in_mask(config_.channel_mask),
+                    config_.format);
+    } else if (streamAttributes_.type == PAL_STREAM_VOICE_CALL_RECORD) {
+        return (config_.sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC/ 1000) *
             audio_bytes_per_frame(
                     audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
