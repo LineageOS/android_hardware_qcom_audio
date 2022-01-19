@@ -5179,6 +5179,7 @@ int route_output_stream(struct stream_out *out,
     /*handles device and call state changes*/
     audio_extn_extspk_update(adev->extspk);
 
+    clear_devices(&new_devices);
 error:
     ALOGV("%s: exit: code(%d)", __func__, ret);
     return ret;
@@ -10280,10 +10281,12 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
 
     // Update routing for stream
     if (stream != NULL) {
-        if (p_info->patch_type == PATCH_PLAYBACK)
+        if (p_info->patch_type == PATCH_PLAYBACK) {
             ret = route_output_stream((struct stream_out *) stream, &devices);
-        else if (p_info->patch_type == PATCH_CAPTURE)
+            clear_devices(&devices);
+        } else if (p_info->patch_type == PATCH_CAPTURE) {
             ret = route_input_stream((struct stream_in *) stream, &devices, input_source);
+        }
         if (ret < 0) {
             pthread_mutex_lock(&adev->lock);
             s_info->patch_handle = AUDIO_PATCH_HANDLE_NONE;
