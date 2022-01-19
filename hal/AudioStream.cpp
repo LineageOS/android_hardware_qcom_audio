@@ -618,6 +618,9 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamOutPrimary> astream_out;
     uint32_t period_ms, latency = 0;
+    int trial = 0;
+    char value[PROPERTY_VALUE_MAX] = {0};
+    int low_latency_period_size = LOW_LATENCY_PLAYBACK_PERIOD_SIZE;
 
     if (adevice) {
         astream_out = adevice->OutGetStream((audio_stream_t*)stream);
@@ -647,6 +650,14 @@ static uint32_t astream_get_latency(const struct audio_stream_out *stream) {
         latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
         break;
     case USECASE_AUDIO_PLAYBACK_LOW_LATENCY:
+        if (property_get("vendor.audio_hal.period_size", value, NULL) > 0) {
+            trial = atoi(value);
+            if (astream_out->period_size_is_plausible_for_low_latency(trial))
+                low_latency_period_size = trial;
+        }
+        latency = (LOW_LATENCY_PLAYBACK_PERIOD_COUNT * low_latency_period_size * 1000)/ (astream_out->GetSampleRate());
+        latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
+        break;
     case USECASE_AUDIO_PLAYBACK_WITH_HAPTICS:
         latency = LOW_LATENCY_OUTPUT_PERIOD_DURATION * LOW_LATENCY_PLAYBACK_PERIOD_COUNT;
         latency += StreamOutPrimary::GetRenderLatency(astream_out->flags_) / 1000;
@@ -2408,7 +2419,7 @@ int StreamOutPrimary::get_pcm_buffer_size()
     return fragment_size;
 }
 
-static bool period_size_is_plausible_for_low_latency(int period_size)
+bool StreamOutPrimary:: period_size_is_plausible_for_low_latency(int period_size)
 {
      switch (period_size) {
      case LL_PERIOD_SIZE_FRAMES_160:
