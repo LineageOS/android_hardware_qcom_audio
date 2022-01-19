@@ -1428,6 +1428,17 @@ typedef struct synth_init_config {
 } synth_init_config_t;
 // END: SYNTH_HAL FEATURE ==================================================
 
+// START: POWER_POLICY FEATURE ==================================================
+
+typedef void (*fp_in_set_power_policy_t) (uint8_t);
+typedef void (*fp_out_set_power_policy_t) (uint8_t);
+
+typedef struct power_policy_init_config {
+    fp_in_set_power_policy_t                      fp_in_set_power_policy;
+    fp_out_set_power_policy_t                     fp_out_set_power_policy;
+} power_policy_init_config_t;
+// END: POWER_POLICY FEATURE ==================================================
+
 bool audio_extn_edid_is_supported_sr(edid_audio_info* info, int sr);
 bool audio_extn_edid_is_supported_bps(edid_audio_info* info, int bps);
 int audio_extn_edid_get_highest_supported_sr(edid_audio_info* info);

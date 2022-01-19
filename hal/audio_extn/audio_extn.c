@@ -6526,10 +6526,13 @@ static void* power_policy_thread_func(void* arg __unused) {
         goto exit;
     }
     ALOGD("%s: Launching Power Policy Client", __func__);
-    launch_power_policy();
+    power_policy_init_config_t init_config;
+    init_config.fp_in_set_power_policy = in_set_power_policy;
+    init_config.fp_out_set_power_policy = out_set_power_policy;
+    launch_power_policy(init_config);
 
 exit:
-    pthread_exit(NULL);
+    return NULL;
 }
 
 static int power_policy_feature_init(bool is_feature_enabled)

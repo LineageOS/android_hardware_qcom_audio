@@ -3445,8 +3445,9 @@ int start_input_stream(struct stream_in *in)
           __func__, &in->stream, in->usecase, use_case_table[in->usecase]);
 
     if (CARD_STATUS_OFFLINE == in->card_status||
-        CARD_STATUS_OFFLINE == adev->card_status) {
-        ALOGW("in->card_status or adev->card_status offline, try again");
+        CARD_STATUS_OFFLINE == adev->card_status ||
+        POWER_POLICY_STATUS_OFFLINE == adev->in_power_policy) {
+        ALOGW("in->card_status or adev->card_status or adev->input_power offline, try again");
         ret = -EIO;
         goto error_config;
     }
@@ -3865,7 +3866,8 @@ static void *offload_thread_loop(void *context)
             else
                 ALOGE("%s: Next track returned error %d",__func__, ret);
             if (-ENETRESET != ret && !(-EINTR == ret &&
-                        CARD_STATUS_OFFLINE == out->card_status)) {
+                (CARD_STATUS_OFFLINE == out->card_status ||
+                POWER_POLICY_STATUS_OFFLINE == adev->out_power_policy))) {
                 send_callback = true;
                 pthread_mutex_lock(&out->lock);
                 out->send_new_metadata = 1;
@@ -3882,7 +3884,8 @@ static void *offload_thread_loop(void *context)
             ALOGD("copl(%p):out of compress_drain", out);
             // EINTR check avoids drain interruption due to SSR
             if (-ENETRESET != ret && !(-EINTR == ret &&
-                        CARD_STATUS_OFFLINE == out->card_status)) {
+               (CARD_STATUS_OFFLINE == out->card_status ||
+                POWER_POLICY_STATUS_OFFLINE == adev->out_power_policy))) {
                 send_callback = true;
                 event = STREAM_CBK_EVENT_DRAIN_READY;
             } else
@@ -4121,7 +4124,8 @@ int start_output_stream(struct stream_out *out)
                                                       AUDIO_DEVICE_OUT_SPEAKER_SAFE);
 
     if (CARD_STATUS_OFFLINE == out->card_status ||
-        CARD_STATUS_OFFLINE == adev->card_status) {
+        CARD_STATUS_OFFLINE == adev->card_status ||
+        POWER_POLICY_STATUS_OFFLINE == adev->out_power_policy) {
         ALOGW("out->card_status or adev->card_status offline, try again");
         ret = -EIO;
         goto error_fatal;
@@ -6139,7 +6143,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void *buffer,
     ATRACE_BEGIN("out_write");
     lock_output_stream(out);
 
-    if (CARD_STATUS_OFFLINE == out->card_status) {
+    if (CARD_STATUS_OFFLINE == out->card_status ||
+        POWER_POLICY_STATUS_OFFLINE == adev->out_power_policy) {
 
         if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
             /*during SSR for compress usecase we should return error to flinger*/
@@ -6599,7 +6604,8 @@ static int out_get_render_position(const struct audio_stream_out *stream,
         } else if(ret < 0) {
             ALOGE(" ERROR: Unable to get time stamp from compress driver");
             ret = -EINVAL;
-        } else if (out->card_status == CARD_STATUS_OFFLINE) {
+        } else if (out->card_status == CARD_STATUS_OFFLINE ||
+                   adev->out_power_policy == POWER_POLICY_STATUS_OFFLINE) {
             /*
              * Handle corner case where compress session is closed during SSR
              * and timestamp is queried
@@ -6728,6 +6734,7 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
                 ret = 0;
             }
         } else if (out->card_status == CARD_STATUS_OFFLINE ||
+                   adev->out_power_policy == POWER_POLICY_STATUS_OFFLINE ||
             // audioflinger still needs position updates when A2DP is suspended
             (is_a2dp_out_device_type(&out->device_list) && audio_extn_a2dp_source_is_suspended())) {
             *frames = out->written;
@@ -6949,7 +6956,8 @@ static int out_create_mmap_buffer(const struct audio_stream_out *stream,
     pthread_mutex_lock(&adev->lock);
 
     if (CARD_STATUS_OFFLINE == out->card_status ||
-        CARD_STATUS_OFFLINE == adev->card_status) {
+        CARD_STATUS_OFFLINE == adev->card_status ||
+        POWER_POLICY_STATUS_OFFLINE == adev->out_power_policy) {
         ALOGW("out->card_status or adev->card_status offline, try again");
         ret = -EIO;
         goto exit;
@@ -7828,7 +7836,8 @@ static int in_create_mmap_buffer(const struct audio_stream_in *stream,
     ALOGV("%s in %p", __func__, in);
 
     if (CARD_STATUS_OFFLINE == in->card_status||
-        CARD_STATUS_OFFLINE == adev->card_status) {
+        CARD_STATUS_OFFLINE == adev->card_status ||
+        POWER_POLICY_STATUS_OFFLINE == adev->in_power_policy) {
         ALOGW("in->card_status or adev->card_status offline, try again");
         ret = -EIO;
         goto exit;
@@ -9029,6 +9038,51 @@ void adev_close_output_stream(struct audio_hw_device *dev __unused,
     ALOGV("%s: exit", __func__);
 }
 
+void in_set_power_policy(uint8_t enable)
+{
+    struct listnode *node;
+
+    ALOGD("%s: Enter, state %d", __func__, enable);
+
+    pthread_mutex_lock(&adev->lock);
+    adev->in_power_policy = enable ? POWER_POLICY_STATUS_ONLINE : POWER_POLICY_STATUS_OFFLINE;
+    pthread_mutex_unlock(&adev->lock);
+
+    if (!enable) {
+        list_for_each(node, &adev->active_inputs_list) {
+            streams_input_ctxt_t *in_ctxt = node_to_item(node,
+                                                         streams_input_ctxt_t,
+                                                         list);
+            struct stream_in *in = in_ctxt->input;
+            in_standby(&in->stream.common);
+        }
+    }
+
+    ALOGD("%s: Exit", __func__);
+}
+
+void out_set_power_policy(uint8_t enable)
+{
+    struct listnode *node;
+
+    ALOGD("%s: Enter, state %d", __func__, enable);
+
+    pthread_mutex_lock(&adev->lock);
+    adev->out_power_policy = enable ? POWER_POLICY_STATUS_ONLINE : POWER_POLICY_STATUS_ONLINE;
+    pthread_mutex_unlock(&adev->lock);
+
+    if (!enable) {
+        list_for_each(node, &adev->active_outputs_list) {
+            streams_output_ctxt_t *out_ctxt = node_to_item(node,
+                                                           streams_output_ctxt_t,
+                                                           list);
+            struct stream_out *out = out_ctxt->output;
+            out_on_error(&out->stream.common);
+        }
+    }
+
+    ALOGD("%s: Exit", __func__);
+}
 static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 {
     struct audio_device *adev = (struct audio_device *)dev;
@@ -11180,6 +11234,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     pthread_mutex_lock(&adev->lock);
     audio_extn_snd_mon_register_listener(adev, adev_snd_mon_cb);
     adev->card_status = CARD_STATUS_ONLINE;
+    adev->out_power_policy = POWER_POLICY_STATUS_ONLINE;
+    adev->in_power_policy = POWER_POLICY_STATUS_ONLINE;
     audio_extn_battery_properties_listener_init(adev_on_battery_status_changed);
     /*
      * if the battery state callback happens before charging can be queried,
