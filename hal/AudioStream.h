@@ -46,16 +46,10 @@
 #include <map>
 
 #define LOW_LATENCY_PLATFORM_DELAY (13*1000LL)
-#define DEEP_BUFFER_PLATFORM_DELAY (70*1000LL)
+#define DEEP_BUFFER_PLATFORM_DELAY (29*1000LL)
 #define PCM_OFFLOAD_PLATFORM_DELAY (30*1000LL)
 #define MMAP_PLATFORM_DELAY        (3*1000LL)
 #define ULL_PLATFORM_DELAY         (4*1000LL)
-
-//Need to confirm audio source delay values from adsp team
-#define DEEP_BUFFER_PLATFORM_CAPTURE_DELAY (40*1000LL)
-#define LOW_LATENCY_PLATFORM_CAPTURE_DELAY (40*1000LL)
-#define VOIP_TX_PLATFORM_CAPTURE_DELAY (40*1000LL)
-#define RAW_STREAM_PLATFORM_CAPTURE_DELAY (40*1000LL)
 
 #define DEEP_BUFFER_OUTPUT_PERIOD_DURATION 40
 #define PCM_OFFLOAD_OUTPUT_PERIOD_DURATION 80
@@ -442,6 +436,7 @@ public:
     int             GetUseCase();
     std::mutex write_wait_mutex_;
     std::condition_variable write_condition_;
+    std::mutex stream_mutex_;
     bool write_ready_;
     std::mutex drain_wait_mutex_;
     std::condition_variable drain_condition_;
@@ -467,7 +462,7 @@ protected:
     int usecase_;
     struct pal_volume_data *volume_; /* used to cache volume */
     std::map <audio_devices_t, pal_device_id_t> mAndroidDeviceMap;
-
+    int mmap_shared_memory_fd;
 };
 
 class StreamOutPrimary : public StreamPrimary {

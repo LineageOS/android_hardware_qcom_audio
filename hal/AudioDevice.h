@@ -171,7 +171,9 @@ public:
     pal_speaker_rotation_type current_rotation;
     static card_status_t sndCardState;
     std::mutex adev_init_mutex;
+    std::mutex adev_perf_mutex;
     uint32_t adev_init_ref_count = 0;
+    int32_t perf_lock_acquire_cnt = 0;
     hw_device_t *GetAudioDeviceCommon();
     int perf_lock_handle;
     int perf_lock_opts[MAX_PERF_LOCK_OPTS];
@@ -191,7 +193,7 @@ public:
     static snd_device_to_mic_map_t microphone_maps[PAL_MAX_INPUT_DEVICES];
     static bool find_enum_by_string(const struct audio_string_to_enum * table, const char * name,
                                     int32_t len, unsigned int *value);
-    static bool set_microphone_characteristic(struct audio_microphone_characteristic_t mic);
+    static bool set_microphone_characteristic(struct audio_microphone_characteristic_t *mic);
     static int32_t get_microphones(struct audio_microphone_characteristic_t *mic_array, size_t *mic_count);
     static void process_microphone_characteristics(const XML_Char **attr);
     static bool is_input_pal_dev_id(int deviceId);
