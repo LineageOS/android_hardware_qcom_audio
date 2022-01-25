@@ -117,139 +117,139 @@ PRODUCT_COPY_FILES += \
 endif
 
 # Reduce client buffer size for fast audio output tracks
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 af.fast_track_multiplier=1
 
 #Low latency audio buffer size in frames
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio_hal.period_size=192
 
 ##fluencetype can be "fluence" or "fluencepro" or "none"
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
 persist.vendor.audio.fluence.voicerec=false\
 persist.vendor.audio.fluence.speaker=true
 
 #disable tunnel encoding
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.tunnel.encode=false
 
 #Buffer size in kbytes for compress offload playback
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.offload.buffer.size.kb=64
 
 #Minimum duration for offload playback in secs
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 audio.offload.min.duration.secs=30
 
 #Enable offload audio video playback by default
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 audio.offload.video=true
 
 #Enable audio track offload by default
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.offload.track.enable=true
 
 #Enable music through deep buffer
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 audio.deep_buffer.media=true
 
 #enable voice path for PCM VoIP by default
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.voice.path.for.pcm.voip=true
 
 #Enable multi channel aac through offload
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.offload.multiaac.enable=true
 
 #Enable DS2, Hardbypass feature for Dolby
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.dolby.ds2.enabled=false\
 vendor.audio.dolby.ds2.hardbypass=false
 
 #Disable Multiple offload sesison
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.offload.multiple.enabled=false
 
 #Disable Compress passthrough playback
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.offload.passthrough=false
 
 #Disable surround sound recording
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 ro.vendor.audio.sdk.ssr=false
 
 #enable dsp gapless mode by default
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.offload.gapless.enabled=true
 
 #enable pbe effects
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.safx.pbe.enabled=true
 
 #parser input buffer size(256kb) in byte stream mode
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.parser.ip.buffer.size=262144
 
 #enable downsampling for multi-channel content > 48Khz
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.playback.mch.downsample=true
 
 #enable software decoders for ALAC and APE.
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.use.sw.alac.decoder=true\
 vendor.audio.use.sw.ape.decoder=true
 
 #property for AudioSphere Post processing
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.pp.asphere.enabled=false
 
 #Audio voice concurrency related flags
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.voice.playback.conc.disabled=true\
 vendor.voice.record.conc.disabled=false\
 vendor.voice.voip.conc.disabled=true
 
 #Decides the audio fallback path during voice call,
 #deep-buffer and fast are the two allowed fallback paths now.
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.voice.conc.fallbackpath=deep-buffer
 
 #Disable speaker protection by default
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 persist.vendor.audio.speaker.prot.enable=false
 
 #Enable HW AAC Encoder by default
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.hw.aac.encoder=true
 
 #flac sw decoder 24 bit decode capability
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.flac.sw.decoder.24bit=true
 
 #timeout crash duration set to 20sec before system is ready.
 #timeout duration updates to default timeout of 5sec once the system is ready.
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.hal.boot.timeout.ms=20000
 
 #read wsatz name from thermal zone type
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.read.wsatz.type=true
 
 #Set AudioFlinger client heap size
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 ro.af.client_heap_size_kbyte=7168
 
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 persist.vendor.audio.hw.binder.size_kbyte=1024
 
 #Set speaker protection cal tx path sampling rate to 48k
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.spkr_prot.tx.sampling_rate=48000
 
 # add dynamic feature flags here
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.feature.snd_mon.enable=true \
 vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.hifi_audio.enable=true \
