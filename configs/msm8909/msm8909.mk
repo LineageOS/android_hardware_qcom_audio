@@ -99,14 +99,14 @@ PRODUCT_COPY_FILES += \
 endif
 
 
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 ro.vendor.audio.sdk.ssr=false
 
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 ro.vendor.audio.sdk.ffv=false
 
 ##fluencetype can be "fluence" or "fluencepro" or "fluenceffv" or "none"
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
 persist.vendor.audio.fluence.voicerec=false\
@@ -114,64 +114,64 @@ persist.vendor.audio.fluence.speaker=true\
 persist.vendor.audio.fluence.audiorec=false
 
 #enable generic handset mic
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.apptype.multirec.enabled=false
 
 #enable multi record
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.record.multiple.enabled=true
 
 #disable tunnel encoding
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.tunnel.encode=false
 
 #Buffer size in kbytes for compress offload playback
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.offload.buffer.size.kb=64
 
 #Minimum duration for offload playback in secs
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 audio.offload.min.duration.secs=30
 
 #Enable offload audio video playback by default
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 audio.offload.video=true
 
 #enable voice path for PCM VoIP by default
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.voice.path.for.pcm.voip=true
 
 #enable dsp gapless mode by default
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.offload.gapless.enabled=true
 
 #Audio voice concurrency related flags
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.voice.playback.conc.disabled=true\
 vendor.voice.record.conc.disabled=true\
 vendor.voice.voip.conc.disabled=true
 
 #Audio VoIP / playback record concurrency flags
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.rec.playback.conc.disabled=true
 
 #property to enable image unload by audio HAL
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.sys.init=false
 
 #Enable DS2 feature for Dolby
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.dolby.ds2.enabled=true
 
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 persist.vendor.audio.hw.binder.size_kbyte=1024
 
 #Disable split a2dp
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 persist.vendor.bt.enable.splita2dp=false
 
 #enable headset calibration
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_VENDOR_PROPERTIES += \
 vendor.audio.volume.headset.gain.depcal=true
 
 PRODUCT_PACKAGES += \
