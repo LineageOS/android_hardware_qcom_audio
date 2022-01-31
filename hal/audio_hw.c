@@ -9614,7 +9614,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         ret = audio_extn_auto_hal_open_echo_reference_stream(in);
     }
 
-    if (in->source == AUDIO_SOURCE_FM_TUNER) {
+    if ((in->source == AUDIO_SOURCE_FM_TUNER) || (devices == AUDIO_DEVICE_IN_FM_TUNER)) {
         if(!get_usecase_from_list(adev, USECASE_AUDIO_RECORD_FM_VIRTUAL))
             in->usecase = USECASE_AUDIO_RECORD_FM_VIRTUAL;
         else {
