@@ -1411,6 +1411,20 @@ int enable_snd_device(struct audio_device *adev,
         }
 
         if (SND_DEVICE_OUT_BT_A2DP == snd_device) {
+
+            struct audio_usecase *usecase;
+            struct listnode *node;
+            /* Disable SCO Devices and enable handset mic for active input stream */
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                if (usecase->stream.in && (usecase->type == PCM_CAPTURE) &&
+                    is_sco_in_device_type(&usecase->stream.in->device_list)) {
+                    ALOGD("a2dp resumed, switch bt sco mic to handset mic");
+                    reassign_device_list(&usecase->stream.in->device_list,
+                                         AUDIO_DEVICE_IN_BUILTIN_MIC, "");
+                    select_devices(adev, usecase->id);
+                }
+            }
             if (audio_extn_a2dp_start_playback() < 0) {
                 ALOGE(" fail to configure A2dp Source control path ");
                 goto err;
@@ -8777,25 +8791,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
          else {
             adev->bt_sco_on = false;
             audio_extn_sco_reset_configuration();
-        }
-    }
-
-    ret = str_parms_get_str(parms, "A2dpSuspended", value, sizeof(value));
-    if (ret >= 0) {
-        if (!strncmp(value, "false", 5) &&
-            audio_extn_a2dp_source_is_suspended()) {
-            struct audio_usecase *usecase;
-            struct listnode *node;
-            list_for_each(node, &adev->usecase_list) {
-                usecase = node_to_item(node, struct audio_usecase, list);
-                if (usecase->stream.in && (usecase->type == PCM_CAPTURE) &&
-                    is_sco_in_device_type(&usecase->stream.in->device_list)) {
-                    ALOGD("a2dp resumed, switch bt sco mic to handset mic");
-                    reassign_device_list(&usecase->stream.in->device_list,
-                                         AUDIO_DEVICE_IN_BUILTIN_MIC, "");
-                    select_devices(adev, usecase->id);
-                }
-            }
         }
     }
 
