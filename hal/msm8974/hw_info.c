@@ -893,6 +893,23 @@ static void update_hardware_info_msm8953(struct hardware_info *hw_info, const ch
     }
 }
 
+static void update_hardware_info_msm8976(struct hardware_info *hw_info, const char *snd_card_name)
+{
+    if (!strcmp(snd_card_name, "msm8976-tasha-snd-card")) {
+        strlcpy(hw_info->name, "msm8976", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8976-tashalite-snd-card")) {
+        strlcpy(hw_info->name, "msm8976", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8976-tasha-skun-snd-card")) {
+        strlcpy(hw_info->name, "msm8976", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8976-tapan-snd-card")) {
+        strlcpy(hw_info->name, "msm8976", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8976-skun-snd-card")) {
+        strlcpy(hw_info->name, "msm8976", sizeof(hw_info->name));
+    } else if (!strcmp(snd_card_name, "msm8976-skup-snd-card")) {
+        strlcpy(hw_info->name, "msm8976", sizeof(hw_info->name));
+    }
+}
+
 static void update_hardware_info_msm8952(struct hardware_info *hw_info, const char *snd_card_name)
 {
     if (!strcmp(snd_card_name, "msm8952-snd-card")) {
@@ -1005,6 +1022,9 @@ void *hw_info_init(const char *snd_card_name)
     } else if (strstr(snd_card_name, "msm8953")) {
         ALOGV("MSM8953 - variant soundcard");
         update_hardware_info_msm8953(hw_info, snd_card_name);
+    } else if (strstr(snd_card_name, "msm8976")) {
+        ALOGV("MSM8976/56 - variant soundcard");
+        update_hardware_info_msm8976(hw_info, snd_card_name);
     } else if (strstr(snd_card_name, "msm8952")) {
         ALOGV("MSM8952 - variant soundcard");
         update_hardware_info_msm8952(hw_info, snd_card_name);

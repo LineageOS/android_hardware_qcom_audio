@@ -1886,6 +1886,12 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("msm8952-sku1-snd-card")) ||
          !strncmp(snd_card_name, "msm8952-sku2-snd-card",
                    sizeof("msm8952-sku2-snd-card")) ||
+         !strncmp(snd_card_name, "msm8976-tapan-snd-card",
+                  sizeof("msm8976-tapan-snd-card")) ||
+         !strncmp(snd_card_name, "msm8976-skun-snd-card",
+                  sizeof("msm8976-skun-snd-card")) ||
+         !strncmp(snd_card_name, "msm8976-skup-snd-card",
+                  sizeof("msm8976-skup-snd-card"))  ||
          !strncmp(snd_card_name, "msm8953-snd-card-mtp",
                    sizeof("msm8953-snd-card-mtp")) ||
          !strncmp(snd_card_name, "msm8953-sku4-snd-card",
@@ -11914,6 +11920,7 @@ int platform_spkr_prot_is_wsa_analog_mode(void *adev __unused)
    snd_card_name = mixer_get_name(adev_h->mixer);
    if ((!strcmp(snd_card_name, "msm8953-snd-card-mtp")) ||
        (!strcmp(snd_card_name, "msm8953-sku4-snd-card")) ||
+       (!strcmp(snd_card_name, "msm8976-skun-snd-card")) ||
        (!strcmp(snd_card_name, "sdm439-sku1-snd-card")) ||
        (!strcmp(snd_card_name, "sdm439-snd-card-mtp")))
        return 1;
