@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -406,7 +407,6 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
     pal_device_id_t pal_tx_device = (pal_device_id_t) NULL;
     pal_device_id_t* pal_device_ids = NULL;
     uint16_t device_count = 0;
-    bool same_dev = false;
 
     AHAL_DBG("Enter");
 
@@ -447,7 +447,6 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
         pal_tx_device = pal_device_ids[0];
     }
 
-    same_dev = pal_voice_rx_device_id_ == pal_rx_device;
     pal_voice_rx_device_id_ = pal_rx_device;
     pal_voice_tx_device_id_ = pal_tx_device;
 
@@ -458,12 +457,10 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
         }
     } else {
         //do device switch here
-        if (!same_dev) {
-            for (int i = 0; i < max_voice_sessions_; i++) {
-                ret = VoiceSetDevice(&voice_.session[i]);
-                if (ret)
-                    AHAL_ERR("Device switch failed for session[%d]", i);
-            }
+        for (int i = 0; i < max_voice_sessions_; i++) {
+             ret = VoiceSetDevice(&voice_.session[i]);
+             if (ret)
+                 AHAL_ERR("Device switch failed for session[%d]", i);
         }
     }
 
