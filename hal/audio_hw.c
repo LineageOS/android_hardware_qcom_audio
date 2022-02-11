@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2022, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -7548,6 +7548,7 @@ static int add_remove_audio_effect(const struct audio_stream *stream,
         ALOGD("NS enable %d", enable);
         if (!in->standby) {
             if (in->source == AUDIO_SOURCE_VOICE_COMMUNICATION ||
+                in->source == AUDIO_SOURCE_VOICE_RECOGNITION ||
                 in->dev->mode == AUDIO_MODE_IN_COMMUNICATION) {
                 if (enable_disable_effect(in->dev, EFFECT_NS, enable) == ENOSYS)
                     select_devices(in->dev, in->usecase);

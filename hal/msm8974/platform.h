@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, 2022, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -760,6 +760,7 @@ enum {
 #define TX_VOICE_FLUENCE_SM_SB 0x10F38
 #define TX_VOICE_FLUENCE_MM_SB 0x10F39
 #define TX_VOICE_FLUENCE_SM_NN 0x10B0F
+#define TX_VOICE_FLUENCEV5_SM 0x10F32
 
 /* multi-mic surround ECNS zone control */
 #define TOPOLOGY_ID_MM_HFP_ECNS 0x1FFF0002

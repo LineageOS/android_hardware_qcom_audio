@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2022, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2013 The Android Open Source Project
@@ -846,6 +846,9 @@ static struct audio_effect_config effect_config_table[GET_IN_DEVICE_INDEX(SND_DE
     [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_SPEAKER_MIC_NN)][EFFECT_NS] = {TX_VOICE_FLUENCE_SM_NN, 0x8000, 0x10EAF, 0x02},
     [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_HANDSET_MIC_NN)][EFFECT_AEC] = {TX_VOICE_FLUENCE_SM_NN, 0x8000, 0x10EAF, 0x01},
     [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_HANDSET_MIC_NN)][EFFECT_NS] = {TX_VOICE_FLUENCE_SM_NN, 0x8000, 0x10EAF, 0x02},
+
+    [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)][EFFECT_AEC] = {TX_VOICE_FLUENCEV5_SM, 0x0, 0x10EAF, 0x01},
+    [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)][EFFECT_NS] = {TX_VOICE_FLUENCEV5_SM, 0x0, 0x10EAF, 0x02},
 };
 
 static struct audio_fluence_mmsecns_config fluence_mmsecns_table = {TOPOLOGY_ID_MM_HFP_ECNS, MODULE_ID_MM_HFP_ECNS,
@@ -7554,10 +7557,11 @@ snd_device_t platform_get_input_snd_device(void *platform,
         else if (compare_device_type(out_devices, AUDIO_DEVICE_OUT_USB_DEVICE))
             reassign_device_list(&in_devices, AUDIO_DEVICE_IN_USB_DEVICE, address);
 
-        if (list_empty(out_devices))
+        if (adev->bt_sco_on == true)
+            reassign_device_list(&in_devices, AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET, address);
+        else if (list_empty(out_devices))
             reassign_device_list(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC,
                                  address);
-
         if (in)
             snd_device = get_snd_device_for_voice_comm(my_data, in, out_devices, &in_devices);
     } else if (source == AUDIO_SOURCE_MIC) {
