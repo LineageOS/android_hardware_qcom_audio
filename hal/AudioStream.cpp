@@ -2653,23 +2653,25 @@ int StreamOutPrimary::Open() {
 
         if (!hapticsDevice) {
             hapticsDevice = (struct pal_device*) calloc(1, sizeof(struct pal_device));
-            hapticsDevice->id = PAL_DEVICE_OUT_HAPTICS_DEVICE;
-            hapticsDevice->config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
-            hapticsDevice->config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
-            hapticsDevice->config.ch_info = ch_info;
-            hapticsDevice->config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
-        }
+            if (hapticsDevice) {
+                hapticsDevice->id = PAL_DEVICE_OUT_HAPTICS_DEVICE;
+                hapticsDevice->config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+                hapticsDevice->config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
+                hapticsDevice->config.ch_info = ch_info;
+                hapticsDevice->config.aud_fmt_id = PAL_AUDIO_FMT_PCM_S16_LE;
 
-        ret = pal_stream_open (&hapticsStreamAttributes,
-                          1,
-                          hapticsDevice,
-                          0,
-                          NULL,
-                          &pal_callback,
-                          (uint64_t)this,
-                          &pal_haptics_stream_handle);
-        if (ret) {
-            AHAL_ERR("Pal Haptics Stream Open Error (%x)", ret);
+                ret = pal_stream_open (&hapticsStreamAttributes,
+                                        1,
+                                        hapticsDevice,
+                                        0,
+                                        NULL,
+                                        &pal_callback,
+                                        (uint64_t)this,
+                                        &pal_haptics_stream_handle);
+                if (ret)
+                    AHAL_ERR("Pal Haptics Stream Open Error (%x)", ret);
+            } else
+                AHAL_ERR("Failed to allocate memory for hapticsDevice");
         }
     }
     if (karaoke) {
