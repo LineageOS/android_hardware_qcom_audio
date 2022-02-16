@@ -1423,7 +1423,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             pal_device_count = GetPalDeviceIds({device}, pal_device_ids);
             ret = add_input_headset_if_usb_out_headset(&pal_device_count, &pal_device_ids);
             if (ret) {
-                free(pal_device_ids);
+                if (pal_device_ids)
+                    free(pal_device_ids);
                 AHAL_ERR("adding input headset failed, error:%d", ret);
                 goto exit;
             }
@@ -1612,6 +1613,13 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         if (device) {
             pal_device_ids = (pal_device_id_t *) calloc(1, sizeof(pal_device_id_t));
             pal_device_count = GetPalDeviceIds({device}, pal_device_ids);
+            ret = add_input_headset_if_usb_out_headset(&pal_device_count, &pal_device_ids);
+            if (ret) {
+                if (pal_device_ids)
+                    free(pal_device_ids);
+                AHAL_ERR("adding input headset failed, error:%d", ret);
+                goto exit;
+            }
             for (int i = 0; i < pal_device_count; i++) {
                 param_device_connection.connection_state = false;
                 param_device_connection.id = pal_device_ids[i];
@@ -1622,10 +1630,6 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     AHAL_ERR("pal set param failed for device disconnect");
                 }
                 AHAL_INFO("pal set param sucess for device disconnect");
-            }
-            if (pal_device_ids) {
-                free(pal_device_ids);
-                pal_device_ids = NULL;
             }
         }
     }
