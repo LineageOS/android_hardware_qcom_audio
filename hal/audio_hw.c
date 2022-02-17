@@ -314,6 +314,67 @@ struct pcm_config pcm_config_audio_capture_rt = {
     .avail_min = ULL_PERIOD_SIZE, //1 ms
 };
 
+struct pcm_config pcm_config_audio_capture_rt_48KHz = {
+    .channels = 2,
+    .rate = 48000,
+    .period_size = 48,
+    .period_count = 512,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = 0,
+    .stop_threshold = AFE_PROXY_RECORD_PERIOD_SIZE * AFE_PROXY_RECORD_PERIOD_COUNT,
+    .silence_threshold = 0,
+    .silence_size = 0,
+    .avail_min = 48, //1 ms
+};
+struct pcm_config pcm_config_audio_capture_rt_32KHz = {
+    .channels = 2,
+    .rate = 32000,
+    .period_size = 32,
+    .period_count = 512,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = 0,
+    .stop_threshold = AFE_PROXY_RECORD_PERIOD_SIZE * AFE_PROXY_RECORD_PERIOD_COUNT,
+    .silence_threshold = 0,
+    .silence_size = 0,
+    .avail_min = 32, //1 ms
+};
+struct pcm_config pcm_config_audio_capture_rt_24KHz = {
+    .channels = 2,
+    .rate = 24000,
+    .period_size = 24,
+    .period_count = 512,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = 0,
+    .stop_threshold = AFE_PROXY_RECORD_PERIOD_SIZE * AFE_PROXY_RECORD_PERIOD_COUNT,
+    .silence_threshold = 0,
+    .silence_size = 0,
+    .avail_min = 24, //1 ms
+};
+struct pcm_config pcm_config_audio_capture_rt_16KHz = {
+    .channels = 2,
+    .rate = 16000,
+    .period_size = 16,
+    .period_count = 512,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = 0,
+    .stop_threshold = AFE_PROXY_RECORD_PERIOD_SIZE * AFE_PROXY_RECORD_PERIOD_COUNT,
+    .silence_threshold = 0,
+    .silence_size = 0,
+    .avail_min = 16, //1 ms
+};
+struct pcm_config pcm_config_audio_capture_rt_8KHz = {
+    .channels = 2,
+    .rate = 8000,
+    .period_size = 8,
+    .period_count = 512,
+    .format = PCM_FORMAT_S16_LE,
+    .start_threshold = 0,
+    .stop_threshold = AFE_PROXY_RECORD_PERIOD_SIZE * AFE_PROXY_RECORD_PERIOD_COUNT,
+    .silence_threshold = 0,
+    .silence_size = 0,
+    .avail_min = 8, //1 ms
+};
+
 struct pcm_config pcm_config_afe_proxy_record = {
     .channels = AFE_PROXY_CHANNEL_COUNT,
     .rate = AFE_PROXY_SAMPLING_RATE,
@@ -3114,7 +3175,11 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                      !audio_is_true_native_stream_active(adev)) &&
                     usecase->stream.out->sample_rate == OUTPUT_SAMPLING_RATE_44100) ||
                     (usecase->stream.out->sample_rate < OUTPUT_SAMPLING_RATE_44100)) {
-            usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+            if (!(compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_BUS) && ((usecase->stream.out->flags &
+                (audio_output_flags_t)AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION) || (usecase->stream.out->flags &
+                (audio_output_flags_t)AUDIO_OUTPUT_FLAG_PHONE)))) {
+                usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
+            }
         }
     }
     enable_audio_route(adev, usecase);
@@ -4523,8 +4588,27 @@ static size_t get_stream_buffer_size(size_t duration_ms,
     uint32_t bytes_per_period_sample = 0;
 
     size = (sample_rate * duration_ms) / 1000;
-    if (is_low_latency)
-        size = configured_low_latency_capture_period_size;
+    if (is_low_latency){
+        switch(sample_rate) {
+            case 48000:
+                size = 240;
+                break;
+            case 32000:
+                size = 160;
+                break;
+            case 24000:
+                size = 120;
+                break;
+            case 16000:
+                size = 80;
+                break;
+            case 8000:
+                size = 40;
+                break;
+            default:
+                size = 240;
+        }
+    }
 
     bytes_per_period_sample = audio_bytes_per_sample(format) * channel_count;
     size *= audio_bytes_per_sample(format) * channel_count;
@@ -9623,7 +9707,11 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
         }
     }
 
-    if (config->sample_rate == LOW_LATENCY_CAPTURE_SAMPLE_RATE &&
+    if ((config->sample_rate == 48000 ||
+        config->sample_rate == 32000 ||
+        config->sample_rate == 24000 ||
+        config->sample_rate == 16000 ||
+        config->sample_rate == 8000)&&
             (flags & AUDIO_INPUT_FLAG_TIMESTAMP) == 0 &&
             (flags & AUDIO_INPUT_FLAG_COMPRESS) == 0 &&
             (flags & AUDIO_INPUT_FLAG_FAST) != 0) {
@@ -9647,7 +9735,26 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             in->af_period_multiplier = 1;
         } else {
             // period size is left untouched for rt mode playback
-            in->config = pcm_config_audio_capture_rt;
+            switch(config->sample_rate)
+            {
+                case 48000:
+                    in->config = pcm_config_audio_capture_rt_48KHz;
+                    break;
+                case 32000:
+                    in->config = pcm_config_audio_capture_rt_32KHz;
+                    break;
+                case 24000:
+                    in->config = pcm_config_audio_capture_rt_24KHz;
+                    break;
+                case 16000:
+                    in->config = pcm_config_audio_capture_rt_16KHz;
+                    break;
+                case 8000:
+                    in->config = pcm_config_audio_capture_rt_8KHz;
+                    break;
+                default:
+                    in->config = pcm_config_audio_capture_rt_48KHz;
+            }
             in->af_period_multiplier = af_period_multiplier;
         }
     }
@@ -9827,6 +9934,31 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
             }
         }
     }
+    if (in->realtime) {
+        switch(config->sample_rate)
+        {
+            case 48000:
+                in->config = pcm_config_audio_capture_rt_48KHz;
+                break;
+            case 32000:
+                in->config = pcm_config_audio_capture_rt_32KHz;
+                break;
+            case 24000:
+                in->config = pcm_config_audio_capture_rt_24KHz;
+                break;
+            case 16000:
+                in->config = pcm_config_audio_capture_rt_16KHz;
+                break;
+            case 8000:
+                in->config = pcm_config_audio_capture_rt_8KHz;
+                break;
+            default:
+                in->config = pcm_config_audio_capture_rt_48KHz;
+        }
+        in->config.format = pcm_format_from_audio_format(config->format);
+        in->af_period_multiplier = af_period_multiplier;
+    }
+
     if (audio_extn_ssr_get_stream() != in)
         in->config.channels = channel_count;
 
