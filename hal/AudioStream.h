@@ -488,7 +488,7 @@ public:
                      visualizer_hal_stop_output fnp_visualizer_stop_output_);
 
     ~StreamOutPrimary();
-    bool sendGaplessMetadata = false;
+    bool sendGaplessMetadata = true;
     bool isCompressMetadataAvail = false;
     int Standby();
     int SetVolume(float left, float right);

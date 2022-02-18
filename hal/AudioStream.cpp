@@ -1872,6 +1872,7 @@ int StreamOutPrimary::Flush() {
         }
         mBytesWritten = 0;
     }
+    sendGaplessMetadata = true;
     stream_mutex_.unlock();
 
     if (ret)
@@ -1932,6 +1933,7 @@ int StreamOutPrimary::Standby() {
 
     stream_started_ = false;
     stream_paused_ = false;
+    sendGaplessMetadata = true;
     if (CheckOffloadEffectsType(streamAttributes_.type)) {
         ret = StopOffloadEffects(handle_, pal_stream_handle_);
         ret = StopOffloadVisualizer(handle_, pal_stream_handle_);
@@ -2181,13 +2183,17 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
         if (ret1 >= 0 ) {
             gaplessMeta.encoderDelay = atoi(value);
             AHAL_DBG("new encoder delay %u", gaplessMeta.encoderDelay);
+        } else {
+            gaplessMeta.encoderDelay = 0;
         }
+
         ret1 = str_parms_get_str(parms, AUDIO_OFFLOAD_CODEC_PADDING_SAMPLES, value, sizeof(value));
         if (ret1 >= 0) {
             gaplessMeta.encoderPadding = atoi(value);
             AHAL_DBG("padding %u", gaplessMeta.encoderPadding);
+        } else {
+            gaplessMeta.encoderPadding = 0;
         }
-        sendGaplessMetadata = true;
     }
 
     ret1 = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_HAC, value, sizeof(value));
@@ -2345,7 +2351,10 @@ uint64_t StreamOutPrimary::GetFramesWritten(struct timespec *timestamp)
 
 int StreamOutPrimary::get_compressed_buffer_size()
 {
+    char value[PROPERTY_VALUE_MAX] = {0};
     int fragment_size = COMPRESS_OFFLOAD_FRAGMENT_SIZE;
+    int fsize = 0;
+
     AHAL_DBG("config_ %x", config_.format);
     if(config_.format ==  AUDIO_FORMAT_FLAC ) {
         fragment_size = FLAC_COMPRESS_OFFLOAD_FRAGMENT_SIZE;
@@ -2355,6 +2364,14 @@ int StreamOutPrimary::get_compressed_buffer_size()
     } else {
         fragment_size =  COMPRESS_OFFLOAD_FRAGMENT_SIZE;
     }
+
+    if((property_get("vendor.audio.offload.buffer.size.kb", value, "")) &&
+            atoi(value)) {
+        fsize = atoi(value) * 1024;
+    }
+    if (fsize > fragment_size)
+        fragment_size = fsize;
+
     return fragment_size;
 }
 
@@ -3232,6 +3249,8 @@ StreamOutPrimary::StreamOutPrimary(
     mBytesWritten = 0;
     int noPalDevices = 0;
     int ret = 0;
+    /*Initialize the gaplessMeta value with 0*/
+    memset(&gaplessMeta,0,sizeof(struct pal_compr_gapless_mdata));
 
     if (!stream_) {
         AHAL_ERR("No memory allocated for stream_");
