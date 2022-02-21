@@ -142,6 +142,12 @@
         <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="31" />
     </pcm_ids>
 
+    <soft_volume_params>
+        <vol_params name="USECASE_AUDIO_PLAYBACK_MEDIA" period="70" step="10000" curve="0"/>
+        <vol_params name="USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION" period="25" step="1000" curve="0"/>
+        <vol_params name="USECASE_AUDIO_PLAYBACK_REAR_SEAT" period="40" step="1000" curve="0"/>
+    </soft_volume_params>
+
     <config_params>
         <param key="spkr_1_tz_name" value="wsatz.13"/>
         <param key="spkr_2_tz_name" value="wsatz.14"/>
