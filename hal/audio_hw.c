@@ -5624,7 +5624,8 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
     } else {
         latency = (out->config.period_count * out->config.period_size * 1000) /
                    (out->config.rate);
-        if (out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER)
+        if (out->usecase == USECASE_AUDIO_PLAYBACK_DEEP_BUFFER ||
+            out->usecase == USECASE_AUDIO_PLAYBACK_LOW_LATENCY)
             latency += platform_render_latency(out)/1000;
     }
 
