@@ -450,6 +450,7 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
     pal_voice_rx_device_id_ = pal_rx_device;
     pal_voice_tx_device_id_ = pal_tx_device;
 
+    voice_mutex_.lock();
     if (!IsAnyCallActive()) {
         if (mode_ == AUDIO_MODE_IN_CALL || mode_ == AUDIO_MODE_CALL_SCREEN) {
             voice_.in_call = true;
@@ -463,6 +464,7 @@ int AudioVoice::RouteStream(const std::set<audio_devices_t>& rx_devices) {
                  AHAL_ERR("Device switch failed for session[%d]", i);
         }
     }
+    voice_mutex_.unlock();
 
     free(pal_device_ids);
 exit:
@@ -472,7 +474,7 @@ exit:
 
 int AudioVoice::UpdateCallState(uint32_t vsid, int call_state) {
     voice_session_t *session = NULL;
-    int i = 0, ret;
+    int i, ret = 0;
     bool is_call_active;
 
 
@@ -483,6 +485,7 @@ int AudioVoice::UpdateCallState(uint32_t vsid, int call_state) {
         }
     }
 
+    voice_mutex_.lock();
     if (session) {
         session->state.new_ = call_state;
         is_call_active = IsCallActive(session);
@@ -493,10 +496,11 @@ int AudioVoice::UpdateCallState(uint32_t vsid, int call_state) {
             ret = UpdateCalls(voice_.session);
         }
     } else {
-        return -EINVAL;
+        ret = -EINVAL;
     }
+    voice_mutex_.unlock();
 
-    return 0;
+    return ret;
 }
 
 int AudioVoice::UpdateCalls(voice_session_t *pSession) {
@@ -558,7 +562,7 @@ int AudioVoice::UpdateCalls(voice_session_t *pSession) {
 }
 
 int AudioVoice::StopCall() {
-    int i, ret = 0;;
+    int i, ret = 0;
 
     AHAL_DBG("Enter");
     voice_.in_call = false;
