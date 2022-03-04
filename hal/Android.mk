@@ -258,6 +258,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_CONCURRENT_CAPTURE)),true)
     LOCAL_CFLAGS += -DCONCURRENT_CAPTURE_ENABLED
 endif
 
+# soft step volume params control
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SOFT_VOLUME)),true)
+    LOCAL_CFLAGS += -DSOFT_VOLUME
+endif
+
 # Hardware specific feature
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAP)),true)
 LOCAL_CFLAGS += -DQAP_EXTN_ENABLED -Wno-tautological-pointer-compare

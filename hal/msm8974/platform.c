@@ -402,6 +402,17 @@ struct  spkr_device_chmap {
     char chmap[AUDIO_CHANNEL_COUNT_MAX];
 };
 
+#ifdef SOFT_VOLUME
+static int usecase_volume_params[AUDIO_USECASE_MAX][3] = {
+    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_MEDIA] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_REAR_SEAT] = {-1,-1,-1},
+};
+#endif
+
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
                                             DEEP_BUFFER_PCM_DEVICE},
@@ -12560,6 +12571,48 @@ bool platform_set_microphone_map(void *platform, snd_device_t in_snd_device,
     my_data->mic_map[in_snd_device].microphones[m_count] = *info;
     return true;
 }
+
+#ifdef SOFT_VOLUME
+int platform_get_soft_step_volume_params(struct soft_step_volume_params *volume_params, int uc_id)
+{
+    int ret = 0;
+
+    if (volume_params == NULL) {
+        ALOGE("%s: Invalid volume_params", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if ((usecase_volume_params[uc_id][0] < 0) || (usecase_volume_params[uc_id][1] < 0) || (usecase_volume_params[uc_id][2] < 0) ) {
+        ALOGE("%s: soft step volume params values are not set dynamically,will use default static values set through cal data",__func__);
+        ret = -EINVAL;
+    } else {
+        memcpy(volume_params,usecase_volume_params[uc_id],sizeof(struct soft_step_volume_params));
+        ALOGV("%s: usecase-id = %d, ramp period = %d, ramp step = %d, ramp curve = %d",
+           __func__, uc_id, volume_params->period, volume_params->step, volume_params->curve);
+    }
+done:
+    return ret;
+}
+
+int platform_set_soft_step_volume_params(int uc_id, int period, int step, int curve)
+{
+    int ret = 0;
+
+    ALOGV("%s: usecase-id = %d, ramp period = %d, ramp step = %d, ramp curve = %d",
+           __func__, uc_id, period, step, curve);
+    if ((uc_id < 0) || (uc_id >= AUDIO_USECASE_MAX)) {
+        ALOGE("%s : invalid usecase id", __func__);
+	    ret = -EINVAL;
+    }
+
+    usecase_volume_params[uc_id][0] = period;
+    usecase_volume_params[uc_id][1] = step;
+    usecase_volume_params[uc_id][2] = curve;
+
+    return ret;
+}
+#endif
 
 int platform_get_active_microphones(void *platform, unsigned int channels,
                                     audio_usecase_t uc_id,

@@ -543,7 +543,9 @@ static int out_set_compr_volume(struct audio_stream_out *stream, float left, flo
 static int out_set_mmap_volume(struct audio_stream_out *stream, float left, float right);
 static int out_set_voip_volume(struct audio_stream_out *stream, float left, float right);
 static int out_set_pcm_volume(struct audio_stream_out *stream, float left, float right);
-
+#ifdef SOFT_VOLUME
+static int out_set_soft_volume_params(struct audio_stream_out *stream);
+#endif
 static void adev_snd_mon_cb(void *cookie, struct str_parms *parms);
 static void in_snd_mon_cb(void * stream, struct str_parms * parms);
 static void out_snd_mon_cb(void * stream, struct str_parms * parms);
@@ -4283,6 +4285,9 @@ int start_output_stream(struct stream_out *out)
                  out->apply_volume = false;
         } else if (audio_extn_auto_hal_is_bus_device_usecase(out->usecase)) {
             out_set_pcm_volume(&out->stream, out->volume_l, out->volume_r);
+#ifdef SOFT_VOLUME
+            out_set_soft_volume_params(&out->stream);
+#endif
         }
     } else {
         /*
@@ -5646,6 +5651,45 @@ static float AmpToDb(float amplification)
     }
     return db;
 }
+
+#ifdef SOFT_VOLUME
+static int out_set_soft_volume_params(struct audio_stream_out *stream)
+{
+    struct stream_out *out = (struct stream_out *)stream;
+    int ret = 0;
+    char mixer_ctl_name[128];
+    struct audio_device *adev = out->dev;
+    struct mixer_ctl *ctl = NULL;
+    struct soft_step_volume_params *volume_params = NULL;
+
+    int pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "Playback  %d Soft Vol Params", pcm_device_id);
+    ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+    if (!ctl) {
+        ALOGE("%s : Could not get ctl for mixer cmd - %s", __func__, mixer_ctl_name);
+        return -EINVAL;
+    }
+
+    volume_params =(struct soft_step_volume_params * ) malloc(sizeof(struct soft_step_volume_params));
+    if (volume_params == NULL){
+        ALOGE("%s : malloc is failed for volume params", __func__);
+        return -EINVAL;
+    } else {
+        ret = platform_get_soft_step_volume_params(volume_params,out->usecase);
+        if (ret < 0) {
+            ALOGE("%s : platform_get_soft_step_volume_params is fialed", __func__);
+            return -EINVAL;
+        }
+
+    }
+    ret = mixer_ctl_set_array(ctl, volume_params, sizeof(struct soft_step_volume_params)/sizeof(int));
+    if (ret < 0) {
+        ALOGE("%s: Could not set ctl, error:%d ", __func__, ret);
+        return -EINVAL;
+    }
+    return 0;
+}
+#endif
 
 static int out_set_mmap_volume(struct audio_stream_out *stream, float left,
                           float right)
