@@ -1,4 +1,4 @@
 third_party {
-  # would be NOTICE save for legacy/libalsa-intf/alsa_ucm.h
+  license_note: "would be NOTICE save for legacy/libalsa-intf/alsa_ucm.h"
   license_type: RESTRICTED
 }
