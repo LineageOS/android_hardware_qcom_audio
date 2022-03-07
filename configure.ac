@@ -50,6 +50,7 @@ AC_ARG_ENABLE(target,
                         [sa81*],      [TARGET_SUPPORT=msmnile_au],
                         [sa61*],      [TARGET_SUPPORT=msmsteppe_au],
                         [qrbx210],    [TARGET_SUPPORT=qrbx210],
+                        [sdmsteppe],    [TARGET_SUPPORT=sdmsteppe],
                         [TARGET_SUPPORT=none])],
                [TARGET_SUPPORT=none]
 )
@@ -104,6 +105,8 @@ fi
 if (test x$TARGET_SUPPORT = xsdmsteppe); then
          AC_SUBST([TARGET_PLATFORM], ["msm8974"])
          TARGET_CFLAGS="-DPLATFORM_MSMSTEPPE"
+         TARGET_CFLAGS+=" -DMAX_TARGET_SPECIFIC_CHANNEL_CNT=\"4\""
+         TARGET_CFLAGS+=" -DINCALL_STEREO_CAPTURE_ENABLED"
 fi
 if (test x$TARGET_SUPPORT = xqrbx210); then
          AC_SUBST([TARGET_PLATFORM], ["msm8974"])
