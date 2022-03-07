@@ -4462,6 +4462,7 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
         else if (streamAttributes_.in_media_config.ch_info.channels == 2)
             config_.channel_mask = AUDIO_CHANNEL_IN_STEREO;
         config_.format = AUDIO_FORMAT_PCM_16_BIT;
+        config_.sample_rate = streamAttributes_.in_media_config.sample_rate;
 
         /*
          * reset pal_stream_handle in case standby come before
