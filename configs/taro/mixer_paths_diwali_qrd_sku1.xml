@@ -495,6 +495,7 @@
         <ctl name="SpkrLeft VISENSE Switch" value="1" />
         <ctl name="SpkrLeft SWR DAC_Port Switch" value="1" />
         <ctl name="EAR SPKR PA Gain" value="G_6_DB" />
+        <ctl name="WSA_RX0 Digital Volume" value="60" />
     </path>
 
     <path name="handset-mic">
@@ -998,108 +999,49 @@
 
     <!-- Quad MIC devices -->
 
-    <path name="handset-dual-amic-quad-adc-hdr">
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC4" value="1"/>
+    <path name="handset-single-amic-dual-adc-hdr">
         <ctl name="TX DEC1 MUX" value="SWR_MIC"/>
         <ctl name="TX DEC2 MUX" value="SWR_MIC"/>
-        <ctl name="TX DEC3 MUX" value="SWR_MIC"/>
-        <ctl name="TX DEC4 MUX" value="SWR_MIC"/>
-        <ctl name="ADC3 MUX" value="INP4"/>
-        <ctl name="HDR12 MUX" value="HDR12"/>
-        <ctl name="HDR34 MUX" value="HDR34"/>
-        <ctl name="ADC2_BCS Disable" value="1" />
-        <ctl name="ADC2 MUX" value="INP3"/>
-        <ctl name="TX2 MODE" value="ADC_HIFI"/>
-        <ctl name="TX0 MODE" value="ADC_HIFI"/>
-        <ctl name="TX3 MODE" value="ADC_HIFI"/>
-        <ctl name="TX1 MODE" value="ADC_HIFI"/>
-        <ctl name="ADC3 ChMap" value="SWRM_TX3_CH1"/>
-        <ctl name="ADC1 ChMap" value="SWRM_TX2_CH1"/>
-        <ctl name="ADC4 ChMap" value="SWRM_TX3_CH2"/>
-        <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2"/>
-        <ctl name="ADC3_MIXER Switch" value="1"/>
-        <ctl name="ADC1_MIXER Switch" value="1"/>
-        <ctl name="ADC4_MIXER Switch" value="1"/>
-        <ctl name="ADC2_MIXER Switch" value="1"/>
-        <ctl name="AMIC1_MIXER Switch" value="1"/>
-        <ctl name="AMIC4_MIXER Switch" value="1"/>
-        <ctl name="TX_DEC1 Volume" value="84"/>
-        <ctl name="TX_DEC2 Volume" value="84"/>
-        <ctl name="TX_DEC3 Volume" value="84"/>
-        <ctl name="TX_DEC4 Volume" value="84"/>
-        <ctl name="ADC1 Volume" value="16"/>
-        <ctl name="ADC2 Volume" value="0"/>
-        <ctl name="ADC3 Volume" value="16"/>
-        <ctl name="ADC4 Volume" value="0"/>
+	<ctl name="TX DEC3 MUX" value="SWR_MIC"/>
+	<ctl name="TX DEC4 MUX" value="SWR_MIC"/>
+	<ctl name="TX SMIC MUX1" value="SWR_MIC4"/>
+	<ctl name="TX SMIC MUX2" value="SWR_MIC5"/>
+	<ctl name="TX SMIC MUX3" value="SWR_MIC4"/>
+	<ctl name="TX SMIC MUX4" value="SWR_MIC5"/>
+	<ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
+	<ctl name="TX_AIF1_CAP Mixer DEC2" value="1"/>
+	<ctl name="TX_AIF1_CAP Mixer DEC3" value="1"/>
+	<ctl name="TX_AIF1_CAP Mixer DEC4" value="1"/>
+	<ctl name="ADC1 ChMap" value="SWRM_TX2_CH1"/>
+	<ctl name="ADC2 ChMap" value="SWRM_TX2_CH2"/>
+	<ctl name="HDR12 MUX" value="HDR12"/>
+	<ctl name="ADC1_MIXER Switch" value="1"/>
+	<ctl name="ADC2_MIXER Switch" value="1"/>
+	<ctl name="TX1 MODE" value="ADC_LP"/>
+	<ctl name="TX0 MODE" value="ADC_LP"/>
+	<ctl name="TX_DEC1 Volume" value="84"/>
+	<ctl name="TX_DEC2 Volume" value="84"/>
+	<ctl name="TX_DEC3 Volume" value="84"/>
+	<ctl name="TX_DEC4 Volume" value="84"/>
+	<ctl name="ADC1 Volume" value="16"/>
+	<ctl name="ADC2 Volume" value="0"/>
+	<ctl name="AMIC1_MIXER Switch" value="1"/>
     </path>
 
     <path name="unprocessed-hdr-mic-landscape">
-        <path name="handset-dual-amic-quad-adc-hdr" />
-        <ctl name="TX SMIC MUX1" value="SWR_MIC9"/>
-        <ctl name="TX SMIC MUX2" value="SWR_MIC8"/>
-        <ctl name="TX SMIC MUX3" value="SWR_MIC4"/>
-        <ctl name="TX SMIC MUX4" value="SWR_MIC5"/>
+        <path name="handset-single-amic-dual-adc-hdr" />
     </path>
 
     <path name="unprocessed-hdr-mic-inverted-landscape">
-        <path name="handset-dual-amic-quad-adc-hdr" />
-        <ctl name="TX SMIC MUX1" value="SWR_MIC4"/>
-        <ctl name="TX SMIC MUX2" value="SWR_MIC5"/>
-        <ctl name="TX SMIC MUX3" value="SWR_MIC9"/>
-        <ctl name="TX SMIC MUX4" value="SWR_MIC8"/>
-    </path>
-
-    <path name="handset-single-amic-quad-adc">
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC4" value="1"/>
-        <ctl name="TX DEC1 MUX" value="SWR_MIC"/>
-        <ctl name="TX DEC2 MUX" value="SWR_MIC"/>
-        <ctl name="TX DEC3 MUX" value="SWR_MIC"/>
-        <ctl name="TX DEC4 MUX" value="SWR_MIC"/>
-        <ctl name="TX SMIC MUX1" value="SWR_MIC9"/>
-        <ctl name="TX SMIC MUX2" value="SWR_MIC9"/>
-        <ctl name="TX SMIC MUX3" value="SWR_MIC9"/>
-        <ctl name="TX SMIC MUX4" value="SWR_MIC9"/>
-        <ctl name="ADC3 MUX" value="INP4"/>
-        <ctl name="HDR12 MUX" value="NO_HDR12"/>
-        <ctl name="HDR34 MUX" value="NO_HDR34"/>
-        <ctl name="ADC2_BCS Disable" value="1" />
-        <ctl name="ADC2 MUX" value="INP3"/>
-        <ctl name="TX2 MODE" value="ADC_HIFI"/>
-        <ctl name="TX0 MODE" value="ADC_HIFI"/>
-        <ctl name="TX3 MODE" value="ADC_HIFI"/>
-        <ctl name="TX1 MODE" value="ADC_HIFI"/>
-        <ctl name="ADC3 ChMap" value="SWRM_TX3_CH1"/>
-        <ctl name="ADC1 ChMap" value="SWRM_TX2_CH1"/>
-        <ctl name="ADC4 ChMap" value="SWRM_TX3_CH2"/>
-        <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2"/>
-        <ctl name="ADC3_MIXER Switch" value="1"/>
-        <ctl name="ADC1_MIXER Switch" value="1"/>
-        <ctl name="ADC4_MIXER Switch" value="1"/>
-        <ctl name="ADC2_MIXER Switch" value="1"/>
-        <ctl name="AMIC1_MIXER Switch" value="1"/>
-        <ctl name="AMIC3_MIXER Switch" value="1"/>
-        <ctl name="TX_DEC1 Volume" value="84"/>
-        <ctl name="TX_DEC2 Volume" value="84"/>
-        <ctl name="TX_DEC3 Volume" value="84"/>
-        <ctl name="TX_DEC4 Volume" value="84"/>
-        <ctl name="ADC1 Volume" value="12"/>
-        <ctl name="ADC2 Volume" value="12"/>
-        <ctl name="ADC3 Volume" value="12"/>
-        <ctl name="ADC4 Volume" value="12"/>
+        <path name="handset-single-amic-dual-adc-hdr" />
     </path>
 
     <path name="unprocessed-hdr-mic-portrait">
-        <path name="handset-single-amic-quad-adc" />
+        <path name="handset-single-amic-dual-adc-hdr" />
     </path>
 
     <path name="unprocessed-hdr-mic-inverted-portrait">
-        <path name="handset-single-amic-quad-adc" />
+        <path name="handset-single-amic-dual-adc-hdr" />
     </path>
 
     <!-- TTY devices -->

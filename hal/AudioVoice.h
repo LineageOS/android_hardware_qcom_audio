@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -98,6 +99,7 @@ public:
     bool is_valid_call_state(int call_state);
     bool is_valid_vsid(uint32_t vsid);
     int max_voice_sessions_;
+    std::mutex voice_mutex_;
     int SetMode(const audio_mode_t mode);
     int VoiceStart(voice_session_t *session);
     int VoiceStop(voice_session_t *session);
