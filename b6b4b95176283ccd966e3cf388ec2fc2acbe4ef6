@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "8e788e0b_fc3ce6e6",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2022-03-09T22:46:42Z",
+      "side": 1,
+      "message": "I mean, I guess? This is pretty much a no-op for lineage given that no one is likely using the CAF configs here...",
+      "revId": "b6b4b95176283ccd966e3cf388ec2fc2acbe4ef6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
