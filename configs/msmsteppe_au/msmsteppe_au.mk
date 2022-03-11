@@ -364,7 +364,7 @@ vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.compress_in.enable=false \
 vendor.audio.feature.compress_meta_data.enable=false \
 vendor.audio.feature.compr_voip.enable=false \
-vendor.audio.feature.concurrent_capture.enable=false  \
+vendor.audio.feature.concurrent_capture.enable=true  \
 vendor.audio.feature.custom_stereo.enable=false \
 vendor.audio.feature.display_port.enable=false \
 vendor.audio.feature.dsm_feedback.enable=false \
@@ -400,7 +400,8 @@ vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
-vendor.audio.feature.powerpolicy.enable=true
+vendor.audio.feature.powerpolicy.enable=true \
+vendor.audio.feature.concurrent_pcm_record.enable=true
 else
 # Non-Generic ODM varient related
 PRODUCT_ODM_PROPERTIES += \
@@ -412,7 +413,7 @@ vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.compress_in.enable=true \
 vendor.audio.feature.compress_meta_data.enable=true \
 vendor.audio.feature.compr_voip.enable=false \
-vendor.audio.feature.concurrent_capture.enable=false \
+vendor.audio.feature.concurrent_capture.enable=true \
 vendor.audio.feature.custom_stereo.enable=true \
 vendor.audio.feature.display_port.enable=true \
 vendor.audio.feature.dsm_feedback.enable=false \
@@ -448,7 +449,8 @@ vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
-vendor.audio.feature.powerpolicy.enable=true
+vendor.audio.feature.powerpolicy.enable=true \
+vendor.audio.feature.concurrent_pcm_record.enable=true
 endif
 
 # for HIDL related packages
@@ -493,7 +495,7 @@ PRODUCT_PACKAGES_DEBUG += \
     AudioSettings
 
 # for HIDL related audiocontrol packages
-ifneq ($(PLATFORM_VERSION), 12)
+ifeq ( ,$(filter 12 Tiramisu,$(PLATFORM_VERSION)))
 PRODUCT_PACKAGES += \
     android.hardware.automotive.audiocontrol@2.0-service \
     android.hardware.automotive.audiocontrol@2.0

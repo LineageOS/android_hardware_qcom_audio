@@ -1339,6 +1339,18 @@
         <ctl name="TERT_TDM_TX_0 ADM Channels" value="Four" />
     </path>
 
+    <path name="audio-record2">
+        <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
+        <ctl name="MultiMedia33 Mixer TERT_TDM_TX_0" value="1" />
+        <ctl name="TERT_TDM_TX_0 ADM Channels" value="Four" />
+    </path>
+
+    <path name="audio-record3">
+        <ctl name="TERT_TDM_TX_0 Channels" value="Four" />
+        <ctl name="MultiMedia34 Mixer TERT_TDM_TX_0" value="1" />
+        <ctl name="TERT_TDM_TX_0 ADM Channels" value="Four" />
+    </path>
+
     <path name="front-passenger-record">
         <ctl name="QUAT_TDM_TX_0 Channels" value="Eight" />
         <ctl name="MultiMedia23 Mixer QUAT_TDM_TX_0" value="1" />
