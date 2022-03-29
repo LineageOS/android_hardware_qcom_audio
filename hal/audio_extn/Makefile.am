@@ -232,3 +232,25 @@ libhfp_la_CFLAGS += -DNDEBUG
 libhfp_la_CFLAGS += -D_GNU_SOURCE
 libhfp_la_LDFLAGS = -module -shared -avoid-version
 endif
+
+if SPKR_PROTECTION
+h_sources = audio_defs.h \
+            audio_extn.h \
+            ../audio_hw.h \
+            ../voice.h
+
+AM_CFLAGS += -DSPKR_PROT_ENABLED
+library_include_HEADERS = $(h_sources)
+library_includedir = $(includedir)
+lib_LTLIBRARIES += audio.spkr.prot.la
+audio_spkr_prot_la_SOURCES = spkr_protection.c
+audio_spkr_prot_la_LIBADD = $(GLIB_LIBS) -llog -lcutils -ltinyalsa
+audio_spkr_prot_la_LIBADD += -ltinycompress -laudioroute -ldl -lexpat -laudioutils
+audio_spkr_prot_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+audio_spkr_prot_la_CFLAGS += -Dstrlcat=g_strlcat
+audio_spkr_prot_la_CFLAGS += -DINT_MAX=0x7fffffff
+audio_spkr_prot_la_CFLAGS += -D__unused=__attribute__\(\(__unused__\)\)
+audio_spkr_prot_la_CFLAGS += -DLINUX_ENABLED $(TARGET_CFLAGS) -DAUDIO_EXTN_FORMATS_ENABLED
+audio_spkr_prot_la_CFLAGS += -DNDEBUG
+audio_spkr_prot_la_LDFLAGS = -module -shared -avoid-version
+endif
