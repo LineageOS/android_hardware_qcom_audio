@@ -82,7 +82,7 @@ static struct fm_module fm = {
 
 int32_t fm_set_volume(float value, bool persist=false)
 {
-    int32_t vol, ret = 0;
+    int32_t ret = 0;
     struct pal_volume_data *pal_volume = NULL;
 
     AHAL_DBG("Enter: volume = %f, persist: %d", value, persist);
@@ -95,13 +95,12 @@ int32_t fm_set_volume(float value, bool persist=false)
         value = 1.0;
     }
 
-    vol = lrint((value * 0x2000) + 0.5);
     if(persist)
         fm.volume = value;
 
-    if (fm.muted && vol > 0) {
-        AHAL_DBG("fm is muted, applying '0' volume instead of '%d'.", vol);
-        vol = 0;
+    if (fm.muted && value > 0) {
+        AHAL_DBG("fm is muted, applying '0' volume instead of %f", value);
+        value = 0;
     }
 
     if (!fm.running) {
@@ -109,7 +108,7 @@ int32_t fm_set_volume(float value, bool persist=false)
         return -EIO;
     }
 
-    AHAL_DBG("Setting FM volume to %d", vol);
+    AHAL_DBG("Setting FM volume to %f", value);
 
     pal_volume = (struct pal_volume_data *) malloc(sizeof(struct pal_volume_data) + sizeof(struct pal_channel_vol_kv));
 
