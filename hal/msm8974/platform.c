@@ -7254,11 +7254,15 @@ snd_device_t platform_get_input_snd_device(void *platform,
             } else if (my_data->fluence_type == FLUENCE_NONE ||
                 (my_data->fluence_in_voice_call == false &&
                  my_data->fluence_in_hfp_call == false)) {
-                 snd_device = my_data->fluence_sb_enabled ?
-                                 SND_DEVICE_IN_HANDSET_MIC_SB
-                                 : (my_data->fluence_nn_enabled ?
-                                        SND_DEVICE_IN_HANDSET_MIC_NN
-                                        : SND_DEVICE_IN_HANDSET_MIC);
+                 if (is_operator_tmus()) {
+                     snd_device = SND_DEVICE_IN_VOICE_DMIC_TMUS;
+                 } else {
+                     snd_device = my_data->fluence_sb_enabled ?
+                                     SND_DEVICE_IN_HANDSET_MIC_SB
+                                     : (my_data->fluence_nn_enabled ?
+                                            SND_DEVICE_IN_HANDSET_MIC_NN
+                                            : SND_DEVICE_IN_HANDSET_MIC);
+                 }
                  if (audio_extn_hfp_is_active(adev))
                      platform_set_echo_reference(adev, true, out_devices);
             } else {
