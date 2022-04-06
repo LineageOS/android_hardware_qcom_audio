@@ -50,6 +50,9 @@ AUDIO_FEATURE_ENABLED_AHAL_EXT := false
 DOLBY_ENABLE := false
 AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
 AUDIO_FEATURE_ENABLED_SOFT_VOLUME:= true
+SOONG_CONFIG_NAMESPACES += tinycompressnamespace
+SOONG_CONFIG_tinycompressnamespace := ext_compress_format_enabled
+SOONG_CONFIG_tinycompressnamespace_ext_compress_format_enabled := true
 endif
 
 USE_XML_AUDIO_POLICY_CONF := 1
