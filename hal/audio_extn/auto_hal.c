@@ -406,6 +406,13 @@ int auto_hal_open_output_stream(struct stream_out *out)
             out->flags |= AUDIO_OUTPUT_FLAG_PHONE;
         out->volume_l = out->volume_r = MAX_VOLUME_GAIN;
         break;
+    case CAR_AUDIO_STREAM_ALERTS:
+        out->usecase = USECASE_AUDIO_PLAYBACK_ALERTS;
+        out->config = pcm_config_system;
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
+            out->flags |= AUDIO_OUTPUT_FLAG_ALERTS;
+        out->volume_l = out->volume_r = MAX_VOLUME_GAIN;
+        break;
     case CAR_AUDIO_STREAM_FRONT_PASSENGER:
         out->usecase = USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER;
         out->config = pcm_config_system;
@@ -463,6 +470,9 @@ snd_device_t auto_hal_get_snd_device_for_car_audio_stream(int car_audio_stream)
         break;
     case CAR_AUDIO_STREAM_PHONE:
         snd_device = SND_DEVICE_OUT_BUS_PHN;
+        break;
+    case CAR_AUDIO_STREAM_ALERTS:
+        snd_device = SND_DEVICE_OUT_BUS_ALR;
         break;
     case CAR_AUDIO_STREAM_FRONT_PASSENGER:
         snd_device = SND_DEVICE_OUT_BUS_PAX;
@@ -899,6 +909,9 @@ snd_device_t auto_hal_get_output_snd_device(struct audio_device *adev,
                     case CAR_AUDIO_STREAM_PHONE:
                         snd_device = SND_DEVICE_OUT_BUS_PHN;
                         break;
+                    case CAR_AUDIO_STREAM_ALERTS:
+                        snd_device = SND_DEVICE_OUT_BUS_ALR;
+                        break;
                     case CAR_AUDIO_STREAM_FRONT_PASSENGER:
                         snd_device = SND_DEVICE_OUT_BUS_PAX;
                         break;
@@ -920,6 +933,9 @@ snd_device_t auto_hal_get_output_snd_device(struct audio_device *adev,
             break;
         case USECASE_AUDIO_PLAYBACK_PHONE:
             snd_device = SND_DEVICE_OUT_BUS_PHN;
+            break;
+        case USECASE_AUDIO_PLAYBACK_ALERTS:
+            snd_device = SND_DEVICE_OUT_BUS_ALR;
             break;
         case USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER:
             snd_device = SND_DEVICE_OUT_BUS_PAX;

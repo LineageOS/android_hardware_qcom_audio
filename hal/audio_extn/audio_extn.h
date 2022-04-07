@@ -1345,6 +1345,9 @@ int audio_extn_utils_get_license_params(const struct audio_device *adev,  struct
 #ifndef AUDIO_OUTPUT_FLAG_PHONE
 #define AUDIO_OUTPUT_FLAG_PHONE 0x800000
 #endif
+#ifndef AUDIO_OUTPUT_FLAG_ALERTS
+#define AUDIO_OUTPUT_FLAG_ALERTS 0x4000000
+#endif
 #ifndef AUDIO_OUTPUT_FLAG_FRONT_PASSENGER
 #define AUDIO_OUTPUT_FLAG_FRONT_PASSENGER 0x1000000
 #endif
