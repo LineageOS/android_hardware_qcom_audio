@@ -193,6 +193,10 @@ typedef enum card_status_t {
     CARD_STATUS_ONLINE
 } card_status_t;
 
+typedef enum power_policy_status_t {
+    POWER_POLICY_STATUS_OFFLINE,
+    POWER_POLICY_STATUS_ONLINE
+} power_policy_status_t;
 /* These are the supported use cases by the hardware.
  * Each usecase is mapped to a specific PCM device.
  * Refer to pcm_device_table[].
@@ -751,6 +755,8 @@ struct audio_device {
 
     int snd_card;
     card_status_t card_status;
+    power_policy_status_t out_power_policy;
+    power_policy_status_t in_power_policy;
     unsigned int cur_codec_backend_samplerate;
     unsigned int cur_codec_backend_bit_width;
     bool is_channel_status_set;
@@ -845,6 +851,8 @@ struct soft_step_volume_params {
     int curve;
 };
 #endif
+void out_set_power_policy(uint8_t enable);
+void in_set_power_policy(uint8_t enable);
 
 int select_devices(struct audio_device *adev,
                           audio_usecase_t uc_id);
