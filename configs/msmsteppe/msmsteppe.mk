@@ -354,6 +354,10 @@ PRODUCT_PACKAGES += \
     android.hardware.audio.effect@6.0 \
     android.hardware.audio.effect@6.0-impl
 
+# enable sound trigger hidl hal 2.3
+PRODUCT_PACKAGES += \
+    android.hardware.soundtrigger@2.3-impl \
+
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \
     VoicePrintDemo
