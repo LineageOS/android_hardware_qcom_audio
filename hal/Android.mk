@@ -1,7 +1,9 @@
 LOCAL_PATH := $(call my-dir)
 
+LOCAL_AUDIO_SERVICE_64 := taro parrot
+
 include $(CLEAR_VARS)
-ifeq ($(TARGET_BOARD_PLATFORM),taro)
+ifeq ($(call is-board-platform-in-list,$(LOCAL_AUDIO_SERVICE_64)), true)
 LOCAL_MODULE       := android.hardware.audio.service_64.rc
 else
 LOCAL_MODULE       := android.hardware.audio.service.rc
