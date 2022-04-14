@@ -88,7 +88,6 @@ AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
 BOARD_SUPPORTS_QAHW := false
 AUDIO_FEATURE_ENABLED_RAS := true
-AUDIO_FEATURE_ENABLED_SND_MONITOR := false
 AUDIO_FEATURE_ENABLED_DLKM := true
 AUDIO_FEATURE_ENABLED_USB_BURST_MODE := false
 AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
@@ -126,6 +125,9 @@ else
 AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT := false
 AUDIO_FEATURE_ENABLED_SILENT_BOOT := false
 endif
+AUDIO_FEATURE_ENABLED_SND_MONITOR := false
+else
+AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 endif
 AUDIO_FEATURE_ENABLED_FM_TUNER_EXT := true
 AUDIO_FEATURE_ENABLED_ICC := true
@@ -422,11 +424,17 @@ vendor.audio.feature.deepbuffer_as_primary.enable=false \
 vendor.audio.feature.vbat.enable=false \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
-vendor.audio.feature.snd_mon.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
 vendor.audio.feature.powerpolicy.enable=true \
 vendor.audio.feature.concurrent_pcm_record.enable=true
+ifeq ($(AUDIO_FEATURE_ENABLED_SND_MONITOR), true)
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=true
+else
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=false
+endif
 else
 # Non-Generic ODM varient related
 PRODUCT_ODM_PROPERTIES += \
@@ -471,11 +479,17 @@ vendor.audio.feature.deepbuffer_as_primary.enable=false \
 vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
-vendor.audio.feature.snd_mon.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
 vendor.audio.feature.powerpolicy.enable=true \
 vendor.audio.feature.concurrent_pcm_record.enable=true
+ifeq ($(AUDIO_FEATURE_ENABLED_SND_MONITOR), true)
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=true
+else
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=false
+endif
 endif
 
 # for HIDL related packages
