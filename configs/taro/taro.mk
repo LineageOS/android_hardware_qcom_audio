@@ -154,6 +154,7 @@ PRODUCT_PACKAGES += ftm_test_config_diwali-idp-snd-card
 PRODUCT_PACKAGES += ftm_test_config_diwali-qrd-snd-card
 PRODUCT_PACKAGES += ftm_test_config_diwali-idp-sku1-snd-card
 PRODUCT_PACKAGES += ftm_test_config_diwali-qrd-sku1-snd-card
+PRODUCT_PACKAGES += ftm_test_config_diwali-parrot-qrd-snd-card
 PRODUCT_PACKAGES += audioadsprpcd
 PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
 PRODUCT_PACKAGES += android.hardware.audio.service_64
@@ -176,6 +177,8 @@ PRODUCT_PACKAGES += IDP_diwali_sku1_acdb_cal.acdb
 PRODUCT_PACKAGES += IDP_diwali_sku1_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_diwali_sku1_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_diwali_sku1_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += QRD_diwali_parrot_acdb_cal.acdb
+PRODUCT_PACKAGES += QRD_diwali_parrot_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.10.pmd
 PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.36_enpu2_comp.pmd
 PRODUCT_PACKAGES += fai__2.0.0_0.1__3.0.0_0.0__eai_1.36_enpu2.pmd
@@ -311,7 +314,9 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_idp_sku1.xml \
     $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_qrd_sku1.xml \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_idp_sku1.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_qrd_sku1.xml
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_qrd_sku1.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_parrot_qrd.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_parrot_qrd.xml
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
