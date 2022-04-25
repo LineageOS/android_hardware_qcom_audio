@@ -221,6 +221,10 @@ libhfp_la_LIBADD = $(GLIB_LIBS) -llog -lcutils -ltinyalsa
 libhfp_la_LIBADD += -ltinycompress -laudioroute -ldl -lexpat -laudioutils
 libhfp_la_LIBADD += -lm -lc -lresolv
 
+if AUDIO_PARSER
+libhfp_la_LIBADD += -laudioparsers
+endif
+
 libhfp_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 libhfp_la_CFLAGS += -Dstrlcat=g_strlcat
 libhfp_la_CFLAGS += -DINT_MAX=0x7fffffff
