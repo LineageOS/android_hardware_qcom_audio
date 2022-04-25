@@ -3575,6 +3575,11 @@ void *platform_init(struct audio_device *adev)
          * done to preserve backward compatibility but not mandatory as
          * long as the mixer files are named as per above assumption.
         */
+        char mixer_xml_file_custom[PROPERTY_VALUE_MAX];
+        property_get("vendor.audio.mixer_xml.path", mixer_xml_file_custom, "");
+        if (strlen(mixer_xml_file_custom) > 0)
+            strlcpy(mixer_xml_file, mixer_xml_file_custom, sizeof(mixer_xml_file));
+        else {
         snprintf(mixer_xml_file, sizeof(mixer_xml_file), "%s_%s_%s.xml",
                          MIXER_XML_BASE_STRING, snd_split_handle->snd_card,
                          snd_split_handle->form_factor);
@@ -3594,6 +3599,7 @@ void *platform_init(struct audio_device *adev)
                     audio_extn_utils_resolve_config_file(mixer_xml_file);
                 }
             }
+        }
         }
 
         ALOGD("%s: Loading mixer file: %s", __func__, mixer_xml_file);
