@@ -712,8 +712,8 @@ static void register_out_stream(struct stream_out *out)
     if (!adev->adm_set_config)
         return;
 
-    if (out->realtime)
-        adev->adm_set_config(adev->adm_data,
+    if (out->realtime || (out->flags & AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION))
+       adev->adm_set_config(adev->adm_data,
                              out->handle,
                              out->pcm, &out->config);
 }
