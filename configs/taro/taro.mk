@@ -119,7 +119,7 @@ BOARD_SUPPORTS_OPENSOURCE_STHAL := true
 AUDIO_HARDWARE := audio.a2dp.default
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
-AUDIO_HARDWARE += audio.primary.taro
+AUDIO_HARDWARE += audio.primary.$(TARGET_BOARD_PLATFORM)
 
 #HAL Wrapper
 AUDIO_WRAPPER := libqahw
@@ -293,6 +293,38 @@ $(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
     $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
 
 endif
+
+# Audio configuration xml's related to parrot
+QCV_FAMILY_SKUS := parrot
+DEVICE_SKU := parrot
+
+CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
+
+PRODUCT_COPY_FILES += \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_upd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_upd.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_idp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_idp.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_qrd.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_idp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_idp.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_qrd.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_idp_sku1.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_qrd_sku1.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_idp_sku1.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_qrd_sku1.xml
+
+#XML Audio configuration files
+ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
+PRODUCT_COPY_FILES += \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
+
+#Audio configuration xml's common to Taro family
+PRODUCT_COPY_FILES += \
+$(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
+
+endif
+
 PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
