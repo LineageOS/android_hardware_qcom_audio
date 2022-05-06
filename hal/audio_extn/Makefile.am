@@ -234,6 +234,9 @@ libhfp_la_CFLAGS += -D__unused=__attribute__\(\(__unused__\)\)
 libhfp_la_CFLAGS += -DLINUX_ENABLED $(TARGET_CFLAGS) -DAUDIO_EXTN_FORMATS_ENABLED
 libhfp_la_CFLAGS += -DNDEBUG
 libhfp_la_CFLAGS += -D_GNU_SOURCE
+if HAL_PATH_SPECIFIED
+libhfp_la_CFLAGS += -DHAL_LIBRARY_PATH=\"@HAL_PATH@\"
+endif
 libhfp_la_LDFLAGS = -module -shared -avoid-version
 endif
 

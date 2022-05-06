@@ -4935,14 +4935,24 @@ void audio_extn_sco_reset_configuration()
 #ifdef __LP64__
 #ifdef LINUX_ENABLED
 #define HFP_LIB_PATH "/usr/lib64/libhfp.so"
+#define LINUX_PATH true
+#ifdef HAL_LIBRARY_PATH
+#define HFP_LIB_PATH HAL_LIBRARY_PATH
+#endif
 #else
 #define HFP_LIB_PATH "/vendor/lib64/libhfp.so"
+#define LINUX_PATH false
 #endif
 #else
 #ifdef LINUX_ENABLED
 #define HFP_LIB_PATH "/usr/lib/libhfp.so"
+#define LINUX_PATH true
+#ifdef HAL_LIBRARY_PATH
+#define HFP_LIB_PATH HAL_LIBRARY_PATH
+#endif
 #else
 #define HFP_LIB_PATH "/vendor/lib/libhfp.so"
+#define LINUX_PATH false
 #endif
 #endif
 
@@ -4973,8 +4983,12 @@ int hfp_feature_init(bool is_feature_enabled)
                   is_feature_enabled ? "Enabled" : "NOT Enabled");
     if (is_feature_enabled) {
         // dlopen lib
-        hfp_lib_handle = dlopen(HFP_LIB_PATH, RTLD_NOW);
-
+        if (LINUX_PATH) {
+            char libhfp_path[100];
+            snprintf(libhfp_path, sizeof(libhfp_path), "%s/libhfp.so", HFP_LIB_PATH);
+            hfp_lib_handle = dlopen(libhfp_path, RTLD_NOW);
+        } else
+            hfp_lib_handle = dlopen(HFP_LIB_PATH , RTLD_NOW);
         if (!hfp_lib_handle) {
             ALOGE("%s: dlopen failed", __func__);
             goto feature_disabled;
