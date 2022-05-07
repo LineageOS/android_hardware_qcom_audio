@@ -96,7 +96,9 @@ AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := false
 AUDIO_FEATURE_ENABLED_SOFT_VOLUME:= true
 ##AUDIO_FEATURE_FLAGS
 
+ifneq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
 AUDIO_HARDWARE += audio.a2dp.default
+endif
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
 AUDIO_HARDWARE += audio.primary.msmnile
