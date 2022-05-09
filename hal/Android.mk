@@ -138,6 +138,10 @@ LOCAL_CFLAGS += -Wno-macro-redefined
 
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 
+ifeq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
+LOCAL_HEADER_LIBRARIES += qti_legacy_audio_kernel_uapi
+endif
+
 LOCAL_SRC_FILES := \
     audio_hw.c \
     acdb.c \
