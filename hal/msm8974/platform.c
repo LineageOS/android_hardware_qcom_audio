@@ -6940,6 +6940,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         ALOGE("%s: Unknown device(s) %#x", __func__, get_device_types(&devices));
     }
 exit:
+    clear_devices(&devices);
     ALOGV("%s: exit: snd_device(%s)", __func__, device_table[snd_device]);
     return snd_device;
 }
@@ -7784,6 +7785,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
         }
     }
 exit:
+    clear_devices(&in_devices);
     ALOGV("%s: exit: in_snd_device(%s)", __func__, device_table[snd_device]);
     return snd_device;
 }
