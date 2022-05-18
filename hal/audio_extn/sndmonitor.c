@@ -81,6 +81,8 @@
 #define AUDIO_PARAMETER_KEY_EXT_AUDIO_DEVICE "ext_audio_device"
 #define INIT_MAP_SIZE 5
 
+#define FD_INVALID -1
+
 typedef enum {
     audio_event_on,
     audio_event_off
@@ -245,8 +247,11 @@ static int enum_sndcards()
         }
 
         ret = add_new_sndcard(atoi(ptr), fd);
+
+        close(fd);
+        fd = FD_INVALID;
+
         if (ret != 0) {
-            close(fd);
             continue;
         }
 
@@ -275,8 +280,11 @@ static int enum_sndcards()
             continue;
 
         ret = add_new_sndcard(CPE_MAGIC_NUM+num_cpe, fd);
+
+        close(fd);
+        fd = FD_INVALID;
+
         if (ret != 0) {
-            close(fd);
             continue;
         }
 
@@ -304,10 +312,11 @@ static int enum_sndcards()
         }
         if (fd >= 0) {
             ret = add_new_sndcard(SLPI_MAGIC_NUM, fd);
-            if (ret != 0)
-                close(fd);
-            else
+            if (ret == 0)
                 num_cards++;
+
+            close(fd);
+            fd = FD_INVALID;
         }
     }
 
