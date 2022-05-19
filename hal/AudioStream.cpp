@@ -1553,6 +1553,9 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
         return palStreamType;
     } else if (source_ == AUDIO_SOURCE_VOICE_RECOGNITION) {
         palStreamType = PAL_STREAM_VOICE_RECOGNITION;
+        if (halStreamFlags & AUDIO_INPUT_FLAG_MMAP_NOIRQ) {
+            palStreamType = PAL_STREAM_ULTRA_LOW_LATENCY;
+        }
         return palStreamType;
     }
 
