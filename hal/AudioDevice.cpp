@@ -1864,9 +1864,11 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             sizeof(pal_param_bta2dp_t));
     }
 
-    str_parms_destroy(parms);
 
 exit:
+    if (parms)
+        str_parms_destroy(parms);
+
     AHAL_DBG("exit: %s", kvpairs);
     return 0;
 }
