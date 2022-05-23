@@ -5768,16 +5768,28 @@ static int out_set_soft_volume_params(struct audio_stream_out *stream)
         ret = platform_get_soft_step_volume_params(volume_params,out->usecase);
         if (ret < 0) {
             ALOGE("%s : platform_get_soft_step_volume_params is fialed", __func__);
-            return -EINVAL;
+            ret = -EINVAL;
+            goto ERR_EXIT;
         }
 
     }
     ret = mixer_ctl_set_array(ctl, volume_params, sizeof(struct soft_step_volume_params)/sizeof(int));
     if (ret < 0) {
         ALOGE("%s: Could not set ctl, error:%d ", __func__, ret);
-        return -EINVAL;
+        ret = -EINVAL;
+        goto ERR_EXIT;
+    }
+
+    if (volume_params) {
+        free(volume_params);
     }
     return 0;
+
+ERR_EXIT:
+    if (volume_params) {
+        free(volume_params);
+    }
+    return ret;
 }
 #endif
 
