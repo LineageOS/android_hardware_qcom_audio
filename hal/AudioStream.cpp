@@ -4118,26 +4118,23 @@ uint32_t StreamInPrimary::GetBufferSizeForLowLatencyRecord() {
 /* in bytes */
 uint32_t StreamInPrimary::GetBufferSize() {
     struct pal_stream_attributes streamAttributes_;
+    size_t size = 0;
+    uint32_t bytes_per_period_sample = 0;
 
     streamAttributes_.type = StreamInPrimary::GetPalStreamType(flags_,
             config_.sample_rate);
     if (streamAttributes_.type == PAL_STREAM_VOIP_TX) {
-        return (DEFAULT_VOIP_BUF_DURATION_MS * config_.sample_rate / 1000) *
+        size = (DEFAULT_VOIP_BUF_DURATION_MS * config_.sample_rate / 1000) *
                audio_bytes_per_frame(
                        audio_channel_count_from_in_mask(config_.channel_mask),
                        config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_LOW_LATENCY) {
-        return LOW_LATENCY_CAPTURE_PERIOD_SIZE *
+        size = LOW_LATENCY_CAPTURE_PERIOD_SIZE *
             audio_bytes_per_frame(
                     audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
         return GetBufferSizeForLowLatencyRecord();
-    } else if (streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
-        return (config_.sample_rate/ 1000) * AUDIO_CAPTURE_PERIOD_DURATION_MSEC *
-            audio_bytes_per_frame(
-                    audio_channel_count_from_in_mask(config_.channel_mask),
-                    config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_VOICE_CALL_RECORD) {
         return (config_.sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC/ 1000) *
             audio_bytes_per_frame(
@@ -4154,8 +4151,24 @@ uint32_t StreamInPrimary::GetBufferSize() {
                         audio_channel_count_from_in_mask(config_.channel_mask),
                         config_.format);
     } else {
-        return BUF_SIZE_CAPTURE * NO_OF_BUF;
+        /* this else condition will be other stream types like deepbuffer/RAW.. */
+        size = (config_.sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC) /1000;
+        size *= audio_bytes_per_frame(
+                         audio_channel_count_from_in_mask(config_.channel_mask),
+                         config_.format);;
     }
+    /* make sure the size is multiple of 32 bytes and additionally multiple of
+     * the frame_size (required for 24bit samples and non-power-of-2 channel counts)
+     * At 48 kHz mono 16-bit PCM:
+     *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
+     *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
+     * Also, make sure the size is multiple of bytes per period sample
+     */
+    bytes_per_period_sample = audio_bytes_per_sample(config_.format) *
+                              audio_channel_count_from_in_mask(config_.channel_mask);
+    size = nearest_multiple(size, lcm(32, bytes_per_period_sample));
+
+    return size;
 }
 
 int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_source_t source)

@@ -148,37 +148,24 @@ AUDIO_HAL_TEST_APPS += hal_rec_test
 PRODUCT_PACKAGES += $(AUDIO_HARDWARE)
 PRODUCT_PACKAGES += $(AUDIO_WRAPPER)
 PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
-PRODUCT_PACKAGES += ftm_test_config
-PRODUCT_PACKAGES += ftm_test_config_waipio-qrd-snd-card
-PRODUCT_PACKAGES += ftm_test_config_diwali-idp-snd-card
-PRODUCT_PACKAGES += ftm_test_config_diwali-qrd-snd-card
-PRODUCT_PACKAGES += ftm_test_config_diwali-idp-sku1-snd-card
-PRODUCT_PACKAGES += ftm_test_config_diwali-qrd-sku1-snd-card
-PRODUCT_PACKAGES += ftm_test_config_diwali-parrot-qrd-snd-card
+PRODUCT_PACKAGES += ftm_test_config_parrot-qrd-snd-card
+PRODUCT_PACKAGES += ftm_test_config_parrot-idp-snd-card
+PRODUCT_PACKAGES += ftm_test_config_parrot-qrd-sku1-snd-card
+PRODUCT_PACKAGES += ftm_test_config_parrot-idp-sku1-snd-card
 PRODUCT_PACKAGES += audioadsprpcd
 PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
 PRODUCT_PACKAGES += android.hardware.audio.service_64
 PRODUCT_PACKAGES += android.hardware.audio.service_64.rc
-PRODUCT_PACKAGES += MTP_acdb_cal.acdb
-PRODUCT_PACKAGES += MTP_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += CDP_acdb_cal.acdb
-PRODUCT_PACKAGES += CDP_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += IDP_acdb_cal.acdb
+PRODUCT_PACKAGES += IDP_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += IDP_parrot_sku1_acdb_cal.acdb
+PRODUCT_PACKAGES += IDP_parrot_sku1_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += QRD_parrot_sku1_acdb_cal.acdb
+PRODUCT_PACKAGES += QRD_parrot_sku1_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += IDP_UPD_acdb_cal.acdb
 PRODUCT_PACKAGES += IDP_UPD_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += IDP_UPD_diwali_acdb_cal.acdb
-PRODUCT_PACKAGES += IDP_UPD_diwali_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += IDP_diwali_acdb_cal.acdb
-PRODUCT_PACKAGES += IDP_diwali_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += QRD_diwali_acdb_cal.acdb
-PRODUCT_PACKAGES += QRD_diwali_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += IDP_diwali_sku1_acdb_cal.acdb
-PRODUCT_PACKAGES += IDP_diwali_sku1_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += QRD_diwali_sku1_acdb_cal.acdb
-PRODUCT_PACKAGES += QRD_diwali_sku1_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += QRD_diwali_parrot_acdb_cal.acdb
-PRODUCT_PACKAGES += QRD_diwali_parrot_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.10.pmd
 PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.36_enpu2_comp.pmd
 PRODUCT_PACKAGES += fai__2.0.0_0.1__3.0.0_0.0__eai_1.36_enpu2.pmd
@@ -203,135 +190,39 @@ PRODUCT_PACKAGES += $(AUDIO_PAL)
 PRODUCT_PACKAGES += $(AUDIO_C2)
 
 # Audio configuration xml's related to Waipio
-QCV_FAMILY_SKUS := taro
-DEVICE_SKU := taro
+#QCV_FAMILY_SKUS := taro
+#DEVICE_SKU := taro
 
-CONFIG_PAL_SRC_DIR := vendor/qcom/opensource/pal/configs/taro
-CONFIG_HAL_SRC_DIR := vendor/qcom/opensource/audio-hal/primary-hal/configs/taro
-CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
+CONFIG_PAL_SRC_DIR := vendor/qcom/opensource/pal/configs/parrot
+CONFIG_HAL_SRC_DIR := vendor/qcom/opensource/audio-hal/primary-hal/configs/parrot
+#CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
+CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/
 
 PRODUCT_COPY_FILES += \
     $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
     $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
     $(CONFIG_HAL_SRC_DIR)/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml \
     $(CONFIG_HAL_SRC_DIR)/microphone_characteristics.xml:$(TARGET_COPY_OUT_VENDOR)/etc/microphone_characteristics.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_waipio_qrd.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_mtp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_waipio_mtp.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_cdp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_waipio_cdp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_waipio_qrd.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_mtp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_waipio_mtp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_cdp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_waipio_cdp.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_parrot_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_parrot_qrd.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_parrot_idp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_parrot_idp.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_parrot_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_parrot_qrd.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_parrot_idp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_parrot_idp.xml \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_upd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_upd.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_parrot_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_parrot_qrd_sku1.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_parrot_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_parrot_idp_sku1.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_parrot_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_parrot_idp_sku1.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_parrot_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_parrot_qrd_sku1.xml \
     $(CONFIG_PAL_SRC_DIR)/usecaseKvManager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usecaseKvManager.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
 
-#XML Audio configuration files
-ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
+
+#Audio configuration xml's common to Parrot family
 PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
-
-#Audio configuration xml's common to Taro family
-PRODUCT_COPY_FILES += \
-$(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
-
-endif
-# Audio configuration xml's related to Diwali
-QCV_FAMILY_SKUS := diwali
-DEVICE_SKU := diwali
-
-CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml
 
 PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
-    $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_upd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_upd.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_idp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_idp.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_qrd.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_idp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_idp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_qrd.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_idp_sku1.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_qrd_sku1.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_idp_sku1.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_qrd_sku1.xml
-
-#XML Audio configuration files
-ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
-PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
-
-#Audio configuration xml's common to Taro family
-PRODUCT_COPY_FILES += \
-$(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
-
-endif
-# Audio configuration xml's related to Cape
-QCV_FAMILY_SKUS := cape
-DEVICE_SKU := cape
-
-CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
-
-PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
-    $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_waipio_qrd.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_mtp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_waipio_mtp.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_cdp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_waipio_cdp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_waipio_qrd.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_mtp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_waipio_mtp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_cdp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_waipio_cdp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_upd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_upd.xml \
-
-#XML Audio configuration files
-ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
-PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
-
-#Audio configuration xml's common to Taro family
-PRODUCT_COPY_FILES += \
-$(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
-
-endif
-
-# Audio configuration xml's related to parrot
-QCV_FAMILY_SKUS := parrot
-DEVICE_SKU := parrot
-
-CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
-
-PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
-    $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_upd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_upd.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_idp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_idp.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_qrd.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_idp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_idp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_qrd.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_idp_sku1.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_qrd_sku1.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_idp_sku1.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_qrd_sku1.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_parrot_qrd.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_parrot_qrd.xml
-
-#XML Audio configuration files
-ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
-PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
-
-#Audio configuration xml's common to Taro family
-PRODUCT_COPY_FILES += \
-$(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
-
-endif
-
-PRODUCT_COPY_FILES += \
-    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \

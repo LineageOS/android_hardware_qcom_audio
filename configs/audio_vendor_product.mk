@@ -38,20 +38,12 @@ AUDIO_USE_STUB_HAL := true
 TARGET_USES_AOSP_FOR_AUDIO := true
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/default.mk
 else
-ifeq ($(TARGET_BOARD_PLATFORM), parrot)
--include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/taro.mk
-else
 # Audio hal configuration file
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/$(TARGET_BOARD_PLATFORM)/$(TARGET_BOARD_PLATFORM).mk
 endif
-endif
-else
-ifeq ($(TARGET_BOARD_PLATFORM), parrot)
--include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/taro/taro.mk
 else
 # Audio hal configuration file
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/$(TARGET_BOARD_PLATFORM)/$(TARGET_BOARD_PLATFORM).mk
-endif
 endif
 
 ifeq ($(AUDIO_USE_STUB_HAL), true)
