@@ -371,6 +371,9 @@ int AudioExtn::get_controller_stream_from_params(struct str_parms *parms,
             *stream = 0;
             return -EINVAL;
         }
+    } else {
+        *controller = -1;
+        *stream = -1;
     }
     return 0;
 }
