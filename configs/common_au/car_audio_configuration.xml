@@ -42,10 +42,6 @@
                         <context context="alarm"/>
                         <context context="notification"/>
                         <context context="system_sound"/>
-                        <context context="emergency"/>
-                        <context context="safety"/>
-                        <context context="vehicle_status"/>
-                        <context context="announcement"/>
                     </device>
                 </group>
                 <group>
@@ -58,6 +54,14 @@
                     <device address="BUS03_PHONE">
                         <context context="call"/>
                         <context context="call_ring"/>
+                    </device>
+                </group>
+                <group>
+                    <device address="BUS05_ALERTS">
+                        <context context="emergency"/>
+                        <context context="safety"/>
+                        <context context="vehicle_status"/>
+                        <context context="announcement"/>
                     </device>
                 </group>
             </volumeGroups>
