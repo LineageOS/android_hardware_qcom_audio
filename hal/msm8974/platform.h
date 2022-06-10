@@ -703,6 +703,11 @@ enum {
 #define HFP_ASM_RX_TX 18
 #define HFP_SEC_SCO_RX -1
 #define HFP_SEC_ASM_RX_TX -1
+#elif PLATFORM_MSMSTEPPE
+#define HFP_SCO_RX 12
+#define HFP_ASM_RX_TX 37
+#define HFP_SEC_SCO_RX -1
+#define HFP_SEC_ASM_RX_TX -1
 #else
 #define HFP_SCO_RX 23
 #define HFP_ASM_RX_TX 24

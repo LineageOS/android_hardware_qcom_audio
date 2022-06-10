@@ -56,6 +56,14 @@ AC_ARG_ENABLE(target,
                [TARGET_SUPPORT=none]
 )
 
+AC_ARG_WITH(hal-path,
+        AS_HELP_STRING([--with-hal-path=DIR], [Specify the HAL modules location in run time]),
+        [HAL_PATH="$withval"],
+        [HAL_PATH="no"])
+
+AM_CONDITIONAL([HAL_PATH_SPECIFIED], [test "x${HAL_PATH}" != "xno"])
+AC_SUBST(HAL_PATH)
+
 if (test "x${with_glib}" = "xyes"); then
         PKG_CHECK_MODULES(GTHREAD, gthread-2.0 >= 2.16, dummy=yes,
                                 AC_MSG_ERROR(GThread >= 2.16 is required))
