@@ -796,6 +796,9 @@ static void update_hardware_info_bear(struct hardware_info *hw_info, const char 
     } else if (!strncmp(snd_card_name, "trinket-tashalite-snd-card",
                  sizeof("trinket-tashalite-snd-card"))) {
         strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "trinket-facepay-tashalite-snd-card",
+                 sizeof("trinket-facepay-tashalite-snd-card"))) {
+        strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "trinket-tasha-snd-card",
                  sizeof("trinket-tasha-snd-card"))) {
         strlcpy(hw_info->name, "trinket", sizeof(hw_info->name));
