@@ -498,9 +498,9 @@ int AudioDevice::CreateAudioPatch(audio_patch_handle_t *handle,
         patch->sinks = sinks;
     }
 
-    ret = stream->RouteStream(device_types);
     if (voice_ && patch_type == AudioPatch::PATCH_PLAYBACK)
-        ret |= voice_->RouteStream(device_types);
+        ret = voice_->RouteStream(device_types);
+    ret |= stream->RouteStream(device_types);
 
     if (ret) {
         if (new_patch)
