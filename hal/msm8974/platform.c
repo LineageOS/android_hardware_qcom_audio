@@ -402,6 +402,17 @@ struct  spkr_device_chmap {
     char chmap[AUDIO_CHANNEL_COUNT_MAX];
 };
 
+#ifdef SOFT_VOLUME
+static int usecase_volume_params[AUDIO_USECASE_MAX][3] = {
+    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_MEDIA] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_REAR_SEAT] = {-1,-1,-1},
+};
+#endif
+
 static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
                                             DEEP_BUFFER_PCM_DEVICE},
@@ -440,8 +451,10 @@ static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
 
 
     [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD2] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD3] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
     [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
-    [USECASE_AUDIO_RECORD_COMPRESS2] = {-1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS2] = {COMPRESS_CAPTURE_DEVICE,COMPRESS_CAPTURE_DEVICE},
     [USECASE_AUDIO_RECORD_COMPRESS3] = {-1, -1},
     [USECASE_AUDIO_RECORD_COMPRESS4] = {-1, -1},
     [USECASE_AUDIO_RECORD_COMPRESS5] = {-1, -1},
@@ -849,6 +862,9 @@ static struct audio_effect_config effect_config_table[GET_IN_DEVICE_INDEX(SND_DE
 
     [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)][EFFECT_AEC] = {TX_VOICE_FLUENCEV5_SM, 0x0, 0x10EAF, 0x01},
     [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)][EFFECT_NS] = {TX_VOICE_FLUENCEV5_SM, 0x0, 0x10EAF, 0x02},
+
+    [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_STEREO)][EFFECT_AEC] = {TX_VOICE_TM_FLUENCE_EF, 0x0, 0x10EAF, 0x01},
+    [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_STEREO)][EFFECT_NS] = {TX_VOICE_TM_FLUENCE_EF, 0x0, 0x10EAF, 0x02},
 };
 
 static struct audio_fluence_mmsecns_config fluence_mmsecns_table = {TOPOLOGY_ID_MM_HFP_ECNS, MODULE_ID_MM_HFP_ECNS,
@@ -1392,6 +1408,8 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD9)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MMAP)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD2)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD3)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS2)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS3)},
@@ -6922,6 +6940,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         ALOGE("%s: Unknown device(s) %#x", __func__, get_device_types(&devices));
     }
 exit:
+    clear_devices(&devices);
     ALOGV("%s: exit: snd_device(%s)", __func__, device_table[snd_device]);
     return snd_device;
 }
@@ -7766,6 +7785,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
         }
     }
 exit:
+    clear_devices(&in_devices);
     ALOGV("%s: exit: in_snd_device(%s)", __func__, device_table[snd_device]);
     return snd_device;
 }
@@ -11908,7 +11928,9 @@ int platform_spkr_prot_is_wsa_analog_mode(void *adev __unused)
    if ((!strcmp(snd_card_name, "msm8953-snd-card-mtp")) ||
        (!strcmp(snd_card_name, "msm8953-sku4-snd-card")) ||
        (!strcmp(snd_card_name, "sdm439-sku1-snd-card")) ||
-       (!strcmp(snd_card_name, "sdm439-snd-card-mtp")))
+       (!strcmp(snd_card_name, "sdm439-snd-card-mtp")) ||
+       (!strcmp(snd_card_name, "bengal-qrd-snd-card")) ||
+       (!strcmp(snd_card_name, "bengal-scubaqrd-snd-card")))
        return 1;
    else
        return 0;
@@ -12553,6 +12575,48 @@ bool platform_set_microphone_map(void *platform, snd_device_t in_snd_device,
     my_data->mic_map[in_snd_device].microphones[m_count] = *info;
     return true;
 }
+
+#ifdef SOFT_VOLUME
+int platform_get_soft_step_volume_params(struct soft_step_volume_params *volume_params, int uc_id)
+{
+    int ret = 0;
+
+    if (volume_params == NULL) {
+        ALOGE("%s: Invalid volume_params", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if ((usecase_volume_params[uc_id][0] < 0) || (usecase_volume_params[uc_id][1] < 0) || (usecase_volume_params[uc_id][2] < 0) ) {
+        ALOGE("%s: soft step volume params values are not set dynamically,will use default static values set through cal data",__func__);
+        ret = -EINVAL;
+    } else {
+        memcpy(volume_params,usecase_volume_params[uc_id],sizeof(struct soft_step_volume_params));
+        ALOGV("%s: usecase-id = %d, ramp period = %d, ramp step = %d, ramp curve = %d",
+           __func__, uc_id, volume_params->period, volume_params->step, volume_params->curve);
+    }
+done:
+    return ret;
+}
+
+int platform_set_soft_step_volume_params(int uc_id, int period, int step, int curve)
+{
+    int ret = 0;
+
+    ALOGV("%s: usecase-id = %d, ramp period = %d, ramp step = %d, ramp curve = %d",
+           __func__, uc_id, period, step, curve);
+    if ((uc_id < 0) || (uc_id >= AUDIO_USECASE_MAX)) {
+        ALOGE("%s : invalid usecase id", __func__);
+	    ret = -EINVAL;
+    }
+
+    usecase_volume_params[uc_id][0] = period;
+    usecase_volume_params[uc_id][1] = step;
+    usecase_volume_params[uc_id][2] = curve;
+
+    return ret;
+}
+#endif
 
 int platform_get_active_microphones(void *platform, unsigned int channels,
                                     audio_usecase_t uc_id,

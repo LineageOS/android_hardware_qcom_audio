@@ -138,6 +138,10 @@ LOCAL_CFLAGS += -Wno-macro-redefined
 
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 
+ifeq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
+LOCAL_HEADER_LIBRARIES += qti_legacy_audio_kernel_uapi
+endif
+
 LOCAL_SRC_FILES := \
     audio_hw.c \
     acdb.c \
@@ -251,6 +255,16 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_QAF)),true)
     LOCAL_CFLAGS += -DQAF_EXTN_ENABLED
     LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/qaf/
     LOCAL_SRC_FILES += audio_extn/qaf.c
+endif
+
+# Concurrent capture
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_CONCURRENT_CAPTURE)),true)
+    LOCAL_CFLAGS += -DCONCURRENT_CAPTURE_ENABLED
+endif
+
+# soft step volume params control
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_SOFT_VOLUME)),true)
+    LOCAL_CFLAGS += -DSOFT_VOLUME
 endif
 
 # Hardware specific feature

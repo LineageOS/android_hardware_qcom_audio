@@ -12,11 +12,11 @@ BOARD_USES_ALSA_AUDIO := true
 
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 ifeq ($(TARGET_FWK_SUPPORTS_FULL_VALUEADDS),true)
-USE_CUSTOM_AUDIO_POLICY := 1
+USE_CUSTOM_AUDIO_POLICY := 0
 else
 USE_CUSTOM_AUDIO_POLICY := 0
 endif
-AUDIO_FEATURE_QSSI_COMPLIANCE := true
+AUDIO_FEATURE_QSSI_COMPLIANCE := false
 AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := false
 AUDIO_FEATURE_ENABLED_COMPRESS_INPUT := true
 AUDIO_FEATURE_ENABLED_CONCURRENT_CAPTURE := true
@@ -49,6 +49,10 @@ AUDIO_FEATURE_ENABLED_3D_AUDIO := false
 AUDIO_FEATURE_ENABLED_AHAL_EXT := false
 DOLBY_ENABLE := false
 AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
+AUDIO_FEATURE_ENABLED_SOFT_VOLUME:= true
+SOONG_CONFIG_NAMESPACES += tinycompressnamespace
+SOONG_CONFIG_tinycompressnamespace := ext_compress_format_enabled
+SOONG_CONFIG_tinycompressnamespace_ext_compress_format_enabled := true
 endif
 
 USE_XML_AUDIO_POLICY_CONF := 1
@@ -84,14 +88,16 @@ AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
 BOARD_SUPPORTS_QAHW := false
 AUDIO_FEATURE_ENABLED_RAS := true
-AUDIO_FEATURE_ENABLED_SND_MONITOR := false
 AUDIO_FEATURE_ENABLED_DLKM := true
 AUDIO_FEATURE_ENABLED_USB_BURST_MODE := false
 AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := false
+AUDIO_FEATURE_ENABLED_SOFT_VOLUME:= true
 ##AUDIO_FEATURE_FLAGS
 
+ifneq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
 AUDIO_HARDWARE += audio.a2dp.default
+endif
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
 AUDIO_HARDWARE += audio.primary.msmnile
@@ -121,11 +127,17 @@ else
 AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT := false
 AUDIO_FEATURE_ENABLED_SILENT_BOOT := false
 endif
+AUDIO_FEATURE_ENABLED_SND_MONITOR := false
+else
+AUDIO_FEATURE_ENABLED_SND_MONITOR := true
 endif
 AUDIO_FEATURE_ENABLED_FM_TUNER_EXT := true
 AUDIO_FEATURE_ENABLED_ICC := true
 ifneq ( ,$(filter S 12, $(PLATFORM_VERSION)))
 AUDIO_FEATURE_ENABLED_POWER_POLICY := true
+endif
+ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX), msmnile_gvmq)
+AUDIO_FEATURE_ENABLED_AUDIO_PARSERS := true
 endif
 ##AUTOMOTIVE_AUDIO_FEATURE_FLAGS
 
@@ -384,7 +396,7 @@ vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.compress_in.enable=false \
 vendor.audio.feature.compress_meta_data.enable=false \
 vendor.audio.feature.compr_voip.enable=false \
-vendor.audio.feature.concurrent_capture.enable=false \
+vendor.audio.feature.concurrent_capture.enable=true \
 vendor.audio.feature.custom_stereo.enable=false \
 vendor.audio.feature.display_port.enable=false \
 vendor.audio.feature.dsm_feedback.enable=false \
@@ -417,10 +429,17 @@ vendor.audio.feature.deepbuffer_as_primary.enable=false \
 vendor.audio.feature.vbat.enable=false \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
-vendor.audio.feature.snd_mon.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
-vendor.audio.feature.powerpolicy.enable=true
+vendor.audio.feature.powerpolicy.enable=true \
+vendor.audio.feature.concurrent_pcm_record.enable=true
+ifeq ($(AUDIO_FEATURE_ENABLED_SND_MONITOR), true)
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=true
+else
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=false
+endif
 else
 # Non-Generic ODM varient related
 PRODUCT_ODM_PROPERTIES += \
@@ -432,7 +451,7 @@ vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.compress_in.enable=true \
 vendor.audio.feature.compress_meta_data.enable=true \
 vendor.audio.feature.compr_voip.enable=false \
-vendor.audio.feature.concurrent_capture.enable=false \
+vendor.audio.feature.concurrent_capture.enable=true \
 vendor.audio.feature.custom_stereo.enable=true \
 vendor.audio.feature.display_port.enable=true \
 vendor.audio.feature.dsm_feedback.enable=false \
@@ -465,10 +484,17 @@ vendor.audio.feature.deepbuffer_as_primary.enable=false \
 vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
-vendor.audio.feature.snd_mon.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
-vendor.audio.feature.powerpolicy.enable=true
+vendor.audio.feature.powerpolicy.enable=true \
+vendor.audio.feature.concurrent_pcm_record.enable=true
+ifeq ($(AUDIO_FEATURE_ENABLED_SND_MONITOR), true)
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=true
+else
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=false
+endif
 endif
 
 # for HIDL related packages
@@ -513,7 +539,7 @@ PRODUCT_PACKAGES_DEBUG += \
     AudioSettings
 
 # for HIDL related audiocontrol packages
-ifneq ($(PLATFORM_VERSION), 12)
+ifeq ( ,$(filter 12 Tiramisu,$(PLATFORM_VERSION)))
 PRODUCT_PACKAGES += \
     android.hardware.automotive.audiocontrol@2.0-service \
     android.hardware.automotive.audiocontrol@2.0
