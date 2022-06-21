@@ -188,6 +188,10 @@ if LL_AS_PRIMARY_OUTPUT
 AM_CFLAGS += -DUSE_LL_AS_PRIMARY_OUTPUT
 endif
 
+if DISABLE_COMPRESS_FORMAT
+AM_CFLAGS += -DAUDIO_DISABLE_COMPRESS_FORMAT
+endif
+
 h_sources = audio_extn/audio_defs.h \
             audio_extn/audio_extn.h \
             audio_hw.h \
@@ -199,7 +203,7 @@ library_includedir = $(includedir)
 lib_LTLIBRARIES = audio.primary.default.la
 audio_primary_default_la_SOURCES = $(c_sources)
 audio_primary_default_la_LIBADD = $(GLIB_LIBS) -llog -lcutils -ltinyalsa
-audio_primary_default_la_LIBADD += -ltinycompress -laudioroute -ldl -lexpat -laudioutils
+audio_primary_default_la_LIBADD += -ltinycompress -laudioroute -ldl -lexpat -laudioutils -lutils
 audio_primary_default_la_LIBADD += -lm -lc -lresolv
 if AUDIO_PARSER
 audio_primary_default_la_LIBADD += -laudioparsers
