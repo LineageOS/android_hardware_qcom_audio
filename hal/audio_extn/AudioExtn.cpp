@@ -71,6 +71,8 @@ static bool battery_listener_enabled;
 static void *batt_listener_lib_handle;
 static bool audio_extn_kpi_optimize_feature_enabled = false;
 
+std::atomic<bool> AudioExtn::sServicesRegistered = false;
+
 int AudioExtn::audio_extn_parse_compress_metadata(struct audio_config *config_, pal_snd_dec_t *pal_snd_dec,
                                str_parms *parms, uint32_t *sr, uint16_t *ch, bool *isCompressMetadataAvail) {
    int ret = 0;
@@ -709,11 +711,13 @@ int AudioExtn::audio_extn_hidl_init() {
     configureRpcThreadpool(32, false /*callerWillJoin*/);
     if(android::OK !=  service->registerAsService()) {
         AHAL_ERR("Could not register PAL service");
+        return -EINVAL;
     } else {
         AHAL_DBG("successfully registered PAL service");
     }
 #endif
     /* to register other hidls */
+    sServicesRegistered = true;
     return 0;
 }
 
