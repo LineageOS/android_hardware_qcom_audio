@@ -1553,6 +1553,9 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
         return palStreamType;
     } else if (source_ == AUDIO_SOURCE_VOICE_RECOGNITION) {
         palStreamType = PAL_STREAM_VOICE_RECOGNITION;
+        if (halStreamFlags & AUDIO_INPUT_FLAG_MMAP_NOIRQ) {
+            palStreamType = PAL_STREAM_ULTRA_LOW_LATENCY;
+        }
         return palStreamType;
     }
 
@@ -2172,7 +2175,8 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     if (ret >= 0) {
         adevice->dp_controller = controller;
         adevice->dp_stream = stream;
-        AHAL_INFO("ret %d, plugin device cont %d stream %d", ret, controller, stream);
+        if (stream >= 0 || controller >= 0)
+            AHAL_INFO("ret %d, plugin device cont %d stream %d", ret, controller, stream);
     } else {
         AHAL_ERR("error %d, failed to get stream and controller", ret);
     }
