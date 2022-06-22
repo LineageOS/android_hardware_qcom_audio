@@ -1300,7 +1300,7 @@ int AudioDevice::add_input_headset_if_usb_out_headset(int *device_count,
 
 int AudioDevice::SetParameters(const char *kvpairs) {
     int ret = 0, val = 0;
-    struct str_parms *parms;
+    struct str_parms *parms = NULL;
     char value[256];
     int pal_device_count = 0;
     pal_device_id_t* pal_device_ids = NULL;
@@ -1321,7 +1321,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
     if (!parms) {
         AHAL_ERR("Error in str_parms_create_str");
         ret = 0;
-        goto exit;
+        return ret;
     }
     AudioExtn::audio_extn_set_parameters(adev_, parms);
 
@@ -1633,6 +1633,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                 }
                 AHAL_INFO("pal set param sucess for device disconnect");
             }
+            usb_input_dev_enabled = false;
+            AHAL_DBG("usb_input_dev_enabled flag is cleared.");
         }
     }
 
