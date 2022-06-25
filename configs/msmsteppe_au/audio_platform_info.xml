@@ -139,6 +139,9 @@
         <usecase name="USECASE_ICC_CALL" type="out" id="33" />
         <usecase name="USECASE_AUDIO_PLAYBACK_SYNTHESIZER" type="in" id="33" />
         <usecase name="USECASE_AUDIO_PLAYBACK_SYNTHESIZER" type="out" id="33" />
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="31" />
+        <usecase name="USECASE_AUDIO_RECORD2" type="in" id="61" />
+        <usecase name="USECASE_AUDIO_RECORD3" type="in" id="62" />
     </pcm_ids>
 
     <config_params>
