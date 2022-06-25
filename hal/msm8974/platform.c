@@ -2,6 +2,8 @@
  * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,6 +73,8 @@
 #define PLATFORM_INFO_XML_PATH_I2S_NAME "audio_platform_info_extcodec.xml"
 #define PLATFORM_INFO_XML_PATH_WSA_NAME  "audio_platform_info_wsa.xml"
 #define PLATFORM_INFO_XML_PATH_TDM_NAME  "audio_platform_info_tdm.xml"
+#define PLATFORM_INFO_XML_PATH_XRFUSION  "audio_platform_info_xrfusion.xml"
+#define PLATFORM_INFO_XML_PATH_XRFUSIONULT  "audio_platform_info_xrfusionult.xml"
 
 #include <linux/msm_audio.h>
 #if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || \
@@ -1797,6 +1801,10 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("kona-mtp-snd-card")) ||
          !strncmp(snd_card_name, "kona-qrd-snd-card",
                    sizeof("kona-qrd-snd-card")) ||
+         !strncmp(snd_card_name, "kona-xrfusion-ult-snd-card",
+                   sizeof("kona-xrfusion-ult-snd-card")) ||
+         !strncmp(snd_card_name, "kona-xrfusionult-snd-card",
+                   sizeof("kona-xrfusionult-snd-card")) ||
          !strncmp(snd_card_name, "lito-mtp-snd-card",
                    sizeof("lito-mtp-snd-card")) ||
          !strncmp(snd_card_name, "lito-qrd-snd-card",
@@ -3378,6 +3386,14 @@ void *platform_init(struct audio_device *adev)
     } else if (!strncmp(snd_card_name, "kona-qrd-snd-card",
                sizeof("kona-qrd-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_QRD_NAME),
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "kona-xrfusion-ult-snd-card",
+               sizeof("kona-xrfusion-ult-snd-card"))) {
+        platform_info_init(PLATFORM_INFO_XML_PATH_XRFUSION,
+            my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "kona-xrfusionult-snd-card",
+               sizeof("kona-xrfusionult-snd-card"))) {
+        platform_info_init(PLATFORM_INFO_XML_PATH_XRFUSIONULT,
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "sm8150-tavil-qrd-snd-card",
                sizeof("sm8150-tavil-qrd-snd-card"))) {
