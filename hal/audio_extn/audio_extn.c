@@ -35,6 +35,42 @@
  * limitations under the License.
  */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted (subject to the limitations in the
+* disclaimer below) provided that the following conditions are met:
+*
+*    * Redistributions of source code must retain the above copyright
+*      notice, this list of conditions and the following disclaimer.
+*
+*    * Redistributions in binary form must reproduce the above
+*      copyright notice, this list of conditions and the following
+*      disclaimer in the documentation and/or other materials provided
+*      with the distribution.
+*
+*    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+*      contributors may be used to endorse or promote products derived
+*      from this software without specific prior written permission.
+*
+* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_TAG "audio_hw_extn"
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
@@ -203,6 +239,7 @@ static bool audio_extn_battery_listener_enabled = false;
 static bool audio_extn_maxx_audio_enabled = false;
 static bool audio_extn_audiozoom_enabled = false;
 static bool audio_extn_hifi_filter_enabled = false;
+static bool audio_extn_concurrent_pcm_record_enabled = false;
 
 #define AUDIO_PARAMETER_KEY_AANC_NOISE_LEVEL "aanc_noise_level"
 #define AUDIO_PARAMETER_KEY_ANC        "anc_enabled"
@@ -1798,6 +1835,23 @@ void audio_extn_usb_set_reconfig(bool is_required)
 #define CIRRUS_SPKR_PROT_LIB_PATH  "/vendor/lib/libcirrusspkrprot.so"
 #endif
 
+
+#define STR_CAT(path, extn) (path extn)
+
+#if LINUX_ENABLED
+#  define SPKR_PROT_LIB_PATH        STR_CAT(LE_LIBDIR, "/audio.spkr.prot.so")
+#  define CIRRUS_SPKR_PROT_LIB_PATH STR_CAT(LE_LIBDIR, "/audio.external.spkr.prot.so")
+#else
+#  ifdef __LP64__
+#    define SPKR_PROT_LIB_PATH         "/vendor/lib64/libspkrprot.so"
+#    define CIRRUS_SPKR_PROT_LIB_PATH  "/vendor/lib64/libcirrusspkrprot.so"
+#  else
+#    define SPKR_PROT_LIB_PATH         "/vendor/lib/libspkrprot.so"
+#    define CIRRUS_SPKR_PROT_LIB_PATH  "/vendor/lib/libcirrusspkrprot.so"
+#  endif
+#endif
+
+
 static void *spkr_prot_lib_handle = NULL;
 
 typedef void (*spkr_prot_init_t)(void *, spkr_prot_init_config_t);
@@ -1838,10 +1892,14 @@ void spkr_prot_feature_init(bool is_feature_enabled)
             is_feature_enabled ? "Enabled" : "NOT Enabled", vendor_enhanced_info);
     if (is_feature_enabled) {
         // dlopen lib
+#if LINUX_ENABLED
+        spkr_prot_lib_handle = dlopen(SPKR_PROT_LIB_PATH, RTLD_NOW);
+#else
         if ((vendor_enhanced_info & 0x3) == 0x0) // Pure AOSP
             spkr_prot_lib_handle = dlopen(CIRRUS_SPKR_PROT_LIB_PATH, RTLD_NOW);
         else
             spkr_prot_lib_handle = dlopen(SPKR_PROT_LIB_PATH, RTLD_NOW);
+#endif
 
         if (spkr_prot_lib_handle == NULL) {
             ALOGE("%s: dlopen failed", __func__);
@@ -4878,14 +4936,24 @@ void audio_extn_sco_reset_configuration()
 #ifdef __LP64__
 #ifdef LINUX_ENABLED
 #define HFP_LIB_PATH "/usr/lib64/libhfp.so"
+#define LINUX_PATH true
+#ifdef HAL_LIBRARY_PATH
+#define HFP_LIB_PATH HAL_LIBRARY_PATH
+#endif
 #else
 #define HFP_LIB_PATH "/vendor/lib64/libhfp.so"
+#define LINUX_PATH false
 #endif
 #else
 #ifdef LINUX_ENABLED
 #define HFP_LIB_PATH "/usr/lib/libhfp.so"
+#define LINUX_PATH true
+#ifdef HAL_LIBRARY_PATH
+#define HFP_LIB_PATH HAL_LIBRARY_PATH
+#endif
 #else
 #define HFP_LIB_PATH "/vendor/lib/libhfp.so"
+#define LINUX_PATH false
 #endif
 #endif
 
@@ -4916,8 +4984,12 @@ int hfp_feature_init(bool is_feature_enabled)
                   is_feature_enabled ? "Enabled" : "NOT Enabled");
     if (is_feature_enabled) {
         // dlopen lib
-        hfp_lib_handle = dlopen(HFP_LIB_PATH, RTLD_NOW);
-
+        if (LINUX_PATH) {
+            char libhfp_path[100];
+            snprintf(libhfp_path, sizeof(libhfp_path), "%s/libhfp.so", HFP_LIB_PATH);
+            hfp_lib_handle = dlopen(libhfp_path, RTLD_NOW);
+        } else
+            hfp_lib_handle = dlopen(HFP_LIB_PATH , RTLD_NOW);
         if (!hfp_lib_handle) {
             ALOGE("%s: dlopen failed", __func__);
             goto feature_disabled;
@@ -5625,6 +5697,19 @@ void concurrent_capture_feature_init(bool is_feature_enabled)
     ALOGD("%s: ---- Feature CONCURRENT_CAPTURE is %s----", __func__, is_feature_enabled? "ENABLED": "NOT ENABLED");
 }
 // END: CONCURRENT_CAPTURE ====================================================
+
+// START: CONCURRENT_PCM_RECORD ===============================================
+bool audio_extn_is_concurrent_pcm_record_enabled()
+{
+    return audio_extn_concurrent_pcm_record_enabled;
+}
+
+void concurrent_pcm_record_feature_init(bool is_feature_enabled)
+{
+    audio_extn_concurrent_pcm_record_enabled = is_feature_enabled;
+    ALOGD("%s: ---- Feature CONCURRENT_PCM_RECORD is %s----", __func__, is_feature_enabled? "ENABLED": "NOT ENABLED");
+}
+// END: CONCURRENT_PCM_RECORD =================================================
 
 // START: COMPRESS_IN ==================================================
 void compress_in_feature_init(bool is_feature_enabled)
@@ -6513,10 +6598,13 @@ static void* power_policy_thread_func(void* arg __unused) {
         goto exit;
     }
     ALOGD("%s: Launching Power Policy Client", __func__);
-    launch_power_policy();
+    power_policy_init_config_t init_config;
+    init_config.fp_in_set_power_policy = in_set_power_policy;
+    init_config.fp_out_set_power_policy = out_set_power_policy;
+    launch_power_policy(init_config);
 
 exit:
-    pthread_exit(NULL);
+    return NULL;
 }
 
 static int power_policy_feature_init(bool is_feature_enabled)
@@ -6699,6 +6787,9 @@ void audio_extn_feature_init()
     power_policy_feature_init(
         property_get_bool("vendor.audio.feature.powerpolicy.enable",
                        false));
+    concurrent_pcm_record_feature_init(
+        property_get_bool("vendor.audio.feature.concurrent_pcm_record.enable",
+                           false));
 }
 
 void audio_extn_set_parameters(struct audio_device *adev,
