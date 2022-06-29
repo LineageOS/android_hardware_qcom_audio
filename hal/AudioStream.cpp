@@ -2806,6 +2806,19 @@ int StreamOutPrimary::GetFrames(uint64_t *frames)
         *frames = 0;
         return 0;
     }
+    /*
+     * when ssr happens, dsp position for pcm offload could be 0,
+     * so return written frames instead
+     */
+    if ((PAL_STREAM_PCM_OFFLOAD == streamAttributes_.type) &&
+        (CARD_STATUS_OFFLINE == AudioDevice::sndCardState)) {
+        struct timespec ts;
+        *frames = GetFramesWritten(&ts);
+        mCachedPosition = *frames;
+        AHAL_DBG("card is offline, return written frames %lld", (long long) *frames);
+        goto exit;
+    }
+
     ret = pal_get_timestamp(pal_stream_handle_, &tstamp);
     if (ret != 0) {
        AHAL_ERR("pal_get_timestamp failed %d", ret);
