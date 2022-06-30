@@ -202,7 +202,7 @@ PRODUCT_PACKAGES_DEBUG += $(MM_AUDIO_DBG)
 # audio specific
 # ------
 TARGET_USES_AOSP := true
-TARGET_USES_AOSP_FOR_AUDIO := true
+TARGET_USES_AOSP_FOR_AUDIO := false
 
 # sdm845 specific rules
 ifeq ($(TARGET_BOARD_PLATFORM),sdm845)
