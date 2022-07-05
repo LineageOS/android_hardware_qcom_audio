@@ -4264,6 +4264,7 @@ ssize_t StreamInPrimary::read(const void *buffer, size_t bytes) {
                 memset(palBuffer.buffer, 0, palBuffer.size);
                 AHAL_ERR("error, failed to read data from PAL");
                 ATRACE_END();
+                ret = bytes;
                 goto exit;
             } else {
                 size += ret;
