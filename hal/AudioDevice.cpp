@@ -1458,6 +1458,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     if ((dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
                             dynamic_media_config.mask == 0) || (dynamic_media_config.jack_status == false))
                         usb_input_dev_enabled = false;
+                    else
+                        usb_input_dev_enabled = true;
                     free(device_cap_query);
                 } else {
                     AHAL_ERR("Failed to allocate mem for device_cap_query");
@@ -1871,9 +1873,11 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             sizeof(pal_param_bta2dp_t));
     }
 
-    str_parms_destroy(parms);
 
 exit:
+    if (parms)
+        str_parms_destroy(parms);
+
     AHAL_DBG("exit: %s", kvpairs);
     return 0;
 }

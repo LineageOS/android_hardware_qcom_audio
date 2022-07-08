@@ -536,6 +536,7 @@ protected:
     uint16_t mchannels;
     std::shared_ptr<audio_stream_out>   stream_;
     uint64_t mBytesWritten; /* total bytes written, not cleared when entering standby */
+    uint64_t mCachedPosition = 0; /* cache pcm offload position when entering standby */
     offload_effects_start_output fnp_offload_effect_start_output_ = nullptr;
     offload_effects_stop_output fnp_offload_effect_stop_output_ = nullptr;
     visualizer_hal_start_output fnp_visualizer_start_output_ = nullptr;
