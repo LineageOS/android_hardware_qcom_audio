@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "24b647b1_48ec0cdc",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2022-07-14T10:09:16Z",
+      "side": 1,
+      "message": "We shouldn\u0027t take for granted that everyone uses outdated blobs, I suggest to just decommonize your configs and apply the fix there",
+      "revId": "0bb4afc9654ce9451a99a86e11e98118c1c637ea",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
