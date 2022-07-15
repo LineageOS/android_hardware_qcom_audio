@@ -804,7 +804,7 @@ static int parse_snd_card_status(struct str_parms *parms, int *card,
 
 bool is_combo_audio_input_device(struct listnode *devices){
 
-    if (devices == NULL)
+    if ((devices == NULL) || (!list_empty(devices)))
         return false;
 
     if(compare_device_type(devices, AUDIO_DEVICE_IN_BUILTIN_MIC|AUDIO_DEVICE_IN_SPEAKER_MIC2))
