@@ -16,6 +16,24 @@
       "message": "We shouldn\u0027t take for granted that everyone uses outdated blobs, I suggest to just decommonize your configs and apply the fix there",
       "revId": "0bb4afc9654ce9451a99a86e11e98118c1c637ea",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "929b99b9_251c58ea",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 28232
+      },
+      "writtenOn": "2022-07-15T03:47:08Z",
+      "side": 1,
+      "message": "Is there any device that has updated blobs? As per some internal sources, this has been addressed on the blobs that come with A12 tag or with security tags and I think no msm8953 based device would have them.\n\nAlso, since 8953 HALs were split I see only FP3 using them. Hence I thought addressing this here would be a better approach. Please correct me if I am wrong.",
+      "parentUuid": "24b647b1_48ec0cdc",
+      "revId": "0bb4afc9654ce9451a99a86e11e98118c1c637ea",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
