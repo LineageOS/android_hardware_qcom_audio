@@ -33,7 +33,7 @@
         <device name="SND_DEVICE_OUT_BUS_MEDIA" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BUS_SYS" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BUS_NAV" acdb_id="14"/>
-        <device name="SND_DEVICE_OUT_BUS_PHN" acdb_id="94"/>
+        <device name="SND_DEVICE_OUT_BUS_PHN" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BUS_ALR" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BUS_PAX" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BUS_RSE" acdb_id="60"/>
