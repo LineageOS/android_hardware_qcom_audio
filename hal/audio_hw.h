@@ -303,6 +303,7 @@ enum {
     USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
     USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
     USECASE_AUDIO_PLAYBACK_PHONE,
+    USECASE_AUDIO_PLAYBACK_ALERTS,
     USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER,
     USECASE_AUDIO_PLAYBACK_REAR_SEAT,
     USECASE_AUDIO_RECORD_BUS,
@@ -404,6 +405,7 @@ enum {
     CAR_AUDIO_STREAM_NAV_GUIDANCE       = 0x4,
     CAR_AUDIO_STREAM_PHONE              = 0x8,
     CAR_AUDIO_STREAM_IN_PRIMARY         = 0x10,
+    CAR_AUDIO_STREAM_ALERTS             = 0x20,
     CAR_AUDIO_STREAM_FRONT_PASSENGER    = 0x100,
     CAR_AUDIO_STREAM_IN_FRONT_PASSENGER = 0x200,
     CAR_AUDIO_STREAM_REAR_SEAT          = 0x10000,
@@ -909,6 +911,7 @@ size_t get_output_period_size(uint32_t sample_rate,
 #define CHECK(condition) LOG_ALWAYS_FATAL_IF(!(condition), "%s",\
             __FILE__ ":" LITERAL_TO_STRING(__LINE__)\
             " ASSERT_FATAL(" #condition ") failed.")
+bool is_combo_audio_input_device(struct listnode *devices);
 
 static inline bool is_loopback_input_device(audio_devices_t device) {
     if (!audio_is_output_device(device) &&

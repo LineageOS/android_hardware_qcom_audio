@@ -9,7 +9,7 @@
  * You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *
+
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -149,7 +149,7 @@ struct audio_custom_mtmx_params_info {
 struct audio_custom_mtmx_params {
     struct listnode list;
     struct audio_custom_mtmx_params_info info;
-    uint32_t coeffs[0];
+    uint64_t coeffs[0];
 };
 
 struct audio_custom_mtmx_in_params_info {
@@ -168,6 +168,7 @@ struct audio_custom_mtmx_in_params {
     struct audio_custom_mtmx_in_params_info in_info;
     uint32_t ip_channels;
     uint32_t mic_ch;
+    uint32_t i2s_ch;
     uint32_t ec_ref_ch;
     struct audio_custom_mtmx_params_in_ch_info in_ch_info[MAX_IN_CHANNELS];
 };

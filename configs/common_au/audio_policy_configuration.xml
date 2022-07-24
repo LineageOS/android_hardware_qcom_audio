@@ -57,6 +57,7 @@
                 <item>Sys Notification Bus</item>
                 <item>Nav Guidance Bus</item>
                 <item>Phone Bus</item>
+                <item>Alerts Bus</item>
                 <item>Front Passenger Bus</item>
                 <item>Rear Seat Bus</item>
                 <item>Built-In Mic</item>
@@ -102,6 +103,10 @@
                              samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
                 </mixPort>
                 <mixPort name="phone" role="source">
+                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
+                             samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
+                </mixPort>
+                <mixPort name="alerts" role="source">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
                              samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
                 </mixPort>
@@ -227,6 +232,15 @@
                                 minValueMB="-6000" maxValueMB="600" defaultValueMB="0" stepValueMB="100"/>
                     </gains>
                 </devicePort>
+                <devicePort tagName="Alerts Bus" role="sink" type="AUDIO_DEVICE_OUT_BUS"
+                        address="BUS05_ALERTS">
+                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
+                             samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
+                    <gains>
+                        <gain name="" mode="AUDIO_GAIN_MODE_JOINT"
+                                minValueMB="-6000" maxValueMB="600" defaultValueMB="0" stepValueMB="100"/>
+                    </gains>
+                </devicePort>
                 <devicePort tagName="Front Passenger Bus" role="sink" type="AUDIO_DEVICE_OUT_BUS"
                         address="BUS08_FRONT_PASSENGER">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
@@ -321,6 +335,8 @@
                        sources="nav_guidance"/>
                 <route type="mix" sink="Phone Bus"
                        sources="phone"/>
+                <route type="mix" sink="Alerts Bus"
+                       sources="alerts"/>
                 <route type="mix" sink="Front Passenger Bus"
                        sources="front_passenger"/>
                 <route type="mix" sink="Rear Seat Bus"
