@@ -154,7 +154,8 @@ PRODUCT_PACKAGES += ftm_test_config_diwali-idp-snd-card
 PRODUCT_PACKAGES += ftm_test_config_diwali-qrd-snd-card
 PRODUCT_PACKAGES += ftm_test_config_diwali-idp-sku1-snd-card
 PRODUCT_PACKAGES += ftm_test_config_diwali-qrd-sku1-snd-card
-PRODUCT_PACKAGES += ftm_test_config_diwali-parrot-qrd-snd-card
+PRODUCT_PACKAGES += ftm_test_config_ukee-mtp-snd-card
+PRODUCT_PACKAGES += ftm_test_config_ukee-qrd-snd-card
 PRODUCT_PACKAGES += audioadsprpcd
 PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
 PRODUCT_PACKAGES += android.hardware.audio.service_64
@@ -177,6 +178,12 @@ PRODUCT_PACKAGES += IDP_diwali_sku1_acdb_cal.acdb
 PRODUCT_PACKAGES += IDP_diwali_sku1_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_diwali_sku1_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_diwali_sku1_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += MTP_ukee_acdb_cal.acdb
+PRODUCT_PACKAGES += MTP_ukee_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += QRD_ukee_acdb_cal.acdb
+PRODUCT_PACKAGES += QRD_ukee_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += CDP_ukee_acdb_cal.acdb
+PRODUCT_PACKAGES += CDP_ukee_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_diwali_parrot_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_diwali_parrot_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.10.pmd
@@ -291,6 +298,35 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
 
 #Audio configuration xml's common to Taro family
+PRODUCT_COPY_FILES += \
+$(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
+
+endif
+
+# Audio configuration xml's related to Ukee
+QCV_FAMILY_SKUS := ukee
+DEVICE_SKU := ukee
+
+CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
+
+PRODUCT_COPY_FILES += \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_ukee_qrd.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_mtp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_ukee_mtp.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_cdp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_ukee_cdp.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_ukee_qrd.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_mtp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_ukee_mtp.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_cdp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_ukee_cdp.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_upd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_upd.xml \
+
+#XML Audio configuration files
+ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
+PRODUCT_COPY_FILES += \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
+
+#Audio configuration xml's common to Ukee family
 PRODUCT_COPY_FILES += \
 $(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
     $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
