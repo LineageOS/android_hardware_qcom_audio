@@ -258,7 +258,6 @@ void fm_set_parameters(std::shared_ptr<AudioDevice> adev, struct str_parms *parm
     pal_device_id_t *pal_devs;
     char value[32] = {0};
     float vol = 0.0;
-    const char* p = str_parms_to_str(parms);
 
     AHAL_DBG("Enter");
 
