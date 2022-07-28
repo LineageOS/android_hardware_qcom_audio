@@ -2885,6 +2885,9 @@ static struct stream_in *get_priority_input(struct audio_device *adev)
             in = usecase->stream.in;
             if (!in)
                 continue;
+
+            if (USECASE_AUDIO_RECORD_FM_VIRTUAL == usecase->id)
+                continue;
             priority = source_priority(in->source);
 
             if (priority > last_priority) {
