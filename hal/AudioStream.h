@@ -490,6 +490,7 @@ public:
     ~StreamOutPrimary();
     bool sendGaplessMetadata = true;
     bool isCompressMetadataAvail = false;
+    void UpdatemCachedPosition(uint64_t val);
     int Standby();
     int SetVolume(float left, float right);
     uint64_t GetFramesWritten(struct timespec *timestamp);
