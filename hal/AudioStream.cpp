@@ -705,15 +705,21 @@ static int astream_out_get_presentation_position(
     }
     if (astream_out) {
        switch (astream_out->GetPalStreamType(astream_out->flags_)) {
-       case PAL_STREAM_COMPRESSED:
        case PAL_STREAM_PCM_OFFLOAD:
-          ret = astream_out->GetFrames(frames);
-          if (ret != 0) {
-             AHAL_ERR("GetTimestamp failed %d", ret);
-             return ret;
-          }
-          clock_gettime(CLOCK_MONOTONIC, timestamp);
-          break;
+           if (AudioDevice::sndCardState == CARD_STATUS_OFFLINE) {
+               *frames = astream_out->GetFramesWritten(timestamp);
+               astream_out->UpdatemCachedPosition(*frames);
+               break;
+           }
+            /* fall through if the card is online for PCM OFFLOAD stream */
+       case PAL_STREAM_COMPRESSED:
+           ret = astream_out->GetFrames(frames);
+           if (ret) {
+               AHAL_ERR("GetTimestamp failed %d", ret);
+               return ret;
+           }
+           clock_gettime(CLOCK_MONOTONIC, timestamp);
+           break;
        default:
           *frames = astream_out->GetFramesWritten(timestamp);
           break;
@@ -744,10 +750,17 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     }
     if (astream_out) {
         switch (astream_out->GetPalStreamType(astream_out->flags_)) {
-        case PAL_STREAM_COMPRESSED:
         case PAL_STREAM_PCM_OFFLOAD:
+            if (AudioDevice::sndCardState == CARD_STATUS_OFFLINE) {
+                frames =  astream_out->GetFramesWritten(NULL);
+                *dsp_frames = (uint32_t) frames;
+                astream_out->UpdatemCachedPosition(*dsp_frames);
+                break;
+            }
+             /* fall through if the card is online for PCM OFFLOAD stream */
+        case PAL_STREAM_COMPRESSED:
             ret = astream_out->GetFrames(&frames);
-            if (ret != 0) {
+            if (ret) {
                 AHAL_ERR("Get DSP Frames failed %d", ret);
                 return ret;
             }
@@ -1928,14 +1941,33 @@ int StreamOutPrimary::Drain(audio_drain_type_t type) {
     return ret;
 }
 
+void StreamOutPrimary::UpdatemCachedPosition(uint64_t val)
+{
+    mCachedPosition = val;
+}
+
 int StreamOutPrimary::Standby() {
     int ret = 0;
 
     AHAL_DBG("Enter");
     stream_mutex_.lock();
     if (pal_stream_handle_) {
-        if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD)
-            GetFrames(&mCachedPosition);
+        if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD) {
+            /*
+             * when ssr happens, dsp position for pcm offload could be 0,
+             * so get written frames. Else, get frames.
+             */
+            if (AudioDevice::sndCardState == CARD_STATUS_OFFLINE) {
+                struct timespec ts;
+                // release stream lock as GetFramesWritten will lock/unlock stream mutex
+                stream_mutex_.unlock();
+                mCachedPosition = GetFramesWritten(&ts);
+                stream_mutex_.lock();
+                AHAL_DBG("card is offline, return written frames %lld", (long long)mCachedPosition);
+            } else {
+                GetFrames(&mCachedPosition);
+            }
+        }
         ret = pal_stream_stop(pal_stream_handle_);
         if (ret) {
             AHAL_ERR("failed to stop stream.");
@@ -2805,18 +2837,6 @@ int StreamOutPrimary::GetFrames(uint64_t *frames)
         AHAL_VERBOSE("stream not in started state");
         *frames = 0;
         return 0;
-    }
-    /*
-     * when ssr happens, dsp position for pcm offload could be 0,
-     * so return written frames instead
-     */
-    if ((PAL_STREAM_PCM_OFFLOAD == streamAttributes_.type) &&
-        (CARD_STATUS_OFFLINE == AudioDevice::sndCardState)) {
-        struct timespec ts;
-        *frames = GetFramesWritten(&ts);
-        mCachedPosition = *frames;
-        AHAL_DBG("card is offline, return written frames %lld", (long long) *frames);
-        goto exit;
     }
 
     ret = pal_get_timestamp(pal_stream_handle_, &tstamp);
