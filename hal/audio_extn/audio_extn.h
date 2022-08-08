@@ -1422,6 +1422,7 @@ typedef struct auto_hal_init_config {
     fp_platform_set_echo_reference_t             fp_platform_set_echo_reference;
     fp_platform_get_eccarstate_t                 fp_platform_get_eccarstate;
     fp_generate_patch_handle_t                   fp_generate_patch_handle;
+    fp_platform_get_pcm_device_id_t              fp_platform_get_pcm_device_id;
 } auto_hal_init_config_t;
 // END: AUTO_HAL FEATURE ==================================================
 

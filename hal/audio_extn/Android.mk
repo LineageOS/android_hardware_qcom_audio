@@ -1189,7 +1189,8 @@ LOCAL_SHARED_LIBRARIES := \
     libcutils \
     libdl \
     libexpat \
-    liblog
+    liblog \
+    libtinyalsa
 
 LOCAL_C_INCLUDES := \
     $(PRIMARY_HAL_PATH) \
