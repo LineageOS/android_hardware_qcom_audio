@@ -42,7 +42,7 @@ enum {
     SOURCE_DUAL_MIC  = 0x2,            /* Target contains 2 mics */
     SOURCE_THREE_MIC = 0x4,            /* Target contains 3 mics */
     SOURCE_QUAD_MIC  = 0x8,            /* Target contains 4 mics */
-    SOURCE_HEX_MIC   = 0x16,           /* Target contains 6 mics */
+    SOURCE_HEX_MIC   = 0x10,           /* Target contains 6 mics */
     SOURCE_OCT_MIC   = 0x20,           /* Target contains 8 mics */
     SOURCE_DEC_MIC   = 0x40,
 };
