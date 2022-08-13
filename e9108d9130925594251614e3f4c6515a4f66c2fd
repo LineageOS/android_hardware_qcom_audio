@@ -16,6 +16,24 @@
       "message": "Make it an audio_amplifier HAL?",
       "revId": "e9108d9130925594251614e3f4c6515a4f66c2fd",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "5a291635_0d54eb2e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31578
+      },
+      "writtenOn": "2022-08-13T04:51:43Z",
+      "side": 1,
+      "message": "Did you mean to ceate a new HAL in, for example, device tree, that handles the amplifier?",
+      "parentUuid": "01b59838_8fd5a5ce",
+      "revId": "e9108d9130925594251614e3f4c6515a4f66c2fd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
