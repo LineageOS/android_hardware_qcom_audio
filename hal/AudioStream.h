@@ -327,6 +327,9 @@ const std::map<uint32_t, pal_audio_fmt_t> getFormatId {
     {AUDIO_FORMAT_MP3,                 PAL_AUDIO_FMT_MP3},
     {AUDIO_FORMAT_AAC,                 PAL_AUDIO_FMT_AAC},
     {AUDIO_FORMAT_AAC_LC,              PAL_AUDIO_FMT_AAC},
+    {AUDIO_FORMAT_AAC_ADTS_LC ,        PAL_AUDIO_FMT_AAC},
+    {AUDIO_FORMAT_AAC_ADTS_HE_V1,      PAL_AUDIO_FMT_AAC},
+    {AUDIO_FORMAT_AAC_ADTS_HE_V2,      PAL_AUDIO_FMT_AAC},
     {AUDIO_FORMAT_AAC_ADTS,            PAL_AUDIO_FMT_AAC_ADTS},
     {AUDIO_FORMAT_AAC_ADIF,            PAL_AUDIO_FMT_AAC_ADIF},
     {AUDIO_FORMAT_AAC_LATM,            PAL_AUDIO_FMT_AAC_LATM},
@@ -346,7 +349,13 @@ const uint32_t format_to_bitwidth_table[] = {
     [AUDIO_FORMAT_PCM_8_24_BIT] = 32,
     [AUDIO_FORMAT_PCM_FLOAT] = sizeof(float) * 8,
     [AUDIO_FORMAT_PCM_24_BIT_PACKED] = 24,
-    [AUDIO_FORMAT_AAC_LC] = 16,
+};
+
+const std::unordered_map<uint32_t, uint32_t> compressRecordBitWidthTable{
+    {AUDIO_FORMAT_AAC_LC, 16},
+    {AUDIO_FORMAT_AAC_ADTS_LC, 16},
+    {AUDIO_FORMAT_AAC_ADTS_HE_V1, 16},
+    {AUDIO_FORMAT_AAC_ADTS_HE_V2, 16},
 };
 
 const std::map<uint32_t, uint32_t> getAlsaSupportedFmt {
@@ -633,6 +642,7 @@ public:
     int GetInputUseCase(audio_input_flags_t halStreamFlags, audio_source_t source);
     int addRemoveAudioEffect(const struct audio_stream *stream, effect_handle_t effect,bool enable);
     int SetParameters(const char *kvpairs);
+    bool getParameters(struct str_parms *query, struct str_parms *reply);
     bool is_st_session;
     audio_input_flags_t                 flags_;
     int CreateMmapBuffer(int32_t min_size_frames, struct audio_mmap_buffer_info *info);
@@ -657,9 +667,12 @@ protected:
      * compress record usecase
      * */
     uint64_t mCompressReadCalls = 0;
+    int32_t mCompressStreamAdjBitRate;
+    bool mIsBitRateSet =false;
+    bool mIsBitRateGet = false;
     bool isECEnabled = false;
     bool isNSEnabled = false;
     bool effects_applied_ = true;
-    pal_snd_enc_t palSndEnc;
+    pal_snd_enc_t palSndEnc{};
 };
 #endif  // ANDROID_HARDWARE_AHAL_ASTREAM_H_

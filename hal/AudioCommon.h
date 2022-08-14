@@ -25,6 +25,11 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include <stdlib.h>
@@ -33,16 +38,21 @@
 #include <log/log.h>
 
 #define AHAL_LOG_ERR             (0x1) /**< error message, represents code bugs that should be debugged and fixed.*/
-#define AHAL_LOG_INFO            (0x2) /**< info message, additional info to support debug */
-#define AHAL_LOG_DBG             (0x4) /**< debug message, required at minimum for debug.*/
-#define AHAL_LOG_VERBOSE         (0x8)/**< verbose message, useful primarily to help developers debug low-level code */
+#define AHAL_LOG_WARN            (0x2) /**< warning message, represents "may not be the best case scenario". */
+#define AHAL_LOG_INFO            (0x4) /**< info message, additional info to support debug */
+#define AHAL_LOG_DBG             (0x8) /**< debug message, required at minimum for debug.*/
+#define AHAL_LOG_VERBOSE         (0x10)/**< verbose message, useful primarily to help developers debug low-level code */
 
-static uint32_t ahal_log_lvl = AHAL_LOG_ERR|AHAL_LOG_INFO|AHAL_LOG_DBG; /*TODO make this dynamic*/
+static uint32_t ahal_log_lvl = AHAL_LOG_ERR|AHAL_LOG_WARN|AHAL_LOG_INFO|AHAL_LOG_DBG; /*TODO make this dynamic*/
 
 
 #define AHAL_ERR(arg,...)                                          \
     if (ahal_log_lvl & AHAL_LOG_ERR) {                              \
         ALOGE("%s: %d: "  arg, __func__, __LINE__, ##__VA_ARGS__);\
+    }
+#define AHAL_WARN(arg,...)                                          \
+    if (ahal_log_lvl & AHAL_LOG_WARN) {                              \
+        ALOGW("%s: %d: "  arg, __func__, __LINE__, ##__VA_ARGS__);\
     }
 #define AHAL_DBG(arg,...)                                           \
     if (ahal_log_lvl & AHAL_LOG_DBG) {                               \
