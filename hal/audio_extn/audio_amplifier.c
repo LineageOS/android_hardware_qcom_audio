@@ -50,6 +50,13 @@ int amplifier_open(void* adev) {
         return -ENODEV;
     }
 
+    if (amp.hw->calibrate) {
+        rc = amp.hw->calibrate(adev);
+        if (rc) {
+            ALOGV("%s: Failed to do amplifier hardware calibration %s\n", __func__, strerror(-rc));
+        }
+    }
+
     return 0;
 }
 
