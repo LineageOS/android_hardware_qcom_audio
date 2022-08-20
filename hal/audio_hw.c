@@ -1387,7 +1387,6 @@ int enable_snd_device(struct audio_device *adev,
             goto err;
         }
         audio_extn_dev_arbi_acquire(snd_device);
-        amplifier_enable_devices(snd_device, true);
         if (audio_extn_spkr_prot_start_processing(snd_device)) {
             ALOGE("%s: spkr_start_processing failed", __func__);
             audio_extn_dev_arbi_release(snd_device);
@@ -1402,6 +1401,8 @@ int enable_snd_device(struct audio_device *adev,
         }
         platform_set_speaker_gain_in_combo(adev, snd_device, true);
     } else {
+        amplifier_enable_devices(snd_device, true);
+
         ALOGD("%s: snd_device(%d: %s)", __func__, snd_device, device_name);
 
         /* enable island and power mode on supported device */
