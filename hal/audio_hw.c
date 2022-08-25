@@ -8329,7 +8329,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
     if (direct_dev &&
         (audio_is_linear_pcm(out->format) ||
-         config->format == AUDIO_FORMAT_DEFAULT)) {
+         config->format == AUDIO_FORMAT_DEFAULT) &&
+        out->flags == AUDIO_OUTPUT_FLAG_NONE) {
         audio_format_t req_format = config->format;
         audio_channel_mask_t req_channel_mask = config->channel_mask;
         uint32_t req_sample_rate = config->sample_rate;
