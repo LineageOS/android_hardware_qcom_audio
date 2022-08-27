@@ -66,6 +66,7 @@
                 <item>Front Passenger In Bus</item>
                 <item>Rear Seat In Bus</item>
                 <item>Echo Reference</item>
+                <item>FM Tuner</item>
             </attachedDevices>
             <defaultOutputDevice>Media Bus</defaultOutputDevice>
             <mixPorts>
@@ -97,6 +98,11 @@
                 <mixPort name="carplay_48k_sys" role="source">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
                         samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
+                </mixPort>
+                <mixPort name="mixport_tuner0" role="sink">
+                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
+                             samplingRates="48000"
+                             channelMasks="AUDIO_CHANNEL_IN_STEREO"/>
                 </mixPort>
                 <mixPort name="nav_guidance" role="source">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
@@ -325,6 +331,11 @@
                              samplingRates="16000,48000"
                              channelMasks="AUDIO_CHANNEL_IN_MONO,AUDIO_CHANNEL_IN_STEREO"/>
                 </devicePort>
+                <devicePort tagName="FM Tuner" type="AUDIO_DEVICE_IN_FM_TUNER" role="source"> 
+                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
+                             samplingRates="48000"
+                             channelMasks="AUDIO_CHANNEL_IN_MONO,AUDIO_CHANNEL_IN_STEREO"/>
+                </devicePort>
             </devicePorts>
             <routes>
                 <route type="mix" sink="Media Bus"
@@ -373,6 +384,8 @@
                        sources="primary output,deep_buffer,compressed_offload,voip_rx"/>
                 <route type="mix" sink="BT A2DP Speaker"
                        sources="primary output,deep_buffer,compressed_offload,voip_rx"/>
+                <route type="mix" sink="mixport_tuner0"
+                       sources="FM Tuner"/>
             </routes>
         </module>
 
