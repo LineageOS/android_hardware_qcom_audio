@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "5884adca_1d518a84",
+        "filename": "hal/audio_extn/audio_amplifier.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 53,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2022-09-02T08:09:22Z",
+      "side": 1,
+      "message": "do we need to check if amp.hw is null here? I don\u0027t think it\u0027s possible that we reach this with amp.hw \u003d\u003d null.",
+      "range": {
+        "startLine": 53,
+        "startChar": 8,
+        "endLine": 53,
+        "endChar": 14
+      },
+      "revId": "4bdf45f94c8a2e1bf43af882accd2961656acc57",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
