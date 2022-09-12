@@ -2290,7 +2290,11 @@ void spkr_prot_init(void *adev, spkr_prot_init_config_t spkr_prot_init_config_va
     pthread_mutex_init(&handle.mutex_spkr_prot, NULL);
     pthread_mutex_init(&handle.spkr_calib_cancelack_mutex, NULL);
     pthread_mutex_init(&handle.spkr_prot_thermalsync_mutex, NULL);
+#ifdef __LP64__
+    handle.thermal_handle = dlopen("/vendor/lib64/libthermalclient.so",
+#else
     handle.thermal_handle = dlopen("/vendor/lib/libthermalclient.so",
+#endif
             RTLD_NOW);
     if (!handle.thermal_handle) {
         ALOGE("%s: DLOPEN for thermal client failed", __func__);

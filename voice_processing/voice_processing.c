@@ -32,7 +32,11 @@
 // local definitions
 //------------------------------------------------------------------------------
 
+#ifdef __LP64__
+#define EFFECTS_DESCRIPTOR_LIBRARY_PATH "/vendor/lib64/soundfx/libqcomvoiceprocessingdescriptors.so"
+#else
 #define EFFECTS_DESCRIPTOR_LIBRARY_PATH "/vendor/lib/soundfx/libqcomvoiceprocessingdescriptors.so"
+#endif
 
 // types of pre processing modules
 enum effect_id

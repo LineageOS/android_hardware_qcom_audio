@@ -44,7 +44,11 @@
 
 
 #define MA_SET_STATE "audio_hw_send_qdsp_parameter"
+#ifdef __LP64__
+#define HAL_VENDOR_PATH "/vendor/lib64/hw"
+#else
 #define HAL_VENDOR_PATH "/vendor/lib/hw"
+#endif
 
 enum {
     MA_LISTENER_STATE_UNINITIALIZED,
