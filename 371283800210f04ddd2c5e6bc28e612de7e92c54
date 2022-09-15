@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "09ed2497_0141aa79",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 29080
+      },
+      "writtenOn": "2022-09-15T03:58:57Z",
+      "side": 1,
+      "message": "Audio works fine, no dlopen errors in logcat",
+      "revId": "371283800210f04ddd2c5e6bc28e612de7e92c54",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
