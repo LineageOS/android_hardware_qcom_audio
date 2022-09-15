@@ -378,6 +378,7 @@ int AudioVoice::GetMatchingTxDevices(const std::set<audio_devices_t>& rx_devices
                 tx_devices.insert(AUDIO_DEVICE_IN_BUILTIN_MIC);
                 break;
             case AUDIO_DEVICE_OUT_USB_HEADSET:
+            case AUDIO_DEVICE_OUT_USB_DEVICE:
                 if (adevice->usb_input_dev_enabled)
                     tx_devices.insert(AUDIO_DEVICE_IN_USB_HEADSET);
                 else
