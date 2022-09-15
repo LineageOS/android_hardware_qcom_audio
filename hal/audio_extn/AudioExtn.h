@@ -29,6 +29,7 @@
 
 #ifndef AUDIOEXTN_H
 #define AUDIOEXTN_H
+#include <atomic>
 #include <cutils/str_parms.h>
 #include <set>
 #include "PalDefs.h"
@@ -110,9 +111,12 @@ public:
             int *perf_lock_opts, int size);
     static void audio_extn_perf_lock_release(int *handle);
     /* end kpi optimize perf apis */
+    static bool isServiceRegistered() { return sServicesRegistered; }
 protected:
     pal_stream_handle_t *karaoke_stream_handle;
     struct pal_stream_attributes sattr;
+private:
+    static std::atomic<bool> sServicesRegistered;
 
 };
 
