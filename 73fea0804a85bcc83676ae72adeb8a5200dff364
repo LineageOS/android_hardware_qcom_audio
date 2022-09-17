@@ -16,6 +16,24 @@
       "message": "If speaker prot is enabled currently amp won\u0027t ever be enabled\nimo the enable/disable should be unconditional, unless there\u0027s a good reason no to in some cases",
       "revId": "73fea0804a85bcc83676ae72adeb8a5200dff364",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7a190283_f3bb4bfd",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31578
+      },
+      "writtenOn": "2022-09-17T06:56:32Z",
+      "side": 1,
+      "message": "I have updated the patch. I will test that later",
+      "parentUuid": "953325c8_5bbe5623",
+      "revId": "73fea0804a85bcc83676ae72adeb8a5200dff364",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
