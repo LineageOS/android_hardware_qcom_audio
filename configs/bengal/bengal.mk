@@ -170,6 +170,9 @@ PRODUCT_PACKAGES += QRD_scuba_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += fai_3.0.0_0.0_eai_1.00.pmd
 PRODUCT_PACKAGES += fai__2.0.0_0.1__3.0.0_0.0__eai_1.00.pmd
 PRODUCT_PACKAGES += fai__2.2.0_0.1__3.0.0_0.0__eai_1.00.pmd
+PRODUCT_PACKAGES += libhfp_pal
+PRODUCT_PACKAGES += libfmpal
+PRODUCT_PACKAGES += libqtigefar
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MCS)), true)
 PRODUCT_PACKAGES += libmcs
@@ -193,11 +196,11 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
     $(CONFIG_HAL_SRC_DIR)/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml \
     $(CONFIG_HAL_SRC_DIR)/microphone_characteristics.xml:$(TARGET_COPY_OUT_VENDOR)/etc/microphone_characteristics.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_bengal_idp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_bengal_idp.xml \
     $(CONFIG_HAL_SRC_DIR)/mixer_paths_scubaidp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_scubaidp.xml \
     $(CONFIG_HAL_SRC_DIR)/mixer_paths_scubaqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_scubaqrd.xml \
     $(CONFIG_HAL_SRC_DIR)/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_bengal_idp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_bengal_idp.xml \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_qrd.xml \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_scubaidp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_scubaidp.xml \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_scubaqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_scubaqrd.xml \
