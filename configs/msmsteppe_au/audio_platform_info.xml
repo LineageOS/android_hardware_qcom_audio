@@ -34,6 +34,7 @@
         <device name="SND_DEVICE_OUT_BUS_SYS" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BUS_NAV" acdb_id="14"/>
         <device name="SND_DEVICE_OUT_BUS_PHN" acdb_id="94"/>
+        <device name="SND_DEVICE_OUT_BUS_ALR" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BUS_PAX" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BUS_RSE" acdb_id="60"/>
         <device name="SND_DEVICE_OUT_BT_SCO" acdb_id="21"/>
@@ -107,6 +108,7 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION" type="out" id="9"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE" type="out" id="1"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_PHONE" type="out" id="12"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_ALERTS" type="out" id="59"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER" type="out" id="55"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_REAR_SEAT" type="out" id="54"/>
         <usecase name="USECASE_VOICEMMODE1_CALL" type="in" id="2"/>
@@ -184,6 +186,7 @@
         <device name="SND_DEVICE_OUT_BUS_SYS" interface="TERT_TDM_RX_0"/>
         <device name="SND_DEVICE_OUT_BUS_NAV" interface="TERT_TDM_RX_1"/>
         <device name="SND_DEVICE_OUT_BUS_PHN" interface="TERT_TDM_RX_2"/>
+        <device name="SND_DEVICE_OUT_BUS_ALR" interface="TERT_TDM_RX_0"/>
         <device name="SND_DEVICE_OUT_BUS_PAX" interface="QUAT_TDM_RX_0"/>
         <device name="SND_DEVICE_OUT_BUS_RSE" interface="QUAT_TDM_RX_1"/>
         <device name="SND_DEVICE_OUT_ICC" interface="TERT_TDM_RX_0"/>
@@ -209,6 +212,7 @@
         <device name="SND_DEVICE_OUT_BUS_SYS" backend="sys-bus-out" interface="TERT_TDM_RX_0"/>
         <device name="SND_DEVICE_OUT_BUS_NAV" backend="nav-bus-out" interface="TERT_TDM_RX_1"/>
         <device name="SND_DEVICE_OUT_BUS_PHN" backend="phone-bus-out" interface="TERT_TDM_RX_2"/>
+        <device name="SND_DEVICE_OUT_BUS_ALR" backend="alerts-bus-out" interface="TERT_TDM_RX_0"/>
         <device name="SND_DEVICE_OUT_BUS_PAX" backend="pax-bus-out" interface="QUAT_TDM_RX_0"/>
         <device name="SND_DEVICE_OUT_BUS_RSE" backend="rse-bus-out" interface="QUIN_TDM_RX_0"/>
     </backend_names>
