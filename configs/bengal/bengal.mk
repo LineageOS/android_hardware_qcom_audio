@@ -151,6 +151,7 @@ PRODUCT_PACKAGES += $(AUDIO_WRAPPER)
 PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
 PRODUCT_PACKAGES += ftm_test_config
 PRODUCT_PACKAGES += ftm_test_config_bengal-qrd-snd-card
+PRODUCT_PACKAGES += ftm_test_config_bengal-idp-snd-card
 PRODUCT_PACKAGES += ftm_test_config_bengal-scubaidp-snd-card
 PRODUCT_PACKAGES += ftm_test_config_bengal-scubaqrd-snd-card
 PRODUCT_PACKAGES += audioadsprpcd
