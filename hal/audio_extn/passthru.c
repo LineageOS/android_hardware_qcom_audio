@@ -53,7 +53,44 @@
  */
 
 #ifdef DTSHD_PARSER_ENABLED
-#include "audio_parsers.h"
+enum audio_parser_code_type {
+    AUDIO_PARSER_CODEC_AC3 = 1,
+    AUDIO_PARSER_CODEC_DTS = 2,
+    AUDIO_PARSER_CODEC_DTSHD = 3,
+};
+
+struct ac3_frame_info {
+    unsigned int ac3_fr_sz_16bit;
+    unsigned char bsmod;
+    unsigned int sample_rate;
+    unsigned int reverse_bytes;
+};
+
+struct dts_frame_info {
+    unsigned int dts_fr_sz_8bit;
+    unsigned int sample_rate;
+    unsigned char dts_type;
+    unsigned int reverse_bytes;
+};
+
+struct dtshd_iec61937_info {
+    uint32_t sample_rate;
+    uint32_t num_channels;
+};
+
+struct audio_parser_codec_info {
+    enum audio_parser_code_type codec_type;
+    union {
+        struct ac3_frame_info ac3_fr_info;
+        struct dts_frame_info dts_fr_info;
+        struct dtshd_iec61937_info dtshd_tr_info;
+    } codec_config;
+};
+
+int init_audio_parser(unsigned char *audio_stream_data,
+        unsigned int audio_stream_sz, enum audio_parser_code_type);
+
+int get_iec61937_info(struct audio_parser_codec_info *audio_codec_info);
 
 /* list of all supported DTS transmission sample rates */
 static const int dts_transmission_sample_rates[] = {
