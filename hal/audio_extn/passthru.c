@@ -105,9 +105,10 @@ static fp_audio_extn_utils_is_dolby_format_t fp_audio_extn_utils_is_dolby_format
  */
 static volatile int32_t compress_passthru_active;
 
-int passthru_update_dts_stream_configuration(struct stream_out *out,
-        const void *buffer, size_t bytes)
+int passthru_update_dts_stream_configuration(struct stream_out *out __unused,
+        const void *buffer __unused, size_t bytes __unused)
 {
+#ifdef DTSHD_PARSER_ENABLED
     struct audio_parser_codec_info codec_info;
     struct dtshd_iec61937_info dtshd_tr_info;
     int i;
@@ -183,6 +184,7 @@ int passthru_update_dts_stream_configuration(struct stream_out *out,
         out->compr_config.codec->ch_in = 2;
         out->channel_mask = audio_channel_out_mask_from_count(2);
     }
+#endif
     return 0;
 }
 
