@@ -574,8 +574,6 @@ include $(BUILD_SHARED_LIBRARY)
 #-------------------------------------------
 #            Build HDMI PASSTHROUGH
 #-------------------------------------------
-ifneq ($(QCPATH),)
-
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libhdmipassthru
@@ -599,10 +597,8 @@ LOCAL_CFLAGS += \
     -Werror \
     -Wno-unused-function \
     -Wno-unused-variable \
-    -DDTSHD_PARSER_ENABLED
 
 LOCAL_SHARED_LIBRARIES := \
-    libaudioparsers \
     libaudioroute \
     libaudioutils \
     libcutils \
@@ -619,8 +615,13 @@ LOCAL_C_INCLUDES := \
     external/tinycompress/include \
     external/expat/lib \
     system/media/audio_utils/include \
-    $(TARGET_OUT_HEADERS)/mm-audio/audio-parsers \
     $(call include-path-for, audio-route) \
+
+ifneq ($(QCPATH),)
+LOCAL_CFLAGS += -DDTSHD_PARSER_ENABLED
+LOCAL_SHARED_LIBRARIES += libaudioparsers
+LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/mm-audio/audio-parsers
+endif
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
@@ -644,8 +645,6 @@ ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_SANITIZE := integer_overflow
 endif
 include $(BUILD_SHARED_LIBRARY)
-
-endif
 
 #-------------------------------------------
 #            Build BATTERY_LISTENER
