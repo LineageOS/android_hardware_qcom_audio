@@ -35,9 +35,20 @@
 
 extern "C" {
 
+#define CHECK_SERVICES_REGISTERED()                       \
+    ({                                                    \
+        if(!AudioExtn::isServiceRegistered()) {           \
+            AHAL_ERR("service not registered");           \
+            return 0;                                     \
+        }                                                 \
+    })
+
+
 __attribute__ ((visibility ("default")))
 int audio_hw_get_gain_level_mapping(struct pal_amp_db_and_gain_table *mapping_tbl,
                                       int table_size) {
+    CHECK_SERVICES_REGISTERED();
+
     int ret = 0;
     size_t payload_size = 0;
     pal_param_gain_lvl_map_t gain_lvl_map;
@@ -59,6 +70,8 @@ int audio_hw_get_gain_level_mapping(struct pal_amp_db_and_gain_table *mapping_tb
 
 __attribute__ ((visibility ("default")))
 bool audio_hw_send_gain_dep_calibration(int level) {
+    CHECK_SERVICES_REGISTERED();
+
     int32_t ret = 0;
     pal_param_gain_lvl_cal_t gain_lvl_cal;
     gain_lvl_cal.level = level;

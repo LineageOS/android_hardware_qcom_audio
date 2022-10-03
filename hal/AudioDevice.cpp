@@ -1052,7 +1052,12 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
      *Once PAL init is sucessfull, register the PAL service
      *from HAL process context
      */
-    AudioExtn::audio_extn_hidl_init();
+    //AudioExtn::audio_extn_hidl_init();
+    ret = AudioExtn::audio_extn_hidl_init();
+    if (ret) {
+        AHAL_ERR("audio_extn_hidl_init failed ret=(%d)", ret);
+        return ret;
+    }
 
     adev_->device_.get()->common.tag = HARDWARE_DEVICE_TAG;
     adev_->device_.get()->common.version = AUDIO_DEVICE_API_VERSION_3_2;
