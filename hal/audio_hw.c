@@ -150,6 +150,9 @@ struct pcm_config default_pcm_config_voip_copp = {
 #define STR(x) #x
 #endif
 
+#define IS_USB_HIFI (MAX_HIFI_CHANNEL_COUNT >= MAX_CHANNEL_COUNT) ? \
+                     true : false
+
 #ifdef LINUX_ENABLED
 static inline int64_t audio_utils_ns_from_timespec(const struct timespec *ts)
 {
@@ -491,6 +494,7 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = "sys-notification-playback",
     [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = "nav-guidance-playback",
     [USECASE_AUDIO_PLAYBACK_PHONE] = "phone-playback",
+    [USECASE_AUDIO_PLAYBACK_ALERTS] = "alerts-playback",
     [USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER] = "front-passenger-playback",
     [USECASE_AUDIO_PLAYBACK_REAR_SEAT] = "rear-seat-playback",
     [USECASE_AUDIO_FM_TUNER_EXT] = "fm-tuner-ext",
@@ -798,6 +802,17 @@ static int parse_snd_card_status(struct str_parms *parms, int *card,
     *status = !strcmp(state, "ONLINE") ? CARD_STATUS_ONLINE :
                                          CARD_STATUS_OFFLINE;
     return 0;
+}
+
+bool is_combo_audio_input_device(struct listnode *devices){
+
+    if ((devices == NULL) || (!list_empty(devices)))
+        return false;
+
+    if(compare_device_type(devices, AUDIO_DEVICE_IN_BUILTIN_MIC|AUDIO_DEVICE_IN_SPEAKER_MIC2))
+        return true;
+    else
+        return false;
 }
 
 static inline void adjust_frames_for_device_delay(struct stream_out *out,
@@ -1445,7 +1460,11 @@ int enable_audio_route(struct audio_device *adev,
 
     if (usecase->type == PCM_CAPTURE) {
         in = usecase->stream.in;
-        if (in && is_loopback_input_device(get_device_types(&in->device_list))) {
+        if ((in && is_loopback_input_device(get_device_types(&in->device_list))) ||
+            (in && is_combo_audio_input_device(&in->device_list)) ||
+            (in && ((compare_device_type(&in->device_list, AUDIO_DEVICE_IN_BUILTIN_MIC) ||
+                     compare_device_type(&in->device_list, AUDIO_DEVICE_IN_LINE)) &&
+                    (snd_device == SND_DEVICE_IN_HANDSET_GENERIC_6MIC)))) {
             ALOGD("%s: set custom mtmx params v1", __func__);
             audio_extn_set_custom_mtmx_params_v1(adev, usecase, true);
         }
@@ -1540,7 +1559,11 @@ int disable_audio_route(struct audio_device *adev,
 
     if (usecase->type == PCM_CAPTURE) {
         in = usecase->stream.in;
-        if (in && is_loopback_input_device(get_device_types(&in->device_list))) {
+        if ((in && is_loopback_input_device(get_device_types(&in->device_list))) ||
+            (in && is_combo_audio_input_device(&in->device_list)) ||
+            (in && ((compare_device_type(&in->device_list, AUDIO_DEVICE_IN_BUILTIN_MIC) ||
+                    compare_device_type(&in->device_list, AUDIO_DEVICE_IN_LINE)) &&
+                    (snd_device == SND_DEVICE_IN_HANDSET_GENERIC_6MIC)))){
             ALOGD("%s: reset custom mtmx params v1", __func__);
             audio_extn_set_custom_mtmx_params_v1(adev, usecase, false);
         }
@@ -2867,6 +2890,9 @@ static struct stream_in *get_priority_input(struct audio_device *adev)
         if (usecase->type == PCM_CAPTURE) {
             in = usecase->stream.in;
             if (!in)
+                continue;
+
+            if (USECASE_AUDIO_RECORD_FM_VIRTUAL == usecase->id)
                 continue;
             priority = source_priority(in->source);
 
@@ -4717,9 +4743,10 @@ static size_t get_input_buffer_size(uint32_t sample_rate,
                                     int channel_count,
                                     bool is_low_latency)
 {
+    bool is_usb_hifi = IS_USB_HIFI;
     /* Don't know if USB HIFI in this context so use true to be conservative */
     if (check_input_parameters(sample_rate, format, channel_count,
-                               true /*is_usb_hifi */) != 0)
+                               is_usb_hifi) != 0)
         return 0;
 
     return get_stream_buffer_size(AUDIO_CAPTURE_PERIOD_DURATION_MSEC,
@@ -9428,6 +9455,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     }
 
     amplifier_set_parameters(parms);
+    audio_extn_auto_hal_set_parameters(adev, parms);
     audio_extn_set_parameters(adev, parms);
 done:
     str_parms_destroy(parms);
@@ -9624,11 +9652,12 @@ static int adev_get_mic_mute(const struct audio_hw_device *dev, bool *state)
 static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev __unused,
                                          const struct audio_config *config)
 {
+    bool is_usb_hifi = IS_USB_HIFI;
     int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
 
     /* Don't know if USB HIFI in this context so use true to be conservative */
     if (check_input_parameters(config->sample_rate, config->format, channel_count,
-                               true /*is_usb_hifi */) != 0)
+                              is_usb_hifi) != 0)
         return 0;
 
     return get_input_buffer_size(config->sample_rate, config->format, channel_count,
