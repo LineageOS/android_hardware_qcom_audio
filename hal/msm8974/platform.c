@@ -3389,11 +3389,11 @@ void *platform_init(struct audio_device *adev)
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "kona-xrfusion-ult-snd-card",
                sizeof("kona-xrfusion-ult-snd-card"))) {
-        platform_info_init(PLATFORM_INFO_XML_PATH_XRFUSION,
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_XRFUSION),
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "kona-xrfusionult-snd-card",
                sizeof("kona-xrfusionult-snd-card"))) {
-        platform_info_init(PLATFORM_INFO_XML_PATH_XRFUSIONULT,
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_XRFUSIONULT),
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "sm8150-tavil-qrd-snd-card",
                sizeof("sm8150-tavil-qrd-snd-card"))) {
