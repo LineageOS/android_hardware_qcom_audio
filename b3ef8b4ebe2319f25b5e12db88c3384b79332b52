@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "329aa7d9_3e8c748d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31578
+      },
+      "writtenOn": "2022-10-05T16:47:23Z",
+      "side": 1,
+      "message": "As we have discussed before, a better way would be to call this function despite the state of `spkr_prot`, and pass a parameter indicating whether `spkr_prot` has been enabled or not.\n\nBut I am not sure if that change of interface is actually necessary...",
+      "revId": "b3ef8b4ebe2319f25b5e12db88c3384b79332b52",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
