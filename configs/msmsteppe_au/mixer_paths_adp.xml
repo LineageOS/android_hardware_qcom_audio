@@ -282,6 +282,11 @@
         <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia10" value="1" />
     </path>
 
+    <path name="alerts-playback alerts-bus-out">
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia31" value="1" />
+    </path>
+
     <path name="front-passenger-playback pax-bus-out">
         <ctl name="QUAT_TDM_RX_0 Channels" value="Eight" />
         <ctl name="QUAT_TDM_RX_0 Audio Mixer MultiMedia23" value="1" />

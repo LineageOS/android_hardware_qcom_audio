@@ -26,6 +26,23 @@
 <!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                          -->
 <mixer>
     <!-- These are the initial mixer settings -->
+    <!-- Example commands to Enable the paired rx usecase-->
+    <!-- SlotMapping with the last possible slot of respective TDM interface -->
+    <!-- <ctl name="TERT_TDM_RX_3 SlotMapping" id = "0" value="28"/>
+    <ctl name="TERT_TDM_RX_3 SlotMapping" id = "1" value="65535" />
+    <ctl name="TERT_TDM_RX_3 Channels" value="One" />
+    <ctl name="TERT_TDM Paired_Rx" value="TERT_TDM_RX_3" />
+
+    <ctl name="QUAT_TDM_RX_3 SlotMapping" id = "0" value="124"/>
+    <ctl name="QUAT_TDM_RX_3 SlotMapping" id = "1" value="65535" />
+    <ctl name="QUAT_TDM_RX_3 Channels" value="One" />
+    <ctl name="QUAT_TDM Paired_Rx" value="QUAT_TDM_RX_3" />
+
+    <ctl name="QUIN_TDM_RX_3 SlotMapping" id = "0" value="60"/>
+    <ctl name="QUIN_TDM_RX_3 SlotMapping" id = "1" value="65535" />
+    <ctl name="QUIN_TDM_RX_3 Channels" value="One" />
+    <ctl name="QUIN_TDM Paired_Rx" value="QUIN_TDM_RX_3" /> -->
+
     <ctl name="MultiMedia5 Mixer AFE_PCM_TX" value="0" />
     <ctl name="MultiMedia1 Mixer TERT_TDM_TX_0" value="0" />
     <ctl name="MultiMedia8 Mixer TERT_TDM_TX_0" value="0" />
@@ -293,6 +310,11 @@
     <path name="phone-playback phone-bus-out">
         <ctl name="TERT_TDM_RX_2 Channels" value="One" />
         <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="alerts-playback alerts-bus-out">
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia31" value="1" />
     </path>
 
     <path name="front-passenger-playback pax-bus-out">
