@@ -4039,6 +4039,7 @@ static int stop_output_stream(struct stream_out *out)
         disable_snd_device(adev, SND_DEVICE_OUT_HAPTICS);
 
     audio_extn_extspk_update(adev->extspk);
+    audio_extn_external_speaker_bun_update(adev);
 
     if (is_offload_usecase(out->usecase)) {
         audio_enable_asm_bit_width_enforce_mode(adev->mixer,
@@ -5379,6 +5380,7 @@ int route_output_stream(struct stream_out *out,
 
     /*handles device and call state changes*/
     audio_extn_extspk_update(adev->extspk);
+    audio_extn_external_speaker_bun_update(adev);
 
     clear_devices(&new_devices);
 error:
@@ -9541,6 +9543,7 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
     struct audio_device *adev = (struct audio_device *)dev;
 
     audio_extn_extspk_set_voice_vol(adev->extspk, volume);
+    audio_extn_external_speaker_bun_set_voice_vol(volume);
 
     pthread_mutex_lock(&adev->lock);
     /* cache volume */
@@ -9622,6 +9625,9 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
         }
     }
     pthread_mutex_unlock(&adev->lock);
+
+    audio_extn_external_speaker_bun_set_mode(mode);
+
     return 0;
 }
 
@@ -10830,6 +10836,7 @@ static int adev_close(hw_device_t *device)
         audio_extn_listen_deinit(adev);
         audio_extn_qdsp_deinit();
         audio_extn_extspk_deinit(adev->extspk);
+        audio_extn_external_speaker_bun_deinit();
         audio_extn_utils_release_streams_cfg_lists(
                       &adev->streams_output_cfg_list,
                       &adev->streams_input_cfg_list);
@@ -11150,6 +11157,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     adev->extspk = audio_extn_extspk_init(adev);
+    audio_extn_external_speaker_bun_init();
     if (audio_extn_qap_is_enabled()) {
         ret = audio_extn_qap_init(adev);
         if (ret < 0) {
