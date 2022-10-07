@@ -515,6 +515,14 @@ void audio_extn_extspk_update(void* extn);
 void audio_extn_extspk_set_mode(void* extn, audio_mode_t mode);
 void audio_extn_extspk_set_voice_vol(void* extn, float vol);
 
+void audio_extn_external_speaker_bun_init(void);
+void audio_extn_external_speaker_bun_deinit(void);
+void audio_extn_external_speaker_bun_set_mode(audio_mode_t mode);
+void audio_extn_external_speaker_bun_set_voice_vol(float vol);
+void audio_extn_external_speaker_bun_update(struct audio_device *adev);
+void audio_extn_external_speaker_bun_enable_speaker(void);
+void audio_extn_external_speaker_bun_set_call_state_on(bool on);
+
 #define audio_extn_read_xml(adev, mixer_card, MIXER_XML_PATH, \
                             MIXER_XML_PATH_AUXPCM)               (-ENOSYS)
 #else
