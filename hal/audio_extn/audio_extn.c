@@ -2325,6 +2325,147 @@ void audio_extn_extspk_set_voice_vol(void* extn, float vol) {
 
 //END: EXTERNAL_SPEAKER ================================================================
 
+//START: SPEAKER_BUNDLE ================================================================
+
+#ifdef __LP64__
+#define EXTERNAL_SPKR_BUN_LIB_PATH  "/vendor/lib64/soundfx/libspeakerbundle.so"
+#else
+#define EXTERNAL_SPKR_BUN_LIB_PATH  "/vendor/lib/soundfx/libspeakerbundle.so"
+#endif
+
+static void *external_speaker_bun_lib_handle = NULL;
+
+typedef void* (*external_speaker_bun_init_t)(void);
+static external_speaker_bun_init_t external_speaker_bun_init;
+
+typedef void (*external_speaker_bun_deinit_t)(void);
+static external_speaker_bun_deinit_t external_speaker_bun_deinit;
+
+typedef void (*external_speaker_bun_set_mode_t)(int);
+static external_speaker_bun_set_mode_t external_speaker_bun_set_mode;
+
+typedef void (*external_speaker_bun_set_voice_vol_t)(float);
+static external_speaker_bun_set_voice_vol_t external_speaker_bun_set_voice_vol;
+
+typedef void (*external_speaker_bun_set_speaker_on_t)(bool);
+static external_speaker_bun_set_speaker_on_t external_speaker_bun_set_speaker_on;
+
+typedef void (*external_speaker_bun_set_earpiece_on_t)(bool);
+static external_speaker_bun_set_earpiece_on_t external_speaker_bun_set_earpiece_on;
+
+typedef void (*external_speaker_bun_set_call_state_on_t)(bool);
+static external_speaker_bun_set_call_state_on_t external_speaker_bun_set_call_state_on;
+
+typedef void (*external_speaker_bun_set_output_devices_t)(audio_devices_t);
+static external_speaker_bun_set_output_devices_t external_speaker_bun_set_output_devices;
+
+void external_speaker_bun_feature_init(bool is_feature_enabled)
+{
+    ALOGD("%s: Called with feature %s", __func__, is_feature_enabled?"Enabled":"NOT Enabled");
+    if (is_feature_enabled) {
+        //dlopen lib
+        external_speaker_bun_lib_handle = dlopen(EXTERNAL_SPKR_LIB_PATH, RTLD_NOW);
+        if (external_speaker_bun_lib_handle == NULL) {
+            ALOGE("%s: dlopen failed", __func__);
+            return;
+        }
+        //map each function
+        //on any faliure to map any function, disble feature
+        if (((external_speaker_bun_init =
+             (external_speaker_bun_init_t)dlsym(external_speaker_bun_lib_handle, "init_instance")) == NULL) ||
+            ((external_speaker_bun_deinit =
+             (external_speaker_bun_deinit_t)dlsym(external_speaker_bun_lib_handle, "release_extspk")) == NULL) ||
+            ((external_speaker_bun_set_mode =
+             (external_speaker_bun_set_mode_t)dlsym(external_speaker_bun_lib_handle, "set_mode")) == NULL) ||
+            ((external_speaker_bun_set_voice_vol =
+             (external_speaker_bun_set_voice_vol_t)dlsym(external_speaker_bun_lib_handle, "set_voice_volume")) == NULL) ||
+            ((external_speaker_bun_set_speaker_on) =
+             (external_speaker_bun_set_speaker_on_t)dlsym(external_speaker_bun_lib_handle,  "set_speaker_on")) == NULL ||
+            ((external_speaker_bun_set_earpiece_on) =
+             (external_speaker_bun_set_earpiece_on_t)dlsym(external_speaker_bun_lib_handle, "set_earpiece_on")) == NULL ||
+            ((external_speaker_bun_set_call_state_on) =
+             (external_speaker_bun_set_call_state_on_t)dlsym(external_speaker_bun_lib_handle, "set_call_state_on")) == NULL ||
+            ((external_speaker_bun_set_output_devices) =
+             (external_speaker_bun_set_output_devices_t)dlsym(external_speaker_bun_lib_handle, "set_output_devices")) == NULL) {
+            ALOGE("%s: dlsym failed", __func__);
+            goto feature_disabled;
+        }
+
+        ALOGD("%s:: ---- Feature EXTERNAL_SPKR is Enabled ----", __func__);
+        return;
+    }
+
+feature_disabled:
+    if (external_speaker_bun_lib_handle) {
+        dlclose(external_speaker_bun_lib_handle);
+        external_speaker_bun_lib_handle = NULL;
+    }
+
+    external_speaker_bun_init = NULL;
+    external_speaker_bun_deinit = NULL;
+    external_speaker_bun_set_mode = NULL;
+    external_speaker_bun_set_voice_vol = NULL;
+    external_speaker_bun_set_speaker_on = NULL;
+    external_speaker_bun_set_earpiece_on = NULL;
+    external_speaker_bun_set_call_state_on = NULL;
+    external_speaker_bun_set_output_devices = NULL;
+
+    ALOGW(":: %s: ---- Feature EXTERNAL_SPKR is disabled ----", __func__);
+    return;
+}
+
+void audio_extn_external_speaker_bun_init(void) {
+    if (external_speaker_bun_init)
+        external_speaker_bun_init();
+}
+
+void audio_extn_external_speaker_bun_deinit(void) {
+    if (external_speaker_bun_deinit)
+        external_speaker_bun_deinit();
+}
+
+void audio_extn_external_speaker_bun_update(struct audio_device *adev) {
+    struct audio_usecase *usecase;
+    struct listnode *node;
+    audio_devices_t devices = 0;
+
+    list_for_each(node, &adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+
+        if (adev->snd_dev_ref_cnt[usecase->out_snd_device] != 0)
+            devices |= get_device_types(&usecase->device_list);
+    }
+
+    if (external_speaker_bun_set_output_devices)
+        external_speaker_bun_set_output_devices(devices);
+}
+
+void audio_extn_external_speaker_bun_set_mode(audio_mode_t mode) {
+    if (external_speaker_bun_set_mode)
+        external_speaker_bun_set_mode(mode);
+
+    return;
+}
+
+void audio_extn_external_speaker_bun_set_voice_vol(float vol) {
+    if (external_speaker_bun_set_voice_vol)
+        external_speaker_bun_set_voice_vol(vol);
+
+    return;
+}
+
+void audio_extn_external_speaker_bun_enable_speaker(void) {
+    if (external_speaker_bun_set_speaker_on)
+        external_speaker_bun_set_speaker_on(true);
+}
+
+void audio_extn_external_speaker_bun_set_call_state_on(bool on)
+{
+    if (external_speaker_bun_set_call_state_on)
+        external_speaker_bun_set_call_state_on(on);
+}
+
+//END: SPEAKER_BUNDLE ================================================================
 
 //START: EXTERNAL_SPEAKER_TFA ================================================================
 #ifdef __LP64__

@@ -36,6 +36,7 @@
 #include "platform.h"
 #include "platform_api.h"
 #include "voice_extn.h"
+#include "audio_extn.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -358,6 +359,7 @@ static int update_call_states(struct audio_device *adev,
     if (session) {
         session->state.new = call_state;
         voice_extn_is_call_state_active(adev, &is_call_active);
+        audio_extn_external_speaker_bun_set_call_state_on(is_call_active);
         ALOGD("%s is_call_active:%d in_call:%d, mode:%d\n",
               __func__, is_call_active, adev->voice.in_call, adev->mode);
         /* Dont start voice call before device routing for voice usescases has
