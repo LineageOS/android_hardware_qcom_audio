@@ -46,6 +46,12 @@
 #include <vendor/qti/hardware/pal/1.0/IPAL.h>
 using vendor::qti::hardware::pal::V1_0::IPAL;
 using vendor::qti::hardware::pal::V1_0::implementation::PAL;
+#ifdef AGM_HIDL_ENABLED
+#include <agm_server_wrapper.h>
+#include <vendor/qti/hardware/AGMIPC/1.0/IAGM.h>
+using vendor::qti::hardware::AGMIPC::V1_0::IAGM;
+using vendor::qti::hardware::AGMIPC::V1_0::implementation::AGM;
+#endif
 using android::hardware::defaultPassthroughServiceImplementation;
 using android::sp;
 using namespace android::hardware;
@@ -701,6 +707,7 @@ int AudioExtn::karaoke_close(){
 
 int AudioExtn::audio_extn_hidl_init() {
 
+    int num_threads = 32;
 #ifdef PAL_HIDL_ENABLED
    /* register audio PAL HIDL */
     sp<IPAL> service = new PAL();
@@ -708,12 +715,27 @@ int AudioExtn::audio_extn_hidl_init() {
      *We request for more threads as the same number of threads would be divided
      *between PAL and audio HAL HIDL
      */
-    configureRpcThreadpool(32, false /*callerWillJoin*/);
+    configureRpcThreadpool(num_threads, false /*callerWillJoin*/);
     if(android::OK !=  service->registerAsService()) {
         AHAL_ERR("Could not register PAL service");
         return -EINVAL;
     } else {
         AHAL_DBG("successfully registered PAL service");
+    }
+#endif
+
+#ifdef AGM_HIDL_ENABLED
+    /* register AGM HIDL */
+    sp<IAGM> agm_service = new AGM();
+    AGM *temp = static_cast<AGM *>(agm_service.get());
+    configureRpcThreadpool(num_threads, false /*callerWillJoin*/);
+    if (temp->is_agm_initialized()) {
+        if(android::OK != agm_service->registerAsService()) {
+            AHAL_ERR("Could not register AGM service");
+            return -EINVAL;
+        } else {
+            AHAL_DBG("successfully registered AGM service");
+        }
     }
 #endif
     /* to register other hidls */
