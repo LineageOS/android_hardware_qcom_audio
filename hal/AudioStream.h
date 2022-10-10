@@ -196,6 +196,8 @@ enum {
 
     USECASE_AUDIO_PLAYBACK_SILENCE,
 
+    USECASE_AUDIO_RECORD_ECHO_REF,
+
     USECASE_AUDIO_TRANSCODE_LOOPBACK_RX,
     USECASE_AUDIO_TRANSCODE_LOOPBACK_TX,
 
@@ -378,6 +380,9 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = "afe-proxy-playback",
     [USECASE_AUDIO_RECORD_AFE_PROXY] = "afe-proxy-record",
     [USECASE_AUDIO_PLAYBACK_SILENCE] = "silence-playback",
+
+    [USECASE_AUDIO_RECORD_ECHO_REF] = "echo-ref-record",
+
 
     /* Transcode loopback cases */
     [USECASE_AUDIO_TRANSCODE_LOOPBACK_RX] = "audio-transcode-loopback-rx",

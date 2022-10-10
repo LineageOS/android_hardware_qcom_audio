@@ -29,6 +29,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_LSM_HIDL)),true)
 LOCAL_VINTF_FRAGMENTS += ../configs/common/manifest_non_qmaa_extn.xml
 endif
 
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EC_REF_CAPTURE)),true)
+LOCAL_CFLAGS += -DEC_REF_CAPTURE_ENABLED
+endif
+
 LOCAL_CFLAGS += -Wno-macro-redefined
 LOCAL_CFLAGS += -DSOUND_TRIGGER_PLATFORM_NAME=$(TARGET_BOARD_PLATFORM)
 LOCAL_CFLAGS += -D_GNU_SOURCE

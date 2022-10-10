@@ -1593,6 +1593,10 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
                    (adevice && adevice->voice_ && adevice->voice_->IsAnyCallActive())) {
                     palStreamType = PAL_STREAM_VOICE_CALL_RECORD;
                 }
+#ifdef EC_REF_CAPTURE_ENABLED
+            } else if (source_ == AUDIO_SOURCE_ECHO_REFERENCE) {
+                   palStreamType = PAL_STREAM_RAW;
+#endif
             } else {
                 if (isDeviceAvailable(PAL_DEVICE_IN_TELEPHONY_RX)) {
                     palStreamType = PAL_STREAM_PROXY;
@@ -4152,11 +4156,18 @@ uint32_t StreamInPrimary::GetBufferSizeForLowLatencyRecord() {
 /* in bytes */
 uint32_t StreamInPrimary::GetBufferSize() {
     struct pal_stream_attributes streamAttributes_;
+#ifdef EC_REF_CAPTURE_ENABLED
+    bool isEchoRef = false;
+#endif
     size_t size = 0;
     uint32_t bytes_per_period_sample = 0;
 
     streamAttributes_.type = StreamInPrimary::GetPalStreamType(flags_,
             config_.sample_rate);
+#ifdef EC_REF_CAPTURE_ENABLED
+    if (streamAttributes_.type == PAL_STREAM_RAW && isDeviceAvailable(PAL_DEVICE_IN_ECHO_REF))
+        isEchoRef = true;
+#endif
     if (streamAttributes_.type == PAL_STREAM_VOIP_TX) {
         size = (DEFAULT_VOIP_BUF_DURATION_MS * config_.sample_rate / 1000) *
                audio_bytes_per_frame(
