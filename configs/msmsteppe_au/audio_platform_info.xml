@@ -108,6 +108,7 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION" type="out" id="9" fe="4"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE" type="out" id="1" fe="1"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_PHONE" type="out" id="12" fe="9"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_PHONE_LL" type="out" id="12" fe="9"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_ALERTS" type="out" id="59" fe="30"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER" type="out" id="55" fe="22"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_REAR_SEAT" type="out" id="54" fe="21"/>

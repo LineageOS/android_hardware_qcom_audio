@@ -25,6 +25,10 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #define LOG_TAG "auto_hal_extn"
 /*#define LOG_NDEBUG 0*/
@@ -432,7 +436,13 @@ int auto_hal_open_output_stream(struct stream_out *out)
         out->volume_l = out->volume_r = MAX_VOLUME_GAIN;
         break;
     case CAR_AUDIO_STREAM_PHONE:
-        out->usecase = USECASE_AUDIO_PLAYBACK_PHONE;
+        if (out->flags == AUDIO_OUTPUT_FLAG_PRIMARY) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_PHONE;
+            out->flags = AUDIO_OUTPUT_FLAG_PHONE;
+        }
+        else if (out->flags == AUDIO_OUTPUT_FLAG_NONE) {
+            out->usecase = USECASE_AUDIO_PLAYBACK_PHONE_LL;
+        }
         switch(out->sample_rate)
         {
             case 48000:
@@ -1072,6 +1082,7 @@ snd_device_t auto_hal_get_output_snd_device(struct audio_device *adev,
             snd_device = SND_DEVICE_OUT_BUS_NAV;
             break;
         case USECASE_AUDIO_PLAYBACK_PHONE:
+        case USECASE_AUDIO_PLAYBACK_PHONE_LL:
             snd_device = SND_DEVICE_OUT_BUS_PHN;
             break;
         case USECASE_AUDIO_PLAYBACK_ALERTS:
