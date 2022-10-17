@@ -137,7 +137,7 @@ AUDIO_FEATURE_ENABLED_SILENT_BOOT := true
 endif
 AUDIO_FEATURE_ENABLED_FM_TUNER_EXT := true
 AUDIO_FEATURE_ENABLED_ICC := true
-ifneq ( ,$(filter S 12, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter S 12 T 13, $(PLATFORM_VERSION)))
 AUDIO_FEATURE_ENABLED_POWER_POLICY := true
 endif
 ifneq ( ,$(filter msmnile_gvmq msmnile_au, $(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)))
