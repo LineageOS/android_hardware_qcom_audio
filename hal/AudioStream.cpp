@@ -182,31 +182,65 @@ bool StreamPrimary::GetSupportedConfig(bool isOutStream,
     bool found = false;
     int index = 0;
     int table_size = 0;
+    int i = 0;
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value, sizeof(value));
     if (ret >= 0) {
         value[0] = '\0';
-        int stream_format = GetFormat();
+        int stream_format = 0;
+        bool first = true;
         table_size = sizeof(formats_name_to_enum_table) / sizeof(struct string_to_enum);
-        index = GetLookupTableIndex(formats_name_to_enum_table,
-                                    table_size, stream_format);
-        if (index >= 0 && index < table_size) {
-            strlcat(value, formats_name_to_enum_table[index].name, sizeof(value));
-            str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value);
-            found = true;
+        if (device_cap_query_) {
+            while (device_cap_query_->config->format[i]!= 0) {
+                stream_format = device_cap_query_->config->format[i];
+                index = GetLookupTableIndex(formats_name_to_enum_table,
+                                            table_size, stream_format);
+                if (!first) {
+                    strlcat(value, "|", sizeof(value));
+                }
+                if (index >= 0 && index < table_size) {
+                    strlcat(value, formats_name_to_enum_table[index].name, sizeof(value));
+                    found = true;
+                    first = false;
+                }
+                i++;
+            }
+        } else {
+            stream_format = GetFormat();
+            index = GetLookupTableIndex(formats_name_to_enum_table,
+                                        table_size, stream_format);
+            if (index >= 0 && index < table_size) {
+                strlcat(value, formats_name_to_enum_table[index].name, sizeof(value));
+                found = true;
+            }
         }
+        str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_FORMATS, value);
     }
 
     ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value, sizeof(value));
     if (ret >= 0) {
-        int stream_chn_mask = GetChannelMask();
-
+        bool first = true;
         value[0] = '\0';
-
-        if (isOutStream)
-            strlcat(value, "AUDIO_CHANNEL_OUT_STEREO", sizeof(value));
-        else
-            strlcat(value, "AUDIO_CHANNEL_IN_STEREO", sizeof(value));
+        i = 0;
+        if (device_cap_query_) {
+            while (device_cap_query_->config->mask[i] != 0) {
+                for (int j = 0; j < ARRAY_SIZE(channels_name_to_enum_table); j++) {
+                    if (channels_name_to_enum_table[j].value == device_cap_query_->config->mask[i]) {
+                        if (!first)
+                            strlcat(value, "|", sizeof(value));
+                        strlcat(value, channels_name_to_enum_table[j].name, sizeof(value));
+                        first = false;
+                        break;
+                    }
+                }
+                i++;
+            }
+        } else {
+            if (isOutStream)
+                strlcat(value, "AUDIO_CHANNEL_OUT_STEREO", sizeof(value));
+            else
+                strlcat(value, "AUDIO_CHANNEL_IN_STEREO", sizeof(value));
+        }
         str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_CHANNELS, value);
         found = true;
     }
@@ -214,12 +248,33 @@ bool StreamPrimary::GetSupportedConfig(bool isOutStream,
     ret = str_parms_get_str(query, AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES, value, sizeof(value));
     if (ret >= 0) {
         value[0] = '\0';
-        int stream_sample_rate = GetSampleRate();
+        i = 0;
         int cursor = 0;
-        int avail = sizeof(value) - cursor;
-        ret = snprintf(value + cursor, avail, "%s%d",
-                       cursor > 0 ? "|" : "",
-                       stream_sample_rate);
+        if (device_cap_query_) {
+            while (device_cap_query_->config->sample_rate[i] != 0) {
+                int avail = sizeof(value) - cursor;
+                ret = snprintf(value + cursor, avail, "%s%d",
+                               cursor > 0 ? "|" : "",
+                               device_cap_query_->config->sample_rate[i]);
+                if (ret < 0 || ret >= avail) {
+                    // if cursor is at the last element of the array
+                    //    overwrite with \0 is duplicate work as
+                    //    snprintf already put a \0 in place.
+                    // else
+                    //    we had space to write the '|' at value[cursor]
+                    //    (which will be overwritten) or no space to fill
+                    //    the first element (=> cursor == 0)
+                    value[cursor] = '\0';
+                    break;
+                }
+                cursor += ret;
+                ++i;
+            }
+        } else {
+            int stream_sample_rate = GetSampleRate();
+            int avail = sizeof(value);
+            ret = snprintf(value, avail, "%d", stream_sample_rate);
+        }
         str_parms_add_str(reply, AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES,
                           value);
         found = true;
@@ -3290,29 +3345,39 @@ StreamOutPrimary::StreamOutPrimary(
 
     //TODO: check if USB device is connected or not
     if (AudioExtn::audio_devices_cmp(mAndroidOutDevices, audio_is_usb_out_device)){
+        // get capability from device of USB
+        device_cap_query_ = (pal_param_device_capability_t *)
+                                calloc(1, sizeof(pal_param_device_capability_t));
+        if (!device_cap_query_) {
+            AHAL_ERR("Failed to allocate mem for device_cap_query_");
+            goto error;
+        }
+        dynamic_media_config_t *dynamic_media_config = (dynamic_media_config_t *)
+                                                  calloc(1, sizeof(dynamic_media_config_t));
+        if (!dynamic_media_config) {
+            free(device_cap_query_);
+            AHAL_ERR("Failed to allocate mem for dynamic_media_config");
+            goto error;
+        }
+        size_t payload_size = 0;
+        device_cap_query_->id = PAL_DEVICE_OUT_USB_DEVICE;
+        device_cap_query_->addr.card_id = adevice->usb_card_id_;
+        device_cap_query_->addr.device_num = adevice->usb_dev_num_;
+        device_cap_query_->config = dynamic_media_config;
+        device_cap_query_->is_playback = true;
+        ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
+                            (void **)&device_cap_query_,
+                            &payload_size, nullptr);
+        if (ret < 0) {
+            AHAL_ERR("Error usb device is not connected");
+            free(dynamic_media_config);
+            free(device_cap_query_);
+            goto error;
+        }
         if (!config->sample_rate || !config->format || !config->channel_mask) {
-            // get capability from device of USB
-            pal_param_device_capability_t *device_cap_query = (pal_param_device_capability_t *)
-                                                      malloc(sizeof(pal_param_device_capability_t));
-            if (!device_cap_query) {
-                AHAL_ERR("Failed to allocate mem for device_cap_query");
-                goto error;
-            }
-            dynamic_media_config_t dynamic_media_config;
-            size_t payload_size = 0;
-            device_cap_query->id = PAL_DEVICE_OUT_USB_DEVICE;
-            device_cap_query->addr.card_id = adevice->usb_card_id_;
-            device_cap_query->addr.device_num = adevice->usb_dev_num_;
-            device_cap_query->config = &dynamic_media_config;
-            device_cap_query->is_playback = true;
-            ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
-                                (void **)&device_cap_query,
-                                &payload_size, nullptr);
-            free(device_cap_query);
-
-            config->sample_rate = dynamic_media_config.sample_rate;
-            config->channel_mask = (audio_channel_mask_t) dynamic_media_config.mask;
-            config->format = (audio_format_t)dynamic_media_config.format;
+            config->sample_rate = dynamic_media_config->sample_rate[0];
+            config->channel_mask = (audio_channel_mask_t) dynamic_media_config->mask[0];
+            config->format = (audio_format_t)dynamic_media_config->format[0];
             if (config->sample_rate == 0)
                 config->sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
             if (config->channel_mask == AUDIO_CHANNEL_NONE)
@@ -4429,26 +4494,42 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
     }
 
     if (AudioExtn::audio_devices_cmp(mAndroidInDevices, audio_is_usb_in_device)) {
+        // get capability from device of USB
+        device_cap_query_ = (pal_param_device_capability_t *)
+                                calloc(1, sizeof(pal_param_device_capability_t));
+        if (!device_cap_query_) {
+            AHAL_ERR("Failed to allocate mem for device_cap_query_");
+            goto error;
+        }
+        dynamic_media_config_t *dynamic_media_config = (dynamic_media_config_t *)
+                                                  calloc(1, sizeof(dynamic_media_config_t));
+        if (!dynamic_media_config) {
+            free(device_cap_query_);
+            AHAL_ERR("Failed to allocate mem for dynamic_media_config");
+            goto error;
+        }
+        size_t payload_size = 0;
+        device_cap_query_->id = PAL_DEVICE_IN_USB_HEADSET;
+        device_cap_query_->addr.card_id = adevice->usb_card_id_;
+        device_cap_query_->addr.device_num = adevice->usb_dev_num_;
+        device_cap_query_->config = dynamic_media_config;
+        device_cap_query_->is_playback = false;
+        ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
+                            (void **)&device_cap_query_,
+                            &payload_size, nullptr);
+        if (ret < 0) {
+            AHAL_ERR("Error usb device is not connected");
+            free(dynamic_media_config);
+            free(device_cap_query_);
+            goto error;
+        }
+        AHAL_DBG("usb fs=%d format=%d mask=%x",
+            dynamic_media_config->sample_rate[0],
+            dynamic_media_config->format[0], dynamic_media_config->mask[0]);
         if (!config->sample_rate) {
-            // get capability from device of USB
-            pal_param_device_capability_t *device_cap_query = new pal_param_device_capability_t();
-            dynamic_media_config_t dynamic_media_config;
-            size_t payload_size = 0;
-            device_cap_query->id = PAL_DEVICE_IN_USB_HEADSET;
-            device_cap_query->addr.card_id = adevice->usb_card_id_;
-            device_cap_query->addr.device_num = adevice->usb_dev_num_;
-            device_cap_query->config = &dynamic_media_config;
-            device_cap_query->is_playback = false;
-            ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
-                                (void **)&device_cap_query,
-                                &payload_size, nullptr);
-            AHAL_DBG("usb fs=%d format=%d mask=%x",
-                dynamic_media_config.sample_rate,
-                dynamic_media_config.format, dynamic_media_config.mask);
-            delete device_cap_query;
-            config->sample_rate = dynamic_media_config.sample_rate;
-            config->channel_mask = (audio_channel_mask_t) dynamic_media_config.mask;
-            config->format = (audio_format_t)dynamic_media_config.format;
+            config->sample_rate = dynamic_media_config->sample_rate[0];
+            config->channel_mask = (audio_channel_mask_t) dynamic_media_config->mask[0];
+            config->format = (audio_format_t)dynamic_media_config->format[0];
             memcpy(&config_, config, sizeof(struct audio_config));
         }
     }
@@ -4604,7 +4685,8 @@ StreamPrimary::StreamPrimary(audio_io_handle_t handle,
     handle_(handle),
     config_(*config),
     volume_(NULL),
-    mmap_shared_memory_fd(-1)
+    mmap_shared_memory_fd(-1),
+    device_cap_query_(NULL)
 {
     memset(&streamAttributes_, 0, sizeof(streamAttributes_));
     memset(&address_, 0, sizeof(address_));
@@ -4616,6 +4698,14 @@ StreamPrimary::~StreamPrimary(void)
     if (volume_) {
         free(volume_);
         volume_ = NULL;
+    }
+    if (device_cap_query_) {
+        if (device_cap_query_->config) {
+            free(device_cap_query_->config);
+            device_cap_query_->config = NULL;
+        }
+        free(device_cap_query_);
+        device_cap_query_ = NULL;
     }
 }
 
