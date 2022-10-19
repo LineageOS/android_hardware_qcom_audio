@@ -391,6 +391,7 @@ static void process_pcm_id(const XML_Char **attr)
 
     int pcm_id = atoi((char *)attr[5]);
 
+#ifdef PLATFORM_AUTO
     if (strcmp(attr[6], "fe") != 0) {
         ALOGE("%s: fe id not mentioned", __func__);
         goto done;
@@ -403,6 +404,15 @@ static void process_pcm_id(const XML_Char **attr)
               __func__, attr[1], type, pcm_id, fe_id);
         goto done;
     }
+#else
+    int fe_id = -1;
+
+    if (platform_set_usecase_pcm_id(index, type, pcm_id, fe_id) < 0) {
+        ALOGE("%s: usecase %s type %d pcm_id %d fe_id %d was not set!",
+              __func__, attr[1], type, pcm_id, fe_id);
+        goto done;
+    }
+#endif
 
 done:
     return;

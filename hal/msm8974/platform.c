@@ -5764,6 +5764,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         path = acdb_dev_type-1;
         fe_id = platform_get_fe_id(usecase->id, path);
 
+#ifdef PLATFORM_AUTO
         if (my_data->acdb_send_audio_cal_v6 && (fe_id != -1) ) {
             my_data->acdb_send_audio_cal_v6(acdb_dev_id, acdb_dev_type,
                                             app_type, sample_rate, fe_id,
@@ -5779,6 +5780,19 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
             my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type, app_type,
                                          sample_rate);
         }
+#else
+        if (my_data->acdb_send_audio_cal_v4) {
+            my_data->acdb_send_audio_cal_v4(acdb_dev_id, acdb_dev_type,
+                                            app_type, sample_rate, i,
+                                            backend_cfg.sample_rate);
+        } else if (my_data->acdb_send_audio_cal_v3) {
+            my_data->acdb_send_audio_cal_v3(acdb_dev_id, acdb_dev_type,
+                                            app_type, sample_rate, i);
+        } else if (my_data->acdb_send_audio_cal) {
+            my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type, app_type,
+                                         sample_rate);
+        }
+#endif
     }
 
     /* send haptics audio calibration */
