@@ -152,6 +152,8 @@ PRODUCT_PACKAGES += ftm_test_config_parrot-qrd-snd-card
 PRODUCT_PACKAGES += ftm_test_config_parrot-idp-snd-card
 PRODUCT_PACKAGES += ftm_test_config_parrot-qrd-sku1-snd-card
 PRODUCT_PACKAGES += ftm_test_config_parrot-idp-sku1-snd-card
+PRODUCT_PACKAGES += ftm_test_config_ravelin-qrd-snd-card
+PRODUCT_PACKAGES += ftm_test_config_ravelin-idp-snd-card
 PRODUCT_PACKAGES += audioadsprpcd
 PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
 PRODUCT_PACKAGES += android.hardware.audio.service_64
@@ -160,6 +162,10 @@ PRODUCT_PACKAGES += IDP_acdb_cal.acdb
 PRODUCT_PACKAGES += IDP_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += IDP_ravelin_acdb_cal.acdb
+PRODUCT_PACKAGES += IDP_ravelin_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += QRD_ravelin_acdb_cal.acdb
+PRODUCT_PACKAGES += QRD_ravelin_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += IDP_parrot_sku1_acdb_cal.acdb
 PRODUCT_PACKAGES += IDP_parrot_sku1_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_parrot_sku1_acdb_cal.acdb
@@ -215,6 +221,33 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
+
+#XML Audio configuration files
+ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
+PRODUCT_COPY_FILES += \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
+
+#Audio configuration xml's common to Parrot family
+PRODUCT_COPY_FILES += \
+$(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
+
+endif
+
+# Audio configuration xml's related to Parrot
+QCV_FAMILY_SKUS := ravelin
+DEVICE_SKU := ravelin
+
+CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
+
+PRODUCT_COPY_FILES += \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_ravelin_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_ravelin_qrd.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_ravelin_idp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_ravelin_idp.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_ravelin_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_ravelin_qrd.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_ravelin_idp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_ravelin_idp.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_upd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_upd.xml \
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
