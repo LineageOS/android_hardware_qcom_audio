@@ -3476,4 +3476,38 @@
         <ctl name="ADC1_MIXER Switch" value="1" />
     </path>
 
+    <path name="va-mic-dmic">
+        <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+        <ctl name="VA_AIF1_CAP Mixer DEC1" value="1" />
+        <ctl name="VA DEC0 MUX" value="MSM_DMIC" />
+        <ctl name="VA DEC1 MUX" value="MSM_DMIC" />
+        <ctl name="VA DMIC MUX0" value="DMIC1" />
+        <ctl name="VA DMIC MUX1" value="DMIC0" />
+    </path>
+
+    <path name="headset-va-mic">
+        <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+        <ctl name="VA DEC0 MUX" value="SWR_MIC" />
+        <ctl name="VA SMIC MUX0" value="SWR_MIC5" />
+        <ctl name="ADC2_MIXER Switch" value="1" />
+        <ctl name="ADC2 MUX" value="INP2" />
+        <ctl name="ADC2_BCS Disable" value="1" />
+        <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
+        <ctl name="VA_DEC0 MODE" value="ADC_LOW_PWR" />
+        <ctl name="HDR12 MUX" value="NO_HDR12" />
+    </path>
+
+     <path name="headset-va-mic-lpi">
+         <ctl name="LPI Enable" value="1" />
+         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+         <ctl name="VA DEC0 MUX" value="SWR_MIC" />
+         <ctl name="VA SMIC MUX0" value="SWR_MIC5" />
+         <ctl name="ADC2_MIXER Switch" value="1" />
+         <ctl name="ADC2 MUX" value="INP2" />
+         <ctl name="ADC2_BCS Disable" value="1" />
+         <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
+         <ctl name="VA_DEC0 MODE" value="ADC_LOW_PWR" />
+         <ctl name="HDR12 MUX" value="NO_HDR12" />
+    </path>
+
 </mixer>

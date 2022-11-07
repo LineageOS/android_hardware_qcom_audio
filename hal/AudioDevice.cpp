@@ -1038,6 +1038,19 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     int ret = 0;
     bool is_charging = false;
 
+#ifdef AGM_HIDL_ENABLED
+    /*
+     * register HIDL services for PAL & AGM
+     * pal_init() depends on AGM, so need to initialize
+     * hidl interface before calling to pal_init()
+     */
+    ret = AudioExtn::audio_extn_hidl_init();
+    if (ret) {
+        AHAL_ERR("audio_extn_hidl_init failed ret=(%d)", ret);
+        return ret;
+    }
+#endif
+
     ret = pal_init();
     if (ret) {
         AHAL_ERR("pal_init failed ret=(%d)", ret);
@@ -1048,16 +1061,18 @@ int AudioDevice::Init(hw_device_t **device, const hw_module_t *module) {
     if (ret) {
         AHAL_ERR("pal register callback failed ret=(%d)", ret);
     }
+
+#ifndef AGM_HIDL_ENABLED
     /*
      *Once PAL init is sucessfull, register the PAL service
      *from HAL process context
      */
-    //AudioExtn::audio_extn_hidl_init();
     ret = AudioExtn::audio_extn_hidl_init();
     if (ret) {
         AHAL_ERR("audio_extn_hidl_init failed ret=(%d)", ret);
         return ret;
     }
+#endif
 
     adev_->device_.get()->common.tag = HARDWARE_DEVICE_TAG;
     adev_->device_.get()->common.version = AUDIO_DEVICE_API_VERSION_3_2;
@@ -1460,8 +1475,8 @@ int AudioDevice::SetParameters(const char *kvpairs) {
                     ret = pal_get_param(PAL_PARAM_ID_DEVICE_CAPABILITY,
                             (void **)&device_cap_query,
                             &payload_size, nullptr);
-                    if ((dynamic_media_config.sample_rate == 0 && dynamic_media_config.format == 0 &&
-                            dynamic_media_config.mask == 0) || (dynamic_media_config.jack_status == false))
+                    if ((dynamic_media_config.sample_rate[0] == 0 && dynamic_media_config.format[0] == 0 &&
+                            dynamic_media_config.mask[0] == 0) || (dynamic_media_config.jack_status == false))
                         usb_input_dev_enabled = false;
                     else
                         usb_input_dev_enabled = true;

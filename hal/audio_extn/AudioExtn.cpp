@@ -25,6 +25,40 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted (subject to the limitations in the
+ * disclaimer below) provided that the following conditions are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *
+ *   * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #define LOG_TAG "AHAL: AudioExtn"
@@ -46,6 +80,12 @@
 #include <vendor/qti/hardware/pal/1.0/IPAL.h>
 using vendor::qti::hardware::pal::V1_0::IPAL;
 using vendor::qti::hardware::pal::V1_0::implementation::PAL;
+#ifdef AGM_HIDL_ENABLED
+#include <agm_server_wrapper.h>
+#include <vendor/qti/hardware/AGMIPC/1.0/IAGM.h>
+using vendor::qti::hardware::AGMIPC::V1_0::IAGM;
+using vendor::qti::hardware::AGMIPC::V1_0::implementation::AGM;
+#endif
 using android::hardware::defaultPassthroughServiceImplementation;
 using android::sp;
 using namespace android::hardware;
@@ -664,9 +704,9 @@ int AudioExtn::karaoke_open(pal_device_id_t device_out, pal_stream_callback pal_
                                  &payload_size, nullptr);
             pal_devs[i].address.card_id = adevice->usb_card_id_;
             pal_devs[i].address.device_num = adevice->usb_dev_num_;
-            pal_devs[i].config.sample_rate = dynamic_media_config.sample_rate;
+            pal_devs[i].config.sample_rate = dynamic_media_config.sample_rate[0];
             pal_devs[i].config.ch_info = ch_info;
-            pal_devs[i].config.aud_fmt_id = (pal_audio_fmt_t)dynamic_media_config.format;
+            pal_devs[i].config.aud_fmt_id = (pal_audio_fmt_t)dynamic_media_config.format[0];
             free(device_cap_query);
         } else {
             pal_devs[i].config.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
@@ -701,6 +741,7 @@ int AudioExtn::karaoke_close(){
 
 int AudioExtn::audio_extn_hidl_init() {
 
+    int num_threads = 32;
 #ifdef PAL_HIDL_ENABLED
    /* register audio PAL HIDL */
     sp<IPAL> service = new PAL();
@@ -708,12 +749,27 @@ int AudioExtn::audio_extn_hidl_init() {
      *We request for more threads as the same number of threads would be divided
      *between PAL and audio HAL HIDL
      */
-    configureRpcThreadpool(32, false /*callerWillJoin*/);
+    configureRpcThreadpool(num_threads, false /*callerWillJoin*/);
     if(android::OK !=  service->registerAsService()) {
         AHAL_ERR("Could not register PAL service");
         return -EINVAL;
     } else {
         AHAL_DBG("successfully registered PAL service");
+    }
+#endif
+
+#ifdef AGM_HIDL_ENABLED
+    /* register AGM HIDL */
+    sp<IAGM> agm_service = new AGM();
+    AGM *temp = static_cast<AGM *>(agm_service.get());
+    configureRpcThreadpool(num_threads, false /*callerWillJoin*/);
+    if (temp->is_agm_initialized()) {
+        if(android::OK != agm_service->registerAsService()) {
+            AHAL_ERR("Could not register AGM service");
+            return -EINVAL;
+        } else {
+            AHAL_DBG("successfully registered AGM service");
+        }
     }
 #endif
     /* to register other hidls */

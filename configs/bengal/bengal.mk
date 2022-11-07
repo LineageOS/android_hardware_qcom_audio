@@ -39,6 +39,7 @@ AUDIO_FEATURE_ENABLED_SSR := true
 AUDIO_FEATURE_ENABLED_DTS_EAGLE := false
 AUDIO_FEATURE_ENABLED_PAL_HIDL := true
 AUDIO_FEATURE_ENABLED_LSM_HIDL := true
+AUDIO_FEATURE_ENABLED_AGM_HIDL := true
 BOARD_USES_SRS_TRUEMEDIA := false
 DTS_CODEC_M_ := false
 MM_AUDIO_ENABLED_SAFX := true
@@ -92,8 +93,10 @@ AUDIO_FEATURE_ENABLED_MCS := true
 AUDIO_AGM := libagmclient
 AUDIO_AGM += libagmservice
 AUDIO_AGM += vendor.qti.hardware.AGMIPC@1.0-impl
+ifneq ($(strip $(AUDIO_FEATURE_ENABLED_AGM_HIDL)), true)
 AUDIO_AGM += vendor.qti.hardware.AGMIPC@1.0-service
 AUDIO_AGM += vendor.qti.hardware.AGMIPC@1.0-service.rc
+endif
 AUDIO_AGM += libagm
 AUDIO_AGM += agmplay
 AUDIO_AGM += agmcap
@@ -121,6 +124,7 @@ AUDIO_HARDWARE := audio.a2dp.default
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
 AUDIO_HARDWARE += audio.primary.bengal
+AUDIO_HARDWARE += audio.usb.bengal
 
 #HAL Wrapper
 AUDIO_WRAPPER := libqahw
@@ -213,7 +217,8 @@ PRODUCT_COPY_FILES += \
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration_gaming.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration_gaming.xml
 endif
 
 PRODUCT_COPY_FILES += \

@@ -82,6 +82,21 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PAL_HIDL)),true)
 
   LOCAL_CFLAGS += -DPAL_HIDL_ENABLED
 endif
+
+ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AGM_HIDL)),true)
+  LOCAL_SHARED_LIBRARIES += \
+     vendor.qti.hardware.AGMIPC@1.0-impl \
+     vendor.qti.hardware.AGMIPC@1.0 \
+     libagm
+
+  LOCAL_CFLAGS += -DAGM_HIDL_ENABLED
+  LOCAL_C_INCLUDES += \
+    $(TOP)/vendor/qcom/opensource/agm/ipc/HwBinders/agm_ipc_client/
+
+  LOCAL_HEADER_LIBRARIES += \
+    libagm_headers
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_GEF_SUPPORT)),true)
     LOCAL_CFLAGS += -DAUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
@@ -91,3 +106,30 @@ endif
 endif
 
 include $(BUILD_SHARED_LIBRARY)
+
+
+# Legacy USB AUDIO HAL
+ifneq ($(filter bengal,$(TARGET_BOARD_PLATFORM)),)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := audio.usb.$(TARGET_BOARD_PLATFORM)
+LOCAL_MODULE_RELATIVE_PATH := hw
+LOCAL_MODULE_OWNER := qti
+LOCAL_VENDOR_MODULE := true
+
+LOCAL_SRC_FILES:= \
+        audio_usb_hal.c
+
+LOCAL_CFLAGS += \
+    -Wno-unused-parameter \
+
+LOCAL_SHARED_LIBRARIES := \
+     liblog \
+     libcutils \
+     libaudioutils \
+     libtinyalsa \
+     libalsautils
+
+LOCAL_HEADER_LIBRARIES += libhardware_headers
+include $(BUILD_SHARED_LIBRARY)
+endif
