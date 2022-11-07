@@ -33,6 +33,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Not a contribution.
  */
 
 #ifndef AUDIO_EXTN_H
@@ -1482,4 +1485,5 @@ snd_device_t audio_extn_get_loopback_snd_device(struct audio_device *adev,
 
 void audio_get_vendor_config_path(char* config_file_path, int path_size);
 bool audio_extn_is_concurrent_pcm_record_enabled();
+bool audio_extn_is_concurrent_low_latency_pcm_record_enabled();
 #endif /* AUDIO_EXTN_H */

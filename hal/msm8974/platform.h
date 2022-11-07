@@ -15,6 +15,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Not a contribution.
  */
 
 #ifndef QCOM_AUDIO_PLATFORM_H
@@ -899,6 +902,8 @@ enum {
     MSM_FRONTEND_DAI_MULTIMEDIA32,
     MSM_FRONTEND_DAI_MULTIMEDIA33,
     MSM_FRONTEND_DAI_MULTIMEDIA34,
+    MSM_FRONTEND_DAI_MULTIMEDIA35,
+    MSM_FRONTEND_DAI_MULTIMEDIA36,
     MSM_FRONTEND_DAI_VOIP,
     MSM_FRONTEND_DAI_AFE_RX,
     MSM_FRONTEND_DAI_AFE_TX,

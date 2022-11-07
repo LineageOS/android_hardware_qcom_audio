@@ -105,11 +105,14 @@
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD7" type="out" id="24" fe="13"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD8" type="out" id="25" fe="14"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_MEDIA" type="out" id="0" fe="0"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_MEDIA_LL" type="out" id="12" fe="9"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION" type="out" id="9" fe="4"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE" type="out" id="1" fe="1"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE_LL" type="out" id="64" fe="35"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_PHONE" type="out" id="12" fe="9"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_PHONE_LL" type="out" id="12" fe="9"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_ALERTS" type="out" id="59" fe="30"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_ALERTS_LL" type="out" id="64" fe="35"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER" type="out" id="55" fe="22"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_REAR_SEAT" type="out" id="54" fe="21"/>
         <usecase name="USECASE_VOICEMMODE1_CALL" type="in" id="2" fe="50"/>
@@ -120,7 +123,7 @@
         <usecase name="USECASE_VOWLAN_CALL" type="out" id="-1" fe="-1"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_AFE_PROXY" type="out" id="5" fe="-1"/>
         <usecase name="USECASE_AUDIO_RECORD_AFE_PROXY" type="in" id="6" fe="-1"/>
-        <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY" type="in" id="13" fe="7"/>
+        <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY" type="in" id="60" fe="31"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_ULL" type="out" id="13" fe="7"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="12" fe="9"/>
         <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="12" fe="9"/>
@@ -145,6 +148,7 @@
         <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="31" fe="16"/>
         <usecase name="USECASE_AUDIO_RECORD2" type="in" id="61" fe="32"/>
         <usecase name="USECASE_AUDIO_RECORD3" type="in" id="62" fe="33"/>
+        <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY2" type="in" id="63" fe="34" />
     </pcm_ids>
 
     <config_params>
