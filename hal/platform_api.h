@@ -149,7 +149,7 @@ struct audio_custom_mtmx_params_info {
 struct audio_custom_mtmx_params {
     struct listnode list;
     struct audio_custom_mtmx_params_info info;
-    uint64_t coeffs[0];
+    uint32_t coeffs[0];
 };
 
 struct audio_custom_mtmx_in_params_info {
