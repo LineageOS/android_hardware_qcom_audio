@@ -635,7 +635,7 @@ static int set_custom_mtmx_output_channel_map(struct audio_device *adev,
     struct mixer_ctl *ctl = NULL;
     char mixer_ctl_name[128] = {0};
     int ret = 0;
-    long channel_map[AUDIO_MAX_DSP_CHANNELS] = {0};
+    int channel_map[AUDIO_MAX_DSP_CHANNELS] = {0};
 
     ALOGV("%s channel_count %d", __func__, ch_count);
 
