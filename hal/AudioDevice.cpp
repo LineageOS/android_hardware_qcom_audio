@@ -936,6 +936,14 @@ static size_t adev_get_input_buffer_size(
 
     size_t size = 0;
     uint32_t bytes_per_period_sample = 0;
+    /* input for compress formats */
+    if (config && !audio_is_linear_pcm(config->format)) {
+        if (config->format == AUDIO_FORMAT_AAC_LC) {
+            return COMPRESS_CAPTURE_AAC_MAX_OUTPUT_BUFFER_SIZE;
+        }
+        return 0;
+    }
+
     if (config != NULL) {
         int channel_count = audio_channel_count_from_in_mask(config->channel_mask);
 
