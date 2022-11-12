@@ -551,6 +551,11 @@
         <ctl name="EC Reference Channels" value="Two"/>
     </path>
 
+    <path name="echo-reference usb-headphones">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="USB_AUDIO_RX"/>
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
     <path name="echo-reference bt-sco-wb">
         <path name="echo-reference bt-sco" />
     </path>
@@ -579,6 +584,11 @@
         <ctl name="EC Reference Channels" value="Two"/>
     </path>
 
+    <path name="echo-reference-voip-low-latency usb-headphones">
+        <ctl name="AUDIO_REF_EC_UL8 MUX" value="USB_AUDIO_RX"/>
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
     <path name="echo-reference-voip-low-latency bt-sco-wb">
         <path name="echo-reference-voip-low-latency bt-sco" />
     </path>
@@ -604,6 +614,11 @@
 
     <path name="echo-reference-voip bt-sco">
         <ctl name="AUDIO_REF_EC_UL10 MUX" value="SLIM_7_RX" />
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+
+    <path name="echo-reference-voip usb-headphones">
+        <ctl name="AUDIO_REF_EC_UL10 MUX" value="USB_AUDIO_RX"/>
         <ctl name="EC Reference Channels" value="Two"/>
     </path>
 
