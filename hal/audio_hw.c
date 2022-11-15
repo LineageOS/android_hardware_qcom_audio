@@ -93,6 +93,8 @@
 #include <log_utils.h>
 #endif
 
+#define SKIP_INPUT_SOURCE_PRIORITY
+
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /*DIRECT PCM has same buffer sizes as DEEP Buffer*/
 #define DIRECT_PCM_NUM_FRAGMENTS 2
@@ -2964,6 +2966,12 @@ static struct stream_in *get_priority_input(struct audio_device *adev)
 
             if (USECASE_AUDIO_RECORD_FM_VIRTUAL == usecase->id)
                 continue;
+#ifdef SKIP_INPUT_SOURCE_PRIORITY
+            // temporary fix to resolve issue when accessing Google Assistant while FM is active.
+            if (USECASE_AUDIO_RECORD_ECHO_REF_EXT == usecase->id) {
+                continue;
+            }
+#endif
             priority = source_priority(in->source);
 
             if (priority > last_priority) {
@@ -3167,8 +3175,21 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                     }
                     priority_in = voip_in;
                 } else {
+#ifdef SKIP_INPUT_SOURCE_PRIORITY
+
+                    //  Precondition: Google Assistant has active use-cases: (1)Echo-ref and (2) Audio-record (with Voice-recognition)
+                    //  When fm is requested: audio-rec(VR) use-case is selected due to get-priority-input order.
+                    //  To avoid situation skipping use-cases: FM and Echo-Ref from the get-priority-input.
+                    if ((uc_id == USECASE_AUDIO_RECORD_FM_VIRTUAL || uc_id == USECASE_AUDIO_RECORD_ECHO_REF_EXT)){
+                        ALOGD("%s: Skipping get_priority_input for use-case-id:%d(%s).", __func__, uc_id, use_case_table[uc_id]);
+                    } else {
+                    /* get the input with the highest priority source*/
+                        priority_in = get_priority_input(adev);
+                    }
+#else
                     /* get the input with the highest priority source*/
                     priority_in = get_priority_input(adev);
+#endif
 
                     if (!priority_in ||
                             audio_extn_auto_hal_overwrite_priority_for_auto(usecase->stream.in))
@@ -3500,8 +3521,19 @@ static int stop_input_stream(struct stream_in *in)
               __func__, in->usecase);
         return -EINVAL;
     }
+#ifdef SKIP_INPUT_SOURCE_PRIORITY
+    // Skip (1)fm-virtual-record and (2)echo-reference-external from get-priority-input logic.
+    // See comment in function select_devices() before call to get_priority_input()
+    if ((in->usecase == USECASE_AUDIO_RECORD_FM_VIRTUAL || in->usecase == USECASE_AUDIO_RECORD_ECHO_REF_EXT)){
+        ALOGD("%s: Skipping get_priority_input for use-case-id:%d/%s.", __func__, in->usecase, use_case_table[in->usecase]);
+    } else {
+        priority_in = get_priority_input(adev);
+    }
+#else
 
     priority_in = get_priority_input(adev);
+
+#endif
 
     if (audio_extn_ext_hw_plugin_usecase_stop(adev->ext_hw_plugin, uc_info))
         ALOGE("%s: failed to stop ext hw plugin", __func__);
