@@ -1688,7 +1688,9 @@ int platform_info_init(const char *filename, void *platform, caller_t caller_typ
 
     my_data.caller = caller_type;
     my_data.platform = platform;
-    my_data.kvpairs = str_parms_create();
+
+    if (!my_data.kvpairs)
+        my_data.kvpairs = str_parms_create();
 
     XML_SetElementHandler(parser, start_tag, end_tag);
 
@@ -1726,4 +1728,10 @@ err_close_file:
 done:
     pthread_mutex_unlock(&parser_lock);
     return ret;
+}
+
+void platform_info_deinit()
+{
+    if (my_data.kvpairs)
+        str_parms_destroy(my_data.kvpairs);
 }
