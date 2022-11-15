@@ -341,6 +341,7 @@ static void hdr_get_parameters(std::shared_ptr<AudioDevice> adev,
 AudioDevice::~AudioDevice() {
     audio_extn_gef_deinit(adev_);
     audio_extn_sound_trigger_deinit(adev_);
+    AudioExtn::battery_properties_listener_deinit();
     pal_deinit();
 }
 
