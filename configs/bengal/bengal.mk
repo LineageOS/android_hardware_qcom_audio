@@ -402,6 +402,12 @@ vendor.qc2audio.suspend.enabled=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.qc2audio.per_frame.flac.dec.enabled=true
 
+# compress capture feature related
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.compress_capture.enabled=true \
+vendor.audio.compress_capture.aac=true
+# compress capture end
+
 ifneq ($(GENERIC_ODM_IMAGE),true)
 $(warning "Enabling codec2.0 SW only for non-generic odm build variant")
 #Rank OMX SW codecs lower than OMX HW codecs

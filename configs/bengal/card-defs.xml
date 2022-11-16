@@ -342,6 +342,19 @@
             <session_mode>1</session_mode>
         </props>
     </pcm-device>
+    <compress-device>
+        <id>124</id>
+        <name>COMPRESS124</name>
+        <compress_plugin>
+            <so-name>libagm_compress_plugin.so</so-name>
+        </compress_plugin>
+        <props>
+            <playback>0</playback>
+            <capture>1</capture>
+            <!--  AGM_SESSION_COMPRESS  -->
+            <session_mode>4</session_mode>
+        </props>
+    </compress-device>
 
     <mixer>
         <id>1</id>
