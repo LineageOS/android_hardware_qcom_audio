@@ -3176,18 +3176,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                     priority_in = voip_in;
                 } else {
 #ifdef SKIP_INPUT_SOURCE_PRIORITY
-
-                    //  Precondition: Google Assistant has active use-cases: (1)Echo-ref and (2) Audio-record (with Voice-recognition)
-                    //  When fm is requested: audio-rec(VR) use-case is selected due to get-priority-input order.
-                    //  To avoid situation skipping use-cases: FM and Echo-Ref from the get-priority-input.
-                    if ((uc_id == USECASE_AUDIO_RECORD_FM_VIRTUAL || uc_id == USECASE_AUDIO_RECORD_ECHO_REF_EXT)){
-                        ALOGD("%s: Skipping get_priority_input for use-case-id:%d(%s).", __func__, uc_id, use_case_table[uc_id]);
-                    } else {
-                    /* get the input with the highest priority source*/
-                        priority_in = get_priority_input(adev);
-                    }
+                    ALOGD("%s: Skipping get_priority_input for use-case-id:%d(%s).", __func__, uc_id, use_case_table[uc_id]);
 #else
-                    /* get the input with the highest priority source*/
                     priority_in = get_priority_input(adev);
 #endif
 
