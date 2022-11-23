@@ -142,6 +142,7 @@ MM_AUDIO += capi_v2_synth
 MM_AUDIO += capi_v2_avc
 MM_AUDIO += capi_v2_asrc
 MM_AUDIO += capi_v2_ecmx
+MM_AUDIO += capi_v2_vote
 MM_AUDIO += icc_module.so.1
 MM_AUDIO += sec_module.so.1
 MM_AUDIO += audio-nxp-auto
