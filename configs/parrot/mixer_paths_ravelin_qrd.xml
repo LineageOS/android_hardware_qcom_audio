@@ -346,12 +346,7 @@
     </path>
 
     <path name="speaker-mono-2">
-        <ctl name="WSA RX1 MUX" value="AIF1_PB" />
-        <ctl name="WSA_RX1 INP0" value="RX1" />
-        <ctl name="WSA_COMP2 Switch" value="1" />
-        <ctl name="SpkrRight COMP Switch" value="1" />
-        <ctl name="SpkrRight VISENSE Switch" value="1" />
-        <ctl name="SpkrRight SWR DAC_Port Switch" value="1" />
+        <path name="speaker" />
     </path>
 
     <path name="speaker-mono-vbat">
@@ -361,7 +356,7 @@
 
     <path name="speaker-mono-2-vbat">
        <path name="speaker-mono-2" />
-       <ctl name="WSA_RX INT1 VBAT WSA RX1 VBAT Enable" value="1" />
+       <ctl name="WSA_RX INT1 VBAT WSA RX0 VBAT Enable" value="1" />
     </path>
 
     <path name="speaker-vbat">
@@ -431,7 +426,7 @@
     </path>
 
     <path name="speaker-mic">
-        <path name="amic5" />
+        <path name="amic1" />
     </path>
 
     <path name="speaker-mic-liquid">
