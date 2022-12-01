@@ -604,4 +604,29 @@ bool is_interactive_usecase(audio_usecase_t uc_id);
  * stream_in or stream_out mutex first, followed by the audio_device mutex.
  */
 
+static inline audio_format_t pcm_format_to_audio_format(const enum pcm_format format)
+{
+   audio_format_t ret = AUDIO_FORMAT_INVALID;
+   switch(format) {
+        case PCM_FORMAT_S16_LE:
+            ret = (audio_format_t)AUDIO_FORMAT_PCM_SUB_16_BIT;
+            break;
+        case PCM_FORMAT_S32_LE:
+           ret = (audio_format_t)AUDIO_FORMAT_PCM_SUB_32_BIT;
+           break;
+        case PCM_FORMAT_S8:
+           ret = (audio_format_t)AUDIO_FORMAT_PCM_SUB_8_BIT;
+           break;
+        case PCM_FORMAT_S24_LE:
+           ret = (audio_format_t)AUDIO_FORMAT_PCM_SUB_8_24_BIT;
+           break;
+        case PCM_FORMAT_S24_3LE:
+           ret = (audio_format_t)AUDIO_FORMAT_PCM_SUB_24_BIT_PACKED;
+           break;
+        default:
+           break;
+      }
+      return ret;
+}
+
 #endif // QCOM_AUDIO_HW_H

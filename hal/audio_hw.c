@@ -5476,7 +5476,7 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
     else if(in->usecase == USECASE_AUDIO_RECORD_VOIP)
         return VOIP_IO_BUF_SIZE(in->config.rate, DEFAULT_VOIP_BUF_DURATION_MS, DEFAULT_VOIP_BIT_DEPTH_BYTE);
     else if(audio_extn_compr_cap_usecase_supported(in->usecase))
-        return audio_extn_compr_cap_get_buffer_size(in->config.format);
+        return audio_extn_compr_cap_get_buffer_size(pcm_format_to_audio_format(in->config.format));
     else if(audio_extn_cin_attached_usecase(in->usecase))
         return audio_extn_cin_get_buffer_size(in);
 
