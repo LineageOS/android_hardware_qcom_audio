@@ -36,7 +36,7 @@ extern "C" {
 
     int launchPowerPolicyClient(power_policy_init_config_t init_config) {
         ALOGD("%s: power policy launcher called", __func__);
-        ABinderProcess_setThreadPoolMaxThreadCount(0);
+        ABinderProcess_setThreadPoolMaxThreadCount(1);
         std::shared_ptr<PowerPolicyClient> powerPolicyClient =
                 ::ndk::SharedRefBase::make<PowerPolicyClient>(init_config);
         ALOGD("%s:Instantiating power policy client from launcher", __func__);

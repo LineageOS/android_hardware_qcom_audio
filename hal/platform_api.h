@@ -293,6 +293,7 @@ void platform_add_app_type(const char *uc_type,
 
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *, caller_t);
+void platform_info_deinit();
 
 void platform_snd_card_update(void *platform, card_status_t scard_status);
 
