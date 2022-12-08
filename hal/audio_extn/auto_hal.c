@@ -391,8 +391,9 @@ int auto_hal_open_output_stream(struct stream_out *out)
                 goto error;
             }
         }
-        else {
+        else if (out->flags == AUDIO_OUTPUT_FLAG_FAST) {
             out->usecase = USECASE_AUDIO_PLAYBACK_MEDIA_LL;
+            out->flags = AUDIO_OUTPUT_FLAG_MEDIA;
             switch(out->sample_rate)
             {
             case 48000:
@@ -401,6 +402,11 @@ int auto_hal_open_output_stream(struct stream_out *out)
             default:
                 out->config=pcm_config_system_48KHz;
             }
+        }
+        else {
+            ALOGE("%s: Output profile flag(%#x) is not valid", __func__,out->flags);
+            ret = -EINVAL;
+            goto error;
         }
         if (out->flags == AUDIO_OUTPUT_FLAG_NONE ||
             out->flags == AUDIO_OUTPUT_FLAG_PRIMARY)
@@ -435,7 +441,7 @@ int auto_hal_open_output_stream(struct stream_out *out)
         out->volume_l = out->volume_r = MAX_VOLUME_GAIN;
         break;
     case CAR_AUDIO_STREAM_NAV_GUIDANCE:
-        if (out->flags == AUDIO_OUTPUT_FLAG_PRIMARY) {
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE) {
             out->usecase = USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE;
             out->config = pcm_config_media;
             out->config.period_size = fp_get_output_period_size(out->sample_rate, out->format,
@@ -447,7 +453,7 @@ int auto_hal_open_output_stream(struct stream_out *out)
                 }
             out->flags |= AUDIO_OUTPUT_FLAG_NAV_GUIDANCE;
         }
-        else {
+        else if (out->flags == AUDIO_OUTPUT_FLAG_FAST) {
             out->usecase = USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE_LL;
             switch(out->sample_rate)
             {
@@ -476,18 +482,30 @@ int auto_hal_open_output_stream(struct stream_out *out)
                     goto error;
                 }
             }
+            out->flags = AUDIO_OUTPUT_FLAG_NAV_GUIDANCE;
+        }
+        else {
+            ALOGE("%s: Output profile flag(%#x) is not valid", __func__,out->flags);
+            ret = -EINVAL;
+            goto error;
         }
         if (out->flags == AUDIO_OUTPUT_FLAG_NONE)
             out->flags |= AUDIO_OUTPUT_FLAG_NAV_GUIDANCE;
         out->volume_l = out->volume_r = MAX_VOLUME_GAIN;
         break;
     case CAR_AUDIO_STREAM_PHONE:
-        if (out->flags == AUDIO_OUTPUT_FLAG_PRIMARY) {
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE) {
             out->usecase = USECASE_AUDIO_PLAYBACK_PHONE;
             out->flags = AUDIO_OUTPUT_FLAG_PHONE;
         }
-        else if (out->flags == AUDIO_OUTPUT_FLAG_NONE) {
+        else if (out->flags == AUDIO_OUTPUT_FLAG_FAST) {
             out->usecase = USECASE_AUDIO_PLAYBACK_PHONE_LL;
+            out->flags = AUDIO_OUTPUT_FLAG_PHONE;
+        }
+        else {
+            ALOGE("%s: Output profile flag(%#x) is not valid", __func__,out->flags);
+            ret = -EINVAL;
+            goto error;
         }
         switch(out->sample_rate)
         {
@@ -514,12 +532,18 @@ int auto_hal_open_output_stream(struct stream_out *out)
         out->volume_l = out->volume_r = MAX_VOLUME_GAIN;
         break;
     case CAR_AUDIO_STREAM_ALERTS:
-        if (out->flags == AUDIO_OUTPUT_FLAG_PRIMARY) {
+        if (out->flags == AUDIO_OUTPUT_FLAG_NONE) {
             out->usecase = USECASE_AUDIO_PLAYBACK_ALERTS;
             out->flags = AUDIO_OUTPUT_FLAG_ALERTS;
         }
-        else {
+        else if (out->flags == AUDIO_OUTPUT_FLAG_FAST) {
             out->usecase = USECASE_AUDIO_PLAYBACK_ALERTS_LL;
+            out->flags = AUDIO_OUTPUT_FLAG_ALERTS;
+        }
+        else {
+            ALOGE("%s: Output profile flag(%#x) is not valid", __func__,out->flags);
+            ret = -EINVAL;
+            goto error;
         }
         switch(out->sample_rate)
         {

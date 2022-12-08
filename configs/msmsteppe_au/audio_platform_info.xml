@@ -148,7 +148,7 @@
         <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="31" fe="16"/>
         <usecase name="USECASE_AUDIO_RECORD2" type="in" id="61" fe="32"/>
         <usecase name="USECASE_AUDIO_RECORD3" type="in" id="62" fe="33"/>
-        <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY2" type="in" id="63" fe="34" />
+        <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY2" type="in" id="63" fe="34"/>
     </pcm_ids>
 
     <config_params>
