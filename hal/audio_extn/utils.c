@@ -1367,7 +1367,9 @@ int audio_extn_utils_get_app_sample_rate_for_device(
             (compare_device_type(&usecase->stream.out->device_list,AUDIO_DEVICE_OUT_SPEAKER))) {
                 if (!((compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_BUS)) && ((usecase->stream.out->flags &
                     (audio_output_flags_t)AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION) || (usecase->stream.out->flags &
-                    (audio_output_flags_t)AUDIO_OUTPUT_FLAG_PHONE)))) {
+                    (audio_output_flags_t)AUDIO_OUTPUT_FLAG_PHONE) || (usecase->stream.out->flags &
+                    (audio_output_flags_t)AUDIO_OUTPUT_FLAG_NAV_GUIDANCE) || (usecase->stream.out->flags &
+                    (audio_output_flags_t)AUDIO_OUTPUT_FLAG_ALERTS)))) {
                     /* Reset to default if no native stream is active or default device is speaker*/
                     usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
                 }

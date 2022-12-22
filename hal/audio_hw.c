@@ -3355,7 +3355,9 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 #ifdef PLATFORM_AUTO
             if (!(compare_device_type(&usecase->device_list, AUDIO_DEVICE_OUT_BUS) && ((usecase->stream.out->flags &
                 (audio_output_flags_t)AUDIO_OUTPUT_FLAG_SYS_NOTIFICATION) || (usecase->stream.out->flags &
-                (audio_output_flags_t)AUDIO_OUTPUT_FLAG_PHONE)))) {
+                (audio_output_flags_t)AUDIO_OUTPUT_FLAG_PHONE) || (usecase->stream.out->flags &
+                (audio_output_flags_t)AUDIO_OUTPUT_FLAG_NAV_GUIDANCE) || (usecase->stream.out->flags &
+                (audio_output_flags_t)AUDIO_OUTPUT_FLAG_ALERTS)))) {
                 usecase->stream.out->app_type_cfg.sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
             }
 #else
