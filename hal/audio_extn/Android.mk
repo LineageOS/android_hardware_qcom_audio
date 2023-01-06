@@ -94,6 +94,10 @@ LOCAL_CFLAGS := \
     -Wno-unused-function \
     -Wno-unused-variable
 
+ifneq ($(filter bengal,$(TARGET_BOARD_PLATFORM)),)
+    LOCAL_CFLAGS += -DQTI_HEALTH
+endif
+
 LOCAL_SHARED_LIBRARIES := \
     android.hardware.health@1.0 \
     android.hardware.health@2.0 \
@@ -106,6 +110,12 @@ LOCAL_SHARED_LIBRARIES := \
     libhidlbase \
     liblog \
     libutils \
+
+ifneq ($(filter bengal,$(TARGET_BOARD_PLATFORM)),)
+    LOCAL_SHARED_LIBRARIES += \
+        android.hardware.health-V1-ndk \
+        libbinder_ndk
+endif
 
 LOCAL_STATIC_LIBRARIES := libhealthhalutils
 
