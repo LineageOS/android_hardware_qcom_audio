@@ -16,6 +16,24 @@
       "message": "These files are expected to be overridden in device trees.",
       "revId": "57f2b707c50e471069728cdec399c45f5788cb24",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e7776523_eb2c48fc",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 31282
+      },
+      "writtenOn": "2023-01-07T18:48:15Z",
+      "side": 1,
+      "message": "Yeah, but still, that\u0027s an issue, which is not fixed by qcom, they renamed in code, but forgot to rename in configs, so maybe better to keep it here too?",
+      "parentUuid": "bef08115_1e389057",
+      "revId": "57f2b707c50e471069728cdec399c45f5788cb24",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
