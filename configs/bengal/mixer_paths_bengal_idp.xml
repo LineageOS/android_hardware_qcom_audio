@@ -27,7 +27,7 @@
 
 <!-- Changes from Qualcomm Innovation Center are provided under the following license:    -->
 <!--                                                                                      -->
-<!-- Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.             -->
+<!-- Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.             -->
 <!-- SPDX-License-Identifier: BSD-3-Clause-Clear                                          -->
 <mixer>
     <!-- These are the initial mixer settings -->
@@ -2508,10 +2508,10 @@
         <ctl name="TX SMIC MUX0" value="SWR_MIC5" />
         <ctl name="DEC0_BCS Switch" value="1" />
         <ctl name="TX_AIF1_CAP Mixer DEC0" value="1" />
-        <ctl name="ADC2_MIXER Switch" value="1" />
-        <ctl name="ADC2 MUX" value="INP2" />
         <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
         <ctl name="MBHC ChMap" value="SWRM_TX3_CH3" />
+        <ctl name="ADC2_MIXER Switch" value="1" />
+        <ctl name="ADC2 MUX" value="INP2" />
         <ctl name="BCS Channel" value="CH10" />
     </path>
 
@@ -2612,12 +2612,12 @@
 
     <path name="handset">
         <ctl name="RX_MACRO RX0 MUX" value="AIF1_PB" />
-	<ctl name="RX_CDC_DMA_RX_0 Channels" value="One" />
-	<ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
-	<ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
-	<ctl name="EAR_RDAC Switch" value="1" />
-	<ctl name="RDAC3_MUX" value="RX1" />
-	<ctl name="RX_EAR Mode" value="ON" />
+        <ctl name="RX_CDC_DMA_RX_0 Channels" value="One" />
+        <ctl name="RX INT0_1 MIX1 INP0" value="RX0" />
+        <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT" />
+        <ctl name="EAR_RDAC Switch" value="1" />
+        <ctl name="RDAC3_MUX" value="RX1" />
+        <ctl name="RX_EAR Mode" value="ON" />
     </path>
 
     <path name="handset-mic">
@@ -3677,10 +3677,10 @@
         <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
         <ctl name="VA DEC0 MUX" value="SWR_MIC" />
         <ctl name="VA SMIC MUX0" value="SWR_MIC5" />
+        <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
         <ctl name="ADC2_MIXER Switch" value="1" />
         <ctl name="ADC2 MUX" value="INP2" />
         <ctl name="ADC2_BCS Disable" value="1" />
-        <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
         <ctl name="VA_DEC0 MODE" value="ADC_LOW_PWR" />
     </path>
 
@@ -3689,10 +3689,10 @@
          <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
          <ctl name="VA DEC0 MUX" value="SWR_MIC" />
          <ctl name="VA SMIC MUX0" value="SWR_MIC5" />
+         <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
          <ctl name="ADC2_MIXER Switch" value="1" />
          <ctl name="ADC2 MUX" value="INP2" />
          <ctl name="ADC2_BCS Disable" value="1" />
-         <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
          <ctl name="VA_DEC0 MODE" value="ADC_LOW_PWR" />
     </path>
 
