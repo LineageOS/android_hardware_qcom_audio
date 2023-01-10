@@ -25,6 +25,11 @@
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+*
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "keep_alive"
@@ -198,13 +203,14 @@ void keep_alive_start(ka_mode_t ka_mode)
     struct listnode out_devices;
 
     pthread_mutex_lock(&ka.lock);
+    list_init(&out_devices);
+
     ALOGV("%s: mode %x", __func__, ka_mode);
     if ((ka.state == STATE_DISABLED)||(ka.state == STATE_DEINIT)) {
         ALOGE(" %s : Unexpected state %x",__func__, ka.state);
         goto exit;
     }
 
-    list_init(&out_devices);
     get_device_id_from_mode(ka_mode, &out_devices);
     if (compare_devices(&out_devices, &ka.active_devices) &&
             (ka.state == STATE_ACTIVE)) {
