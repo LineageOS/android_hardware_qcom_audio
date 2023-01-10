@@ -94,56 +94,56 @@
     </bit_width_configs>
 
     <pcm_ids>
-        <usecase name="USECASE_AUDIO_PLAYBACK_LOW_LATENCY" type="out" id="9"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_DEEP_BUFFER" type="out" id="0"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD" type="out" id="7"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD2" type="out" id="11"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD3" type="out" id="12"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD4" type="out" id="21"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD5" type="out" id="22"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD6" type="out" id="23"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD7" type="out" id="24"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD8" type="out" id="25"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_MEDIA" type="out" id="0"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION" type="out" id="9"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE" type="out" id="1"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_PHONE" type="out" id="12"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_ALERTS" type="out" id="59"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER" type="out" id="55"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_REAR_SEAT" type="out" id="54"/>
-        <usecase name="USECASE_VOICEMMODE1_CALL" type="in" id="2"/>
-        <usecase name="USECASE_VOICEMMODE1_CALL" type="out" id="2"/>
-        <usecase name="USECASE_VOICEMMODE2_CALL" type="in" id="15"/>
-        <usecase name="USECASE_VOICEMMODE2_CALL" type="out" id="15"/>
-        <usecase name="USECASE_VOWLAN_CALL" type="in" id="-1"/>
-        <usecase name="USECASE_VOWLAN_CALL" type="out" id="-1"/>
-        <usecase name="USECASE_AUDIO_PLAYBACK_AFE_PROXY" type="out" id="5"/>
-        <usecase name="USECASE_AUDIO_RECORD_AFE_PROXY" type="in" id="6"/>
-        <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY" type="in" id="13" />
-        <usecase name="USECASE_AUDIO_PLAYBACK_ULL" type="out" id="13" />
-        <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="12" />
-        <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="12" />
-        <usecase name="USECASE_AUDIO_PLAYBACK_MMAP" type="out" id="28" />
-        <usecase name="USECASE_AUDIO_RECORD_MMAP" type="in" id="28" />
-        <usecase name="USECASE_AUDIO_RECORD" type="in" id="0" />
-        <usecase name="USECASE_AUDIO_RECORD_BUS" type="in" id="0" />
-        <usecase name="USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER" type="in" id="55" />
-        <usecase name="USECASE_AUDIO_RECORD_BUS_REAR_SEAT" type="in" id="54" />
-        <usecase name="USECASE_AUDIO_HFP_SCO" type="in" id="29" />
-        <usecase name="USECASE_AUDIO_HFP_SCO" type="out" id="29" />
-        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="in" id="29" />
-        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="out" id="29" />
-        <usecase name="USECASE_AUDIO_HFP_SCO_DOWNLINK" type="in" id="36" />
-        <usecase name="USECASE_AUDIO_HFP_SCO_DOWNLINK" type="out" id="36" />
-        <usecase name="USECASE_AUDIO_HFP_SCO_WB_DOWNLINK" type="in" id="36" />
-        <usecase name="USECASE_AUDIO_HFP_SCO_WB_DOWNLINK" type="out" id="36" />
-        <usecase name="USECASE_ICC_CALL" type="in" id="33" />
-        <usecase name="USECASE_ICC_CALL" type="out" id="33" />
-        <usecase name="USECASE_AUDIO_PLAYBACK_SYNTHESIZER" type="in" id="33" />
-        <usecase name="USECASE_AUDIO_PLAYBACK_SYNTHESIZER" type="out" id="33" />
-        <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="31" />
-        <usecase name="USECASE_AUDIO_RECORD2" type="in" id="61" />
-        <usecase name="USECASE_AUDIO_RECORD3" type="in" id="62" />
+        <usecase name="USECASE_AUDIO_PLAYBACK_LOW_LATENCY" type="out" id="9" fe="4"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_DEEP_BUFFER" type="out" id="0" fe="0"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD" type="out" id="7" fe="3"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD2" type="out" id="11" fe="6"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD3" type="out" id="12" fe="9"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD4" type="out" id="21" fe="10"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD5" type="out" id="22" fe="11"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD6" type="out" id="23" fe="12"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD7" type="out" id="24" fe="13"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD8" type="out" id="25" fe="14"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_MEDIA" type="out" id="0" fe="0"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION" type="out" id="9" fe="4"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE" type="out" id="1" fe="1"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_PHONE" type="out" id="12" fe="9"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_ALERTS" type="out" id="59" fe="30"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER" type="out" id="55" fe="22"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_REAR_SEAT" type="out" id="54" fe="21"/>
+        <usecase name="USECASE_VOICEMMODE1_CALL" type="in" id="2" fe="50"/>
+        <usecase name="USECASE_VOICEMMODE1_CALL" type="out" id="2" fe="50"/>
+        <usecase name="USECASE_VOICEMMODE2_CALL" type="in" id="15" fe="51"/>
+        <usecase name="USECASE_VOICEMMODE2_CALL" type="out" id="15" fe="51"/>
+        <usecase name="USECASE_VOWLAN_CALL" type="in" id="-1" fe="-1"/>
+        <usecase name="USECASE_VOWLAN_CALL" type="out" id="-1" fe="-1"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_AFE_PROXY" type="out" id="5" fe="-1"/>
+        <usecase name="USECASE_AUDIO_RECORD_AFE_PROXY" type="in" id="6" fe="-1"/>
+        <usecase name="USECASE_AUDIO_RECORD_LOW_LATENCY" type="in" id="13" fe="7"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_ULL" type="out" id="13" fe="7"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_VOIP" type="out" id="12" fe="9"/>
+        <usecase name="USECASE_AUDIO_RECORD_VOIP" type="in" id="12" fe="9"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_MMAP" type="out" id="28" fe="15"/>
+        <usecase name="USECASE_AUDIO_RECORD_MMAP" type="in" id="28" fe="15"/>
+        <usecase name="USECASE_AUDIO_RECORD" type="in" id="0" fe="0"/>
+        <usecase name="USECASE_AUDIO_RECORD_BUS" type="in" id="0" fe="0"/>
+        <usecase name="USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER" type="in" id="55" fe="22"/>
+        <usecase name="USECASE_AUDIO_RECORD_BUS_REAR_SEAT" type="in" id="54" fe="21"/>
+        <usecase name="USECASE_AUDIO_HFP_SCO" type="in" id="29" fe="5"/>
+        <usecase name="USECASE_AUDIO_HFP_SCO" type="out" id="29" fe="5"/>
+        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="in" id="29" fe="5"/>
+        <usecase name="USECASE_AUDIO_HFP_SCO_WB" type="out" id="29" fe="5"/>
+        <usecase name="USECASE_AUDIO_HFP_SCO_DOWNLINK" type="in" id="36" fe="20"/>
+        <usecase name="USECASE_AUDIO_HFP_SCO_DOWNLINK" type="out" id="36" fe="20"/>
+        <usecase name="USECASE_AUDIO_HFP_SCO_WB_DOWNLINK" type="in" id="36" fe="20"/>
+        <usecase name="USECASE_AUDIO_HFP_SCO_WB_DOWNLINK" type="out" id="36" fe="20"/>
+        <usecase name="USECASE_ICC_CALL" type="in" id="33" fe="8"/>
+        <usecase name="USECASE_ICC_CALL" type="out" id="33" fe="8"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_SYNTHESIZER" type="in" id="33" fe="8"/>
+        <usecase name="USECASE_AUDIO_PLAYBACK_SYNTHESIZER" type="out" id="33" fe="8"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="31" fe="16"/>
+        <usecase name="USECASE_AUDIO_RECORD2" type="in" id="61" fe="32"/>
+        <usecase name="USECASE_AUDIO_RECORD3" type="in" id="62" fe="33"/>
     </pcm_ids>
 
     <soft_volume_params>

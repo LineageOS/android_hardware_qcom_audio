@@ -24,6 +24,12 @@
 <!-- BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,  -->
 <!-- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN -->
 <!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                          -->
+<!--                                                                        -->
+<!-- Changes from Qualcomm Innovation Center are provided,		    -->
+<!-- under the following license:					    -->
+<!-- Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.-->
+<!-- SPDX-License-Identifier: BSD-3-Clause-Clear			    -->
+<!--                                                                        -->
 <mixer>
     <!-- These are the initial mixer settings -->
     <!-- Example commands to Enable the paired rx usecase-->
@@ -1129,7 +1135,7 @@
     </path>
 
     <path name="mmap-playback phone-bus-out">
-        <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia16" value="1" />
+        <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia16" value="1" />
     </path>
 
     <path name="mmap-playback pax-bus-out">
@@ -1144,12 +1150,12 @@
         <ctl name="AFE_PCM_RX Audio Mixer MultiMedia16" value="1" />
     </path>
 
-    <path name="mmap-record">
-	<ctl name="MultiMedia16 Mixer TERT_TDM_TX_0" value="1" />
-    </path>
-
     <path name="hifi-playback afe-proxy">
         <ctl name="AFE_PCM_RX Audio Mixer MultiMedia2" value="1" />
+    </path>
+
+    <path name="mmap-record">
+        <ctl name="MultiMedia16 Mixer TERT_TDM_TX_0" value="1" />
     </path>
 
 </mixer>
