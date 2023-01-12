@@ -3,6 +3,23 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "93fac55c_bcc59029",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2023-01-12T00:00:01Z",
+      "side": 1,
+      "message": "Have you tried just using the msm8916 variant? qcom uses that on 3.18 HAL https://github.com/LineageOS/android_hardware_qcom_audio/blob/lineage-19.1-caf-msm8996/hal/Android.mk#L59 vs https://github.com/LineageOS/android_hardware_qcom_audio/blob/lineage-19.1-caf-msm8953/hal/Android.mk#L11",
+      "revId": "4aadf0077a3ea3179e33d3a09315656848a2da8b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "23954b7f_3661d8f5",
         "filename": "configs/msm8937/msm8937.mk",
         "patchSetId": 1
