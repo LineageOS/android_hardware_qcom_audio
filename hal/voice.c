@@ -461,7 +461,7 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
         switch (in->source) {
         case AUDIO_SOURCE_VOICE_UPLINK:
             if (audio_extn_compr_cap_enabled() &&
-                audio_extn_compr_cap_format_supported(in->config.format)) {
+                audio_extn_compr_cap_format_supported(pcm_format_to_audio_format(in->config.format))) {
                 in->usecase = USECASE_INCALL_REC_UPLINK_COMPRESS;
             } else
                 in->usecase = USECASE_INCALL_REC_UPLINK;
@@ -469,7 +469,7 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
             break;
         case AUDIO_SOURCE_VOICE_DOWNLINK:
             if (audio_extn_compr_cap_enabled() &&
-                audio_extn_compr_cap_format_supported(in->config.format)) {
+                audio_extn_compr_cap_format_supported(pcm_format_to_audio_format(in->config.format))) {
                 in->usecase = USECASE_INCALL_REC_DOWNLINK_COMPRESS;
             } else
                 in->usecase = USECASE_INCALL_REC_DOWNLINK;
@@ -477,7 +477,7 @@ int voice_check_and_set_incall_rec_usecase(struct audio_device *adev,
             break;
         case AUDIO_SOURCE_VOICE_CALL:
             if (audio_extn_compr_cap_enabled() &&
-                audio_extn_compr_cap_format_supported(in->config.format)) {
+                audio_extn_compr_cap_format_supported(pcm_format_to_audio_format(in->config.format))) {
                 in->usecase = USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS;
             } else
                 in->usecase = USECASE_INCALL_REC_UPLINK_AND_DOWNLINK;
