@@ -555,7 +555,7 @@ PRODUCT_PACKAGES_DEBUG += \
     AudioSettings
 
 # for HIDL related audiocontrol packages
-ifeq ( ,$(filter 12 13 T,$(PLATFORM_VERSION)))
+ifeq ( ,$(filter 12 13 T U UpsideDownCake 14,$(PLATFORM_VERSION)))
 PRODUCT_PACKAGES += \
     android.hardware.automotive.audiocontrol@2.0-service \
     android.hardware.automotive.audiocontrol@2.0
