@@ -108,6 +108,24 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "0146bf79_19d1069d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2023-01-17T13:12:33Z",
+      "side": 1,
+      "message": "\u003e and you don\u0027t need to hack around support for it on 4.9\n\n1. on k4.9 + Q, It was using msm8916 variant\n2. I don\u0027t think it\u0027s as complicated as \"hack around\", Just needs to allow a sound card name and that\u0027s all\n3. Isn\u0027t it more strange to do something opposite of the commit b904fbec4986fb371c81cf550f2615052874bf40 in audio HAL?",
+      "parentUuid": "1863a9b1_53610d4b",
+      "revId": "4aadf0077a3ea3179e33d3a09315656848a2da8b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "23954b7f_3661d8f5",
