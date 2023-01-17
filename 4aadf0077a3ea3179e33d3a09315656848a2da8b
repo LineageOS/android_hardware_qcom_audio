@@ -72,6 +72,24 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "5a990ce1_56c38c96",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 25732
+      },
+      "writtenOn": "2023-01-17T12:27:29Z",
+      "side": 1,
+      "message": "\u003e Is there any valid reason that I should use 3.18 HAL / blobs again?\nBecause it was made for msm8937 3.18 devices, and you don\u0027t need to hack around support for it on 4.9\nThis way might work for your devices, but it might not on other msm8937 devices, so it\u0027s better to just find a universal way for everyone\nPlease retry with msm8916 variant and send me logs if it doesn\u0027t work",
+      "parentUuid": "95ce221d_9cc00702",
+      "revId": "4aadf0077a3ea3179e33d3a09315656848a2da8b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "23954b7f_3661d8f5",
