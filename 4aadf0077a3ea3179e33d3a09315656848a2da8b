@@ -36,6 +36,24 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "817d1e4e_37ab67c8",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2023-01-17T09:41:34Z",
+      "side": 1,
+      "message": "I agree with what did Sid_key said\n\nYeah, It was working pretty well with 3.18 HAL\nand It works well with the current 4.9 HAL too\nI\u0027ve been giving that to the users since May 2022, They had never reported any issue that\u0027s specific to 4.9 HAL\n\nIs there any valid reason that I should use 3.18 HAL / blobs again?",
+      "parentUuid": "d206ed5e_8150a8fe",
+      "revId": "4aadf0077a3ea3179e33d3a09315656848a2da8b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "23954b7f_3661d8f5",
