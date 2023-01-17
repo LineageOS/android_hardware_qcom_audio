@@ -126,6 +126,24 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "7de3efa7_a7a23596",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2023-01-17T17:30:29Z",
+      "side": 1,
+      "message": "At least, I don\u0027t think it\u0027s better to mix Q stuff together with R stuff.\n\nFor those who really need to use R HALs+blobs except for Audio stack, They can still include Q Audio HAL as either git subtree or prebuilt in their device tree.\n\nStill better than messing up Android.mk guard, adapting/reverting changes on audio configs, mixing blobs, etc, to make it use msm8916 variant again.\n\nI\u0027m even doubting if the things in hal/msm8916 dir in R audio HAL still works. Seems like nothing still uses it.",
+      "parentUuid": "0146bf79_19d1069d",
+      "revId": "4aadf0077a3ea3179e33d3a09315656848a2da8b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "23954b7f_3661d8f5",
