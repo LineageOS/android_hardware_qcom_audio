@@ -911,3 +911,111 @@ void AudioExtn::audio_extn_perf_lock_release(int *handle)
 
 //END: KPI_OPTIMIZE =============================================================================
 
+// START: compress_capture =====================================================
+
+std::vector<uint32_t> CompressCapture::sAacSampleRates = {
+    8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000};
+
+std::unordered_map<uint32_t, int32_t>
+    CompressCapture::sSampleRateToDefaultBitRate = {
+        {8000, 36000},   {11025, 48000},  {12000, 56000},
+        {16000, 64000},  {22050, 82500},  {24000, 96000},
+        {32000, 110000}, {44100, 128000}, {48000, 156000}};
+
+bool CompressCapture::parseMetadata(str_parms *parms,
+                                    struct audio_config *config,
+                                    int32_t &compressStreamAdjBitRate) {
+    bool ret = false;
+    int32_t value = 0;
+
+    if (config->format == AUDIO_FORMAT_AAC_LC ||
+        config->format == AUDIO_FORMAT_AAC_ADTS_LC ||
+        config->format == AUDIO_FORMAT_AAC_ADTS_HE_V1 ||
+        config->format == AUDIO_FORMAT_AAC_ADTS_HE_V2) {
+        /* query for AAC bitrate */
+        if (!str_parms_get_int(parms, kAudioParameterDSPAacBitRate,
+                               &value)) {
+            uint32_t channelCount =
+                audio_channel_count_from_in_mask(config->channel_mask);
+            int32_t minValue = 0;
+            int32_t maxValue = UINT32_MAX;
+            auto it = std::find(sAacSampleRates.cbegin(),
+                                sAacSampleRates.cend(), config->sample_rate);
+            if (it != sAacSampleRates.cend() &&
+                getAACMinBitrateValue(config->sample_rate, channelCount,
+                                      minValue) &&
+                getAACMaxBitrateValue(config->sample_rate, channelCount,
+                                      maxValue)) {
+                AHAL_INFO("client requested AAC bitrate: %d", value);
+                if (value < minValue) {
+                    value = minValue;
+                    AHAL_WARN("Adjusting AAC bitrate to minimum: %d", value);
+                } else if (value > maxValue) {
+                    value = maxValue;
+                    AHAL_WARN("Adjusting AAC bitrate to maximum: %d", value);
+                }
+                compressStreamAdjBitRate = value;
+                ret = true;
+            }
+        }
+    }
+
+    return ret;
+}
+
+bool CompressCapture::getAACMinBitrateValue(uint32_t sampleRate,
+                                            uint32_t channelCount,
+                                            int32_t &minValue) {
+    if (channelCount == 1) {
+        minValue = kAacMonoMinSupportedBitRate;
+    } else if (channelCount == 2) {
+        minValue = kAacStereoMinSupportedBitRate;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+bool CompressCapture::getAACMaxBitrateValue(uint32_t sampleRate,
+                                            uint32_t channelCount,
+                                            int32_t &maxValue) {
+    if (channelCount == 1) {
+        maxValue = (int32_t)std::min((uint32_t)kAacMonoMaxSupportedBitRate,
+                                     6 * sampleRate);
+    } else if (channelCount == 2) {
+        maxValue = (int32_t)std::min((uint32_t)kAacStereoMaxSupportedBitRate,
+                                     12 * sampleRate);
+    } else {
+        return false;
+    }
+    return true;
+}
+
+bool CompressCapture::getAACMaxBufferSize(struct audio_config *config,
+                                          uint32_t &maxBufSize) {
+    int32_t maxBitRate = 0;
+    if (getAACMaxBitrateValue(
+            config->sample_rate,
+            audio_channel_count_from_in_mask(config->channel_mask),
+            maxBitRate)) {
+        /**
+         * AAC Encoder 1024 PCM samples => 1 compress AAC frame;
+         * 1 compress AAC frame => max possible length => max-bitrate bits;
+         * let's take example of 48K HZ;
+         * 1 second ==> 384000 bits ; 1 second ==> 48000 PCM samples;
+         * 1 AAC frame ==> 1024 PCM samples;
+         * Max buffer size possible;
+         * 48000/1024 = (8/375) seconds ==> ( 8/375 ) * 384000 bits
+         *     ==> ( (8/375) * 384000 / 8 ) bytes;
+         **/
+        maxBufSize = (uint32_t)((((((double)kAacPCMSamplesPerFrame) /
+                                   config->sample_rate) *
+                                  ((uint32_t)(maxBitRate))) /
+                                 8) +
+                                /* Just in case; not to miss precision */ 1);
+        return true;
+    }
+
+    return false;
+}
+// END: compress_capture =======================================================

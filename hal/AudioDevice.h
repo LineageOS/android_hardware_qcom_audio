@@ -26,6 +26,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #ifndef ANDROID_HARDWARE_AHAL_ADEVICE_H_
 #define ANDROID_HARDWARE_AHAL_ADEVICE_H_
@@ -64,6 +69,9 @@
 #define MIC_INFO_MAP_INDEX(X) (X - (PAL_DEVICE_IN_MIN + 1))
 #define XML_READ_BUFFER_SIZE 1024
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
+#define COMPRESS_CAPTURE_AAC_MAX_OUTPUT_BUFFER_SIZE 2048
+#define COMPRESS_CAPTURE_AAC_PCM_SAMPLES_IN_FRAME 1024
 
 typedef enum {
     TAG_MICROPHONE_CHARACTERISTIC,

@@ -28,6 +28,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define LOG_NDEBUG 0
 #define LOG_TAG "AHAL: AudioStream"
 #define ATRACE_TAG (ATRACE_TAG_AUDIO | ATRACE_TAG_HAL)
 #include "AudioCommon.h"
@@ -51,6 +52,8 @@
 
 #define COMPRESS_OFFLOAD_FRAGMENT_SIZE (32 * 1024)
 #define FLAC_COMPRESS_OFFLOAD_FRAGMENT_SIZE (256 * 1024)
+
+#define COMPRESS_CAPTURE_AAC_MAX_OUTPUT_BUFFER_SIZE 2048
 
 #define MAX_READ_RETRY_COUNT 25
 #define MAX_ACTIVE_MICROPHONES_TO_SUPPORT 10
@@ -1224,9 +1227,16 @@ uint64_t StreamInPrimary::GetFramesRead(int64_t* time)
     stream_mutex_.lock();
     dsp_latency = StreamInPrimary::GetSourceLatency(flags_);
 
-    signed_frames = mBytesRead / audio_bytes_per_frame(
+    if (usecase_ == USECASE_AUDIO_RECORD_COMPRESS) {
+        /**
+         * TODO get num of pcm frames from below layers
+         **/
+        signed_frames = mCompressReadCalls * 1024;
+    } else {
+        signed_frames = mBytesRead / audio_bytes_per_frame(
         audio_channel_count_from_in_mask(config_.channel_mask),
         config_.format);
+    }
 
     *time = (readAt.tv_sec * 1000000000LL) + readAt.tv_nsec - (dsp_latency * 1000LL);
 
@@ -1269,7 +1279,8 @@ static int astream_in_get_capture_position(const struct audio_stream_in* stream,
         *frames = astream_in->GetFramesRead(time);
     else
         return -ENOSYS;
-    AHAL_VERBOSE("frames %lld played at %lld ", ((long long)*frames), ((long long)*time));
+    AHAL_VERBOSE("audio stream(%p) frames %lld played at %lld ",
+                 astream_in.get(), ((long long)*frames), ((long long)*time));
 
     return 0;
 }
@@ -1451,6 +1462,7 @@ static int astream_in_set_parameters(struct audio_stream *stream, const char *kv
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
     std::shared_ptr<StreamInPrimary> astream_in;
 
+    AHAL_DBG("Enter: %s",kvpairs);
 
     if (!stream || !kvpairs) {
         ret = 0;
@@ -1469,6 +1481,7 @@ static int astream_in_set_parameters(struct audio_stream *stream, const char *kv
     }
 
 error:
+    AHAL_DBG("Exit: %d",ret);
     return ret;
 }
 
@@ -1507,8 +1520,9 @@ static char* astream_in_get_parameters(const struct audio_stream *stream,
     }
     AHAL_DBG("keys: %s", keys);
 
-    if (astream_in->GetSupportedConfig(false, query, reply))
-        str = str_parms_to_str(reply);
+    astream_in->GetSupportedConfig(false, query, reply);
+    astream_in->getParameters(query,reply);
+    str = str_parms_to_str(reply);
 
 error:
     str_parms_destroy(query);
@@ -1608,6 +1622,14 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
 
         return palStreamType;
     }
+    /*
+     * check for input direct flag which is exclusive
+     * meant for compress offload capture.
+     */
+    if ((halStreamFlags & AUDIO_INPUT_FLAG_DIRECT) != 0) {
+        palStreamType = PAL_STREAM_COMPRESSED;
+        return palStreamType;
+    }
 
     /*
      *For AUDIO_SOURCE_UNPROCESSED we use LL pal stream as it corresponds to
@@ -1629,7 +1651,6 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
             palStreamType = PAL_STREAM_LOW_LATENCY;
             break;
         case AUDIO_INPUT_FLAG_RAW:
-        case AUDIO_INPUT_FLAG_DIRECT:
             palStreamType = PAL_STREAM_RAW;
             break;
         case AUDIO_INPUT_FLAG_VOIP_TX:
@@ -4026,17 +4047,55 @@ done:
     return ret;
 }
 
+bool StreamInPrimary::getParameters(struct str_parms *query,
+                                    struct str_parms *reply) {
+    bool found = false;
+    char value[256];
+
+    if (usecase_ == USECASE_AUDIO_RECORD_COMPRESS) {
+        if (config_.format == AUDIO_FORMAT_AAC_LC ||
+            config_.format == AUDIO_FORMAT_AAC_ADTS_LC ||
+            config_.format == AUDIO_FORMAT_AAC_ADTS_HE_V1 ||
+            config_.format == AUDIO_FORMAT_AAC_ADTS_HE_V2) {
+            // query for AAC bitrate
+            if (str_parms_get_str(query,
+                                  CompressCapture::kAudioParameterDSPAacBitRate,
+                                  value, sizeof(value)) >= 0) {
+                value[0] = '\0';
+                // fill in the AAC bitrate
+                if (mIsBitRateSet &&
+                    (str_parms_add_int(
+                         reply, CompressCapture::kAudioParameterDSPAacBitRate,
+                         mCompressStreamAdjBitRate) >= 0)) {
+                    mIsBitRateGet = found = true;
+                }
+            }
+        }
+    }
+
+    return found;
+}
+
 int StreamInPrimary::SetParameters(const char* kvpairs) {
     struct str_parms *parms = (str_parms *)NULL;
     int ret = 0;
 
-    AHAL_DBG("enter: kvpairs=%s", kvpairs);
+    AHAL_DBG("enter: kvpairs: %s", kvpairs);
     if(!mInitialized)
         goto exit;
 
     parms = str_parms_create_str(kvpairs);
     if (!parms)
         goto exit;
+
+    if (usecase_ == USECASE_AUDIO_RECORD_COMPRESS) {
+        if (CompressCapture::parseMetadata(parms, &config_,
+                                           mCompressStreamAdjBitRate)) {
+            mIsBitRateSet = true;
+        } else {
+            ret = -EINVAL;
+        }
+    }
 
     str_parms_destroy(parms);
 exit:
@@ -4150,6 +4209,9 @@ int StreamInPrimary::Open() {
     if (is_pcm_format(config_.format)) {
        streamAttributes_.in_media_config.aud_fmt_id = getFormatId.at(config_.format);
        streamAttributes_.in_media_config.bit_width = format_to_bitwidth_table[config_.format];
+    } else if (!is_pcm_format(config_.format) && usecase_ == USECASE_AUDIO_RECORD_COMPRESS) {
+        streamAttributes_.in_media_config.aud_fmt_id = getFormatId.at(config_.format);
+        streamAttributes_.in_media_config.bit_width = compressRecordBitWidthTable.at(config_.format);
     } else {
        /*TODO:Update this to support compressed capture using hal apis*/
        streamAttributes_.in_media_config.bit_width = CODEC_BACKEND_DEFAULT_BIT_WIDTH;
@@ -4208,6 +4270,67 @@ int StreamInPrimary::Open() {
         AHAL_ERR("Pal Stream Open Error (%x)", ret);
         ret = -EINVAL;
         goto exit;
+    }
+    // TODO configure this for any audio format
+    //PAL input compressed stream is used only for compress capture
+    if (streamAttributes_.type == PAL_STREAM_COMPRESSED) {
+        pal_param_payload *param_payload = nullptr;
+        param_payload = (pal_param_payload *)calloc(
+            1, sizeof(pal_param_payload) + sizeof(pal_snd_enc_t));
+
+        if (!param_payload) {
+            AHAL_ERR("calloc failed for size %zu",
+                     sizeof(pal_param_payload) + sizeof(pal_snd_enc_t));
+        } else {
+            /**
+            * encoder mode
+            0x2       AAC_AOT_LC
+            0x5      AAC_AOT_SBR
+            0x1d      AAC_AOT_PS
+
+            * format flag
+            0x0       AAC_FORMAT_FLAG_ADTS
+            0x1       AAC_FORMAT_FLAG_LOAS
+            0x3       AAC_FORMAT_FLAG_RAW
+            0x4       AAC_FORMAT_FLAG_LATM
+            **/
+            param_payload->payload_size = sizeof(pal_snd_enc_t);
+
+            if (config_.format == AUDIO_FORMAT_AAC_LC ||
+                config_.format == AUDIO_FORMAT_AAC_ADTS_LC) {
+                palSndEnc.aac_enc.enc_cfg.aac_enc_mode = 0x2;
+                palSndEnc.aac_enc.enc_cfg.aac_fmt_flag = 0x00;
+            } else if (config_.format == AUDIO_FORMAT_AAC_ADTS_HE_V1) {
+                palSndEnc.aac_enc.enc_cfg.aac_enc_mode = 0x5;
+                palSndEnc.aac_enc.enc_cfg.aac_fmt_flag = 0x00;
+            } else if (config_.format == AUDIO_FORMAT_AAC_ADTS_HE_V2) {
+                palSndEnc.aac_enc.enc_cfg.aac_enc_mode = 0x1d;
+                palSndEnc.aac_enc.enc_cfg.aac_fmt_flag = 0x00;
+            } else {
+                palSndEnc.aac_enc.enc_cfg.aac_enc_mode = 0x2;
+                palSndEnc.aac_enc.enc_cfg.aac_fmt_flag = 0x00;
+            }
+
+            if (mIsBitRateSet && mIsBitRateGet) {
+                palSndEnc.aac_enc.aac_bit_rate = mCompressStreamAdjBitRate;
+                mIsBitRateSet = mIsBitRateGet = false;
+                AHAL_DBG("compress aac bitrate configured: %d",
+                         palSndEnc.aac_enc.aac_bit_rate);
+            } else {
+                palSndEnc.aac_enc.aac_bit_rate =
+                    CompressCapture::sSampleRateToDefaultBitRate.at(
+                        config_.sample_rate);
+            }
+
+            memcpy(param_payload->payload, &palSndEnc,
+                   param_payload->payload_size);
+
+            ret = pal_stream_set_param(pal_stream_handle_,
+                                       PAL_PARAM_ID_CODEC_CONFIGURATION,
+                                       param_payload);
+            if (ret) AHAL_ERR("Pal Set Param Error (%x)", ret);
+            free(param_payload);
+        }
     }
 
 set_buff_size:
@@ -4307,6 +4430,9 @@ uint32_t StreamInPrimary::GetBufferSize() {
                 audio_bytes_per_frame(
                         audio_channel_count_from_in_mask(config_.channel_mask),
                         config_.format);
+    } else if (streamAttributes_.type == PAL_STREAM_COMPRESSED) {
+        // TODO make this allocation with respect to AUDIO_FORMAT
+        return COMPRESS_CAPTURE_AAC_MAX_OUTPUT_BUFFER_SIZE;
     } else {
         /* this else condition will be other stream types like deepbuffer/RAW.. */
         size = (config_.sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC) /1000;
@@ -4344,6 +4470,8 @@ int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_s
     else if (source == AUDIO_SOURCE_VOICE_COMMUNICATION &&
              halStreamFlags & AUDIO_INPUT_FLAG_VOIP_TX)
         usecase = USECASE_AUDIO_RECORD_VOIP;
+    else if ((halStreamFlags & AUDIO_INPUT_FLAG_DIRECT) != 0)
+        usecase = USECASE_AUDIO_RECORD_COMPRESS;
 
     return usecase;
 }
@@ -4391,8 +4519,7 @@ ssize_t StreamInPrimary::read(const void *buffer, size_t bytes) {
     palBuffer.size = bytes;
     palBuffer.offset = 0;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
-
-    AHAL_VERBOSE("Bytes:(%zu)", bytes);
+    AHAL_VERBOSE("requested bytes: %zu", bytes);
 
     stream_mutex_.lock();
     if (!pal_stream_handle_) {
@@ -4473,6 +4600,11 @@ ssize_t StreamInPrimary::read(const void *buffer, size_t bytes) {
     }
 
     ret = pal_stream_read(pal_stream_handle_, &palBuffer);
+    AHAL_VERBOSE("received size= %d",palBuffer.size);
+    if (usecase_ == USECASE_AUDIO_RECORD_COMPRESS && ret > 0) {
+        size = palBuffer.size;
+        mCompressReadCalls++;
+    }
     // mute pcm data if sva client is reading lab data
     if (adevice->num_va_sessions_ > 0 &&
         source_ != AUDIO_SOURCE_VOICE_RECOGNITION &&
@@ -4489,7 +4621,7 @@ exit:
     }
     stream_mutex_.unlock();
     clock_gettime(CLOCK_MONOTONIC, &readAt);
-
+    AHAL_DBG("Exit: returning size: %zu size ", size);
     return (ret < 0 ? onReadError(bytes, ret) : (size > 0 ? size : bytes));
 }
 
