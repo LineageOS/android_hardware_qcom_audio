@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "fb750270_cb82244e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2023-02-05T06:29:31Z",
+      "side": 1,
+      "message": "Dependency of Mi439 and Mi8937/Mi8917.\n\nIt might also help the other targets that are unified, or which has switched to R Audio HAL.",
+      "revId": "47c6c568c27c7175823e2a78d0618fff682e99f8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
