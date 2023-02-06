@@ -183,6 +183,30 @@
       },
       "revId": "4aadf0077a3ea3179e33d3a09315656848a2da8b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4524e09c_e292ba9f",
+        "filename": "configs/msm8937/msm8937.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 127,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2023-02-06T01:20:07Z",
+      "side": 1,
+      "message": "Ack",
+      "parentUuid": "23954b7f_3661d8f5",
+      "range": {
+        "startLine": 127,
+        "startChar": 0,
+        "endLine": 127,
+        "endChar": 108
+      },
+      "revId": "4aadf0077a3ea3179e33d3a09315656848a2da8b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
