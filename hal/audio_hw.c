@@ -3647,7 +3647,7 @@ int start_input_stream(struct stream_in *in)
             in->pcm = NULL;
             goto error_open;
         }
-        if (in->flags == AUDIO_INPUT_FLAG_FAST)
+        if (in->flags  & (AUDIO_INPUT_FLAG_FAST | AUDIO_INPUT_FLAG_RAW))
             register_in_stream(in);
         if (in->realtime) {
             ATRACE_BEGIN("pcm_in_start");
@@ -4507,7 +4507,7 @@ int start_output_stream(struct stream_out *out)
     }
 
     if (ret == 0) {
-        if (out->flags == AUDIO_OUTPUT_FLAG_FAST)
+        if (out->flags & (AUDIO_OUTPUT_FLAG_FAST | AUDIO_OUTPUT_FLAG_RAW))
             register_out_stream(out);
         if (out->realtime) {
             if (out->pcm == NULL || !pcm_is_ready(out->pcm)) {
