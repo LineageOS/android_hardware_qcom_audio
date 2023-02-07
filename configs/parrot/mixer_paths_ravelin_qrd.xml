@@ -690,15 +690,13 @@
     </path>
 
     <path name="va-mic-mono">
-        <ctl name="VA_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="VA DEC2 MUX" value="SWR_MIC" />
-        <ctl name="VA_DEC2 MODE" value="ADC_LOW_PWR" />
-        <ctl name="TX1 MODE" value="ADC_LP" />
-        <ctl name="ADC2 MUX" value="INP3" />
-        <ctl name="VA SMIC MUX2" value="SWR_MIC5" />
-        <ctl name="ADC2 ChMap" value="SWRM_TX2_CH2" />
-        <ctl name="ADC2_MIXER Switch" value="1" />
-        <ctl name="VA_AMIC3_MIXER Switch" value="1" />
+        <ctl name="VA_AIF1_CAP Mixer DEC0" value="1" />
+        <ctl name="VA DEC0 MUX" value="SWR_MIC" />
+        <ctl name="VA_DEC0 MODE" value="ADC_LOW_PWR" />
+        <ctl name="VA SMIC MUX0" value="SWR_MIC0" />
+        <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1" />
+        <ctl name="ADC1_MIXER Switch" value="1" />
+        <ctl name="VA_AMIC1_MIXER Switch" value="1" />
     </path>
 
     <path name="va-mic-dmic">
@@ -709,8 +707,8 @@
         <ctl name="VA_DEC0 MODE" value="ADC_LOW_PWR" />
         <ctl name="VA_DEC1 MODE" value="ADC_LOW_PWR" />
         <ctl name="ADC2 MUX" value="INP3" />
-        <ctl name="VA SMIC MUX0" value="SWR_MIC4" />
-        <ctl name="VA SMIC MUX1" value="SWR_MIC0" />
+        <ctl name="VA SMIC MUX0" value="SWR_MIC0" />
+        <ctl name="VA SMIC MUX1" value="SWR_MIC4" />
         <ctl name="ADC2 ChMap" value="SWRM_TX2_CH1" />
         <ctl name="ADC1 ChMap" value="SWRM_TX1_CH1" />
         <ctl name="ADC2_MIXER Switch" value="1" />
