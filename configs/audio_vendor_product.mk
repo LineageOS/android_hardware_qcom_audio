@@ -156,6 +156,7 @@ MM_AUDIO += liba2bstack-protobuf
 MM_AUDIO += a2b-app
 MM_AUDIO += liba2bdriver
 MM_AUDIO += libacdbloaderclient
+MM_AUDIO += libacdbloadersocketclient
 MM_AUDIO += acdb_loader_service
 MM_AUDIO += libaudiohalpluginclient
 MM_AUDIO += audio_hal_plugin_service
