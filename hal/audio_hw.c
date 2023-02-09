@@ -33,6 +33,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #define LOG_TAG "audio_hw_primary"
@@ -1909,7 +1911,7 @@ static snd_device_t derive_playback_snd_device(void * platform,
 
     snd_device_t d1 = uc->out_snd_device;
     snd_device_t d2 = new_snd_device;
-    snd_device_t ret = 0;
+    int ret = 0;
 
     list_init(&a1);
     list_init(&a2);
@@ -1930,7 +1932,7 @@ static snd_device_t derive_playback_snd_device(void * platform,
          compare_devices_for_any_match(&a1 ,&a2)) {
         snd_device_t d3[2];
         int num_devices = 0;
-        int ret = platform_split_snd_device(platform,
+        ret = platform_split_snd_device(platform,
                                             list_length(&a1) > 1 ? d1 : d2,
                                             &num_devices,
                                             d3);
@@ -1975,9 +1977,6 @@ static snd_device_t derive_playback_snd_device(void * platform,
             goto end; // case 6, 3
         }
     }
-
-    clear_devices(&a1);
-    clear_devices(&a2);
 
 end:
     clear_devices(&a1);
