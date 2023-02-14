@@ -12169,6 +12169,7 @@ int platform_spkr_prot_is_wsa_analog_mode(void *adev __unused)
        (!strcmp(snd_card_name, "msm8953-sku4-snd-card")) ||
        (!strcmp(snd_card_name, "sdm439-sku1-snd-card")) ||
        (!strcmp(snd_card_name, "sdm439-snd-card-mtp")) ||
+       (!strcmp(snd_card_name, "lahaina-yupikiot-snd-card")) ||
        (!strcmp(snd_card_name, "bengal-qrd-snd-card")) ||
        (!strcmp(snd_card_name, "bengal-scubaqrd-snd-card")))
        return 1;
