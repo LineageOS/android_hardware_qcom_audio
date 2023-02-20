@@ -196,6 +196,7 @@ public:
     int  hdr_sample_rate = 0;
     int cameraOrientation = CAMERA_DEFAULT;
     bool usb_input_dev_enabled = false;
+    bool usb_out_headset = false;
     static bool mic_characteristics_available;
     static microphone_characteristics_t microphones;
     static snd_device_to_mic_map_t microphone_maps[PAL_MAX_INPUT_DEVICES];
@@ -238,7 +239,7 @@ protected:
     visualizer_hal_stop_output fnp_visualizer_stop_output_ = nullptr;
     std::map<audio_devices_t, pal_device_id_t> android_device_map_;
     std::map<audio_patch_handle_t, AudioPatch*> patch_map_;
-    int add_input_headset_if_usb_out_headset(int *device_count,  pal_device_id_t** pal_device_ids);
+    int add_input_headset_if_usb_out_headset(int *device_count,  pal_device_id_t** pal_device_ids, bool conn_state);
 };
 
 static inline uint32_t lcm(uint32_t num1, uint32_t num2)
