@@ -381,7 +381,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AHAL_EXT)),true)
 endif
 
 LOCAL_CFLAGS += -D_GNU_SOURCE
-LOCAL_CFLAGS += -Wall -Werror
+LOCAL_CFLAGS += -Wall -Werror -Wno-enum-conversion
 
 LOCAL_COPY_HEADERS_TO   := mm-audio
 LOCAL_COPY_HEADERS      := audio_extn/audio_defs.h
