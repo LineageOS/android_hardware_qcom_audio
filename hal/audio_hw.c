@@ -11101,19 +11101,6 @@ int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool
         pthread_mutex_lock(&out->latch_lock);
         // mute stream and switch to speaker if suspended
         if (!out->a2dp_muted && !out->standby) {
-            assign_devices(&devices, &out->device_list);
-            reassign_device_list(&out->device_list, AUDIO_DEVICE_OUT_SPEAKER, "");
-            list_for_each(node, &adev->usecase_list) {
-                usecase = node_to_item(node, struct audio_usecase, list);
-                if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info) &&
-                    !is_a2dp_out_device_type(&usecase->stream.out->device_list) &&
-                    !is_sco_out_device_type(&usecase->stream.out->device_list) &&
-                    platform_check_backends_match(SND_DEVICE_OUT_SPEAKER,
-                                                  usecase->out_snd_device)) {
-                    assign_devices(&out->device_list, &usecase->stream.out->device_list);
-                    break;
-                }
-            }
             if ((is_a2dp_out_device_type(&devices) && list_length(&devices) == 1) ||
                 (uc_info->out_snd_device == SND_DEVICE_OUT_BT_A2DP)) {
                 out->a2dp_muted = true;
@@ -11132,6 +11119,19 @@ int check_a2dp_restore_l(struct audio_device *adev, struct stream_out *out, bool
                         (out->config.period_count * out->config.period_size * 1000) /
                         (out->config.rate);
                     usleep(latency * 1000);
+                }
+            }
+            assign_devices(&devices, &out->device_list);
+            reassign_device_list(&out->device_list, AUDIO_DEVICE_OUT_SPEAKER, "");
+            list_for_each(node, &adev->usecase_list) {
+                usecase = node_to_item(node, struct audio_usecase, list);
+                if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info) &&
+                    !is_a2dp_out_device_type(&usecase->stream.out->device_list) &&
+                    !is_sco_out_device_type(&usecase->stream.out->device_list) &&
+                    platform_check_backends_match(SND_DEVICE_OUT_SPEAKER,
+                                                  usecase->out_snd_device)) {
+                    assign_devices(&out->device_list, &usecase->stream.out->device_list);
+                    break;
                 }
             }
             select_devices(adev, out->usecase);
