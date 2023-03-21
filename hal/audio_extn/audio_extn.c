@@ -3791,7 +3791,7 @@ static int audio_extn_set_multichannel_mask(struct audio_device *adev,
     int max_mic_count = platform_get_max_mic_count(adev->platform);
     /* validate input params. Avoid updated channel mask if loopback device */
     /* validate input params. Avoid updated channel mask if HDMI or loopback device */
-    if ((channel_count > max_mic_count) &&
+    if ((channel_count == 6) &&
         (in->format == AUDIO_FORMAT_PCM_16_BIT) &&
         (!is_loopback_input_device(get_device_types(&in->device_list)))) {
         switch (max_mic_count) {
