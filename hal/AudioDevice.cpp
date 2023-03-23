@@ -1302,7 +1302,7 @@ int AudioDevice::SetMode(const audio_mode_t mode) {
 }
 
 int AudioDevice::add_input_headset_if_usb_out_headset(int *device_count,
-                                                      pal_device_id_t** pal_device_ids)
+                              pal_device_id_t** pal_device_ids, bool conn_state)
 {
     bool is_usb_headset = false;
     int count = *device_count;
@@ -1311,6 +1311,7 @@ int AudioDevice::add_input_headset_if_usb_out_headset(int *device_count,
     for (int i = 0; i < count; i++) {
          if (*pal_device_ids[i] == PAL_DEVICE_OUT_USB_HEADSET) {
              is_usb_headset = true;
+             usb_out_headset = true;
              break;
          }
     }
@@ -1323,7 +1324,12 @@ int AudioDevice::add_input_headset_if_usb_out_headset(int *device_count,
         *pal_device_ids = temp;
         temp[count] = PAL_DEVICE_IN_USB_HEADSET;
         *device_count = count + 1;
-        usb_input_dev_enabled = true;
+        if (conn_state)
+           usb_input_dev_enabled = true;
+        else {
+           usb_input_dev_enabled = false;
+           usb_out_headset = false;
+        }
     }
     return 0;
 }
@@ -1451,7 +1457,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         if (device) {
             pal_device_ids = (pal_device_id_t *) calloc(1, sizeof(pal_device_id_t));
             pal_device_count = GetPalDeviceIds({device}, pal_device_ids);
-            ret = add_input_headset_if_usb_out_headset(&pal_device_count, &pal_device_ids);
+            ret = add_input_headset_if_usb_out_headset(&pal_device_count, &pal_device_ids, true);
             if (ret) {
                 if (pal_device_ids)
                     free(pal_device_ids);
@@ -1632,6 +1638,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
             if ((usb_card_id_ == param_device_connection.device_config.usb_addr.card_id) &&
                 (audio_is_usb_in_device(device)) && (usb_input_dev_enabled == true)) {
                    usb_input_dev_enabled = false;
+                   usb_out_headset = false;
                    AHAL_DBG("usb_input_dev_enabled flag is cleared.");
             }
         } else if (val == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
@@ -1646,7 +1653,7 @@ int AudioDevice::SetParameters(const char *kvpairs) {
         if (device) {
             pal_device_ids = (pal_device_id_t *) calloc(1, sizeof(pal_device_id_t));
             pal_device_count = GetPalDeviceIds({device}, pal_device_ids);
-            ret = add_input_headset_if_usb_out_headset(&pal_device_count, &pal_device_ids);
+            ret = add_input_headset_if_usb_out_headset(&pal_device_count, &pal_device_ids, false);
             if (ret) {
                 if (pal_device_ids)
                     free(pal_device_ids);
