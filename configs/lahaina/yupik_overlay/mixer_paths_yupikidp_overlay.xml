@@ -25,6 +25,10 @@
 <!--- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE      -->
 <!--- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN    -->
 <!--- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                             -->
+<!--                                                                        -->
+<!-- Changes from Qualcomm Innovation Center are provided under the following license:-->
+<!-- Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.-->
+<!-- SPDX-License-Identifier: BSD-3-Clause-Clear                            -->
 <mixer>
     <ctl name="TX DEC0 MUX" value="MSM_DMIC"/>
     <ctl name="TX DEC1 MUX" value="MSM_DMIC"/>
@@ -118,5 +122,17 @@
     </path>
     <path name="mmap-record capture-fm">
         <ctl name="MultiMedia16 Mixer SEC_MI2S_TX" value="1"/>
+    </path>
+    <path name="echo-reference usb-headphones">
+        <ctl name="AUDIO_REF_EC_UL1 MUX" value="USB_AUDIO_RX"/>
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+    <path name="echo-reference-voip-low-latency usb-headphones">
+        <ctl name="AUDIO_REF_EC_UL8 MUX" value="USB_AUDIO_RX"/>
+        <ctl name="EC Reference Channels" value="Two"/>
+    </path>
+    <path name="echo-reference-voip usb-headphones">
+        <ctl name="AUDIO_REF_EC_UL10 MUX" value="USB_AUDIO_RX"/>
+        <ctl name="EC Reference Channels" value="Two"/>
     </path>
 </mixer>

@@ -52,6 +52,7 @@ AC_ARG_ENABLE(target,
                         [qrbx210],    [TARGET_SUPPORT=qrbx210],
                         [qrb5165],    [TARGET_SUPPORT=qrb5165],
                         [sdmsteppe],    [TARGET_SUPPORT=sdmsteppe],
+                        [qcs6490],    [TARGET_SUPPORT=qcs6490],
                         [TARGET_SUPPORT=none])],
                [TARGET_SUPPORT=none]
 )
@@ -126,6 +127,12 @@ fi
 if (test x$TARGET_SUPPORT = xqrb5165); then
          AC_SUBST([TARGET_PLATFORM], ["msm8974"])
          TARGET_CFLAGS=" -DPLATFORM_KONA"
+         TARGET_CFLAGS+=" -DMAX_TARGET_SPECIFIC_CHANNEL_CNT=\"4\""
+         TARGET_CFLAGS+=" -DINCALL_STEREO_CAPTURE_ENABLED"
+fi
+if (test x$TARGET_SUPPORT = xqcs6490); then
+         AC_SUBST([TARGET_PLATFORM], ["msm8974"])
+         TARGET_CFLAGS=" -DPLATFORM_LAHAINA"
          TARGET_CFLAGS+=" -DMAX_TARGET_SPECIFIC_CHANNEL_CNT=\"4\""
          TARGET_CFLAGS+=" -DINCALL_STEREO_CAPTURE_ENABLED"
 fi

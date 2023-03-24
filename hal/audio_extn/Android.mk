@@ -18,8 +18,13 @@ else
 endif
 
 ifeq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
+ifeq ($(TARGET_BOARD_AUTO),true)
+  LIBRARY_TINYCOMPRESS := libqti-tinycompress
+  LIBRARY_TINYCOMPRESS_INC := $(TOP)/vendor/qcom/opensource/tinycompress/include
+else
   LIBRARY_TINYCOMPRESS := libtinycompress
   LIBRARY_TINYCOMPRESS_INC := external/tinycompress/include
+endif
   LOCAL_CFLAGS += -DENABLE_AUDIO_LEGACY_PURE
 endif
 #--------------------------------------------
