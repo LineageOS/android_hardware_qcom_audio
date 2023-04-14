@@ -179,6 +179,12 @@ PRODUCT_PACKAGES += fai__2.2.0_0.1__3.0.0_0.0__eai_1.00.pmd
 PRODUCT_PACKAGES += libhfp_pal
 PRODUCT_PACKAGES += libfmpal
 PRODUCT_PACKAGES += libqtigefar
+PRODUCT_PACKAGES += IDP_arrax_acdb_cal.acdb
+PRODUCT_PACKAGES += IDP_arrax_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += QRD_arrax_acdb_cal.acdb
+PRODUCT_PACKAGES += QRD_arrax_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += fai__2.0.0_0.1__3.0.0_0.0__eai_1.10.pmd
+PRODUCT_PACKAGES += fai__2.2.0_0.1__3.0.0_0.0__eai_1.10.pmd
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_MCS)), true)
 PRODUCT_PACKAGES += libmcs
@@ -210,7 +216,10 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_bengal_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_bengal_qrd.xml \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_scubaidp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_scubaidp.xml \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_scubaqrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_scubaqrd.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_bengal_idp_arrax.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_bengal_idp_arrax.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_bengal_qrd_arrax.xml:$(TARGET_COPY_OUT_VENDOR)/etc/resourcemanager_bengal_qrd_arrax.xml \
     $(CONFIG_PAL_SRC_DIR)/usecaseKvManager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usecaseKvManager.xml \
+    $(CONFIG_PAL_SRC_DIR)/usecaseKvManager_arrax.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usecaseKvManager_arrax.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
