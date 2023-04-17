@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <!-- Changes from Qualcomm Innovation Center are provided under the following license: -->
-<!-- Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.          -->	
+<!-- Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.          -->
 <!-- SPDX-License-Identifier: BSD-3-Clause-Clear                                       -->
 
 <!-- Copyright (c) 2016-2021 The Linux Foundation. All rights reserved
@@ -349,8 +349,6 @@
                        sources="primary output,raw,deep_buffer,direct_pcm,compressed_offload,voip_rx,hifi_playback"/>
                 <route type="mix" sink="USB Headset Out"
                        sources="primary output,raw,deep_buffer,direct_pcm,compressed_offload,voip_rx,hifi_playback"/>
-                <route type="mix" sink="Telephony Tx"
-                       sources="voice_tx"/>
                 <route type="mix" sink="voice_rx"
                        sources="Telephony Rx"/>
                 <route type="mix" sink="primary input"
