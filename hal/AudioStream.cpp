@@ -2365,7 +2365,7 @@ int StreamOutPrimary::SetVolume(float left , float right) {
         volume_->no_of_volpair = 2;
         volume_->volume_pair[0].channel_mask = 0x01;
         volume_->volume_pair[0].vol = left;
-        volume_->volume_pair[1].channel_mask = 0x10;
+        volume_->volume_pair[1].channel_mask = 0x02;
         volume_->volume_pair[1].vol = right;
     }
 
