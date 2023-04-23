@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "51826b86_e39b0d3a",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 27502
+      },
+      "writtenOn": "2023-04-23T19:03:06Z",
+      "side": 1,
+      "message": "Hi! I really do not think this is required because libvolumelistener does not exist in stock; and I believe everything can be made to work without this blob. \nI made this change when I was experimenting with bengal bringup for Xiaomi Redmi 9T, and I believe this does not hamper functionality when this is not added.\nPlease let me know if the case is otherwise, thank you!",
+      "revId": "8985158f474743e404aaac5a3670ca2c0225ec1d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
