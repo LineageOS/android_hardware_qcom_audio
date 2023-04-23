@@ -34,6 +34,24 @@
       "parentUuid": "51826b86_e39b0d3a",
       "revId": "8985158f474743e404aaac5a3670ca2c0225ec1d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "855cefc0_8f3ceb18",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 27502
+      },
+      "writtenOn": "2023-04-23T19:22:59Z",
+      "side": 1,
+      "message": "Oh! This does make sense - thank you for this information! :D\nIt definitely could be an error on their side, but it is very surprising how devices are stable without it too, on stock ROMs.",
+      "parentUuid": "e9a5bb1e_ba46ee21",
+      "revId": "8985158f474743e404aaac5a3670ca2c0225ec1d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
