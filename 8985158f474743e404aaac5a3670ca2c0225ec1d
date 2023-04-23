@@ -16,6 +16,24 @@
       "message": "Hi! I really do not think this is required because libvolumelistener does not exist in stock; and I believe everything can be made to work without this blob. \nI made this change when I was experimenting with bengal bringup for Xiaomi Redmi 9T, and I believe this does not hamper functionality when this is not added.\nPlease let me know if the case is otherwise, thank you!",
       "revId": "8985158f474743e404aaac5a3670ca2c0225ec1d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e9a5bb1e_ba46ee21",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2023-04-23T19:11:13Z",
+      "side": 1,
+      "message": "It is listed here https://github.com/LineageOS/android_hardware_qcom_audio/blob/lineage-20.0-caf-sm8250/configs/bengal/audio_effects.xml#L41 and volume_listener is used for a few effects if you scroll down. This looks like an error on qcom side, since every other platform can build this lib.",
+      "parentUuid": "51826b86_e39b0d3a",
+      "revId": "8985158f474743e404aaac5a3670ca2c0225ec1d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
