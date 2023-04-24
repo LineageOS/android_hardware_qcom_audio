@@ -316,8 +316,18 @@ PRODUCT_VENDOR_PROPERTIES += \
 ro.bluetooth.a2dp_offload.supported=true
 
 # Disable A2DP offload
+ifeq ($(ENABLE_HYP), true)
+ifeq ($(TARGET_GVMGH_SPECIFIC), false)
+PRODUCT_VENDOR_PROPERTIES += \
+persist.bluetooth.a2dp_offload.disabled=true
+else
 PRODUCT_VENDOR_PROPERTIES += \
 persist.bluetooth.a2dp_offload.disabled=false
+endif
+else
+PRODUCT_VENDOR_PROPERTIES += \
+persist.bluetooth.a2dp_offload.disabled=false
+endif
 
 # A2DP offload DSP supported encoder list
 PRODUCT_VENDOR_PROPERTIES += \
