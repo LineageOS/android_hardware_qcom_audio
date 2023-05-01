@@ -382,12 +382,10 @@ vendor.audio.hal.output.suspend.supported=false
 #Enable AAudio MMAP/NOIRQ data path
 #1 is AAUDIO_POLICY_NEVER so it will not try MMAP
 #2 is AAUDIO_POLICY_AUTO so it will try MMAP then fallback to Legacy path
-ifneq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX), msmnile_gvmq)
 PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_policy=2
 #Allow EXCLUSIVE then fall back to SHARED.
 PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_exclusive_policy=2
 PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
-endif
 
 #enable mirror-link feature
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -458,7 +456,8 @@ vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
 vendor.audio.feature.powerpolicy.enable=true \
-vendor.audio.feature.concurrent_pcm_record.enable=true
+vendor.audio.feature.concurrent_pcm_record.enable=true \
+vendor.audio.feature.concurrent_low_latency_pcm_record.enable=true
 ifeq ($(AUDIO_FEATURE_ENABLED_SND_MONITOR), true)
 PRODUCT_ODM_PROPERTIES += \
 vendor.audio.feature.snd_mon.enable=true
@@ -513,7 +512,8 @@ vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
 vendor.audio.feature.powerpolicy.enable=true \
-vendor.audio.feature.concurrent_pcm_record.enable=true
+vendor.audio.feature.concurrent_pcm_record.enable=true \
+vendor.audio.feature.concurrent_low_latency_pcm_record.enable=true
 ifeq ($(AUDIO_FEATURE_ENABLED_SND_MONITOR), true)
 PRODUCT_ODM_PROPERTIES += \
 vendor.audio.feature.snd_mon.enable=true

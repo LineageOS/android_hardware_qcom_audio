@@ -36,7 +36,7 @@
 
  *  Changes from Qualcomm Innovation Center are provided under the following license:
 
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -243,6 +243,7 @@ enum {
     USECASE_AUDIO_RECORD_COMPRESS5,
     USECASE_AUDIO_RECORD_COMPRESS6,
     USECASE_AUDIO_RECORD_LOW_LATENCY,
+    USECASE_AUDIO_RECORD_LOW_LATENCY2,
     USECASE_AUDIO_RECORD_FM_VIRTUAL,
     USECASE_AUDIO_RECORD_HIFI,
 
@@ -299,10 +300,14 @@ enum {
 
     /* car streams usecases */
     USECASE_AUDIO_PLAYBACK_MEDIA,
+    USECASE_AUDIO_PLAYBACK_MEDIA_LL,
     USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
     USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
+    USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE_LL,
     USECASE_AUDIO_PLAYBACK_PHONE,
+    USECASE_AUDIO_PLAYBACK_PHONE_LL,
     USECASE_AUDIO_PLAYBACK_ALERTS,
+    USECASE_AUDIO_PLAYBACK_ALERTS_LL,
     USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER,
     USECASE_AUDIO_PLAYBACK_REAR_SEAT,
     USECASE_AUDIO_RECORD_BUS,
@@ -766,6 +771,7 @@ struct audio_device {
     void *extspk;
     unsigned int offload_usecases_state;
     unsigned int pcm_record_uc_state;
+    unsigned int pcm_low_latency_record_uc_state;
     void *visualizer_lib;
     int (*visualizer_start_output)(audio_io_handle_t, int);
     int (*visualizer_stop_output)(audio_io_handle_t, int);

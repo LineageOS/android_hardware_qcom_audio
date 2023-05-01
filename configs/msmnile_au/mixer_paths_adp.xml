@@ -24,6 +24,10 @@
 <!-- BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,  -->
 <!-- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN -->
 <!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                          -->
+<!--                                                                        -->
+<!-- Changes from Qualcomm Innovation Center are provided under the following license: -->
+<!-- Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved. -->
+<!-- SPDX-License-Identifier: BSD-3-Clause-Clear                            -->
 <mixer>
     <!-- These are the initial mixer settings -->
     <!-- Example commands to Enable the paired rx usecase-->
@@ -297,6 +301,11 @@
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia1" value="1" />
     </path>
 
+    <path name="media-playback-ll">
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia10" value="1" />
+    </path>
+
     <path name="sys-notification-playback sys-bus-out">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia5" value="1" />
@@ -307,7 +316,17 @@
         <ctl name="TERT_TDM_RX_1 Audio Mixer MultiMedia2" value="1" />
     </path>
 
+    <path name="nav-guidance-playback-ll nav-bus-out">
+        <ctl name="TERT_TDM_RX_1 Channels" value="One" />
+        <ctl name="TERT_TDM_RX_1 Audio Mixer MultiMedia36" value="1" />
+    </path>
+
     <path name="phone-playback phone-bus-out">
+        <ctl name="TERT_TDM_RX_2 Channels" value="One" />
+        <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia10" value="1" />
+    </path>
+
+    <path name="phone-playback-ll phone-bus-out">
         <ctl name="TERT_TDM_RX_2 Channels" value="One" />
         <ctl name="TERT_TDM_RX_2 Audio Mixer MultiMedia10" value="1" />
     </path>
@@ -315,6 +334,11 @@
     <path name="alerts-playback alerts-bus-out">
         <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
         <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia31" value="1" />
+    </path>
+
+    <path name="alerts-playback-ll alerts-bus-out">
+        <ctl name="TERT_TDM_RX_0 Channels" value="Six" />
+        <ctl name="TERT_TDM_RX_0 Audio Mixer MultiMedia36" value="1" />
     </path>
 
     <path name="front-passenger-playback pax-bus-out">
@@ -391,7 +415,17 @@
 
     <path name="low-latency-record">
         <ctl name="TERT_TDM_TX_0 Channels" value="One" />
-        <ctl name="MultiMedia8 Mixer TERT_TDM_TX_0" value="1" />
+        <ctl name="MultiMedia32 Mixer TERT_TDM_TX_0" value="1" />
+    </path>
+
+    <path name="low-latency-record2">
+        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
+        <ctl name="MultiMedia35 Mixer TERT_TDM_TX_0" value="1" />
+    </path>
+
+    <path name="audio-record-voip">
+        <ctl name="TERT_TDM_TX_0 Channels" value="One" />
+        <ctl name="MultiMedia10 Mixer TERT_TDM_TX_0" value="1" />
     </path>
 
     <path name="low-latency-record headset-mic">

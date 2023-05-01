@@ -15,6 +15,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
  */
 #include <audio_hw.h>
 #include "platform.h"
@@ -112,10 +117,14 @@ struct pcm_config pcm_config_system_8KHz = {
 
 static const audio_usecase_t bus_device_usecases[] = {
     USECASE_AUDIO_PLAYBACK_MEDIA,
+    USECASE_AUDIO_PLAYBACK_MEDIA_LL,
     USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION,
     USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE,
+    USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE_LL,
     USECASE_AUDIO_PLAYBACK_PHONE,
+    USECASE_AUDIO_PLAYBACK_PHONE_LL,
     USECASE_AUDIO_PLAYBACK_ALERTS,
+    USECASE_AUDIO_PLAYBACK_ALERTS_LL,
     USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER,
     USECASE_AUDIO_PLAYBACK_REAR_SEAT,
     USECASE_AUDIO_RECORD_BUS,
