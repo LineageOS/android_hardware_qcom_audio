@@ -131,6 +131,11 @@ MM_AUDIO += Headset_cal.acdb
 MM_AUDIO += Speaker_cal.acdb
 
 MM_AUDIO += libaudiohalplugin
+ifeq ($(call is-board-platform-in-list,gen4),true)
+MM_AUDIO += libaudio_dac
+MM_AUDIO += libaudio_expander
+MM_AUDIO += exp_dac_test
+endif #gen4
 MM_AUDIO += libcdcdriver
 MM_AUDIO += libvad
 MM_AUDIO += capi_v2_bmt
