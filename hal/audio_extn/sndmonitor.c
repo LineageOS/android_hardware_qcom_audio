@@ -159,11 +159,11 @@ static int add_new_sndcard(int card, int fd)
     s->fd = fd; // dup?
 
     char *state = read_state(fd);
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0))
     if (!state) {
         free(s);
         return -1;
     }
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0))
     bool online = state && !strcmp(state, "ONLINE");
 
     if (state)
