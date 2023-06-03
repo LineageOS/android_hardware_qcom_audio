@@ -8462,14 +8462,6 @@ int adev_open_output_stream(struct audio_hw_device *dev,
         out->config.period_size = HDMI_MULTI_PERIOD_BYTES / (out->config.channels *
                                                          audio_bytes_per_sample(config->format));
         out->config.format = pcm_format_from_audio_format(out->format);
-    } else if ((!(out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD)) &&
-                compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_BUS)) {
-            ret = audio_extn_auto_hal_open_output_stream(out);
-            if (ret) {
-                ALOGE("%s: Failed to open output stream for bus device", __func__);
-                ret = -EINVAL;
-                goto error_open;
-            }
      }else if ((out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) ||
                (out->flags == AUDIO_OUTPUT_FLAG_DIRECT)) {
         pthread_mutex_lock(&adev->lock);
@@ -8864,6 +8856,13 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                 audio_channel_count_from_out_mask(out->channel_mask);
         out->config.format = pcm_format_from_audio_format(out->format);
         adev->voice_tx_output = out;
+    } else if (compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_BUS)) {
+            ret = audio_extn_auto_hal_open_output_stream(out);
+            if (ret) {
+                ALOGE("%s: Failed to open output stream for bus device", __func__);
+                ret = -EINVAL;
+                goto error_open;
+            }
     } else {
         unsigned int channels = 0;
         /*Update config params to default if not set by the caller*/
