@@ -227,3 +227,9 @@ else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATI
 else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),sm6150_au)
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe_au/msmsteppe_au.mk
 endif
+
+ifeq ($(TARGET_BOARD_AUTO),true)
+ifeq ($(TARGET_USES_RRO),true)
+PRODUCT_PACKAGES += CarServiceResAutoTarget_Vendor
+endif
+endif
