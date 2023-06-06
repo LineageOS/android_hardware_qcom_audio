@@ -4186,7 +4186,7 @@ static int stop_output_stream(struct stream_out *out)
         struct audio_usecase *usecase;
         list_for_each(node, &adev->usecase_list) {
             usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->type == PCM_PLAYBACK || usecase == uc_info ||
+            if (usecase == uc_info ||
                 (usecase->type == PCM_CAPTURE &&
                      usecase->id != USECASE_AUDIO_RECORD_VOIP &&
                           usecase->id != USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY))
