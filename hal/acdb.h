@@ -4,6 +4,7 @@
  *
  * Copyright (C) 2013 The Android Open Source Project
  *
+ * Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -68,7 +69,7 @@ typedef int (*acdb_reload_t) (char *, char *, char *, int);
 typedef int (*acdb_reload_v2_t) (char *, char *, char *, struct listnode *);
 typedef int (*acdb_send_gain_dep_cal_t)(int, int, int, int, int);
 typedef void (*acdb_set_fluence_nn_state_t)(bool);
-typedef bool (*acdb_get_fluence_nn_state_t)();
+typedef int (*acdb_get_fluence_nn_state_t)();
 
 struct meta_key_list {
     struct listnode list;
