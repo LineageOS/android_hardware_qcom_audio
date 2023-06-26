@@ -19,6 +19,9 @@ include $(MY_LOCAL_PATH)/visualizer/Android.mk
 include $(MY_LOCAL_PATH)/post_proc/Android.mk
 include $(MY_LOCAL_PATH)/qahw/Android.mk
 include $(MY_LOCAL_PATH)/qahw_api/Android.mk
+ifeq ($(AUDIO_FEATURE_ENABLED_STT_SUPPORT),true)
+include $(MY_LOCAL_PATH)/stt_meta/Android.mk
+endif
 endif
 
 ifeq ($(USE_LEGACY_AUDIO_DAEMON), true)
