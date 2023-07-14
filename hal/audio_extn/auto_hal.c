@@ -663,11 +663,19 @@ bool auto_hal_overwrite_priority_for_auto(struct stream_in *in)
     return (in->source == AUDIO_SOURCE_ECHO_REFERENCE);
 }
 
+#ifdef ANDROID_U_HAL7
+int auto_hal_get_audio_port_v7(struct audio_hw_device *dev __unused,
+                        struct audio_port_v7 *config __unused)
+{
+    return -ENOSYS;
+}
+#else
 int auto_hal_get_audio_port(struct audio_hw_device *dev __unused,
                         struct audio_port *config __unused)
 {
     return -ENOSYS;
 }
+#endif
 
 int auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                         const struct audio_port_config *config)
