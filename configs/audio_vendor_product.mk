@@ -1,3 +1,10 @@
+AUDIO_USE_STUB_HAL := false
+ifeq ($(TARGET_USES_QMAA),true)
+ifeq ($(TARGET_USES_QMAA_OVERRIDE_AUDIO), false)
+AUDIO_USE_STUB_HAL := true
+endif # TARGET_USES_QMAA_OVERRIDE_AUDIO
+endif # TARGET_USES_QMAA
+
 #MM_AUDIO product packages
 MM_AUDIO += audiod
 MM_AUDIO += libacdbloader
@@ -223,6 +230,10 @@ TARGET_USES_AOSP_FOR_AUDIO := false
 endif
 
 # Audio configuration file
+ifeq ($(AUDIO_USE_STUB_HAL),true)
+TARGET_USES_AOSP_FOR_AUDIO := true
+-include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/default.mk
+else
 ifeq ($(TARGET_GVMGH_SPECIFIC), false)
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk
 else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX),msmnile_au_km4)
@@ -232,6 +243,7 @@ else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATI
 else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),sm6150_au)
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe_au/msmsteppe_au.mk
 endif
+endif # AUDIO_USE_STUB_HAL
 
 ifeq ($(TARGET_BOARD_AUTO),true)
 ifeq ($(TARGET_USES_RRO),true)
