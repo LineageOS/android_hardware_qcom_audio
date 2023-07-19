@@ -1050,7 +1050,8 @@ static int set_stream_app_type_mixer_ctrl(struct audio_device *adev,
 
     char mixer_ctl_name[MAX_LENGTH_MIXER_CONTROL_IN_INT];
     struct mixer_ctl *ctl;
-    int app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT], len = 0, rc = 0;
+    size_t app_type_cfg[MAX_LENGTH_MIXER_CONTROL_IN_INT] = {0};
+    int len = 0, rc = 0;
     int snd_device_be_idx = -1;
 
     if (stream_type == PCM_PLAYBACK) {

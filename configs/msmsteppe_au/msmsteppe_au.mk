@@ -71,7 +71,7 @@ AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := true
 AUDIO_FEATURE_ENABLED_ACDB_LICENSE := false
 AUDIO_FEATURE_ENABLED_DEV_ARBI := false
 AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
-MM_AUDIO_ENABLED_FTM := true
+MM_AUDIO_ENABLED_FTM := false
 TARGET_USES_QCOM_MM_AUDIO := true
 AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
@@ -83,7 +83,9 @@ AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := false
 ##AUDIO_FEATURE_FLAGS
 
+ifneq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
 AUDIO_HARDWARE += audio.a2dp.default
+endif
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
 AUDIO_HARDWARE += audio.primary.$(MSMSTEPPE)
@@ -103,7 +105,7 @@ PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
 AUDIO_FEATURE_ENABLED_AUTO_HAL := true
 AUDIO_FEATURE_ENABLED_EXT_HW_PLUGIN := true
 AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL := true
-ifneq ( ,$(filter T Tiramisu 13, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14, $(PLATFORM_VERSION)))
 AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL_AIDL := true
 endif
 ifneq ($(ENABLE_HYP),true)
@@ -113,7 +115,7 @@ AUDIO_FEATURE_ENABLED_SILENT_BOOT := true
 endif
 AUDIO_FEATURE_ENABLED_FM_TUNER_EXT := true
 AUDIO_FEATURE_ENABLED_ICC := true
-ifneq ( ,$(filter S 12, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter S 12 U UpsideDownCake 14, $(PLATFORM_VERSION)))
 AUDIO_FEATURE_ENABLED_POWER_POLICY := true
 endif
 ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX), sm6150_au)
@@ -506,7 +508,7 @@ PRODUCT_PACKAGES_DEBUG += \
     AudioSettings
 
 # for HIDL related audiocontrol packages
-ifeq ( ,$(filter 12 13,$(PLATFORM_VERSION)))
+ifeq ( ,$(filter 12 13 U UpsideDownCake 14, $(PLATFORM_VERSION)))
 PRODUCT_PACKAGES += \
     android.hardware.automotive.audiocontrol@2.0-service \
     android.hardware.automotive.audiocontrol@2.0
