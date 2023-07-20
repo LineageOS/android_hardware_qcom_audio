@@ -881,11 +881,15 @@ static void auto_hal_set_mute_duck_state(struct audio_device *adev,
                     case AUDIO_DEVICE_MUTED:
                         ALOGD("%s: Muting BUS device %s", __func__, ptr);
                         out->muted = true;
+                        if (out && out->compr)
+                              auto_hal_out_set_compr_volume(out, DUCKED_VOLUME, DUCKED_VOLUME);
                         break;
 
                     case AUDIO_DEVICE_UNMUTED:
                         ALOGD("%s: Unmuting BUS device %s", __func__, ptr);
                         out->muted = false;
+                        if (out && out->compr)
+                              auto_hal_out_set_compr_volume(out, out->volume_l, out->volume_r);
                         break;
                 }
             }
