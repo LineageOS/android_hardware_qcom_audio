@@ -3455,7 +3455,12 @@ void *platform_init(struct audio_device *adev)
         my_data->hifi_audio = true;
     set_platform_defaults(my_data);
     /* Initialize ACDB ID's */
-    if (my_data->is_i2s_ext_modem && !is_auto_snd_card(snd_card_name)) {
+    char platform_info_xml_path_custom[PROPERTY_VALUE_MAX];
+    property_get("vendor.audio.platform_info_xml.path", platform_info_xml_path_custom, "");
+    if (strlen(platform_info_xml_path_custom) > 0) {
+        platform_info_init(platform_info_xml_path_custom,
+            my_data, PLATFORM);
+    } else if (my_data->is_i2s_ext_modem && !is_auto_snd_card(snd_card_name)) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_I2S_NAME),
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "sdm660-snd-card-skush",
