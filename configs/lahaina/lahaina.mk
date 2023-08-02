@@ -115,9 +115,13 @@ AUDIO_WRAPPER += libqahwwrapper
 AUDIO_HAL_TEST_APPS := hal_play_test
 AUDIO_HAL_TEST_APPS += hal_rec_test
 
+#STT META Test App
+AUDIO_STT_META := stt_meta_extract
+
 PRODUCT_PACKAGES += $(AUDIO_HARDWARE)
 PRODUCT_PACKAGES += $(AUDIO_WRAPPER)
 PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
+PRODUCT_PACKAGES += $(AUDIO_STT_META)
 PRODUCT_PACKAGES += ftm_test_config_lahaina-qrd-snd-card
 PRODUCT_PACKAGES += ftm_test_config_lahaina-hdk-snd-card
 PRODUCT_PACKAGES += ftm_test_config_lahaina-hhg-snd-card
