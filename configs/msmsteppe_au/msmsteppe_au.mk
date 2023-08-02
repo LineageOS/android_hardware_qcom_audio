@@ -339,9 +339,16 @@ vendor.audio.hal.output.suspend.supported=false
 #Enable AAudio MMAP/NOIRQ data path
 #1 is AAUDIO_POLICY_NEVER so it will not try MMAP
 #2 is AAUDIO_POLICY_AUTO so it will try MMAP then fallback to Legacy path
+ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
+PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_policy=2
+#Allow EXCLUSIVE then fall back to SHARED.
+PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_exclusive_policy=2
+PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
+else
 PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_policy=1
 #Allow EXCLUSIVE then fall back to SHARED.
 PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_exclusive_policy=1
+endif
 
 #enable mirror-link feature
 PRODUCT_PROPERTY_OVERRIDES += \
