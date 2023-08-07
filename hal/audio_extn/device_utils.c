@@ -25,6 +25,11 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
  */
 
 #define LOG_TAG "device_utils"
@@ -186,13 +191,13 @@ bool is_codec_backend_out_device_type(struct listnode *devices)
 /* Returns true if USB input device is found in passed devices list */
 bool is_usb_in_device_type(struct listnode *devices)
 {
-    struct listnode *node;
+    struct listnode *node, *temp;
     struct audio_device_info *item = NULL;
 
     if (devices == NULL)
         return false;
 
-    list_for_each (node, devices) {
+    list_for_each_safe (node, temp, devices) {
         item = node_to_item(node, struct audio_device_info, list);
         if (item != NULL && audio_is_usb_in_device(item->type)) {
             ALOGV("%s: USB in device %#x", __func__, item->type);
@@ -207,10 +212,10 @@ bool is_usb_in_device_type(struct listnode *devices)
  */
 bool is_usb_out_device_type(struct listnode *devices)
 {
-    struct listnode *node;
+    struct listnode *node, *temp;
     struct audio_device_info *item = NULL;
 
-    list_for_each (node, devices) {
+    list_for_each_safe (node, temp, devices) {
         item = node_to_item(node, struct audio_device_info, list);
         if (item != NULL && audio_is_usb_out_device(item->type)) {
             ALOGV("%s: USB out device %#x address %s", __func__,
@@ -314,13 +319,13 @@ bool is_a2dp_in_device_type(struct listnode *devices)
  */
 bool is_a2dp_out_device_type(struct listnode *devices)
 {
-    struct listnode *node;
+    struct listnode *node, *temp;
     struct audio_device_info *item = NULL;
 
     if (devices == NULL)
         return false;
 
-    list_for_each (node, devices) {
+    list_for_each_safe (node, temp, devices) {
         item = node_to_item(node, struct audio_device_info, list);
         if (item != NULL && audio_is_a2dp_out_device(item->type)) {
             ALOGV("%s: A2DP out device %#x", __func__, item->type);
@@ -359,13 +364,13 @@ int clear_devices(struct listnode *devices)
  */
 bool compare_device_type(struct listnode *devices, audio_devices_t device_type)
 {
-    struct listnode *node;
+    struct listnode *node, *temp;
     struct audio_device_info *item = NULL;
 
     if (devices == NULL)
         return false;
 
-    list_for_each (node, devices) {
+    list_for_each_safe (node, temp, devices) {
         item = node_to_item(node, struct audio_device_info, list);
         if (item != NULL && (item->type == device_type)) {
             ALOGV("%s: device types %d match", __func__, device_type);
