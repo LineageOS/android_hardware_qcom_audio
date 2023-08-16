@@ -15,6 +15,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #define LOG_TAG "offload_effect_virtualizer"
@@ -400,6 +405,11 @@ int virtualizer_set_parameter(effect_context_t *context, effect_param_t *p,
         break;
     case VIRTUALIZER_PARAM_FORCE_VIRTUALIZATION_MODE:
     {
+        if(p->vsize != sizeof(audio_devices_t)){
+            ALOGE("%s: VIRTUALIZER_PARAM_FORCE_VIRTUALIZATION_MODE :  p->vsize != sizeof(audio_devices_t) , sending -EINVAL", __func__);
+            p->status = -EINVAL;
+            break;
+        }
         const audio_devices_t device = *(audio_devices_t *)value;
         if (0 != virtualizer_force_virtualization_mode(virt_ctxt, device)) {
             p->status = -EINVAL;
