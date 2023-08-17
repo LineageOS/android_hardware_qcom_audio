@@ -6817,7 +6817,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                    compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER_SAFE)) {
             snd_device = SND_DEVICE_OUT_SPEAKER_SAFE_AND_LINE;
         } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
-                   compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER)) {
+                   compare_device_type(&devices, AUDIO_DEVICE_OUT_SPEAKER) &&
+                   controller >= 0 && controller < MAX_CONTROLLERS) {
             switch(my_data->ext_disp[controller][stream].type) {
                 case EXT_DISPLAY_TYPE_HDMI:
                     snd_device = SND_DEVICE_OUT_SPEAKER_AND_HDMI;
@@ -7021,7 +7022,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
                    compare_device_type(&devices, AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET)) {
             snd_device = SND_DEVICE_OUT_USB_HEADSET;
         } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
-                   adev->dp_allowed_for_voice) {
+                   adev->dp_allowed_for_voice && controller >= 0 && controller < MAX_CONTROLLERS) {
             switch(my_data->ext_disp[controller][stream].type) {
                 case EXT_DISPLAY_TYPE_DP:
                     snd_device = SND_DEVICE_OUT_DISPLAY_PORT +
@@ -7120,7 +7121,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             snd_device = SND_DEVICE_OUT_BT_SCO;
     } else if (is_a2dp_out_device_type(&devices)) {
         snd_device = SND_DEVICE_OUT_BT_A2DP;
-    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+    } else if (compare_device_type(&devices, AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
+                    controller >= 0 && controller < MAX_CONTROLLERS) {
             switch(my_data->ext_disp[controller][stream].type) {
                 case EXT_DISPLAY_TYPE_HDMI:
                     snd_device = SND_DEVICE_OUT_HDMI;
@@ -7768,7 +7770,8 @@ snd_device_t platform_get_input_snd_device(void *platform,
                     else
                         snd_device = SND_DEVICE_IN_VOICE_REC_DMIC_FLUENCE;
                 }
-                in->enable_ec_port = true;
+                if (in != NULL)
+                    in->enable_ec_port = true;
             } else if (((channel_mask == AUDIO_CHANNEL_IN_FRONT_BACK) ||
                        (channel_mask == AUDIO_CHANNEL_IN_STEREO)) &&
                        (my_data->source_mic_type & SOURCE_DUAL_MIC)) {
