@@ -79,127 +79,26 @@
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
                              samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
                 </mixPort>
-                <mixPort name="carplay_48k_media" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                             samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
                 <mixPort name="sys_notification" role="source">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
                              samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_8k_sys" role="source">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="8000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_16k_sys" role="source">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="16000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_24k_sys" role="source">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="24000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_32k_sys" role="source">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="32000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_48k_sys" role="source">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
                 </mixPort>
                 <mixPort name="mixport_tuner0" role="sink">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
                              samplingRates="48000"
                              channelMasks="AUDIO_CHANNEL_IN_STEREO"/>
                 </mixPort>
-                <mixPort name="nav_guidance" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_PRIMARY">
+                <mixPort name="nav_guidance" role="source">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
                              samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_8k_navi" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="8000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_16k_navi" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="16000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_24k_navi" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="24000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_32k_navi" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="32000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_48k_navi" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
                 </mixPort>
                 <mixPort name="phone" role="source">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                             samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_8k_phone" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                             samplingRates="8000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_16k_phone" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                             samplingRates="16000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_24k_phone" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                             samplingRates="24000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_32k_phone" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                             samplingRates="32000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_48k_phone" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
                              samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
                 </mixPort>
                 <mixPort name="alerts" role="source">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
                              samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_8k_alerts" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="8000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_16k_alerts" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="16000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_24k_alerts" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="24000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_32k_alerts" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="32000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
-                </mixPort>
-                <mixPort name="carplay_48k_alerts" role="source"
-                         flags="AUDIO_OUTPUT_FLAG_FAST">
-                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
-                        samplingRates="48000" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
                 </mixPort>
                 <mixPort name="front_passenger" role="source">
                     <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
@@ -424,15 +323,15 @@
             </devicePorts>
             <routes>
                 <route type="mix" sink="Media Bus"
-                       sources="media,mmap_no_irq_out,carplay_48k_media"/>
+                       sources="media,mmap_no_irq_out"/>
                 <route type="mix" sink="Sys Notification Bus"
-                       sources="sys_notification,carplay_8k_sys,carplay_16k_sys,carplay_24k_sys,carplay_32k_sys,carplay_48k_sys,mmap_no_irq_out"/>
+                       sources="sys_notification,mmap_no_irq_out"/>
                 <route type="mix" sink="Nav Guidance Bus"
-                       sources="nav_guidance,mmap_no_irq_out,carplay_8k_navi,carplay_16k_navi,carplay_24k_navi,carplay_32k_navi,carplay_48k_navi"/>
+                       sources="nav_guidance,mmap_no_irq_out"/>
                 <route type="mix" sink="Phone Bus"
-                       sources="phone,carplay_8k_phone,carplay_16k_phone,carplay_24k_phone,carplay_32k_phone,carplay_48k_phone,mmap_no_irq_out"/>
+                       sources="phone,mmap_no_irq_out"/>
                 <route type="mix" sink="Alerts Bus"
-                       sources="alerts,carplay_8k_alerts,carplay_16k_alerts,carplay_24k_alerts,carplay_32k_alerts,carplay_48k_alerts"/>
+                       sources="alerts"/>
                 <route type="mix" sink="Front Passenger Bus"
                        sources="front_passenger,mmap_no_irq_out"/>
                 <route type="mix" sink="Rear Seat Bus"

@@ -8901,6 +8901,14 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                         out->pm_qos_mixer_path);
             }
             out->config = pcm_config_low_latency;
+            if (compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_BUS)) {
+                ret = audio_extn_auto_hal_open_output_stream(out);
+                if (ret) {
+                    ALOGE("%s: Failed to open output stream for bus device", __func__);
+                    ret = -EINVAL;
+                    goto error_open;
+                }
+            }
         } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
             out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
             out->config = pcm_config_deep_buffer;
