@@ -92,6 +92,7 @@
 #include "platform_api.h"
 #include "edid.h"
 #include "sound/compress_params.h"
+#include <pthread.h>
 
 #ifdef AUDIO_GKI_ENABLED
 #include "sound/audio_compressed_formats.h"

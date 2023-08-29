@@ -3566,6 +3566,9 @@ static int stop_input_stream(struct stream_in *in)
     }
 
     enable_gcov();
+#ifdef PURGE_UNUSED_MEM
+    mallopt(M_PURGE, 0);
+#endif
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -4205,6 +4208,9 @@ static int stop_output_stream(struct stream_out *out)
 
     clear_devices(&uc_info->device_list);
     free(uc_info);
+#ifdef PURGE_UNUSED_MEM
+    mallopt(M_PURGE, 0);
+#endif
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
