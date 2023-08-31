@@ -44,7 +44,17 @@
     <ctl name="MultiMedia16 Mixer SEC_MI2S_TX" value="0"/>
     <ctl name="SEC MI2S LOOPBACK Volume" value="0"/>
     <ctl name="WSA_CDC_DMA_RX_0 Port Mixer SEC_MI2S_TX" value="0"/>
+    <ctl name="MultiMedia1 Mixer PRI_MI2S_TX" value="0" />
+    <ctl name="MultiMedia17 Mixer PRI_MI2S_TX" value="0" />
 
+    <path name="audio-record hdmi-in">
+	<ctl name="MultiMedia1 Mixer PRI_MI2S_TX" value="1" />
+    </path>
+    <path name="hdmi-in">
+    </path>
+    <path name="audio-record-compress2 hdmi-in">
+	<ctl name="MultiMedia17 Mixer PRI_MI2S_TX" value="1" />
+    </path>
     <path name="speaker-mic">
         <path name="dmic4"/>
     </path>
