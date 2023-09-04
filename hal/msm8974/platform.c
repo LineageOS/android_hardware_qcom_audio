@@ -7849,7 +7849,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
             snd_device = get_snd_device_for_voice_comm(my_data, in, out_devices, &in_devices);
     } else if (source == AUDIO_SOURCE_MIC) {
         if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) &&
-                channel_count == 1 ) {
+                (channel_count == 1 || channel_count == 2)) {
             if(my_data->fluence_in_audio_rec) {
                if ((my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                     (my_data->source_mic_type & SOURCE_QUAD_MIC)) {
