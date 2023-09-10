@@ -379,7 +379,8 @@ int auto_hal_open_output_stream(struct stream_out *out)
 
     switch(out->car_audio_stream) {
     case CAR_AUDIO_STREAM_MEDIA:
-        if (out->flags == AUDIO_OUTPUT_FLAG_PRIMARY) {
+        if (out->flags == AUDIO_OUTPUT_FLAG_PRIMARY ||
+         out->flags == AUDIO_OUTPUT_FLAG_NONE) {
             /* media bus stream shares pcm device with deep-buffer */
             out->usecase = USECASE_AUDIO_PLAYBACK_MEDIA;
             out->config = pcm_config_media;
@@ -403,14 +404,15 @@ int auto_hal_open_output_stream(struct stream_out *out)
                 out->config=pcm_config_system_48KHz;
             }
         }
+        else if (out->flags == AUDIO_OUTPUT_FLAG_NONE ||
+            out->flags == AUDIO_OUTPUT_FLAG_PRIMARY) {
+            out->flags |= AUDIO_OUTPUT_FLAG_MEDIA;
+        }
         else {
             ALOGE("%s: Output profile flag(%#x) is not valid", __func__,out->flags);
             ret = -EINVAL;
             goto error;
         }
-        if (out->flags == AUDIO_OUTPUT_FLAG_NONE ||
-            out->flags == AUDIO_OUTPUT_FLAG_PRIMARY)
-            out->flags |= AUDIO_OUTPUT_FLAG_MEDIA;
         out->volume_l = out->volume_r = MAX_VOLUME_GAIN;
         break;
     case CAR_AUDIO_STREAM_SYS_NOTIFICATION:
@@ -663,11 +665,19 @@ bool auto_hal_overwrite_priority_for_auto(struct stream_in *in)
     return (in->source == AUDIO_SOURCE_ECHO_REFERENCE);
 }
 
+#ifdef ANDROID_U_HAL7
+int auto_hal_get_audio_port_v7(struct audio_hw_device *dev __unused,
+                        struct audio_port_v7 *config __unused)
+{
+    return -ENOSYS;
+}
+#else
 int auto_hal_get_audio_port(struct audio_hw_device *dev __unused,
                         struct audio_port *config __unused)
 {
     return -ENOSYS;
 }
+#endif
 
 int auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                         const struct audio_port_config *config)
