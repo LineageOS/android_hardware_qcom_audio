@@ -241,6 +241,8 @@ ifeq ($(TARGET_GVMGH_SPECIFIC), false)
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk
 else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX),msmnile_au_km4)
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk
+else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX),msmnile_tb)
+-include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk
 else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX),msmnile_au_ar)
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk
 else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),sm6150_au)
