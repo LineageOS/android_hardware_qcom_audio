@@ -2,7 +2,7 @@
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  * Redistribution and use in source and binary forms, with or without
@@ -632,6 +632,9 @@ static void update_hardware_info_lahaina(
         hw_info->is_stereo_spkr = false;
     } else if (!strncmp(snd_card_name, "lahaina-yupikidp-snd-card",
                  sizeof("lahaina-yupikidp-snd-card"))) {
+        strlcpy(hw_info->name, "yupik", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-yupikidprb3-snd-card",
+                 sizeof("lahaina-yupikidprb3-snd-card"))) {
         strlcpy(hw_info->name, "yupik", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "lahaina-yupikqrd-snd-card",
                  sizeof("lahaina-yupikqrd-snd-card"))) {
