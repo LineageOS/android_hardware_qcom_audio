@@ -4427,12 +4427,13 @@ int start_output_stream(struct stream_out *out)
             ALOGE("%s: pcm stream not ready", __func__);
             goto error_open;
         }
+
+        out_set_mmap_volume(&out->stream, out->volume_l, out->volume_r);
         ret = pcm_start(out->pcm);
         if (ret < 0) {
             ALOGE("%s: MMAP pcm_start failed ret %d", __func__, ret);
             goto error_open;
         }
-        out_set_mmap_volume(&out->stream, out->volume_l, out->volume_r);
     } else if (!is_offload_usecase(out->usecase)) {
         unsigned int flags = PCM_OUT;
         unsigned int pcm_open_retry_count = 0;
