@@ -62,7 +62,7 @@
         <path name="dmic4"/>
     </path>
     <path name="handset-mic">
-        <path name="dmic3"/>
+        <path name="dmic1"/>
     </path>
     <path name="handset-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two"/>
