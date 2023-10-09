@@ -390,7 +390,7 @@ int main(int argc, char* argv[]) {
 
     if (property_get_bool("ro.vendor.audio.sdk.fluence.nn.enabled",false)) {
         if((!strncmp("fluencenn", fluence_property, sizeof("fluencenn"))) ||
-                       (!strncmp("none", fluence_property, sizeof("none"))))
+                       (!strncmp("fluence", fluence_property, sizeof("fluence"))))
             fv = FV_13;
         else
             fv = FV_11;
