@@ -161,6 +161,10 @@ ifeq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
   LOCAL_HEADER_LIBRARIES += qti_legacy_audio_kernel_uapi
 endif
 
+ifeq ($(AUDIO_FEATURE_ENABLED_HAL_V7), true)
+  LOCAL_CFLAGS += -DANDROID_U_HAL7
+endif
+
 LOCAL_SRC_FILES := \
     audio_hw.c \
     acdb.c \

@@ -1236,6 +1236,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
   LOCAL_C_INCLUDES += $(AUDIO_KERNEL_INC)
 endif
 
+ifeq ($(AUDIO_FEATURE_ENABLED_HAL_V7), true)
+LOCAL_CFLAGS += -DANDROID_U_HAL7
+endif
+
 LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
 ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)

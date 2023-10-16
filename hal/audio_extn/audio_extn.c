@@ -6228,9 +6228,15 @@ static auto_hal_open_echo_reference_stream_t auto_hal_open_echo_reference_stream
 typedef bool (*auto_hal_is_bus_device_usecase_t)(audio_usecase_t);
 static auto_hal_is_bus_device_usecase_t auto_hal_is_bus_device_usecase;
 
+#ifdef ANDROID_U_HAL7
+typedef int (*auto_hal_get_audio_port_v7_t)(struct audio_hw_device*,
+                                struct audio_port_v7*);
+static auto_hal_get_audio_port_v7_t auto_hal_get_audio_port_v7;
+#else
 typedef int (*auto_hal_get_audio_port_t)(struct audio_hw_device*,
                                 struct audio_port*);
 static auto_hal_get_audio_port_t auto_hal_get_audio_port;
+#endif
 
 typedef int (*auto_hal_set_audio_port_config_t)(struct audio_hw_device*,
                                 const struct audio_port_config*);
@@ -6306,9 +6312,15 @@ int auto_hal_feature_init(bool is_feature_enabled)
             !(auto_hal_is_bus_device_usecase =
                  (auto_hal_is_bus_device_usecase_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_is_bus_device_usecase")) ||
+#ifdef ANDROID_U_HAL7
+	    !(auto_hal_get_audio_port_v7 =
+                 (auto_hal_get_audio_port_v7_t)dlsym(
+                            auto_hal_lib_handle, "auto_hal_get_audio_port_v7")) ||
+#else
             !(auto_hal_get_audio_port =
                  (auto_hal_get_audio_port_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_get_audio_port")) ||
+#endif
             !(auto_hal_set_audio_port_config =
                  (auto_hal_set_audio_port_config_t)dlsym(
                             auto_hal_lib_handle, "auto_hal_set_audio_port_config")) ||
@@ -6355,7 +6367,11 @@ feature_disabled:
     auto_hal_open_input_stream = NULL;
     auto_hal_open_echo_reference_stream = NULL;
     auto_hal_is_bus_device_usecase = NULL;
+#ifdef ANDROID_U_HAL7
+    auto_hal_get_audio_port_v7 = NULL;
+#else
     auto_hal_get_audio_port = NULL;
+#endif
     auto_hal_set_audio_port_config = NULL;
     auto_hal_set_parameters = NULL;
     auto_hal_start_hfp_downlink = NULL;
@@ -6451,13 +6467,21 @@ bool audio_extn_auto_hal_is_bus_device_usecase(audio_usecase_t uc_id)
                             auto_hal_is_bus_device_usecase(uc_id): false);
 }
 
+#ifdef ANDROID_U_HAL7
+int audio_extn_auto_hal_get_audio_port_v7(struct audio_hw_device *dev,
+                                struct audio_port_v7 *config)
+{
+    return ((auto_hal_get_audio_port_v7) ?
+                            auto_hal_get_audio_port_v7(dev, config): 0);
+}
+#else
 int audio_extn_auto_hal_get_audio_port(struct audio_hw_device *dev,
                                 struct audio_port *config)
 {
     return ((auto_hal_get_audio_port) ?
                             auto_hal_get_audio_port(dev, config): 0);
 }
-
+#endif
 int audio_extn_auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                                 const struct audio_port_config *config)
 {

@@ -43,7 +43,12 @@
 #include <cutils/properties.h>
 #include <platform_api.h>
 
+#ifdef __LP64__
+#define PRIMARY_HAL_PATH XSTR(LIB64_AUDIO_HAL)
+#else
 #define PRIMARY_HAL_PATH XSTR(LIB_AUDIO_HAL)
+#endif
+
 #define XSTR(x) STR(x)
 #define STR(x) #x
 

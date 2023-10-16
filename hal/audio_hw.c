@@ -8930,6 +8930,14 @@ int adev_open_output_stream(struct audio_hw_device *dev,
                         out->pm_qos_mixer_path);
             }
             out->config = pcm_config_low_latency;
+            if (compare_device_type(&out->device_list, AUDIO_DEVICE_OUT_BUS)) {
+                ret = audio_extn_auto_hal_open_output_stream(out);
+                if (ret) {
+                    ALOGE("%s: Failed to open output stream for bus device", __func__);
+                    ret = -EINVAL;
+                    goto error_open;
+                }
+            }
         } else if (out->flags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER) {
             out->usecase = USECASE_AUDIO_PLAYBACK_DEEP_BUFFER;
             out->config = pcm_config_deep_buffer;
@@ -10956,6 +10964,16 @@ done:
     return ret;
 }
 
+#ifdef ANDROID_U_HAL7
+int adev_get_audio_port_v7(struct audio_hw_device *dev, struct audio_port_v7 *config)
+{
+    int ret = 0;
+
+    ret = audio_extn_hw_loopback_get_audio_port_v7(dev, config);
+    ret |= audio_extn_auto_hal_get_audio_port_v7(dev, config);
+    return ret;
+}
+#else
 int adev_get_audio_port(struct audio_hw_device *dev, struct audio_port *config)
 {
     int ret = 0;
@@ -10964,6 +10982,7 @@ int adev_get_audio_port(struct audio_hw_device *dev, struct audio_port *config)
     ret |= audio_extn_auto_hal_get_audio_port(dev, config);
     return ret;
 }
+#endif
 
 int adev_set_audio_port_config(struct audio_hw_device *dev,
                         const struct audio_port_config *config)
@@ -11238,9 +11257,13 @@ static int adev_open(const hw_module_t *module, const char *name,
         maj_version = atoi(value);
 
     adev->device.common.tag = HARDWARE_DEVICE_TAG;
-    adev->device.common.version = HARDWARE_DEVICE_API_VERSION(maj_version, 0);
     adev->device.common.module = (struct hw_module_t *)module;
     adev->device.common.close = adev_close;
+#ifdef ANDROID_U_HAL7
+   adev->device.common.version = HARDWARE_DEVICE_API_VERSION(maj_version, 2);
+#else
+   adev->device.common.version = HARDWARE_DEVICE_API_VERSION(maj_version, 0);
+#endif
 
     adev->device.init_check = adev_init_check;
     adev->device.set_voice_volume = adev_set_voice_volume;
@@ -11260,10 +11283,15 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->device.close_input_stream = adev_close_input_stream;
     adev->device.create_audio_patch = adev_create_audio_patch;
     adev->device.release_audio_patch = adev_release_audio_patch;
-    adev->device.get_audio_port = adev_get_audio_port;
     adev->device.set_audio_port_config = adev_set_audio_port_config;
     adev->device.dump = adev_dump;
     adev->device.get_microphones = adev_get_microphones;
+
+#ifdef ANDROID_U_HAL7
+    adev->device.get_audio_port_v7 = adev_get_audio_port_v7;
+#else
+    adev->device.get_audio_port = adev_get_audio_port;
+#endif
 
     /* Set the default route before the PCM stream is opened */
     adev->mode = AUDIO_MODE_NORMAL;

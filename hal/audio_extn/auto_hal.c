@@ -379,7 +379,8 @@ int auto_hal_open_output_stream(struct stream_out *out)
 
     switch(out->car_audio_stream) {
     case CAR_AUDIO_STREAM_MEDIA:
-        if (out->flags == AUDIO_OUTPUT_FLAG_PRIMARY) {
+        if (out->flags == AUDIO_OUTPUT_FLAG_PRIMARY ||
+         out->flags == AUDIO_OUTPUT_FLAG_NONE) {
             /* media bus stream shares pcm device with deep-buffer */
             out->usecase = USECASE_AUDIO_PLAYBACK_MEDIA;
             out->config = pcm_config_media;
@@ -403,14 +404,15 @@ int auto_hal_open_output_stream(struct stream_out *out)
                 out->config=pcm_config_system_48KHz;
             }
         }
+        else if (out->flags == AUDIO_OUTPUT_FLAG_NONE ||
+            out->flags == AUDIO_OUTPUT_FLAG_PRIMARY) {
+            out->flags |= AUDIO_OUTPUT_FLAG_MEDIA;
+        }
         else {
             ALOGE("%s: Output profile flag(%#x) is not valid", __func__,out->flags);
             ret = -EINVAL;
             goto error;
         }
-        if (out->flags == AUDIO_OUTPUT_FLAG_NONE ||
-            out->flags == AUDIO_OUTPUT_FLAG_PRIMARY)
-            out->flags |= AUDIO_OUTPUT_FLAG_MEDIA;
         out->volume_l = out->volume_r = MAX_VOLUME_GAIN;
         break;
     case CAR_AUDIO_STREAM_SYS_NOTIFICATION:
@@ -663,11 +665,19 @@ bool auto_hal_overwrite_priority_for_auto(struct stream_in *in)
     return (in->source == AUDIO_SOURCE_ECHO_REFERENCE);
 }
 
+#ifdef ANDROID_U_HAL7
+int auto_hal_get_audio_port_v7(struct audio_hw_device *dev __unused,
+                        struct audio_port_v7 *config __unused)
+{
+    return -ENOSYS;
+}
+#else
 int auto_hal_get_audio_port(struct audio_hw_device *dev __unused,
                         struct audio_port *config __unused)
 {
     return -ENOSYS;
 }
+#endif
 
 int auto_hal_set_audio_port_config(struct audio_hw_device *dev,
                         const struct audio_port_config *config)
@@ -787,6 +797,32 @@ int auto_hal_set_audio_port_config(struct audio_hw_device *dev,
     return ret;
 }
 
+static int auto_hal_out_set_compr_volume(struct stream_out *out, float left, float right)
+{
+      /* Volume control for compress playback */
+      long volume[2];
+      char mixer_ctl_name[128];
+      struct audio_device *adev = out->dev;
+      struct mixer_ctl *ctl;
+      int pcm_device_id = fp_platform_get_pcm_device_id(out->usecase,
+                                                 PCM_PLAYBACK);
+
+      snprintf(mixer_ctl_name, sizeof(mixer_ctl_name),
+               "Compress Playback %d Volume", pcm_device_id);
+      ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
+      if (!ctl) {
+          ALOGE("%s: Could not get ctl for mixer cmd - %s",
+                __func__, mixer_ctl_name);
+          return -EINVAL;
+      }
+      ALOGE("%s:ctl for mixer cmd - %s, left %f, right %f",
+             __func__, mixer_ctl_name, left, right);
+      volume[0] = (int)(left * DSP_MAX_VOLUME);
+      volume[1] = (int)(right * DSP_MAX_VOLUME);
+      mixer_ctl_set_array(ctl, volume, sizeof(volume)/sizeof(volume[0]));
+
+      return 0;
+}
 
 static int auto_hal_out_set_pcm_volume(struct stream_out *out, float volume)
 {
@@ -834,22 +870,36 @@ static void auto_hal_set_mute_duck_state(struct audio_device *adev,
                 switch(duck_mute_state) {
                     case AUDIO_DEVICE_DUCKED:
                         ALOGD("%s: Ducking BUS device %s", __func__, ptr);
-                        auto_hal_out_set_pcm_volume(out, DUCKED_VOLUME);
+                       if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD){
+                             ALOGD("%s:%d Ducking compress offload path", __func__, __LINE__);
+                             auto_hal_out_set_compr_volume(out, DUCKED_VOLUME, DUCKED_VOLUME);
+                       } else {
+                             auto_hal_out_set_pcm_volume(out, DUCKED_VOLUME);
+                       }
                         break;
 
                     case AUDIO_DEVICE_UNDUCKED:
                         ALOGD("%s: Unducking BUS device %s", __func__, ptr);
-                        auto_hal_out_set_pcm_volume(out, out->volume_l);
+                       if (out->flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD){
+                             ALOGD("%s:%d Unducking compress offload path", __func__, __LINE__);
+                             auto_hal_out_set_compr_volume(out, out->volume_l, out->volume_r);
+                       } else {
+                             auto_hal_out_set_pcm_volume(out, out->volume_l);
+                       }
                         break;
 
                     case AUDIO_DEVICE_MUTED:
                         ALOGD("%s: Muting BUS device %s", __func__, ptr);
                         out->muted = true;
+                        if (out && out->compr)
+                              auto_hal_out_set_compr_volume(out, DUCKED_VOLUME, DUCKED_VOLUME);
                         break;
 
                     case AUDIO_DEVICE_UNMUTED:
                         ALOGD("%s: Unmuting BUS device %s", __func__, ptr);
                         out->muted = false;
+                        if (out && out->compr)
+                              auto_hal_out_set_compr_volume(out, out->volume_l, out->volume_r);
                         break;
                 }
             }
