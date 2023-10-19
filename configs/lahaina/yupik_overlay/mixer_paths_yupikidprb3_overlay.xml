@@ -46,7 +46,75 @@
     <ctl name="WSA_CDC_DMA_RX_0 Port Mixer SEC_MI2S_TX" value="0"/>
     <ctl name="MultiMedia1 Mixer PRI_MI2S_TX" value="0" />
     <ctl name="MultiMedia17 Mixer PRI_MI2S_TX" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia1" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia2" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia4" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia5" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia7" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia8" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia9" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia10" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia11" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia12" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia13" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia14" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia15" value="0" />
+    <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia16" value="0" />
 
+    <path name="hdmi">
+	<ctl name="SEC_MI2S_RX Format" value="S32_LE" />
+    </path>
+    <path name="low-latency-playback hdmi">
+        <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia5" value="1" />
+    </path>
+    <path name="compress-offload-playback hdmi">
+        <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia4" value="1" />
+    </path>
+    <path name="compress-offload-playback2 hdmi">
+        <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia7" value="1" />
+    </path>
+    <path name="compress-offload-playback3 hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+    <path name="compress-offload-playback4 hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia11" value="1" />
+    </path>
+    <path name="compress-offload-playback5 hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia12" value="1" />
+    </path>
+    <path name="compress-offload-playback6 hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia13" value="1" />
+    </path>
+    <path name="compress-offload-playback7 hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia14" value="1" />
+    </path>
+    <path name="compress-offload-playback8 hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia15" value="1" />
+    </path>
+    <path name="compress-offload-playback9 hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+    <path name="mmap-playback hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia16" value="1" />
+    </path>
+    <path name="audio-playback-voip hdmi">
+        <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia10" value="1" />
+    </path>
+    <path name="audio-ull-playback hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia8" value="1" />
+    </path>
+    <path name="deep-buffer-playback hdmi">
+        <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia1" value="1" />
+    </path>
+    <path name="silence-playback hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia9" value="1" />
+    </path>
+    <path name="hifi-playback hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia2" value="1" />
+    </path>
+    <path name="multi-channel-playback hdmi">
+	<ctl name="SEC_MI2S_RX Audio Mixer MultiMedia2" value="1" />
+    </path>
     <path name="audio-record hdmi-in">
 	<ctl name="MultiMedia1 Mixer PRI_MI2S_TX" value="1" />
     </path>
