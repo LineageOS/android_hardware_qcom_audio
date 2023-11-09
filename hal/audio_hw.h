@@ -848,6 +848,8 @@ struct audio_device {
     Hashmap *io_streams_map;
     bool a2dp_started;
     bool ha_proxy_enable;
+    int ext_controller;
+    int ext_stream;
 };
 
 struct audio_patch_record {
