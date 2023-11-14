@@ -2363,7 +2363,7 @@ static void reset_hdmi_sink_caps(struct stream_out *out) {
 /* must be called with hw device mutex locked */
 static int read_hdmi_sink_caps(struct stream_out *out)
 {
-    int ret = 0, i = 0, j = 0;
+    int ret = 0, i = 0, j = 0, rc = 0;
     int channels = platform_edid_get_max_channels_v2(out->dev->platform,
                                                      out->extconn.cs.controller,
                                                      out->extconn.cs.stream);
@@ -2371,11 +2371,11 @@ static int read_hdmi_sink_caps(struct stream_out *out)
     reset_hdmi_sink_caps(out);
 
     /* Cache ext disp type */
-    ret = platform_get_ext_disp_type_v2(adev->platform,
+    rc = platform_get_ext_disp_type_v2(adev->platform,
                                       out->extconn.cs.controller,
                                       out->extconn.cs.stream);
-    if(ret < 0) {
-        ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
+    if(rc < 0) {
+        ALOGE("%s: Failed to query disp type, rc:%d", __func__, rc);
         return -EINVAL;
     }
 
@@ -2391,6 +2391,10 @@ static int read_hdmi_sink_caps(struct stream_out *out)
         out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_QUAD;
         out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_SURROUND;
         out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_2POINT1;
+    case 2:
+        ALOGV("%s: HDMI supports 2 channels", __func__);
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_STEREO;
+        out->supported_channel_masks[i++] = AUDIO_CHANNEL_OUT_MONO;
         break;
     default:
         ALOGE("invalid/nonstandard channal count[%d]",channels);
@@ -4427,12 +4431,13 @@ int start_output_stream(struct stream_out *out)
             ALOGE("%s: pcm stream not ready", __func__);
             goto error_open;
         }
+
+        out_set_mmap_volume(&out->stream, out->volume_l, out->volume_r);
         ret = pcm_start(out->pcm);
         if (ret < 0) {
             ALOGE("%s: MMAP pcm_start failed ret %d", __func__, ret);
             goto error_open;
         }
-        out_set_mmap_volume(&out->stream, out->volume_l, out->volume_r);
     } else if (!is_offload_usecase(out->usecase)) {
         unsigned int flags = PCM_OUT;
         unsigned int pcm_open_retry_count = 0;
@@ -4926,7 +4931,7 @@ static uint64_t get_actual_pcm_frames_rendered(struct stream_out *out, struct ti
     pthread_mutex_unlock(&out->position_query_lock);
 
     ALOGVV("%s signed frames %lld written frames %lld kernel frames %lld dsp frames %lld",
-            __func__, signed_frames, written_frames, kernel_frames, dsp_frames);
+            __func__, (long long)signed_frames, (long long)written_frames, (long long)kernel_frames, (long long)dsp_frames);
 
     return actual_frames_rendered;
 }
@@ -5505,6 +5510,8 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
     if (err == 0) {
         out->extconn.cs.controller = ext_controller;
         out->extconn.cs.stream = ext_stream;
+        adev->ext_controller = out->extconn.cs.controller;
+        adev->ext_stream = out->extconn.cs.stream;
         ALOGD("%s: usecase(%s) new controller/stream (%d/%d)", __func__,
               use_case_table[out->usecase], out->extconn.cs.controller,
               out->extconn.cs.stream);
@@ -8307,6 +8314,8 @@ int adev_open_output_stream(struct audio_hw_device *dev,
     out->prev_card_status_offline = false;
     out->pspd_coeff_sent = false;
     out->mmap_shared_memory_fd = -1; // not open
+    out->extconn.cs.controller = adev->ext_controller;
+    out->extconn.cs.stream = adev->ext_stream;
 
     if ((flags & AUDIO_OUTPUT_FLAG_BD) &&
         (property_get_bool("vendor.audio.matrix.limiter.enable", false)))
@@ -8314,8 +8323,7 @@ int adev_open_output_stream(struct audio_hw_device *dev,
 
     if (direct_dev &&
         (audio_is_linear_pcm(out->format) ||
-         config->format == AUDIO_FORMAT_DEFAULT) &&
-        out->flags == AUDIO_OUTPUT_FLAG_NONE) {
+         config->format == AUDIO_FORMAT_DEFAULT)) {
         audio_format_t req_format = config->format;
         audio_channel_mask_t req_channel_mask = config->channel_mask;
         uint32_t req_sample_rate = config->sample_rate;
@@ -9420,6 +9428,16 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             if (ret < 0) {
                 ALOGE("%s: Failed to query disp type, ret:%d", __func__, ret);
             } else {
+                // Update ctl and stream values for all the existing streams during HDMI connection,
+                // as adev_open_output_stream() doesn't get called for existing streams and values
+                // remain unupdated for those streams.
+                list_for_each(node, &adev->active_outputs_list) {
+                    streams_output_ctxt_t *out_ctxt = node_to_item(node,
+                            streams_output_ctxt_t,
+                            list);
+                    out_ctxt->output->extconn.cs.controller = controller;
+                    out_ctxt->output->extconn.cs.stream = stream;
+                }
                 platform_cache_edid_v2(adev->platform, controller, stream);
             }
         } else if (audio_is_usb_out_device(device) || audio_is_usb_in_device(device)) {
