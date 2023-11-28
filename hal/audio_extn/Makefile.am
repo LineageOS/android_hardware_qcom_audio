@@ -218,7 +218,7 @@ c_sources += hfp.c
 lib_LTLIBRARIES += libhfp.la
 libhfp_la_SOURCES = $(c_sources)
 libhfp_la_LIBADD = $(GLIB_LIBS) -llog -lcutils -ltinyalsa
-libhfp_la_LIBADD += -ltinycompress -laudioroute -ldl -lexpat -laudioutils
+libhfp_la_LIBADD += -ltinycompress -laudioroute -ldl -lexpat -laudioutils -lutils
 libhfp_la_LIBADD += -lm -lc -lresolv
 
 if AUDIO_PARSER
