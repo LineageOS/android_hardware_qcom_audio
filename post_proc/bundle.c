@@ -902,7 +902,8 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         }
         if (pCmdData == NULL || cmdSize != 2 * sizeof(uint32_t) ||
                 replySize == NULL || *replySize < 2*sizeof(int32_t)) {
-            return -EINVAL;
+            status = -EINVAL;
+            goto exit;
         }
         memcpy(pReplyData, pCmdData, sizeof(int32_t)*2);
         } break;
