@@ -166,13 +166,13 @@ static int add_new_sndcard(int card, int fd)
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0))
     bool online = state && !strcmp(state, "ONLINE");
 
-    if (state)
-        free(state);
 #else
     bool online = atoi(state);
 #endif
 
     ALOGV("card %d initial state %s %d", card, state, online);
+    if (state)
+        free(state);
 
     s->status = online ? CARD_STATUS_ONLINE : CARD_STATUS_OFFLINE;
     list_add_tail(&sndmonitor.cards, &s->node);
