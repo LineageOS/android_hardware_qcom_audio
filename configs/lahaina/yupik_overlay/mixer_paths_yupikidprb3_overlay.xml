@@ -27,7 +27,7 @@
 <!--- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                             -->
 <!--                                                                        -->
 <!-- Changes from Qualcomm Innovation Center are provided under the following license:-->
-<!-- Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.-->
+<!-- Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.-->
 <!-- SPDX-License-Identifier: BSD-3-Clause-Clear                            -->
 <mixer>
     <ctl name="TX DEC0 MUX" value="MSM_DMIC"/>
@@ -66,6 +66,10 @@
     </path>
     <path name="low-latency-playback hdmi">
         <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia5" value="1" />
+    </path>
+    <path name="low-latency-playback speaker-and-hdmi">
+        <path name="low-latency-playback hdmi" />
+        <path name="low-latency-playback" />
     </path>
     <path name="compress-offload-playback hdmi">
         <ctl name="SEC_MI2S_RX Audio Mixer MultiMedia4" value="1" />
