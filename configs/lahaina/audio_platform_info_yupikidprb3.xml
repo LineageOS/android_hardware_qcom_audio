@@ -270,7 +270,7 @@
         <device name="SND_DEVICE_IN_HEADSET_MIC_FLUENCE" backend="headset-mic" interface="TX_CDC_DMA_TX_4"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC_SB" interface="TX_CDC_DMA_TX_3"/>
-        <device name="SND_DEVICE_IN_HDMI_MIC" interface="HDMI"/>
+        <device name="SND_DEVICE_IN_HDMI_MIC" interface="PRI_MI2S_TX"/>
         <device name="SND_DEVICE_IN_BT_SCO_MIC" interface="SLIMBUS_7_TX"/>
         <device name="SND_DEVICE_IN_BT_SCO_MIC_NREC" interface="SLIMBUS_7_TX"/>
         <device name="SND_DEVICE_IN_BT_SCO_MIC_WB" interface="SLIMBUS_7_TX"/>
