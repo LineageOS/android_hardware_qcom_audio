@@ -143,6 +143,9 @@ endif
 ifneq ( ,$(filter msmnile_gvmq msmnile_au gen4_au msmnile_au_km4 msmnile_au_ar, $(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX)))
 AUDIO_FEATURE_ENABLED_AUDIO_PARSERS := true
 endif
+ifneq ( ,$(filter msmnile_tb, $(TARGET_PRODUCT)))
+AUDIO_FEATURE_ENABLED_AUDIO_PARSERS := true
+endif
 ##AUTOMOTIVE_AUDIO_FEATURE_FLAGS
 
 ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
@@ -155,7 +158,7 @@ DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/
 endif
 
 ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14, $(PLATFORM_VERSION)))
-ifneq ( ,$(filter msmnile_au  gen4_au msmnile_au_km4 msmnile_au_ar, $(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX))$(TARGET_BOARD_DERIVATIVE_SUFFIX))
+ifneq ( ,$(filter msmnile_au  gen4_au msmnile_au_km4 msmnile_tb msmnile_au_ar, $(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX))$(TARGET_BOARD_DERIVATIVE_SUFFIX))
 AUDIO_FEATURE_MMAP_AAUDIO = true
 endif
 endif
