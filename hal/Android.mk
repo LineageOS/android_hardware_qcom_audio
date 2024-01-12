@@ -417,6 +417,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AHAL_EXT)),true)
     LOCAL_SHARED_LIBRARIES += vendor.qti.hardware.audiohalext@1.0
 endif
 
+# Memory optimization specific feature
+ifeq ($(strip $(TARGET_1G_DDR_RAM)), true)
+    LOCAL_CFLAGS += -DPURGE_UNUSED_MEM
+endif
+
 LOCAL_CFLAGS += -D_GNU_SOURCE
 LOCAL_CFLAGS += -Wall -Werror
 
