@@ -110,14 +110,13 @@ typedef struct {
 #endif
 
 #if LINUX_ENABLED
+#define ADM_LIBRARY_PATH "/usr/lib/libadm.so"
 #if defined(__LP64__)
 #define VISUALIZER_LIBRARY_PATH "/usr/lib64/libqcomvisualizer.so"
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/usr/lib64/libqcompostprocbundle.so"
-#define ADM_LIBRARY_PATH "/usr/lib64/libadm.so"
 #else
 #define VISUALIZER_LIBRARY_PATH "/usr/lib/libqcomvisualizer.so"
 #define OFFLOAD_EFFECTS_BUNDLE_LIBRARY_PATH "/usr/lib/libqcompostprocbundle.so"
-#define ADM_LIBRARY_PATH "/usr/lib/libadm.so"
 #endif
 #else
 #if defined(__LP64__)
