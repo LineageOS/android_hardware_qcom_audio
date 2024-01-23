@@ -7,47 +7,28 @@ ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 USE_CUSTOM_AUDIO_POLICY := 1
 AUDIO_FEATURE_QSSI_COMPLIANCE := true
 #AUDIO_FEATURE_ENABLED_VOICE_CONCURRENCY := true
-AUDIO_FEATURE_ENABLED_AAC_ADTS_OFFLOAD := true
 AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := false
 AUDIO_FEATURE_ENABLED_COMPRESS_VOIP := false
 AUDIO_FEATURE_ENABLED_EXTN_FORMATS := true
-AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER := true
 AUDIO_FEATURE_ENABLED_EXTN_RESAMPLER := true
-AUDIO_FEATURE_ENABLED_FM_POWER_OPT := true
-AUDIO_FEATURE_ENABLED_HDMI_SPK := true
 AUDIO_FEATURE_ENABLED_PCM_OFFLOAD := true
-AUDIO_FEATURE_ENABLED_PCM_OFFLOAD_24 := true
-AUDIO_FEATURE_ENABLED_FLAC_OFFLOAD := true
-AUDIO_FEATURE_ENABLED_VORBIS_OFFLOAD := true
-AUDIO_FEATURE_ENABLED_WMA_OFFLOAD := true
-AUDIO_FEATURE_ENABLED_ALAC_OFFLOAD := true
-AUDIO_FEATURE_ENABLED_APE_OFFLOAD := true
-AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
-AUDIO_FEATURE_ENABLED_SSR := true
 AUDIO_FEATURE_ENABLED_DTS_EAGLE := false
 BOARD_USES_SRS_TRUEMEDIA := false
 DTS_CODEC_M_ := true
-MM_AUDIO_ENABLED_SAFX := true
 AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS := false
 AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := false
-AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
 AUDIO_FEATURE_ENABLED_AHAL_EXT := false
-AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
 DOLBY_ENABLE := false
 endif
 
 USE_XML_AUDIO_POLICY_CONF := 1
-BOARD_SUPPORTS_SOUND_TRIGGER := true
 AUDIO_USE_DEEP_AS_PRIMARY_OUTPUT := false
 AUDIO_FEATURE_ENABLED_HIFI_AUDIO := true
 AUDIO_FEATURE_ENABLED_VBAT_MONITOR := true
 AUDIO_FEATURE_ENABLED_NT_PAUSE_TIMEOUT := true
-AUDIO_FEATURE_ENABLED_ANC_HEADSET := true
 AUDIO_FEATURE_ENABLED_CUSTOMSTEREO := true
 AUDIO_FEATURE_ENABLED_FLUENCE := true
-AUDIO_FEATURE_ENABLED_HDMI_EDID := true
 AUDIO_FEATURE_ENABLED_EXT_HDMI := true
-AUDIO_FEATURE_ENABLED_HFP := true
 AUDIO_FEATURE_ENABLED_INCALL_MUSIC := true
 AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
 AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
@@ -56,11 +37,8 @@ AUDIO_FEATURE_ENABLED_ACDB_LICENSE := true
 AUDIO_FEATURE_ENABLED_DEV_ARBI := false
 MM_AUDIO_ENABLED_FTM := true
 TARGET_USES_QCOM_MM_AUDIO := true
-AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
 BOARD_SUPPORTS_QAHW := false
-AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
 AUDIO_FEATURE_ENABLED_SND_MONITOR := true
-AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 ifeq ($(TARGET_KERNEL_VERSION), 3.18)
     AUDIO_FEATURE_ENABLED_DLKM := false
 else
@@ -70,6 +48,55 @@ ifeq ($(TARGET_SUPPORTS_WEARABLES),true)
 AUDIO_FEATURE_ENABLED_SPLIT_A2DP := true
 endif
 ##AUDIO_FEATURE_FLAGS
+
+ifeq ($(TARGET_1G_DDR_RAM), true)
+    AUDIO_FEATURE_ENABLED_AUDIOSPHERE := false
+    BOARD_SUPPORTS_SOUND_TRIGGER := false
+    AUDIO_FEATURE_ENABLED_HFP := false
+    AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := false
+    AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER := false
+    AUDIO_FEATURE_ENABLED_FM_POWER_OPT := false
+    AUDIO_FEATURE_ENABLED_HDMI_SPK := false
+    AUDIO_FEATURE_ENABLED_PCM_OFFLOAD_24 := false
+    AUDIO_FEATURE_ENABLED_FLAC_OFFLOAD := false
+    AUDIO_FEATURE_ENABLED_VORBIS_OFFLOAD := false
+    AUDIO_FEATURE_ENABLED_WMA_OFFLOAD := false
+    AUDIO_FEATURE_ENABLED_ALAC_OFFLOAD := false
+    AUDIO_FEATURE_ENABLED_APE_OFFLOAD := false
+    AUDIO_FEATURE_ENABLED_AAC_ADTS_OFFLOAD := false
+    AUDIO_FEATURE_ENABLED_PROXY_DEVICE := false
+    AUDIO_FEATURE_ENABLED_SSR := false
+    MM_AUDIO_ENABLED_SAFX := false
+    AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := false
+    AUDIO_FEATURE_ENABLED_ANC_HEADSET := false
+    AUDIO_FEATURE_ENABLED_HDMI_EDID := false
+    AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := false
+    AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := false
+    PURGE_UNUSED_MEMORY := true
+else
+    AUDIO_FEATURE_ENABLED_AUDIOSPHERE := true
+    BOARD_SUPPORTS_SOUND_TRIGGER := true
+    AUDIO_FEATURE_ENABLED_HFP := true
+    AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
+    AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER := true
+    AUDIO_FEATURE_ENABLED_FM_POWER_OPT := true
+    AUDIO_FEATURE_ENABLED_HDMI_SPK := true
+    AUDIO_FEATURE_ENABLED_PCM_OFFLOAD_24 := true
+    AUDIO_FEATURE_ENABLED_FLAC_OFFLOAD := true
+    AUDIO_FEATURE_ENABLED_VORBIS_OFFLOAD := true
+    AUDIO_FEATURE_ENABLED_WMA_OFFLOAD := true
+    AUDIO_FEATURE_ENABLED_ALAC_OFFLOAD := true
+    AUDIO_FEATURE_ENABLED_APE_OFFLOAD := true
+    AUDIO_FEATURE_ENABLED_AAC_ADTS_OFFLOAD := true
+    AUDIO_FEATURE_ENABLED_PROXY_DEVICE := true
+    AUDIO_FEATURE_ENABLED_SSR := true
+    MM_AUDIO_ENABLED_SAFX := true
+    AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
+    AUDIO_FEATURE_ENABLED_ANC_HEADSET := true
+    AUDIO_FEATURE_ENABLED_HDMI_EDID := true
+    AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
+    AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
+endif
 
 
 ifneq ($(BOARD_OPENSOURCE_DIR), )
@@ -338,9 +365,7 @@ vendor.audio.feature.external_speaker.enable=false \
 vendor.audio.feature.external_speaker_tfa.enable=false \
 vendor.audio.feature.fluence.enable=true \
 vendor.audio.feature.fm.enable=true \
-vendor.audio.feature.hdmi_edid.enable=true \
 vendor.audio.feature.hdmi_passthrough.enable=false \
-vendor.audio.feature.hfp.enable=true \
 vendor.audio.feature.hifi_audio.enable=true \
 vendor.audio.feature.hwdep_cal.enable=false \
 vendor.audio.feature.incall_music.enable=true \
@@ -367,18 +392,32 @@ else
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.feature.spkr_prot.enable=true
 endif
+
+ifeq ($(TARGET_1G_DDR_RAM), true)
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.feature.hfp.enable=false \
+vendor.audio.feature.hdmi_edid.enable=false
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+vendor.audio.feature.hfp.enable=true \
+vendor.audio.feature.hdmi_edid.enable=true
+endif
 # for HIDL related packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-service \
     android.hardware.audio@2.0-impl \
     android.hardware.audio.effect@2.0-impl \
-    android.hardware.soundtrigger@2.1-impl \
     android.hardware.audio@4.0 \
     android.hardware.audio.common@4.0 \
     android.hardware.audio.common@4.0-util \
     android.hardware.audio@4.0-impl \
     android.hardware.audio.effect@4.0 \
     android.hardware.audio.effect@4.0-impl
+
+ifneq ($(TARGET_1G_DDR_RAM), true)
+    PRODUCT_PACKAGES += \
+         android.hardware.soundtrigger@2.1-impl
+endif
 
 # enable audio hidl hal 5.0 for sdk rev 29 and above
 ifeq ($(shell expr $(PLATFORM_SDK_VERSION) \>= 29), 1)
