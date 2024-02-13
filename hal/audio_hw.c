@@ -35,7 +35,7 @@
  * limitations under the License.
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  */
@@ -3566,6 +3566,9 @@ static int stop_input_stream(struct stream_in *in)
     }
 
     enable_gcov();
+#ifdef PURGE_UNUSED_MEM
+    mallopt(M_PURGE, 0);
+#endif
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -4205,6 +4208,9 @@ static int stop_output_stream(struct stream_out *out)
 
     clear_devices(&uc_info->device_list);
     free(uc_info);
+#ifdef PURGE_UNUSED_MEM
+    mallopt(M_PURGE, 0);
+#endif
     ALOGV("%s: exit: status(%d)", __func__, ret);
     return ret;
 }
@@ -10811,8 +10817,13 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
         s_info = hashmapGet(adev->io_streams_map, (void *) (intptr_t) io_handle);
         if (s_info == NULL) {
             ALOGE("%s: Failed to obtain stream info", __func__);
-            if (new_patch)
+            if (new_patch) {
+
+                if(p_info->patch)
+                    free(p_info->patch);
+
                 free(p_info);
+            }
             pthread_mutex_unlock(&adev->lock);
             ret = -EINVAL;
             goto done;
@@ -10833,8 +10844,13 @@ int adev_create_audio_patch(struct audio_hw_device *dev,
         if (ret < 0) {
             pthread_mutex_lock(&adev->lock);
             s_info->patch_handle = AUDIO_PATCH_HANDLE_NONE;
-            if (new_patch)
+            if (new_patch) {
+
+                if(p_info->patch)
+                    free(p_info->patch);
+
                 free(p_info);
+            }
             pthread_mutex_unlock(&adev->lock);
             ALOGE("%s: Stream routing failed for io_handle %d", __func__, io_handle);
             goto done;

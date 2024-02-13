@@ -3315,7 +3315,7 @@ int audio_extn_utils_get_channels_from_string(const char *id_string)
     return -EINVAL;
 }
 
-void audio_extn_utils_release_snd_device(snd_device_t snd_device)
+void audio_extn_utils_release_snd_device(snd_device_t snd_device __unused)
 {
     audio_extn_dev_arbi_release(snd_device);
     audio_extn_sound_trigger_update_device_status(snd_device,
