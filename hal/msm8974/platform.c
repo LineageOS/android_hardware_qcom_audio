@@ -11329,9 +11329,9 @@ int platform_set_channel_map(void *platform, int ch_count, char *ch_map, int snd
     if (be_idx >= 0) {
         be_set_values[0] = be_idx;
         memcpy(&be_set_values[1], set_values, sizeof(long) * ch_count);
-        ret = mixer_ctl_set_array(ctl, be_set_values, ARRAY_SIZE(be_set_values));
+        ret = mixer_ctl_set_array(ctl, be_set_values, n);
     } else {
-        ret = mixer_ctl_set_array(ctl, set_values, ARRAY_SIZE(set_values));
+        ret = mixer_ctl_set_array(ctl, set_values, n);
     }
 
     if (ret < 0) {
