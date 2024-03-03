@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d8e690ef_b2f25e4b",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 30475
+      },
+      "writtenOn": "2024-03-03T19:44:34Z",
+      "side": 1,
+      "message": "Bruno, can we get this (+384551) merged?",
+      "revId": "6584f9dca1c6a88a1a3667bee6af38fbe5b65f84",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
