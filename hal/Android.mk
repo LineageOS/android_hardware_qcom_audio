@@ -423,6 +423,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXT_AMPLIFIER)),true)
     LOCAL_SHARED_LIBRARIES += libhardware
 endif
 
+# Memory optimization specific feature
+ifeq ($(strip $(TARGET_1G_DDR_RAM)), true)
+    LOCAL_CFLAGS += -DPURGE_UNUSED_MEM
+endif
+
 LOCAL_CFLAGS += -D_GNU_SOURCE
 LOCAL_CFLAGS += -Wall -Werror
 

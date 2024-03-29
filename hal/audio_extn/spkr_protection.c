@@ -30,7 +30,7 @@
 /*
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -1370,8 +1370,8 @@ static void* spkr_calibration_thread()
                         }
                        thermal_fd = open(wsa_path, O_RDONLY);
                        if (thermal_fd > 0) {
-                           if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0) {
-                               buf[ret-1] = '\0';
+                           if ((ret = read(thermal_fd, buf, sizeof(buf)-1)) >= 0) {
+                               buf[ret] = '\0';
                                t0_spk_1 = atoi(buf);
                            }
                            else
@@ -1406,8 +1406,8 @@ static void* spkr_calibration_thread()
                         }
                         thermal_fd = open(wsa_path, O_RDONLY);
                         if (thermal_fd > 0) {
-                           if ((ret = read(thermal_fd, buf, sizeof(buf))) >= 0) {
-                               buf[ret-1] = '\0';
+                           if ((ret = read(thermal_fd, buf, sizeof(buf)-1)) >= 0) {
+                               buf[ret] = '\0';
                                t0_spk_2 = atoi(buf);
                            }
                            else

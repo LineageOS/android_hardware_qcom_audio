@@ -1,0 +1,17 @@
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+
+blocklist q6_notifier_dlkm
+blocklist spf_core_dlkm
+blocklist audpkt_ion_dlkm
+blocklist gpr_dlkm
+blocklist audio_pkt_dlkm
+blocklist q6_dlkm
+blocklist adsp_loader_dlkm
+blocklist snd_event_dlkm
+blocklist stub_dlkm
+blocklist machine_dlkm
+blocklist q6_pdr_dlkm
+blocklist audio_prm_dlkm
+blocklist coupled_ssr_dlkm
+blocklist msm_virtio_snd
