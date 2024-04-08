@@ -15,6 +15,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
  */
 
 #define LOG_TAG "offload_effect_equalizer"
@@ -425,7 +430,7 @@ int equalizer_set_parameter(effect_context_t *context, effect_param_t *p,
         equalizer_set_preset(eq_ctxt, preset);
         break;
     case EQ_PARAM_BAND_LEVEL:
-        if (vsize < sizeof(int16_t)) {
+        if (vsize < sizeof(int32_t)) {
             p->status = -EINVAL;
             break;
         }
