@@ -9031,7 +9031,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
         }
     }
 
-    amplifier_set_parameters(parms);
+    amplifier_set_parameters(adev, parms);
     audio_extn_set_parameters(adev, parms);
 done:
     str_parms_destroy(parms);
