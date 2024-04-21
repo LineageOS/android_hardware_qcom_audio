@@ -27,7 +27,7 @@
 #define amplifier_input_stream_start(stream) (0)
 #define amplifier_output_stream_standby(stream) (0)
 #define amplifier_input_stream_standby(stream) (0)
-#define amplifier_set_parameters(parms) (0)
+#define amplifier_set_parameters(adev, parms) (0)
 #define amplifier_out_set_parameters(parms) (0)
 #define amplifier_in_set_parameters(parms) (0)
 #define amplifier_set_feedback(adev, devices, enable) (0)

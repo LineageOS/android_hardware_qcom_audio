@@ -109,8 +109,9 @@ int amplifier_input_stream_standby(struct audio_stream_in* stream) {
     return 0;
 }
 
-int amplifier_set_parameters(struct str_parms* parms) {
-    if (amp.hw && amp.hw->set_parameters) return amp.hw->set_parameters(amp.hw, parms);
+int amplifier_set_parameters(void* adev, struct str_parms* parms) {
+    amp.adev = (struct audio_device*)adev;
+    if (amp.hw && amp.hw->set_parameters) return amp.hw->set_parameters(amp.hw, amp.adev, parms);
 
     return 0;
 }
