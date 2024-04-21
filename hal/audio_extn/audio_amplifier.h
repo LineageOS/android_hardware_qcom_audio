@@ -27,7 +27,7 @@
 #define amplifier_input_stream_start(stream) (0)
 #define amplifier_output_stream_standby(stream) (0)
 #define amplifier_input_stream_standby(stream) (0)
-#define amplifier_set_parameters(parms) (0)
+#define amplifier_set_parameters(adev, parms) (0)
 #define amplifier_out_set_parameters(parms) (0)
 #define amplifier_in_set_parameters(parms) (0)
 #define amplifier_close() (0)
@@ -43,7 +43,7 @@ int amplifier_output_stream_start(struct audio_stream_out *stream,
 int amplifier_input_stream_start(struct audio_stream_in *stream);
 int amplifier_output_stream_standby(struct audio_stream_out *stream);
 int amplifier_input_stream_standby(struct audio_stream_in *stream);
-int amplifier_set_parameters(struct str_parms *parms);
+int amplifier_set_parameters(void* adev, struct str_parms* parms);
 int amplifier_out_set_parameters(struct str_parms *parms);
 int amplifier_in_set_parameters(struct str_parms *parms);
 int amplifier_close(void);
