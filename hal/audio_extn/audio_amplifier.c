@@ -57,18 +57,20 @@ int amplifier_open(void* adev)
     return 0;
 }
 
-int amplifier_set_input_devices(uint32_t devices)
+int amplifier_set_input_devices(void *adev, uint32_t devices)
 {
+    amp.adev = (struct audio_device*)adev;
     if (amp.hw && amp.hw->set_input_devices)
-        return amp.hw->set_input_devices(amp.hw, devices);
+        return amp.hw->set_input_devices(amp.hw, amp.adev, devices);
 
     return 0;
 }
 
-int amplifier_set_output_devices(uint32_t devices)
+int amplifier_set_output_devices(void *adev, uint32_t devices)
 {
+    amp.adev = (struct audio_device*)adev;
     if (amp.hw && amp.hw->set_output_devices)
-        return amp.hw->set_output_devices(amp.hw, devices);
+        return amp.hw->set_output_devices(amp.hw, amp.adev, devices);
 
     return 0;
 }

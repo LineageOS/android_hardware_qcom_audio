@@ -2321,8 +2321,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
     }
 
     /* Rely on amplifier_set_devices to distinguish between in/out devices */
-    amplifier_set_input_devices(in_snd_device);
-    amplifier_set_output_devices(out_snd_device);
+    amplifier_set_input_devices(adev, in_snd_device);
+    amplifier_set_output_devices(adev, out_snd_device);
 
     /* Applicable only on the targets that has external modem.
      * New device information should be sent to modem before enabling
