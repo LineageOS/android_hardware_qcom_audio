@@ -2320,6 +2320,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         disable_snd_device(adev, usecase->in_snd_device);
     }
 
+    /* Rely on amplifier_set_devices to distinguish between in/out devices */
+    amplifier_set_input_devices(in_snd_device);
+    amplifier_set_output_devices(out_snd_device);
+
     /* Applicable only on the targets that has external modem.
      * New device information should be sent to modem before enabling
      * the devices to reduce in-call device switch time.
@@ -2398,10 +2402,6 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
             voice_extn_compress_voip_is_started(adev))
             voice_set_sidetone(adev, out_snd_device, true);
     }
-
-    /* Rely on amplifier_set_devices to distinguish between in/out devices */
-    amplifier_set_input_devices(in_snd_device);
-    amplifier_set_output_devices(out_snd_device);
 
     /* Applicable only on the targets that has external modem.
      * Enable device command should be sent to modem only after
