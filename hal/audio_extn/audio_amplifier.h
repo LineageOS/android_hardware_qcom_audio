@@ -19,8 +19,8 @@
 
 #ifndef EXT_AMPLIFIER_ENABLED
 #define amplifier_open(adev) (0)
-#define amplifier_set_input_devices(devices) (0)
-#define amplifier_set_output_devices(devices) (0)
+#define amplifier_set_input_devices(adev, devices) (0)
+#define amplifier_set_output_devices(adev, devices) (0)
 #define amplifier_enable_devices(devices, enable) (0)
 #define amplifier_set_mode(mode) (0)
 #define amplifier_output_stream_start(stream, offload) (0)
@@ -34,8 +34,8 @@
 #else
 
 int amplifier_open(void* adev);
-int amplifier_set_input_devices(uint32_t devices);
-int amplifier_set_output_devices(uint32_t devices);
+int amplifier_set_input_devices(void* adev, uint32_t devices);
+int amplifier_set_output_devices(void* adev, uint32_t devices);
 int amplifier_enable_devices(uint32_t devices, bool enable);
 int amplifier_set_mode(audio_mode_t mode);
 int amplifier_output_stream_start(struct audio_stream_out *stream,
