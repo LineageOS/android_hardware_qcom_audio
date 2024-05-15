@@ -1,6 +1,7 @@
 #BOARD_USES_GENERIC_AUDIO := true
 #
 #AUDIO_FEATURE_FLAGS
+ifneq ($(AUDIO_FRAMEWORK_AUDIOREACH),true)
 ifeq ($(TARGET_USES_QMAA_OVERRIDE_AUDIO), false)
 ifeq ($(TARGET_USES_QMAA),true)
 AUDIO_USE_STUB_HAL := true
@@ -632,3 +633,4 @@ endif
 
 #Audio sample file for early services
 PRODUCT_COPY_FILES += device/qcom/msmnile_au/bike_bell.wav:$(TARGET_COPY_OUT_VENDOR)/etc/bike_bell.wav
+endif
