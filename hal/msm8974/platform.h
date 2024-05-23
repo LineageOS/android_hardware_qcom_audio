@@ -15,7 +15,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #ifndef QCOM_AUDIO_PLATFORM_H
 #define QCOM_AUDIO_PLATFORM_H
@@ -483,7 +487,10 @@ enum {
 
 #define LOW_LATENCY_CAPTURE_SAMPLE_RATE 48000
 #define LOW_LATENCY_CAPTURE_PERIOD_SIZE 240
+
+#ifndef PLATFORM_MSMFALCON
 #define LOW_LATENCY_CAPTURE_USE_CASE 1
+#endif
 
 #define DEVICE_NAME_MAX_SIZE 128
 #define HW_INFO_ARRAY_MAX_SIZE 32
