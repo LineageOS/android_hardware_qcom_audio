@@ -1249,6 +1249,10 @@ LOCAL_MODULE := libaudiopowerpolicy
 
 LOCAL_VENDOR_MODULE := true
 
+ifeq ($(call is-board-platform-in-list,$(MSMSTEPPE)),true)
+        LOCAL_CFLAGS := -DPLATFORM_MSMSTEPPE
+endif
+
 LOCAL_SRC_FILES:= \
         PowerPolicyClient.cpp \
         power_policy_launcher.cpp
