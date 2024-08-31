@@ -11112,6 +11112,16 @@ static int period_size_is_plausible_for_low_latency(int period_size)
     }
 }
 
+card_status_t snd_card_status()
+{
+    card_status_t card_status = CARD_STATUS_ONLINE;
+    pthread_mutex_lock(&adev->lock);
+    card_status = adev->card_status;
+    pthread_mutex_unlock(&adev->lock);
+    ALOGD("%s: card_status %d:",__func__,card_status);
+    return card_status;
+}
+
 static void adev_snd_mon_cb(void *cookie, struct str_parms *parms)
 {
     bool is_snd_card_status = false;

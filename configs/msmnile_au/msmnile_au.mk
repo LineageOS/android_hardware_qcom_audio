@@ -1,6 +1,7 @@
 #BOARD_USES_GENERIC_AUDIO := true
 #
 #AUDIO_FEATURE_FLAGS
+ifneq ($(AUDIO_FRAMEWORK_AUDIOREACH),true)
 ifeq ($(TARGET_USES_QMAA_OVERRIDE_AUDIO), false)
 ifeq ($(TARGET_USES_QMAA),true)
 AUDIO_USE_STUB_HAL := true
@@ -117,7 +118,7 @@ PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
 AUDIO_FEATURE_ENABLED_AUTO_HAL := true
 AUDIO_FEATURE_ENABLED_EXT_HW_PLUGIN := true
 AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL := true
-ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14 V VanillaIceCream 15, $(PLATFORM_VERSION)))
 AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL_AIDL := true
 endif
 ifneq ($(ENABLE_HYP),true)
@@ -137,7 +138,7 @@ AUDIO_FEATURE_ENABLED_SILENT_BOOT := true
 endif
 AUDIO_FEATURE_ENABLED_FM_TUNER_EXT := true
 AUDIO_FEATURE_ENABLED_ICC := true
-ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14 V VanillaIceCream 15, $(PLATFORM_VERSION)))
 AUDIO_FEATURE_ENABLED_POWER_POLICY := true
 endif
 ifneq ( ,$(filter msmnile_gvmq msmnile_au gen4_au msmnile_au_km4 msmnile_au_ar msmnile_gvmq_vcu msmnile_gvmq_s_u, $(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX)))
@@ -148,7 +149,7 @@ AUDIO_FEATURE_ENABLED_AUDIO_PARSERS := true
 endif
 ##AUTOMOTIVE_AUDIO_FEATURE_FLAGS
 
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter U UpsideDownCake 14 V VanillaIceCream 15, $(PLATFORM_VERSION)))
 AUDIO_FEATURE_ENABLED_HAL_V7 := true
 endif
 
@@ -157,7 +158,7 @@ ifneq ($(strip $(TARGET_USES_RRO)), true)
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
 endif
 
-ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter T Tiramisu 13 U UpsideDownCake 14 V VanillaIceCream 15, $(PLATFORM_VERSION)))
 ifneq ( ,$(filter msmnile_au  gen4_au msmnile_au_km4 msmnile_tb msmnile_au_ar, $(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX))$(TARGET_BOARD_DERIVATIVE_SUFFIX))
 AUDIO_FEATURE_MMAP_AAUDIO = true
 endif
@@ -166,7 +167,7 @@ endif
 #Automotive audio specific device overlays
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common_au/overlay
 
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter U UpsideDownCake 14 V VanillaIceCream 15, $(PLATFORM_VERSION)))
 PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_effects_64.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf
 else
@@ -199,7 +200,7 @@ PRODUCT_COPY_FILES += \
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter U UpsideDownCake 14 V VanillaIceCream 15, $(PLATFORM_VERSION)))
 PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_policy_configuration_7_0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/audio_policy_configuration.xml
 else
@@ -208,7 +209,7 @@ PRODUCT_COPY_FILES += \
 endif
 endif
 
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter U UpsideDownCake 14 V VanillaIceCream 15, $(PLATFORM_VERSION)))
 PRODUCT_COPY_FILES += \
     $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common_au/audio_policy_configuration_7_0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration_7_0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml
@@ -589,7 +590,7 @@ PRODUCT_PACKAGES += \
     android.hardware.audio.effect@6.0-impl
 
 # enable audio hidl hal 7.0
-ifneq ( ,$(filter U UpsideDownCake 14, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter U UpsideDownCake 14 V VanillaIceCream 15, $(PLATFORM_VERSION)))
 PRODUCT_PACKAGES += \
     android.hardware.audio@7.0 \
     android.hardware.audio.common@7.0 \
@@ -611,7 +612,7 @@ PRODUCT_PACKAGES_DEBUG += \
     AudioSettings
 
 # for HIDL related audiocontrol packages
-ifeq ( ,$(filter 12 13 T U UpsideDownCake 14,$(PLATFORM_VERSION)))
+ifeq ( ,$(filter 12 13 T U UpsideDownCake 14 V VanillaIceCream 15,$(PLATFORM_VERSION)))
 PRODUCT_PACKAGES += \
     android.hardware.automotive.audiocontrol@2.0-service \
     android.hardware.automotive.audiocontrol@2.0
@@ -632,3 +633,4 @@ endif
 
 #Audio sample file for early services
 PRODUCT_COPY_FILES += device/qcom/msmnile_au/bike_bell.wav:$(TARGET_COPY_OUT_VENDOR)/etc/bike_bell.wav
+endif

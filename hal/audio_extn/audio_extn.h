@@ -35,7 +35,7 @@
  * limitations under the License.
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  */
@@ -1462,10 +1462,12 @@ typedef struct synth_init_config {
 
 typedef void (*fp_in_set_power_policy_t) (uint8_t);
 typedef void (*fp_out_set_power_policy_t) (uint8_t);
+typedef card_status_t (*fp_snd_card_status_t) (void);
 
 typedef struct power_policy_init_config {
     fp_in_set_power_policy_t                      fp_in_set_power_policy;
     fp_out_set_power_policy_t                     fp_out_set_power_policy;
+    fp_snd_card_status_t                          fp_snd_card_status;
 } power_policy_init_config_t;
 // END: POWER_POLICY FEATURE ==================================================
 
