@@ -41,7 +41,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "omx_evrc_aenc.h"
 #include <errno.h>
 
-using namespace std;
 #define SLEEP_MS 100
 
 // omx_cmd_queue destructor
