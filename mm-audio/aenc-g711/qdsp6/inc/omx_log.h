@@ -32,8 +32,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <inttypes.h>
 
-using namespace std;
-
 /*
  * Change logging-level at runtime with "persist.vendor.audio.debug.omx.logs.level"
  *
