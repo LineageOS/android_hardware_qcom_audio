@@ -30,7 +30,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _MAP_H_
 
 #include <stdio.h>
-using namespace std;
 
 template <typename T,typename T2>
 class Map

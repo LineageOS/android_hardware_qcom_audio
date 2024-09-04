@@ -33,8 +33,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "omx_log.h"
 
-using namespace std;
-
 uint32_t gOmxLogLevel;
 
 void updateLogLevel() {
