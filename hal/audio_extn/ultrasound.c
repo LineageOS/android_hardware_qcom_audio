@@ -27,6 +27,7 @@
 
 #define ULTRASOUND_CALIBRATION_FILE "/mnt/vendor/persist/audio/us_cal"
 #define ULTRASOUND_CALIBRATION_MIXER "Ultrasound Calibration Data"
+#define ULTRASOUND_RAMPDOWN_MIXER "Ultrasound RampDown"
 
 enum {
     ULTRASOUND_STATUS_DEFAULT,
@@ -82,6 +83,32 @@ static void us_cal_load(void)
         ALOGE("%s: Could not set ctl, error:%d ", __func__, rc);
 }
 
+static void us_ramp_down(void)
+{
+    struct mixer_ctl *ctl;
+    int rc;
+
+    ALOGD("%s: enter", __func__);
+
+    ctl = mixer_get_ctl_by_name(us->adev->mixer, ULTRASOUND_RAMPDOWN_MIXER);
+    if (!ctl) {
+        ALOGD("%s: Could not get ctl for mixer cmd - %s",
+                __func__, ULTRASOUND_RAMPDOWN_MIXER);
+        goto exit;
+    }
+
+    rc = mixer_ctl_set_enum_by_string(ctl, "On");
+    if (rc < 0) {
+        ALOGE("%s: Could not set ctl, error:%d ", __func__, rc);
+        goto exit;
+    }
+
+    usleep(10000);
+
+exit:
+    ALOGD("%s: exit", __func__);
+}
+
 void us_init(struct audio_device *adev)
 {
     int rc = 0;
@@ -129,6 +156,8 @@ static void stop_us(void)
     ALOGD("%s: enter usecase: ultrasound", __func__);
 
     us->state = ULTRASOUND_STATUS_STOPPED;
+    us_ramp_down();
+
     if (us->rx_pcm) {
         pcm_close(us->rx_pcm);
         us->rx_pcm = NULL;
