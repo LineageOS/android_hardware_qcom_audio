@@ -10185,6 +10185,11 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
         }
     }
 
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+    if (!backend_idx)
+	    sample_rate = 96000;
+#endif
+
     ALOGI("%s:becf: afe: Codec selected backend: %d updated bit width: %d and sample rate: %d",
           __func__, backend_idx , bit_width, sample_rate);
 
