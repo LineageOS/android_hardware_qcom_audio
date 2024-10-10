@@ -33,6 +33,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
  */
 
 #define LOG_TAG "audio_hw_primary"
@@ -9203,6 +9208,19 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     return 0;
 }
 
+static bool adev_set_mic_mute_mmap_hash_cb(void *key __unused, void *value,
+                                           void *context) {
+   struct audio_device *adev = (struct audio_device *)context;
+   struct audio_stream_info *s_info = (struct audio_stream_info *)value;
+   struct audio_stream *stream = s_info->stream;
+
+   /* check whether the stream is input */
+   if (stream && stream->dump == in_dump)
+       in_set_gain((struct audio_stream_in *)stream, adev->mic_muted ? 0.f : 1.f);
+
+   return true;
+}
+
 static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
 {
     int ret;
@@ -9216,6 +9234,8 @@ static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
         ret = audio_extn_ext_hw_plugin_set_mic_mute(adev->ext_hw_plugin, state);
 
     adev->mic_muted = state;
+    /* run mmap streams mute handler */
+    hashmapForEach(adev->io_streams_map, adev_set_mic_mute_mmap_hash_cb, adev);
     pthread_mutex_unlock(&adev->lock);
 
     return ret;
