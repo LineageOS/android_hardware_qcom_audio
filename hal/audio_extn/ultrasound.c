@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 The LineageOS Project
+ * Copyright (c) 2017-2018, 2024 The LineageOS Project
  * Copyright (c) 2017 Balázs Triszka <balika011@protonmail.ch>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -111,6 +111,7 @@ void us_deinit(void)
     ALOGD("%s: enter", __func__);
 
     if (us) {
+        us_stop();
         free(us);
         us = NULL;
     }

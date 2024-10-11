@@ -10376,6 +10376,7 @@ static int adev_close(hw_device_t *device)
              audio_extn_spkr_prot_deinit();
         if (amplifier_close() != 0)
             ALOGE("Amplifier close failed");
+        us_deinit();
         audio_extn_battery_properties_listener_deinit();
         audio_extn_snd_mon_unregister_listener(adev);
         audio_extn_sound_trigger_deinit(adev);
@@ -10415,8 +10416,6 @@ static int adev_close(hw_device_t *device)
         free(device);
         adev = NULL;
     }
-
-    us_deinit();
 
     pthread_mutex_unlock(&adev_init_lock);
     enable_gcov();
