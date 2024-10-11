@@ -237,10 +237,21 @@ int us_start(void)
         return -EIO;
     }
 
-    pcm_start(us->rx_pcm);
-    pcm_start(us->tx_pcm);
-    us->state = ULTRASOUND_STATUS_STARTED;
+    if (pcm_start(us->rx_pcm) < 0) {
+        ALOGE("%s: pcm start for RX failed; error = %s", __func__,
+              pcm_get_error(us->rx_pcm));
+        stop_us();
+        return -EINVAL;
+    }
 
+    if (pcm_start(us->tx_pcm) < 0) {
+        ALOGE("%s: pcm start for TX failed; error = %s", __func__,
+              pcm_get_error(us->tx_pcm));
+        stop_us();
+        return -EINVAL;
+    }
+
+    us->state = ULTRASOUND_STATUS_STARTED;
     ALOGD("%s: exit, status(0)", __func__);
 
     return 0;
