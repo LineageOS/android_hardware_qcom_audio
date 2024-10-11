@@ -82,28 +82,30 @@ void us_cal_load(void)
         ALOGE("%s: Could not set ctl, error:%d ", __func__, rc);
 }
 
-int us_init(struct audio_device *adev)
+void us_init(struct audio_device *adev)
 {
+    int rc = 0;
+
     ALOGD("%s: enter", __func__);
 
     if (us) {
         ALOGI("%s: ultrasound has been initialized!", __func__);
-        return 0;
+        goto exit;
     }
 
     us = calloc(1, sizeof(struct ultrasound_device));
     if (!us) {
         ALOGE("%s: Out of memory!", __func__);
-        return -ENOMEM;
+        rc = -ENOMEM;
+        goto exit;
     }
 
     us->adev = adev;
 
     us_cal_load();
 
-    ALOGD("%s: exit, status(0)", __func__);
-
-    return 0;
+exit:
+    ALOGD("%s: exit, status(%d)", __func__, rc);
 }
 
 void us_deinit(void)
@@ -119,7 +121,7 @@ void us_deinit(void)
     ALOGD("%s: exit", __func__);
 }
 
-int stop_us(void)
+void stop_us(void)
 {
     struct audio_usecase *rx_usecase, *tx_usecase;
     int rc = 0;
@@ -150,7 +152,7 @@ int stop_us(void)
     }
 
     tx_usecase = get_usecase_from_list(us->adev, USECASE_AUDIO_ULTRASOUND_TX);
-    if (!rx_usecase) {
+    if (!tx_usecase) {
         ALOGE("%s: Could not find the usecase (%d) in the list",
                 __func__, USECASE_AUDIO_ULTRASOUND_TX);
         rc = -EINVAL;
@@ -162,19 +164,19 @@ int stop_us(void)
     }
 
     ALOGD("%s: exit: status(%d)", __func__, rc);
-
-    return rc;
 }
 
-int us_start(void)
+void us_start(void)
 {
-    int rx_device_id, tx_device_id;
+    int rc = 0, rx_device_id, tx_device_id;
     struct audio_usecase *rx_usecase, *tx_usecase;
 
     ALOGD("%s: enter", __func__);
 
-    if (!us || us->state == ULTRASOUND_STATUS_STARTED)
-        return -EPERM;
+    if (!us || us->state == ULTRASOUND_STATUS_STARTED) {
+        rc = -EPERM;
+        goto exit;
+    }
 
     ALOGD("%s: enter usecase: ultrasound", __func__);
     rx_device_id = platform_get_pcm_device_id(USECASE_AUDIO_ULTRASOUND_RX, PCM_PLAYBACK);
@@ -182,15 +184,15 @@ int us_start(void)
     if (rx_device_id < 0 || tx_device_id < 0) {
         ALOGE("%s: Invalid PCM devices (rx: %d tx: %d) for the usecase(ultrasound)",
                 __func__, rx_device_id, tx_device_id);
-        stop_us();
-        ALOGE("%s: exit: status(%d)", __func__, -EIO);
-        return -EIO;
+        rc = -EINVAL;
+        goto exit;
     }
 
     rx_usecase = calloc(1, sizeof(struct audio_usecase));
     if (!rx_usecase) {
         ALOGE("%s: Out of memory!", __func__);
-        return -ENOMEM;
+        rc = -ENOMEM;
+        goto exit;
     }
 
     rx_usecase->type = PCM_PLAYBACK;
@@ -207,15 +209,15 @@ int us_start(void)
     us->rx_pcm = pcm_open(us->adev->snd_card, rx_device_id, PCM_OUT, &pcm_config_us);
     if (us->rx_pcm && !pcm_is_ready(us->rx_pcm)) {
         ALOGE("%s: %s", __func__, pcm_get_error(us->rx_pcm));
-        stop_us();
-        ALOGE("%s: exit: status(%d)", __func__, -EIO);
-        return -EIO;
+        rc = -EIO;
+        goto exit;
     }
 
     tx_usecase = calloc(1, sizeof(struct audio_usecase));
     if (!tx_usecase) {
         ALOGE("%s: Out of memory!", __func__);
-        return -ENOMEM;
+        rc = -ENOMEM;
+        goto exit;
     }
 
     tx_usecase->type = PCM_CAPTURE;
@@ -231,40 +233,46 @@ int us_start(void)
             __func__, us->adev->snd_card, tx_device_id);
     us->tx_pcm = pcm_open(us->adev->snd_card, tx_device_id, PCM_IN, &pcm_config_us);
     if (us->tx_pcm && !pcm_is_ready(us->tx_pcm)) {
-        ALOGD("%s: %s", __func__, pcm_get_error(us->tx_pcm));
-        stop_us();
-        ALOGE("%s: exit: status(%d)", __func__, -EIO);
-        return -EIO;
+        ALOGE("%s: %s", __func__, pcm_get_error(us->tx_pcm));
+        rc = -EIO;
+        goto exit;
     }
 
     if (pcm_start(us->rx_pcm) < 0) {
         ALOGE("%s: pcm start for RX failed; error = %s", __func__,
               pcm_get_error(us->rx_pcm));
-        stop_us();
-        return -EINVAL;
+        rc = -EINVAL;
+        goto exit;
     }
 
     if (pcm_start(us->tx_pcm) < 0) {
         ALOGE("%s: pcm start for TX failed; error = %s", __func__,
               pcm_get_error(us->tx_pcm));
-        stop_us();
-        return -EINVAL;
+        rc = -EINVAL;
+        goto exit;
     }
 
     us->state = ULTRASOUND_STATUS_STARTED;
-    ALOGD("%s: exit, status(0)", __func__);
 
-    return 0;
+exit:
+    ALOGD("%s: exit, status(%d)", __func__, rc);
+    if (rc && rc != -EPERM)
+	   stop_us();
 }
 
-int us_stop(void)
+void us_stop(void)
 {
+    int rc = 0;
+
     ALOGD("%s: enter", __func__);
 
-    if (!us || us->state != ULTRASOUND_STATUS_STARTED)
-        return -EPERM;
+    if (!us || us->state != ULTRASOUND_STATUS_STARTED) {
+        rc = -EPERM;
+        goto exit;
+    }
 
     stop_us();
 
-    return 0;
+exit:
+    ALOGD("%s: exit, status(%d)", __func__, rc);
 }

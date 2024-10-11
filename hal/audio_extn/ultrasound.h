@@ -24,10 +24,10 @@
 #define us_start() (0)
 #define us_stop() (0)
 #else
-int us_init(struct audio_device *adev);
+void us_init(struct audio_device *adev);
 void us_deinit(void);
-int us_start(void);
-int us_stop(void);
+void us_start(void);
+void us_stop(void);
 #endif
 
 #endif
