@@ -196,6 +196,8 @@ int us_start(void)
     rx_usecase->type = PCM_PLAYBACK;
     rx_usecase->out_snd_device = SND_DEVICE_OUT_ULTRASOUND_HANDSET;
     rx_usecase->id = USECASE_AUDIO_ULTRASOUND_RX;
+    list_init(&rx_usecase->device_list);
+    assign_devices(&rx_usecase->device_list, &us->adev->primary_output->device_list);
     list_add_tail(&us->adev->usecase_list, &rx_usecase->list);
 
     enable_snd_device(us->adev, SND_DEVICE_OUT_ULTRASOUND_HANDSET);
@@ -219,6 +221,8 @@ int us_start(void)
     tx_usecase->type = PCM_CAPTURE;
     tx_usecase->in_snd_device = SND_DEVICE_IN_ULTRASOUND_MIC;
     tx_usecase->id = USECASE_AUDIO_ULTRASOUND_TX;
+    list_init(&tx_usecase->device_list);
+    reassign_device_list(&tx_usecase->device_list, AUDIO_DEVICE_IN_BUILTIN_MIC, "");
     list_add_tail(&us->adev->usecase_list, &tx_usecase->list);
 
     enable_snd_device(us->adev, SND_DEVICE_IN_ULTRASOUND_MIC);
