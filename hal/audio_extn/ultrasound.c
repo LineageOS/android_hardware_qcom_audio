@@ -34,7 +34,7 @@ enum {
     ULTRASOUND_STATUS_STOPPED,
 };
 
-struct pcm_config pcm_config_us = {
+static struct pcm_config pcm_config_us = {
     .channels = 1,
     .rate = 96000,
     .period_size = 1024,
@@ -50,7 +50,7 @@ struct ultrasound_device {
 
 static struct ultrasound_device *us = NULL;
 
-void us_cal_load(void)
+static void us_cal_load(void)
 {
     FILE *f;
     char buff[5] = {0}, us_cal[64];
@@ -121,7 +121,7 @@ void us_deinit(void)
     ALOGD("%s: exit", __func__);
 }
 
-void stop_us(void)
+static void stop_us(void)
 {
     struct audio_usecase *rx_usecase, *tx_usecase;
     int rc = 0;
