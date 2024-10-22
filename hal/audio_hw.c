@@ -1239,9 +1239,6 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_utils_send_app_type_cfg(adev, usecase);
     if (audio_extn_is_maxx_audio_enabled())
         audio_extn_ma_set_device(usecase);
-#ifdef ELLIPTIC_ULTRASOUND_ENABLED
-    if (usecase->id != USECASE_AUDIO_ULTRASOUND_TX)
-#endif
     audio_extn_utils_send_audio_calibration(adev, usecase);
     if ((usecase->type == PCM_PLAYBACK) && is_offload_usecase(usecase->id)) {
         out = usecase->stream.out;
@@ -1471,9 +1468,6 @@ int enable_snd_device(struct audio_device *adev,
                                         ST_EVENT_SND_DEVICE_BUSY);
         audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_BUSY);
-#ifdef ELLIPTIC_ULTRASOUND_ENABLED
-        if (snd_device != SND_DEVICE_IN_ULTRASOUND_MIC)
-#endif
         if (platform_get_snd_device_acdb_id(snd_device) < 0) {
             audio_extn_sound_trigger_update_device_status(snd_device,
                                             ST_EVENT_SND_DEVICE_FREE);

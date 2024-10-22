@@ -1086,6 +1086,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_VOICE_HEARING_AID] = 44,
     [SND_DEVICE_IN_BUS] = 11,
     [SND_DEVICE_IN_CALL_PROXY] = 33,
+    [SND_DEVICE_IN_ULTRASOUND_MIC] = 4,
 };
 
 struct name_to_index {
