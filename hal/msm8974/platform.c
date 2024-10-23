@@ -642,7 +642,6 @@ static const char * device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_BUS_PAX] = "bus-speaker",
     [SND_DEVICE_OUT_BUS_RSE] = "bus-speaker",
     [SND_DEVICE_OUT_CALL_PROXY] = "call-proxy",
-    [SND_DEVICE_OUT_ULTRASOUND_HANDSET] = "ultrasound-handset",
 
     /* Capture sound devices */
     [SND_DEVICE_IN_HANDSET_MIC] = "handset-mic",
@@ -1950,11 +1949,7 @@ bool platform_send_gain_dep_cal(void *platform, int level) {
             usecase = node_to_item(node, struct audio_usecase, list);
 
             if (usecase != NULL && usecase->stream.out &&
-                                   usecase->type == PCM_PLAYBACK
-#ifdef ELLIPTIC_ULTRASOUND_ENABLED
-                && usecase->id != USECASE_AUDIO_ULTRASOUND_RX
-#endif
-                ) {
+                                   usecase->type == PCM_PLAYBACK) {
                 int new_snd_device[2] = {0};
                 int i, num_devices = 1;
 
@@ -2472,7 +2467,6 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_BUS_PAX] = strdup("QUAT_TDM_RX_0");
     hw_interface_table[SND_DEVICE_OUT_BUS_RSE] = strdup("QUIN_TDM_RX_0");
     hw_interface_table[SND_DEVICE_OUT_CALL_PROXY] = strdup("CALL_PROXY_RX");
-    hw_interface_table[SND_DEVICE_OUT_ULTRASOUND_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC_SB] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_HANDSET_MIC_NN] = strdup("SLIMBUS_0_TX");

@@ -1472,8 +1472,7 @@ int enable_snd_device(struct audio_device *adev,
         audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_BUSY);
 #ifdef ELLIPTIC_ULTRASOUND_ENABLED
-        if (snd_device != SND_DEVICE_OUT_ULTRASOUND_HANDSET &&
-            snd_device != SND_DEVICE_IN_ULTRASOUND_MIC)
+        if (snd_device != SND_DEVICE_IN_ULTRASOUND_MIC)
 #endif
         if (platform_get_snd_device_acdb_id(snd_device) < 0) {
             audio_extn_sound_trigger_update_device_status(snd_device,

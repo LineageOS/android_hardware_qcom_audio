@@ -225,14 +225,14 @@ void us_start(void)
     }
 
     rx_usecase->type = PCM_PLAYBACK;
-    rx_usecase->out_snd_device = SND_DEVICE_OUT_ULTRASOUND_HANDSET;
+    rx_usecase->out_snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
     rx_usecase->id = USECASE_AUDIO_ULTRASOUND_RX;
     rx_usecase->stream.out = us->adev->primary_output;
     list_init(&rx_usecase->device_list);
     assign_devices(&rx_usecase->device_list, &us->adev->primary_output->device_list);
     list_add_tail(&us->adev->usecase_list, &rx_usecase->list);
 
-    enable_snd_device(us->adev, SND_DEVICE_OUT_ULTRASOUND_HANDSET);
+    enable_snd_device(us->adev, SND_DEVICE_OUT_VOICE_HANDSET);
     enable_audio_route(us->adev, rx_usecase);
     ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
             __func__, us->adev->snd_card, rx_device_id);
