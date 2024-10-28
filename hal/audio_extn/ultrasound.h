@@ -23,11 +23,13 @@
 #define us_deinit() (0)
 #define us_start() (0)
 #define us_stop() (0)
+#define us_suspend() (0)
 #else
 void us_init(struct audio_device *adev);
 void us_deinit(void);
 void us_start(void);
 void us_stop(void);
+void us_suspend(int val);
 #endif
 
 #endif

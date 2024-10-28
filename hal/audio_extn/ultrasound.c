@@ -28,6 +28,7 @@
 #define ULTRASOUND_CALIBRATION_FILE "/mnt/vendor/persist/audio/us_cal"
 #define ULTRASOUND_CALIBRATION_MIXER "Ultrasound Calibration Data"
 #define ULTRASOUND_RAMPDOWN_MIXER "Ultrasound RampDown"
+#define ULTRASOUND_SUSPEND_MIXER "Ultrasound Suspend"
 
 enum {
     ULTRASOUND_STATUS_DEFAULT,
@@ -104,6 +105,38 @@ static void us_ramp_down(void)
     }
 
     usleep(10000);
+
+exit:
+    ALOGD("%s: exit", __func__);
+}
+
+void us_suspend(int val)
+{
+    struct mixer_ctl *ctl;
+    int rc;
+
+    ALOGD("%s: enter", __func__);
+    ALOGD("%s: suspend: %d", __func__, val);
+
+    if (!us) {
+        rc = -ENODEV;
+        goto exit;
+    }
+
+    ctl = mixer_get_ctl_by_name(us->adev->mixer, ULTRASOUND_SUSPEND_MIXER);
+    if (!ctl) {
+        ALOGD("%s: Could not get ctl for mixer cmd - %s",
+                __func__, ULTRASOUND_SUSPEND_MIXER);
+        rc = -EINVAL;
+        goto exit;
+    }
+
+    if (val)
+        us_ramp_down();
+
+    rc = mixer_ctl_set_value(ctl, 0, val);
+    if (rc < 0)
+        ALOGE("%s: Could not set ctl, error:%d ", __func__, rc);
 
 exit:
     ALOGD("%s: exit", __func__);
@@ -195,6 +228,32 @@ static void stop_us(void)
     ALOGD("%s: exit: status(%d)", __func__, rc);
 }
 
+static snd_device_t us_get_output_snd_device(void)
+{
+    snd_device_t snd_device;
+
+    snd_device = platform_get_output_snd_device(us->adev->platform,
+                                                us->adev->primary_output,
+                                                USECASE_TYPE_MAX);
+    switch (snd_device) {
+        case SND_DEVICE_OUT_HANDSET:
+        case SND_DEVICE_OUT_VOICE_HANDSET:
+        case SND_DEVICE_OUT_VOICE_HANDSET_TMUS:
+        case SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET:
+        case SND_DEVICE_OUT_VOICE_HAC_HANDSET:
+        case SND_DEVICE_OUT_ANC_HANDSET:
+        case SND_DEVICE_OUT_VOIP_HANDSET:
+            break;
+        default:
+            snd_device = SND_DEVICE_OUT_SPEAKER;
+            break;
+    }
+
+    ALOGD("%s: %s", __func__, platform_get_snd_device_name(snd_device));
+
+    return snd_device;
+}
+
 void us_start(void)
 {
     int rc = 0, rx_device_id, tx_device_id;
@@ -225,14 +284,14 @@ void us_start(void)
     }
 
     rx_usecase->type = PCM_PLAYBACK;
-    rx_usecase->out_snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
+    rx_usecase->out_snd_device = us_get_output_snd_device();
     rx_usecase->id = USECASE_AUDIO_ULTRASOUND_RX;
     rx_usecase->stream.out = us->adev->primary_output;
     list_init(&rx_usecase->device_list);
     assign_devices(&rx_usecase->device_list, &us->adev->primary_output->device_list);
     list_add_tail(&us->adev->usecase_list, &rx_usecase->list);
 
-    enable_snd_device(us->adev, SND_DEVICE_OUT_VOICE_HANDSET);
+    enable_snd_device(us->adev, rx_usecase->out_snd_device);
     enable_audio_route(us->adev, rx_usecase);
     ALOGV("%s: Opening PCM playback device card_id(%d) device_id(%d)",
             __func__, us->adev->snd_card, rx_device_id);

@@ -1809,11 +1809,6 @@ static void check_usecases_codec_backend(struct audio_device *adev,
               platform_get_snd_device_name(usecase->out_snd_device),
               platform_check_backends_match(snd_device, usecase->out_snd_device));
 
-#ifdef ELLIPTIC_ULTRASOUND_ENABLED
-        if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX)
-            continue;
-#endif
-
         if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info) &&
                 (usecase->type != PCM_PASSTHROUGH)) {
             uc_derive_snd_device = derive_playback_snd_device(adev->platform,
@@ -1830,11 +1825,33 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                 ALOGD("%s:becf: check_usecases (%s) is active on (%s) - disabling ..",
                     __func__, use_case_table[usecase->id],
                       platform_get_snd_device_name(usecase->out_snd_device));
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+                if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX)
+                    us_suspend(1);
+#endif
                 disable_audio_route(adev, usecase);
                 switch_device[usecase->id] = true;
                 /* Enable existing usecase on derived playback device */
                 derive_snd_device[usecase->id] = uc_derive_snd_device;
                 num_uc_to_switch++;
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+                if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX) {
+                    switch (snd_device) {
+                        case SND_DEVICE_OUT_HANDSET:
+                        case SND_DEVICE_OUT_VOICE_HANDSET:
+                        case SND_DEVICE_OUT_VOICE_HANDSET_TMUS:
+                        case SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET:
+                        case SND_DEVICE_OUT_VOICE_HAC_HANDSET:
+                        case SND_DEVICE_OUT_ANC_HANDSET:
+                        case SND_DEVICE_OUT_VOIP_HANDSET:
+                            derive_snd_device[usecase->id] = snd_device;
+                            break;
+                        default:
+                            derive_snd_device[usecase->id] = SND_DEVICE_OUT_SPEAKER;
+                            break;
+                    }
+                }
+#endif
             }
         }
     }
@@ -1886,6 +1903,10 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                 } else {
                     enable_snd_device(adev, derive_snd_device[usecase->id]);
                 }
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+                if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX)
+                    us_suspend(0);
+#endif
             }
         }
 
