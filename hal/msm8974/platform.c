@@ -51,6 +51,7 @@
 #include "sound/msmcal-hwdep.h"
 #include <dirent.h>
 
+#include "../audio_hw_lvimfs.h"
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
 #define LOG_MASK HAL_MOD_FILE_PLATFORM
@@ -184,6 +185,8 @@
 #define AUDIO_PARAMETER_KEY_DP_CHANNEL_MASK "dp_channel_mask"
 #define AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP "spkr_device_chmap"
 #define AUDIO_PARAMETER_KEY_HFP_ZONE "hfp_zone"
+
+#define AUDIO_PARAMETER_RECORD_USE_AP_LVIMFS "record_use_ap_lvimfs"
 
 #define EVENT_EXTERNAL_SPK_1 "qc_ext_spk_1"
 #define EVENT_EXTERNAL_SPK_2 "qc_ext_spk_2"
@@ -343,6 +346,7 @@ struct platform_data {
     bool is_i2s_ext_modem;
     bool is_acdb_initialized;
     bool ec_car_state;
+    bool is_lvimfs_enabled;
     /* Vbat monitor related flags */
     bool is_vbat_speaker;
     bool is_bcl_speaker;
@@ -4346,6 +4350,10 @@ acdb_init_fail:
     audio_extn_keep_alive_init(adev);
 
     platform_reset_edid_info(my_data);
+
+    if (my_data->is_lvimfs_enabled) {
+        lvimfs_init();
+    }
     free(snd_card_name);
     ALOGD("%s: exit", __func__);
     return my_data;
@@ -4670,6 +4678,10 @@ void platform_deinit(void *platform)
 
     if (my_data->acdb_deallocate)
         my_data->acdb_deallocate();
+
+    if (my_data->is_lvimfs_enabled) {
+        lvimfs_deinit();
+    }
 
     free(platform);
     /* deinit usb */
@@ -8981,6 +8993,15 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
             ALOGE("%s: Only Zones 0 through 6 are supported", __func__);
         else
             platform_set_hfp_zone(my_data, zone);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_RECORD_USE_AP_LVIMFS,
+                            value, len);
+    if (err >= 0) {
+        my_data->is_lvimfs_enabled = (strncmp("enable", value, sizeof("enable") - 1) == 0);
+        ALOGD("%s: AUDIO_PARAMETER_RECORD_USE_AP_LVIMFS (%d)", __func__,
+              my_data->is_lvimfs_enabled);
+        str_parms_del(parms, AUDIO_PARAMETER_RECORD_USE_AP_LVIMFS);
     }
 
     platform_set_fluence_params(platform, parms, value, len);

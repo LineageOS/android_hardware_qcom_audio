@@ -91,6 +91,7 @@
 #include "sound/asound.h"
 
 #include "audio_amplifier.h"
+#include "audio_hw_lvimfs.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -3559,6 +3560,10 @@ static int stop_input_stream(struct stream_in *in)
     if (is_loopback_input_device(get_device_types(&in->device_list)))
         audio_extn_keep_alive_stop(KEEP_ALIVE_OUT_PRIMARY);
 
+    if (lvimfs_wrapper_ops && in->lvimfs_instance) {
+        lvimfs_stop_input_stream(in);
+    }
+
     list_remove(&uc_info->list);
     clear_devices(&uc_info->device_list);
     free(uc_info);
@@ -3770,6 +3775,9 @@ int start_input_stream(struct stream_in *in)
     if (is_loopback_input_device(get_device_types(&in->device_list)))
         audio_extn_keep_alive_start(KEEP_ALIVE_OUT_PRIMARY);
 
+    if (lvimfs_wrapper_ops && !in->lvimfs_instance) {
+        lvimfs_start_input_stream(in);
+    }
 done_open:
     audio_streaming_hint_end();
     audio_extn_perf_lock_release(&adev->perf_lock_handle);
@@ -7791,6 +7799,11 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
             memset(buffer, 0, bytes);
         }
     }
+
+    if (lvimfs_wrapper_ops && in->lvimfs_instance) {
+        lvimfs_process_input_stream(in, buffer, bytes);
+    }
+
 exit:
     frame_size = audio_stream_in_frame_size(stream);
     if (frame_size > 0)
