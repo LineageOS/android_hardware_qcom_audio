@@ -30,7 +30,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+/*
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 #define LOG_TAG "hardware_info"
 /*#define LOG_NDEBUG 0*/
 #define LOG_NDDEBUG 0
@@ -640,7 +644,12 @@ static void update_hardware_info_lahaina(
                  sizeof("lahaina-yupikqrd-snd-card"))) {
         strlcpy(hw_info->name, "yupik", sizeof(hw_info->name));
         hw_info->is_stereo_spkr = false;
-    } else {
+    } else if (!strncmp(snd_card_name, "lahaina-yupikdashcam-snd-card",
+                 sizeof("lahaina-yupikdashcam-snd-card"))) {
+        strlcpy(hw_info->name, "yupik", sizeof(hw_info->name));
+        hw_info->is_stereo_spkr = false;
+    }
+	else {
         ALOGW("%s: Not a lahaina device", __func__);
     }
 }

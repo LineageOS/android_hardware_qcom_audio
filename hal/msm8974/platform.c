@@ -84,6 +84,7 @@
 #define PLATFORM_INFO_XML_PATH_SCUBA_IDP "audio_platform_info_scubaidp.xml"
 #define PLATFORM_INFO_XML_PATH_SCUBA_QRD "audio_platform_info_scubaqrd.xml"
 #define PLATFORM_INFO_XML_PATH_SA8295_ADP "audio_platform_info_sa8295.xml"
+#define PLATFORM_INFO_XML_PATH_YUPIK_DASHCAM "audio_platform_info_yupikdashcam.xml"
 
 #include <linux/msm_audio.h>
 #if defined (PLATFORM_MSM8998) || (PLATFORM_SDM845) || (PLATFORM_SDM710) || \
@@ -2024,7 +2025,9 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
          !strncmp(snd_card_name, "lito-lagoonqrd-snd-card",
                    sizeof("lito-lagoonqrd-snd-card")) ||
          !strncmp(snd_card_name, "lito-orchidmtp-snd-card",
-                   sizeof("lito-orchidmtp-snd-card"))) {
+                   sizeof("lito-orchidmtp-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-yupikdashcam-snd-card",
+                   sizeof("lahaina-yupikdashcam-snd-card"))) {
          ALOGI("%s: snd_card_name: %s",__func__,snd_card_name);
          my_data->is_internal_codec = true;
          my_data->is_slimbus_interface = false;
@@ -3703,7 +3706,11 @@ void *platform_init(struct audio_device *adev)
     } else if (my_data->is_internal_codec && (strstr(snd_card_name, "sdm429w") == NULL)) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_INTCODEC_NAME),
             my_data, PLATFORM);
-    } else {
+	} else if (!strncmp(snd_card_name, "lahaina-yupikdashcam-snd-card",
+               sizeof("lahaina-yupikdashcam-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_YUPIK_DASHCAM),
+            my_data, PLATFORM);
+	}else {
         // Try to load pixel or default
         audio_extn_utils_get_platform_info(snd_card_name, platform_info_file);
         platform_info_init(platform_info_file, my_data, PLATFORM);
