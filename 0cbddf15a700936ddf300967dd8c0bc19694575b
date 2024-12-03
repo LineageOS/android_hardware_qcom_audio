@@ -16,6 +16,24 @@
       "message": "it\u0027s already guarded, just unset that var in your boardconfig.",
       "revId": "0cbddf15a700936ddf300967dd8c0bc19694575b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "4295ac6f_f18b86fd",
+        "filename": "hal/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 16185
+      },
+      "writtenOn": "2024-12-03T20:51:49Z",
+      "side": 1,
+      "message": "I haven\u0027t tried this change yet, but the issue is that audio dies for some reason when I unset BOARD_USES_ALSA_AUDIO",
+      "parentUuid": "8d6606aa_01ae65a8",
+      "revId": "0cbddf15a700936ddf300967dd8c0bc19694575b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
