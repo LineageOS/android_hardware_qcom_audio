@@ -34,6 +34,24 @@
       "parentUuid": "8d6606aa_01ae65a8",
       "revId": "0cbddf15a700936ddf300967dd8c0bc19694575b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "c3b00605_a6966b4e",
+        "filename": "hal/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2024-12-03T20:58:33Z",
+      "side": 1,
+      "message": "that makes no sense.\n\n```\nrg BOARD_USES_ALSA_AUDIO * | grep -v :\u003d\nhardware/qcom/audio/hal/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\nhardware/qcom/audio/legacy/alsa_sound/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\nhardware/qcom/audio/legacy/libalsa-intf/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\nhardware/qcom-caf/sm8150/audio/hal/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\nhardware/qcom-caf/msm8996/audio/hal/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\nhardware/qcom-caf/msm8953/audio/hal/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\nhardware/qcom-caf/sm8250/audio/hal/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\nhardware/qcom-caf/sm8350/audio/hal/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\nhardware/qcom-caf/msm8998/audio/hal/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\nhardware/qcom-caf/sdm660/audio/hal/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\nhardware/qcom-caf/sdm845/audio/hal/Android.mk:ifeq ($(strip $(BOARD_USES_ALSA_AUDIO)),true)\n```",
+      "parentUuid": "4295ac6f_f18b86fd",
+      "revId": "0cbddf15a700936ddf300967dd8c0bc19694575b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
