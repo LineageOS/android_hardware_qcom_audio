@@ -167,6 +167,7 @@ endif
 
 LOCAL_SRC_FILES := \
     audio_hw.c \
+    audio_hw_lvacfs.c \
     audio_hw_lvimfs.c \
     acdb.c \
     platform_info.c \

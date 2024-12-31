@@ -51,6 +51,7 @@
 #include "sound/msmcal-hwdep.h"
 #include <dirent.h>
 
+#include "../audio_hw_lvacfs.h"
 #include "../audio_hw_lvimfs.h"
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -186,6 +187,7 @@
 #define AUDIO_PARAMETER_KEY_SPKR_DEVICE_CHMAP "spkr_device_chmap"
 #define AUDIO_PARAMETER_KEY_HFP_ZONE "hfp_zone"
 
+#define AUDIO_PARAMETER_RECORD_USE_AP_LVACFS "record_use_ap_lvacfs"
 #define AUDIO_PARAMETER_RECORD_USE_AP_LVIMFS "record_use_ap_lvimfs"
 
 #define EVENT_EXTERNAL_SPK_1 "qc_ext_spk_1"
@@ -346,6 +348,7 @@ struct platform_data {
     bool is_i2s_ext_modem;
     bool is_acdb_initialized;
     bool ec_car_state;
+    bool is_lvacfs_enabled;
     bool is_lvimfs_enabled;
     /* Vbat monitor related flags */
     bool is_vbat_speaker;
@@ -4351,6 +4354,10 @@ acdb_init_fail:
 
     platform_reset_edid_info(my_data);
 
+    if (my_data->is_lvacfs_enabled) {
+        lvacfs_init();
+    }
+
     if (my_data->is_lvimfs_enabled) {
         lvimfs_init();
     }
@@ -4678,6 +4685,10 @@ void platform_deinit(void *platform)
 
     if (my_data->acdb_deallocate)
         my_data->acdb_deallocate();
+
+    if (my_data->is_lvacfs_enabled) {
+        lvacfs_deinit();
+    }
 
     if (my_data->is_lvimfs_enabled) {
         lvimfs_deinit();
@@ -8993,6 +9004,15 @@ int platform_set_parameters(void *platform, struct str_parms *parms)
             ALOGE("%s: Only Zones 0 through 6 are supported", __func__);
         else
             platform_set_hfp_zone(my_data, zone);
+    }
+
+    err = str_parms_get_str(parms, AUDIO_PARAMETER_RECORD_USE_AP_LVACFS,
+                            value, len);
+    if (err >= 0) {
+        my_data->is_lvacfs_enabled = (strncmp("enable", value, sizeof("enable") - 1) == 0);
+        ALOGD("%s: AUDIO_PARAMETER_RECORD_USE_AP_LVACFS (%d)", __func__,
+              my_data->is_lvacfs_enabled);
+        str_parms_del(parms, AUDIO_PARAMETER_RECORD_USE_AP_LVACFS);
     }
 
     err = str_parms_get_str(parms, AUDIO_PARAMETER_RECORD_USE_AP_LVIMFS,

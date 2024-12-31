@@ -640,6 +640,9 @@ struct stream_in {
 
     int car_audio_stream; /* handle for car_audio_stream*/
 
+    void** lvacfs_instance;
+    pthread_mutex_t lvacfs_lock;
+
     void** lvimfs_instance;
     pthread_mutex_t lvimfs_lock;
 };

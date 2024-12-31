@@ -91,6 +91,7 @@
 #include "sound/asound.h"
 
 #include "audio_amplifier.h"
+#include "audio_hw_lvacfs.h"
 #include "audio_hw_lvimfs.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
@@ -3560,6 +3561,10 @@ static int stop_input_stream(struct stream_in *in)
     if (is_loopback_input_device(get_device_types(&in->device_list)))
         audio_extn_keep_alive_stop(KEEP_ALIVE_OUT_PRIMARY);
 
+    if (lvacfs_wrapper_ops && in->lvacfs_instance) {
+        lvacfs_stop_input_stream(in);
+    }
+
     if (lvimfs_wrapper_ops && in->lvimfs_instance) {
         lvimfs_stop_input_stream(in);
     }
@@ -3774,6 +3779,10 @@ int start_input_stream(struct stream_in *in)
 
     if (is_loopback_input_device(get_device_types(&in->device_list)))
         audio_extn_keep_alive_start(KEEP_ALIVE_OUT_PRIMARY);
+
+    if (lvacfs_wrapper_ops && !in->lvacfs_instance) {
+        lvacfs_start_input_stream(in);
+    }
 
     if (lvimfs_wrapper_ops && !in->lvimfs_instance) {
         lvimfs_start_input_stream(in);
@@ -7798,6 +7807,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void *buffer,
         if (in->usecase != USECASE_AUDIO_RECORD_FM_VIRTUAL) {
             memset(buffer, 0, bytes);
         }
+    }
+
+    if (lvacfs_wrapper_ops && in->lvacfs_instance) {
+        lvacfs_process_input_stream(in, buffer, bytes);
     }
 
     if (lvimfs_wrapper_ops && in->lvimfs_instance) {
