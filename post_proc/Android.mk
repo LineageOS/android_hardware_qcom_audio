@@ -36,11 +36,6 @@ LOCAL_SRC_FILES:= \
         effect_api.c \
         effect_util.c
 
-# HW_ACCELERATED has been disabled by default since msm8996. File doesn't
-# compile cleanly on tip so don't want to include it, but keeping this
-# as a reference.
-# LOCAL_SRC_FILES += hw_accelerator.c
-
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_INSTANCE_ID)), true)
     LOCAL_CFLAGS += -DINSTANCE_ID_ENABLED
 endif
@@ -103,53 +98,6 @@ ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_SANITIZE := integer_overflow
 endif
 include $(BUILD_SHARED_LIBRARY)
-
-
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS)),true)
-include $(CLEAR_VARS)
-
-LOCAL_CFLAGS += -Wno-unused-variable
-LOCAL_CFLAGS += -Wno-sign-compare
-LOCAL_CFLAGS += -Wno-unused-parameter
-LOCAL_CFLAGS += -Wno-unused-label
-LOCAL_CFLAGS += -Wno-gnu-designator
-LOCAL_CFLAGS += -Wno-typedef-redefinition
-LOCAL_CFLAGS += -Wno-shorten-64-to-32
-LOCAL_CFLAGS += -Wno-tautological-compare
-LOCAL_CFLAGS += -Wno-unused-function
-LOCAL_CFLAGS += -Wno-unused-local-typedef
-LOCAL_CFLAGS += -Wno-format
-LOCAL_SRC_FILES := EffectsHwAcc.cpp
-
-LOCAL_C_INCLUDES := \
-    $(call include-path-for, audio-effects)
-
-LOCAL_HEADER_LIBRARIES := libhardware_headers \
-                          libsystem_headers \
-                          libutils_headers
-
-LOCAL_SHARED_LIBRARIES := \
-    liblog \
-    libeffects
-
-LOCAL_MODULE_TAGS := optional
-
-LOCAL_CFLAGS += -O2 -fvisibility=hidden
-
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DTS_EAGLE)), true)
-LOCAL_CFLAGS += -DHW_ACC_HPX
-endif
-
-LOCAL_MODULE:= libhwacceffectswrapper
-LOCAL_VENDOR_MODULE := true
-
-ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := unsigned-integer-overflow signed-integer-overflow
-endif
-include $(BUILD_STATIC_LIBRARY)
-endif
-
-
 
 ################################################################################
 
