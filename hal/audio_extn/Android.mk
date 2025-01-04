@@ -988,67 +988,6 @@ include $(BUILD_SHARED_LIBRARY)
 endif
 
 #-------------------------------------------
-#            Build HWDEP_CAL
-#-------------------------------------------
-include $(CLEAR_VARS)
-
-LOCAL_MODULE := libhwdepcal
-LOCAL_VENDOR_MODULE := true
-
-AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
-
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile gen4 kona lahaina holi lito bengal atoll sdm660 msm8937 msm8953 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
-  # B-family platform uses msm8974 code base
-  AUDIO_PLATFORM := msm8974
-  MULTIPLE_HW_VARIANTS_ENABLED := true
-endif
-
-# LOCAL_SRC_FILES:= \
-#         hwdep_cal.c
-
-LOCAL_CFLAGS += \
-    -Wall \
-    -Werror \
-    -Wno-unused-function \
-    -Wno-unused-variable
-
-LOCAL_SHARED_LIBRARIES := \
-    libaudioroute \
-    libaudioutils \
-    libcutils \
-    libdl \
-    libexpat \
-    liblog \
-    libtinyalsa \
-    $(LIBRARY_TINYCOMPRESS)
-
-LOCAL_C_INCLUDES := \
-    $(PRIMARY_HAL_PATH) \
-    $(PRIMARY_HAL_PATH)/$(AUDIO_PLATFORM) \
-    external/tinyalsa/include \
-    $(LIBRARY_TINYCOMPRESS_INC) \
-    external/expat/lib \
-    system/media/audio_utils/include \
-    $(call include-path-for, audio-route) \
-
-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/audio
-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
-LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-
-ifeq ($(strip $(AUDIO_FEATURE_ENABLED_DLKM)),true)
-  LOCAL_HEADER_LIBRARIES += audio_kernel_headers
-  LOCAL_C_INCLUDES += $(AUDIO_KERNEL_INC)
-endif
-
-LOCAL_HEADER_LIBRARIES += libhardware_headers
-LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
-#include $(BUILD_SHARED_LIBRARY)
-
-#-------------------------------------------
 #            Build MAXX_AUDIO
 #-------------------------------------------
 include $(CLEAR_VARS)
