@@ -23,10 +23,6 @@ include $(MY_LOCAL_PATH)/qahw/Android.mk
 include $(MY_LOCAL_PATH)/qahw_api/Android.mk
 endif
 
-ifeq ($(USE_LEGACY_AUDIO_DAEMON), true)
-include $(MY_LOCAL_PATH)/audiod/Android.mk
-endif
-
 endif
 endif
 endif
