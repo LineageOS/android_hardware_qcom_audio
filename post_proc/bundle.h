@@ -27,9 +27,6 @@
 /* Retry for delay for mixer open */
 #define RETRY_NUMBER 10
 #define RETRY_US 500000
-#ifdef HW_ACCELERATED_EFFECTS
-#define EFFECT_CMD_HW_ACC 20
-#endif
 #define MIXER_CARD 0
 #define SOUND_CARD 0
 
