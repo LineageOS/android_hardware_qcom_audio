@@ -51,7 +51,6 @@
 #include <unistd.h>
 
 #include "bundle.h"
-#include "hw_accelerator.h"
 #include "equalizer.h"
 #include "bass_boost.h"
 #include "virtualizer.h"
@@ -75,9 +74,6 @@ const effect_descriptor_t *descriptors[] = {
         &ins_env_reverb_descriptor,
         &aux_preset_reverb_descriptor,
         &ins_preset_reverb_descriptor,
-#ifdef HW_ACCELERATED_EFFECTS
-        &hw_accelerator_descriptor,
-#endif
         NULL,
 };
 
@@ -621,29 +617,6 @@ int effect_lib_create(const effect_uuid_t *uuid,
             reverb_preset_init(reverb_ctxt);
         }
         reverb_ctxt->ctl = NULL;
-#ifdef HW_ACCELERATED_EFFECTS
-    } else if (memcmp(uuid, &hw_accelerator_descriptor.uuid,
-               sizeof(effect_uuid_t)) == 0) {
-        hw_accelerator_context_t *hw_acc_ctxt = (hw_accelerator_context_t *)
-                                   calloc(1, sizeof(hw_accelerator_context_t));
-        if (hw_acc_ctxt == NULL) {
-            ALOGE("h/w acc context allocation failed");
-            return -ENOMEM;
-        }
-        context = (effect_context_t *)hw_acc_ctxt;
-        context->ops.init = hw_accelerator_init;
-        context->ops.reset = hw_accelerator_reset;
-        context->ops.set_parameter = hw_accelerator_set_parameter;
-        context->ops.get_parameter = hw_accelerator_get_parameter;
-        context->ops.set_device = hw_accelerator_set_device;
-        context->ops.set_hw_acc_mode = hw_accelerator_set_mode;
-        context->ops.enable = hw_accelerator_enable;
-        context->ops.disable = hw_accelerator_disable;
-        context->ops.release = hw_accelerator_release;
-        context->ops.process = hw_accelerator_process;
-
-        context->desc = &hw_accelerator_descriptor;
-#endif
     } else {
         return -EINVAL;
     }
@@ -940,22 +913,6 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
             add_effect_to_output(out_ctxt, context);
 
         } break;
-#ifdef HW_ACCELERATED_EFFECTS
-    case EFFECT_CMD_HW_ACC: {
-        ALOGV("EFFECT_CMD_HW_ACC cmdSize %d pCmdData %p, *replySize %d, pReplyData %p",
-              cmdSize, pCmdData, *replySize, pReplyData);
-        if (cmdSize != sizeof(uint32_t) || pCmdData == NULL
-                || pReplyData == NULL || *replySize != sizeof(int)) {
-            return -EINVAL;
-        }
-        uint32_t value = *(uint32_t *)pCmdData;
-        if (context->ops.set_hw_acc_mode)
-            context->ops.set_hw_acc_mode(context, value);
-
-        context->hw_acc_enabled = (value > 0) ? true : false;
-        break;
-    }
-#endif
     default:
         if (cmdCode >= EFFECT_CMD_FIRST_PROPRIETARY && context->ops.command)
             status = context->ops.command(context, cmdCode, cmdSize,
