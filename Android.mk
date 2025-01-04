@@ -26,10 +26,6 @@ include $(MY_LOCAL_PATH)/stt_meta/Android.mk
 endif
 endif
 
-ifeq ($(USE_LEGACY_AUDIO_DAEMON), true)
-include $(MY_LOCAL_PATH)/audiod/Android.mk
-endif
-
 endif
 endif
 endif
