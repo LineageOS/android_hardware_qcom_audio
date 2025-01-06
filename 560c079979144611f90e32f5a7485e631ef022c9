@@ -16,6 +16,23 @@
       "message": "On hold",
       "revId": "560c079979144611f90e32f5a7485e631ef022c9",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f158da80_23184e60",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32253
+      },
+      "writtenOn": "2025-01-06T13:18:52Z",
+      "side": 1,
+      "message": "Haven\u0027t see any regression on msm8953.",
+      "revId": "560c079979144611f90e32f5a7485e631ef022c9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
