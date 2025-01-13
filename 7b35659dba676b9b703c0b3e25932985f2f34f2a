@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "fc7b3771_ac63e432",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 34519
+      },
+      "writtenOn": "2025-01-13T09:19:18Z",
+      "side": 1,
+      "message": "Just rebase on top of new changes and its good to go 😊\nWorks fine on Nothing Phone (1) (Spacewar)",
+      "revId": "7b35659dba676b9b703c0b3e25932985f2f34f2a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
