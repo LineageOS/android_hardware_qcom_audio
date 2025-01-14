@@ -15,9 +15,6 @@ else
 include $(MY_LOCAL_PATH)/hal/Android.mk
 endif
 include $(MY_LOCAL_PATH)/hal/audio_extn/Android.mk
-ifeq ($(AUDIO_FEATURE_ENABLED_STT_SUPPORT),true)
-include $(MY_LOCAL_PATH)/stt_meta/Android.mk
-endif
 endif
 
 endif
