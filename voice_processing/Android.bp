@@ -1,0 +1,37 @@
+package {
+    default_applicable_licenses: ["hardware_qcom_audio_license"],
+}
+
+cc_library_shared {
+    name: "libqcomvoiceprocessing",
+    relative_install_path: "soundfx",
+    vendor: true,
+    owner: "qcom",
+
+    srcs: [
+        "voice_processing.c",
+    ],
+
+    cflags: [
+        "-fvisibility=hidden",
+        "-Werror",
+    ],
+
+    include_dirs: [
+        "system/media/audio_effects/include",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libdl",
+        "liblog",
+    ],
+
+    sanitize: {
+        integer_overflow: true,
+    },
+}

@@ -1,0 +1,122 @@
+package {
+    default_applicable_licenses: ["hardware_qcom_audio_license"],
+}
+
+cc_library_shared {
+    name: "libqcompostprocbundle",
+    relative_install_path: "soundfx",
+    vendor: true,
+    owner: "qcom",
+
+    srcs: [
+        "bundle.c",
+        "equalizer.c",
+        "bass_boost.c",
+        "virtualizer.c",
+        "reverb.c",
+        "effect_api.c",
+    ],
+
+    cflags: [
+        "-fvisibility=hidden",
+        "-Werror",
+    ],
+
+    include_dirs: [
+        "external/tinyalsa/include",
+        "system/media/audio_effects/include",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+        "libsystem_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "liblog",
+        "libtinyalsa",
+    ],
+}
+
+cc_library_shared {
+    name: "libvolumelistener",
+    relative_install_path: "soundfx",
+    vendor: true,
+    owner: "qcom",
+
+    srcs: [
+        "volume_listener.c"
+    ],
+
+    cflags: [
+        "-fvisibility=hidden",
+        "-Werror",
+    ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        any @ flag_val: [
+            "-DLIB_AUDIO_HAL=audio.primary." + flag_val + ".so",
+        ],
+        default: [
+            "-DLIB_AUDIO_HAL=audio.primary.qcom.so",
+        ],
+    }),
+
+    include_dirs: [
+        "hardware/qcom/audio/hal",
+        "system/media/audio_effects/include",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+        "libsystem_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libdl",
+        "liblog",
+    ],
+}
+
+cc_library_shared {
+    name: "libmalistener",
+    relative_install_path: "soundfx",
+    vendor: true,
+    owner: "google",
+
+    srcs: [
+        "ma_listener.c"
+    ],
+
+    cflags: [
+        "-fvisibility=hidden",
+        "-Werror",
+    ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        any @ flag_val: [
+            "-DHAL_LIB_NAME=audio.primary." + flag_val + ".so",
+        ],
+        default: [
+            "-DHAL_LIB_NAME=audio.primary.qcom.so",
+        ],
+    }),
+
+    include_dirs: [
+        "hardware/qcom/audio/hal",
+        "system/media/audio/include/system",
+        "system/media/audio_effects/include",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+        "libsystem_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libdl",
+        "liblog",
+    ],
+}

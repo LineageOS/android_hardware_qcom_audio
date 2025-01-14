@@ -1,0 +1,14 @@
+soong_namespace {
+}
+
+package {
+    default_applicable_licenses: ["hardware_qcom_audio_license"],
+}
+
+license {
+    name: "hardware_qcom_audio_license",
+    visibility: [":__subpackages__"],
+    license_kinds: [
+        "SPDX-license-identifier-Apache-2.0",
+    ],
+}
