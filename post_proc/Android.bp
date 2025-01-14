@@ -1,0 +1,99 @@
+cc_library_shared {
+    name: "libqcompostprocbundle",
+    relative_install_path: "soundfx",
+    vendor: true,
+    owner: "qti",
+
+    srcs: [
+        "bundle.c",
+        "equalizer.c",
+        "bass_boost.c",
+        "virtualizer.c",
+        "reverb.c",
+        "effect_api.c",
+        "effect_util.c",
+    ],
+
+    cflags: [
+        "-fvisibility=hidden",
+        "-Werror",
+        "-DDTS_EAGLE",
+    ] + select(soong_config_variable("qtiaudio", "feature_gki"), {
+        "true": ["-DAUDIO_GKI_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_instance_id"), {
+        "true": ["-DINSTANCE_ID_ENABLED"],
+        default: [],
+    }),
+
+    include_dirs: [
+        "external/tinyalsa/include",
+        "system/media/audio_effects/include",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+        "libsystem_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libdl",
+        "liblog",
+        "libtinyalsa",
+    ],
+
+    sanitize: {
+        integer_overflow: true,
+    },
+}
+
+cc_library_shared {
+    name: "libvolumelistener",
+    relative_install_path: "soundfx",
+    vendor: true,
+    owner: "qti",
+
+    srcs: [
+        "volume_listener.c"
+    ],
+
+    cflags: [
+        "-fvisibility=hidden",
+        "-Werror",
+    ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        any @ flag_val: [
+            "-DLIB_AUDIO_HAL=/vendor/lib/hw/audio.primary." + flag_val + ".so",
+            "-DLIB64_AUDIO_HAL=/vendor/lib64/hw/audio.primary." + flag_val + ".so",
+        ],
+        default: [
+            "-DLIB_AUDIO_HAL=/vendor/lib/hw/audio.primary.qcom.so",
+            "-DLIB64_AUDIO_HAL=/vendor/lib64/hw/audio.primary.qcom.so",
+        ],
+    }),
+
+    include_dirs: [
+        "external/tinyalsa/include",
+        "external/tinycompress/include",
+        "hardware/qcom-caf/sm8350/audio/hal",
+        "hardware/qcom-caf/sm8350/audio/hal/audio_extn",
+        "system/media/audio_route/include",
+        "system/media/audio_utils/include",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libdl",
+        "liblog",
+    ],
+
+    sanitize: {
+        integer_overflow: true,
+    },
+}
