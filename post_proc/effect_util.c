@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <utils/Log.h>
+#include <log/log.h>
 #include <stdlib.h>
 #include <string.h>
 #include "effect_util.h"
