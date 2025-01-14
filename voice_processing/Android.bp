@@ -1,0 +1,34 @@
+cc_library_shared {
+    name: "libqcomvoiceprocessing",
+    relative_install_path: "soundfx",
+    vendor: true,
+    owner: "qti",
+
+    srcs: [
+        "voice_processing.c",
+    ],
+
+    cflags: [
+        "-fvisibility=hidden",
+        "-Werror",
+        "-Wno-gnu-designator",
+    ],
+
+    include_dirs: [
+        "system/media/audio_effects/include",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libdl",
+        "liblog",
+    ],
+
+    sanitize: {
+        integer_overflow: true,
+    },
+}
