@@ -1,0 +1,41 @@
+//
+// SPDX-FileCopyrightText: 2013 The Android Open Source Project
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_library_shared {
+    name: "libqcomvisualizer",
+    relative_install_path: "soundfx",
+    vendor: true,
+
+    srcs: [
+        "offload_visualizer.c"
+    ],
+
+    cflags: [
+        "-fvisibility=hidden",
+        "-Werror",
+        "-Wno-gnu-designator",
+    ],
+
+    include_dirs: [
+        "external/tinyalsa/include",
+        "system/media/audio_effects/include",
+    ],
+
+    header_libs: [
+        "libsystem_headers",
+        "libhardware_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libdl",
+        "liblog",
+        "libtinyalsa",
+    ],
+
+    sanitize: {
+        integer_overflow: true,
+    },
+}
