@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "5f3ee821_cd236b1e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2025-01-15T08:36:00Z",
+      "side": 1,
+      "message": "https://review.lineageos.org/c/LineageOS/android/+/414321 has been merged.",
+      "revId": "adca52f88ed9290b00fc27910fa311b67cef450d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
