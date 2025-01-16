@@ -488,51 +488,6 @@ endif
 include $(BUILD_SHARED_LIBRARY)
 
 #-------------------------------------------
-#            Build MAXX_AUDIO
-#-------------------------------------------
-include $(CLEAR_VARS)
-
-LOCAL_MODULE:= libmaxxaudio
-LOCAL_VENDOR_MODULE := true
-
-LOCAL_SRC_FILES:= \
-        maxxaudio.c \
-        device_utils.c
-
-LOCAL_CFLAGS += \
-    -Wall \
-    -Werror \
-    -Wno-unused-function \
-    -Wno-unused-variable
-
-LOCAL_SHARED_LIBRARIES := \
-    libaudioutils \
-    libcutils \
-    liblog \
-    libtinyalsa \
-    libtinycompress \
-    libaudioroute \
-    libdl \
-    libexpat
-
-LOCAL_C_INCLUDES := \
-    hardware/qcom-caf/sm8250/audio/hal \
-    hardware/qcom-caf/sm8250/audio/hal/msm8974 \
-    external/tinyalsa/include \
-    external/tinycompress/include \
-    external/expat/lib \
-    system/media/audio_utils/include \
-    $(call include-path-for, audio-route) \
-
-LOCAL_HEADER_LIBRARIES += qti_kernel_headers
-
-LOCAL_HEADER_LIBRARIES += libhardware_headers
-LOCAL_HEADER_LIBRARIES += libsystem_headers
-ifneq ($(filter kona lahaina holi,$(TARGET_BOARD_PLATFORM)),)
-LOCAL_SANITIZE := integer_overflow
-endif
-include $(BUILD_SHARED_LIBRARY)
-#-------------------------------------------
 #            Build AUDIOZOOM
 #-------------------------------------------
 include $(CLEAR_VARS)
