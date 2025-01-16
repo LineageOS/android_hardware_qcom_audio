@@ -67,8 +67,6 @@ LOCAL_C_INCLUDES += \
     $(LOCAL_PATH)/audio_extn \
     $(LOCAL_PATH)/voice_extn
 
-LOCAL_C_INCLUDES += vendor/qcom/opensource/core-utils/fwk-detect
-
 LOCAL_HEADER_LIBRARIES += qti_kernel_headers
 
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT)),true)
