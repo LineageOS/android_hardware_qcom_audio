@@ -1,0 +1,162 @@
+soong_config_module_type {
+    name: "target_board_platform_cc_library_shared",
+    module_type: "cc_library_shared",
+    config_namespace: "ANDROID",
+    value_variables: ["target_board_platform"],
+    properties: [
+        "name",
+    ],
+}
+
+target_board_platform_cc_library_shared {
+    name: "audio.primary.qcom",
+    soong_config_variables: {
+        target_board_platform: {
+            name: "audio.primary.%s",
+            conditions_default: {
+                name: "audio.primary.qcom",
+            },
+        },
+    },
+    relative_install_path: "hw",
+    vendor: true,
+    owner: "qcom",
+
+    srcs: [
+        "acdb.c",
+        "audio_hw.c",
+        "audio_perf.cpp",
+        "platform_info.c",
+        "voice.c",
+        "audio_extn/audio_extn.c",
+        "audio_extn/extn_speaker.c",
+        "audio_extn/utils.c",
+        "msm8974/hw_info.c",
+        "msm8974/platform.c",
+    ] + select(soong_config_variable("qtiaudio", "feature_a2dp_offload"), {
+        "true": ["audio_extn/a2dp.c"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_cirrus_spkr_protection"), {
+        "true": ["audio_extn/cirrus_playback.c"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_hwdep_cal"), {
+        "true": ["audio_extn/hwdep_cal.c"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_maxx_audio"), {
+        "true": ["audio_extn/maxxaudio.c"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_multi_voice_sessions"), {
+        "true": ["voice_extn/voice_extn.c"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_snd_monitor"), {
+        "true": ["audio_extn/sndmonitor.c"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_usb_tunnel"), {
+        "true": ["audio_extn/usb.c"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_sound_trigger"), {
+        "true": ["audio_extn/soundtrigger.c"],
+        default: [],
+    }),
+
+    cflags: [
+        "-Werror",
+        "-D_GNU_SOURCE",
+        "-DHW_VARIANTS_ENABLED",
+    ] + select(soong_config_variable("qtiaudio", "feature_24bits_camcorder"), {
+        "true": ["-DENABLED_24BITS_CAMCORDER"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_a2dp_offload"), {
+        "true": ["-DA2DP_OFFLOAD_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_cirrus_spkr_protection"), {
+        "true": ["-DSPKR_PROT_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_hwdep_cal"), {
+        "true": ["-DHWDEP_CAL_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_flicker_sensor_input"), {
+        "true": ["-DFLICKER_SENSOR_INPUT"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_maxx_audio"), {
+        "true": ["-DMAXXAUDIO_QDSP_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_multi_voice_sessions"), {
+        "true": ["-DMULTI_VOICE_SESSION_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_snd_monitor"), {
+        "true": ["-DSND_MONITOR_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_usb_tunnel"), {
+        "true": ["-DUSB_TUNNEL_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_sound_trigger"), {
+        "true": ["-DSOUND_TRIGGER_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "msm8996": [
+            "-DPLATFORM_MSM8996",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=4",
+            "-DKPI_OPTIMIZE_ENABLED",
+            "-DINCALL_MUSIC_ENABLED",
+        ],
+        "msm8998": [
+            "-DPLATFORM_MSM8998",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=4",
+            "-DINCALL_MUSIC_ENABLED",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=msm8998",
+        ],
+        "sdm845": [
+            "-DPLATFORM_SDM845",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=4",
+            "-DINCALL_MUSIC_ENABLED",
+            "-DINCALL_STEREO_CAPTURE_ENABLED",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=sdm845",
+        ],
+        "sdm710": [
+            "-DPLATFORM_SDM710",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=4",
+            "-DINCALL_MUSIC_ENABLED",
+            "-DINCALL_STEREO_CAPTURE_ENABLED",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=sdm710",
+        ],
+        default: [],
+    }),
+
+    local_include_dirs: [
+        "msm8974",
+        "audio_extn",
+        "voice_extn",
+    ],
+
+    include_dirs: [
+        "external/expat/lib",
+        "external/tinyalsa/include",
+        "external/tinycompress/include",
+        "system/media/audio_effects/include",
+        "system/media/audio_route/include",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "android.hardware.power-V1-ndk",
+        "android.hardware.power@1.2",
+        "libaudioroute",
+        "libaudioutils",
+        "libbase",
+        "libbinder_ndk",
+        "libcutils",
+        "libdl",
+        "libexpat",
+        "libhidlbase",
+        "liblog",
+        "libprocessgroup",
+        "libtinyalsa",
+        "libtinycompress",
+        "libutils",
+    ],
+}
