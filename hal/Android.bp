@@ -1,0 +1,147 @@
+soong_config_module_type {
+    name: "target_board_platform_cc_library_shared",
+    module_type: "cc_library_shared",
+    config_namespace: "ANDROID",
+    value_variables: ["target_board_platform"],
+    properties: [
+        "name",
+    ],
+}
+
+target_board_platform_cc_library_shared {
+    name: "audio.primary.qcom",
+    soong_config_variables: {
+        target_board_platform: {
+            name: "audio.primary.%s",
+            conditions_default: {
+                name: "audio.primary.qcom",
+            },
+        },
+    },
+    relative_install_path: "hw",
+    vendor: true,
+    owner: "qti",
+
+    srcs: [
+        "acdb.c",
+        "audio_hw.c",
+        "audio_perf.cpp",
+        "platform_info.c",
+        "voice.c",
+        "audio_extn/audio_extn.c",
+        "audio_extn/audio_hidl.cpp",
+        "audio_extn/compress_in.c",
+        "audio_extn/device_utils.c",
+        "audio_extn/fm.c",
+        "audio_extn/keep_alive.c",
+        "audio_extn/source_track.c",
+        "audio_extn/usb.c",
+        "audio_extn/utils.c",
+        "msm8974/hw_info.c",
+        "msm8974/platform.c",
+        "voice_extn/compress_voip.c",
+        "voice_extn/voice_extn.c",
+    ] + select(soong_config_variable("qtiaudio", "feature_ext_amplifier"), {
+        "true": ["audio_extn/audio_amplifier.c"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_gef_support"), {
+        "true": ["audio_extn/gef.c"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_sound_trigger"), {
+        "true": ["audio_extn/soundtrigger.c"],
+        default: [],
+    }),
+
+    cflags: [
+        "-Werror",
+        "-D_GNU_SOURCE",
+        "-DHW_VARIANTS_ENABLED",
+    ] + select(soong_config_variable("qtiaudio", "feature_ext_amplifier"), {
+        "true": ["-DEXT_AMPLIFIER_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_extended_compress_format"), {
+        "true": ["-DENABLE_EXTENDED_COMPRESS_FORMAT"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_gef_support"), {
+        "true": ["-DAUDIO_GENERIC_EFFECT_FRAMEWORK_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_gki"), {
+        "true": ["-DAUDIO_GKI_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_instance_id"), {
+        "true": ["-DINSTANCE_ID_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("qtiaudio", "feature_sound_trigger"), {
+        "true": ["-DSOUND_TRIGGER_ENABLED"],
+        default: [],
+    }) + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "msmnile": [
+            "-DPLATFORM_MSMNILE",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=4",
+            "-DINCALL_STEREO_CAPTURE_ENABLED",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=msmnile",
+        ],
+        "sm6150": [
+            "-DPLATFORM_MSMSTEPPE",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=4",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=sm6150",
+        ],
+        "trinket": [
+            "-DPLATFORM_TRINKET",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=4",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=trinket",
+        ],
+        "atoll": [
+            "-DPLATFORM_ATOLL",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=4",
+            "-DINCALL_STEREO_CAPTURE_ENABLED",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=atoll",
+        ],
+        default: [],
+    }),
+
+    local_include_dirs: [
+        "msm8974",
+        "audio_extn",
+        "voice_extn",
+    ],
+
+    include_dirs: [
+        "external/expat/lib",
+        "external/tinyalsa/include",
+        "external/tinycompress/include",
+        "system/media/audio_effects/include",
+        "system/media/audio_route/include",
+        "system/media/audio_utils/include",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "android.hardware.power-V1-ndk",
+        "android.hardware.power@1.2",
+        "libaudioroute",
+        "libaudioutils",
+        "libbase",
+        "libbinder_ndk",
+        "libcutils",
+        "libdl",
+        "libexpat",
+        "libhidlbase",
+        "liblog",
+        "libprocessgroup",
+        "libtinyalsa",
+        "libtinycompress",
+        "libutils",
+    ] + select(soong_config_variable("qtiaudio", "feature_ext_amplifier"), {
+        "true": ["libhardware"],
+        default: [],
+    }),
+
+    sanitize: {
+        integer_overflow: true,
+    },
+}
