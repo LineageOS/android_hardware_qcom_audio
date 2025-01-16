@@ -1,0 +1,210 @@
+cc_defaults {
+    name: "qtiaudio_extn_defaults",
+
+    cflags: [
+        "-Werror",
+    ],
+
+    include_dirs: [
+        "external/tinyalsa/include",
+        "external/tinycompress/include",
+        "hardware/qcom-caf/sm8150/audio/hal",
+        "hardware/qcom-caf/sm8150/audio/hal/msm8974",
+        "system/media/audio_route/include",
+        "system/media/audio_utils/include",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "liblog",
+    ],
+
+    sanitize: {
+        integer_overflow: true,
+    },
+}
+
+cc_library_shared {
+    name: "libsndmonitor",
+    defaults: ["qtiaudio_extn_defaults"],
+    owner: "third_party",
+    vendor: true,
+
+    srcs: [
+        "sndmonitor.c",
+    ],
+}
+
+cc_library_shared {
+    name: "libcomprcapture",
+    defaults: ["qtiaudio_extn_defaults"],
+    owner: "third_party",
+    vendor: true,
+
+    srcs: [
+        "compress_capture.c",
+    ],
+}
+
+cc_library_shared {
+    name: "libssrec",
+    defaults: ["qtiaudio_extn_defaults"],
+    vendor: true,
+
+    srcs: [
+        "ssr.c",
+        "device_utils.c",
+    ],
+
+    cflags: [
+        "-D_OSS",
+    ],
+
+    shared_libs: [
+        "libprocessgroup",
+        "libtinyalsa",
+    ],
+}
+
+cc_library_shared {
+    name: "libhdmiedid",
+    defaults: ["qtiaudio_extn_defaults"],
+    owner: "third_party",
+    vendor: true,
+
+    srcs: [
+        "edid.c",
+    ],
+}
+
+cc_library_shared {
+    name: "libspkrprot",
+    defaults: ["qtiaudio_extn_defaults"],
+    owner: "third_party",
+    vendor: true,
+
+    srcs: [
+        "spkr_protection.c"
+    ],
+
+    cflags: [
+        "-DSPKR_PROT_ENABLED",
+    ],
+
+    shared_libs: [
+        "libaudioroute",
+        "libtinyalsa",
+    ],
+}
+
+cc_library_shared {
+    name: "libcirrusspkrprot",
+    defaults: ["qtiaudio_extn_defaults"],
+    owner: "third_party",
+    vendor: true,
+
+    srcs: [
+        "cirrus_playback.c",
+    ],
+
+    cflags: [
+        "-DENABLE_CIRRUS_DETECTION",
+        "-DCIRRUS_FACTORY_CALIBRATION",
+    ],
+
+    shared_libs: [
+        "libaudioroute",
+        "libtinyalsa",
+    ],
+}
+
+cc_library_shared {
+    name: "liba2dpoffload",
+    defaults: ["qtiaudio_extn_defaults"],
+    vendor: true,
+
+    srcs: [
+        "a2dp.c",
+        "device_utils.c",
+    ],
+
+    shared_libs: [
+        "libtinyalsa",
+    ],
+}
+
+cc_library_shared {
+    name: "libexthwplugin",
+    defaults: ["qtiaudio_extn_defaults"],
+    vendor: true,
+
+    srcs: [
+        "ext_hw_plugin.c"
+    ],
+}
+
+cc_library_shared {
+    name: "libhfp",
+    defaults: ["qtiaudio_extn_defaults"],
+    vendor: true,
+
+    srcs: [
+        "hfp.c",
+        "device_utils.c",
+    ],
+
+    shared_libs: [
+        "libtinyalsa",
+    ],
+}
+
+cc_library_shared {
+    name: "libbatterylistener",
+    vendor: true,
+
+    srcs: [
+        "battery_listener.cpp",
+    ],
+
+    cflags: [
+        "-DDTSHD_PARSER_ENABLED",
+    ],
+
+    shared_libs: [
+        "android.hardware.health@1.0",
+        "android.hardware.health@2.0",
+        "android.hardware.power@1.2",
+        "libbase",
+        "libhidlbase",
+        "liblog",
+        "libutils",
+    ],
+
+    static_libs: [
+        "libhealthhalutils",
+    ],
+}
+
+cc_library_shared {
+    name: "libaudiozoom",
+    defaults: ["qtiaudio_extn_defaults"],
+    vendor: true,
+
+    srcs: [
+        "audiozoom.c",
+        "device_utils.c",
+    ],
+
+    include_dirs: [
+        "external/expat/lib",
+    ],
+
+    shared_libs: [
+        "libexpat",
+    ],
+}
