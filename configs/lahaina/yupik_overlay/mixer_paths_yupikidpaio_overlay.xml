@@ -38,10 +38,47 @@
     <ctl name="TX DEC5 MUX" value="MSM_DMIC"/>
     <ctl name="TX DEC6 MUX" value="MSM_DMIC"/>
     <ctl name="TX DEC7 MUX" value="MSM_DMIC"/>
-    <ctl name="TX_DEC0 Volume" value="84"/>
-    <ctl name="TX_DEC1 Volume" value="84"/>
-    <ctl name="TX_DEC2 Volume" value="84"/>
-    <ctl name="TX_DEC3 Volume" value="84"/>
+    <ctl name="TX_DEC0 Volume" value="96"/>
+    <ctl name="TX_DEC1 Volume" value="96"/>
+    <ctl name="TX_DEC2 Volume" value="96"/>
+    <ctl name="TX_DEC3 Volume" value="96"/>
+    <ctl name="TX_DEC4 Volume" value="96"/>
+    <ctl name="TX_DEC5 Volume" value="96"/>
+    <ctl name="TX_DEC6 Volume" value="96"/>
+    <ctl name="TX_DEC7 Volume" value="96"/>
+    <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
+    <ctl name="TX_AIF1_CAP Mixer DEC0" value="0"/>
+    <ctl name="TX_AIF1_CAP Mixer DEC1" value="0"/>
+    <ctl name="TX_AIF1_CAP Mixer DEC2" value="0"/>
+    <ctl name="TX_AIF1_CAP Mixer DEC3" value="0"/>
+    <ctl name="TX_AIF1_CAP Mixer DEC4" value="0"/>
+    <ctl name="TX_AIF1_CAP Mixer DEC5" value="0"/>
+    <ctl name="TX_AIF1_CAP Mixer DEC6" value="0"/>
+    <ctl name="TX_AIF1_CAP Mixer DEC7" value="0"/>
+    <ctl name="TX SMIC MUX0" value="ZERO"/>
+    <ctl name="TX SMIC MUX1" value="ZERO"/>
+    <ctl name="TX SMIC MUX2" value="ZERO"/>
+    <ctl name="TX SMIC MUX3" value="ZERO"/>
+    <ctl name="TX SMIC MUX4" value="ZERO"/>
+    <ctl name="TX SMIC MUX5" value="ZERO"/>
+    <ctl name="TX SMIC MUX6" value="ZERO"/>
+    <ctl name="TX SMIC MUX7" value="ZERO"/>
+    <ctl name="DMIC0 ChMap" value="ZERO"/>
+    <ctl name="DMIC1 ChMap" value="ZERO"/>
+    <ctl name="DMIC2 ChMap" value="ZERO"/>
+    <ctl name="DMIC3 ChMap" value="ZERO"/>
+    <ctl name="DMIC4 ChMap" value="ZERO"/>
+    <ctl name="DMIC5 ChMap" value="ZERO"/>
+    <ctl name="DMIC6 ChMap" value="ZERO"/>
+    <ctl name="DMIC7 ChMap" value="ZERO"/>
+    <ctl name="DMIC1_MIXER Switch" value="0"/>
+    <ctl name="DMIC2_MIXER Switch" value="0"/>
+    <ctl name="DMIC3_MIXER Switch" value="0"/>
+    <ctl name="DMIC4_MIXER Switch" value="0"/>
+    <ctl name="DMIC5_MIXER Switch" value="0"/>
+    <ctl name="DMIC6_MIXER Switch" value="0"/>
+    <ctl name="DMIC7_MIXER Switch" value="0"/>
+    <ctl name="DMIC8_MIXER Switch" value="0"/>
     <ctl name="MultiMedia1 Mixer QUAT_MI2S_TX" value="0"/>
     <ctl name="MultiMedia2 Mixer QUAT_MI2S_TX" value="0"/>
     <ctl name="MultiMedia8 Mixer QUAT_MI2S_TX" value="0"/>
@@ -131,6 +168,70 @@
     <path name="audio-record-compress2 hdmi-in">
         <ctl name="MultiMedia17 Mixer PRI_MI2S_TX" value="1" />
     </path>
+    <path name="dmic0">
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC0" value="1"/>
+        <ctl name="TX DEC0 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX0" value="SWR_MIC4"/>
+        <ctl name="DMIC0 ChMap" value="SWRM_TX2_CH1"/>
+        <ctl name="DMIC1_MIXER Switch" value="1"/>
+    </path>
+    <path name="dmic1">
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
+        <ctl name="TX DEC1 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX1" value="SWR_MIC5"/>
+        <ctl name="DMIC1 ChMap" value="SWRM_TX2_CH2"/>
+        <ctl name="DMIC2_MIXER Switch" value="1"/>
+    </path>
+    <path name="dmic2">
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1"/>
+        <ctl name="TX DEC2 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX2" value="SWR_MIC6"/>
+        <ctl name="DMIC2 ChMap" value="SWRM_TX2_CH3"/>
+        <ctl name="DMIC3_MIXER Switch" value="1"/>
+    </path>
+    <path name="dmic3">
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1"/>
+        <ctl name="TX DEC3 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX3" value="SWR_MIC7"/>
+        <ctl name="DMIC3 ChMap" value="SWRM_TX2_CH4"/>
+        <ctl name="DMIC4_MIXER Switch" value="1"/>
+    </path>
+    <path name="dmic4">
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC4" value="1"/>
+        <ctl name="TX DEC4 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX4" value="SWR_MIC8"/>
+        <ctl name="DMIC4 ChMap" value="SWRM_TX3_CH1"/>
+        <ctl name="DMIC5_MIXER Switch" value="1"/>
+    </path>
+    <path name="dmic5">
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC5" value="1"/>
+        <ctl name="TX DEC5 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX5" value="SWR_MIC9"/>
+        <ctl name="DMIC5 ChMap" value="SWRM_TX3_CH2"/>
+        <ctl name="DMIC6_MIXER Switch" value="1"/>
+    </path>
+    <path name="dmic6">
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC6" value="1"/>
+        <ctl name="TX DEC6 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX6" value="SWR_MIC10"/>
+        <ctl name="DMIC6 ChMap" value="SWRM_TX3_CH3"/>
+        <ctl name="DMIC7_MIXER Switch" value="1"/>
+    </path>
+    <path name="dmic7">
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC7" value="1"/>
+        <ctl name="TX DEC7 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX7" value="SWR_MIC11"/>
+        <ctl name="DMIC7 ChMap" value="SWRM_TX3_CH4"/>
+        <ctl name="DMIC8_MIXER Switch" value="1"/>
+    </path>
     <path name="speaker-mic">
         <path name="dmic4"/>
     </path>
@@ -142,68 +243,117 @@
     </path>
     <path name="handset-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
-        <ctl name="TX DMIC MUX1" value="DMIC2"/>
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1"/>
-        <ctl name="TX DMIC MUX2" value="DMIC3"/>
+        <ctl name="TX DEC2 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX2" value="SWR_MIC6"/>
+        <ctl name="DMIC2 ChMap" value="SWRM_TX2_CH3"/>
+        <ctl name="DMIC3_MIXER Switch" value="1"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1"/>
+        <ctl name="TX DEC3 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX3" value="SWR_MIC7"/>
+        <ctl name="DMIC3 ChMap" value="SWRM_TX2_CH4"/>
+        <ctl name="DMIC4_MIXER Switch" value="1"/>
     </path>
     <path name="speaker-dmic-endfire">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two"/>
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
-        <ctl name="TX DMIC MUX1" value="DMIC3"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1"/>
-        <ctl name="TX DMIC MUX2" value="DMIC1"/>
+        <ctl name="TX DEC1 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX1" value="SWR_MIC5"/>
+        <ctl name="DMIC1 ChMap" value="SWRM_TX2_CH2"/>
+        <ctl name="DMIC2_MIXER Switch" value="1"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1"/>
+        <ctl name="TX DEC3 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX3" value="SWR_MIC7"/>
+        <ctl name="DMIC3 ChMap" value="SWRM_TX2_CH4"/>
+        <ctl name="DMIC4_MIXER Switch" value="1"/>
     </path>
     <path name="speaker-dmic-broadside">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
-        <ctl name="TX DMIC MUX1" value="DMIC3"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1"/>
-        <ctl name="TX DMIC MUX2" value="DMIC0"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC0" value="1"/>
+        <ctl name="TX DEC0 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX0" value="SWR_MIC4"/>
+        <ctl name="DMIC0 ChMap" value="SWRM_TX2_CH1"/>
+        <ctl name="DMIC1_MIXER Switch" value="1"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1"/>
+        <ctl name="TX DEC3 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX3" value="SWR_MIC7"/>
+        <ctl name="DMIC3 ChMap" value="SWRM_TX2_CH4"/>
+        <ctl name="DMIC4_MIXER Switch" value="1"/>
     </path>
     <path name="three-mic">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Three"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
-        <ctl name="TX DMIC MUX1" value="DMIC3"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC0" value="1"/>
+        <ctl name="TX DEC0 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX0" value="SWR_MIC4"/>
+        <ctl name="DMIC0 ChMap" value="SWRM_TX2_CH1"/>
+        <ctl name="DMIC1_MIXER Switch" value="1"/>
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1"/>
-        <ctl name="TX DMIC MUX2" value="DMIC0"/>
+        <ctl name="TX DEC2 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX2" value="SWR_MIC6"/>
+        <ctl name="DMIC2 ChMap" value="SWRM_TX2_CH3"/>
+        <ctl name="DMIC3_MIXER Switch" value="1"/>
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1"/>
-        <ctl name="TX DMIC MUX3" value="DMIC2"/>
+        <ctl name="TX DEC3 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX3" value="SWR_MIC7"/>
+        <ctl name="DMIC3 ChMap" value="SWRM_TX2_CH4"/>
+        <ctl name="DMIC4_MIXER Switch" value="1"/>
     </path>
     <path name="speaker-tmic">
         <path name="three-mic" />
     </path>
     <path name="speaker-qmic">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="Four"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC0" value="1"/>
+        <ctl name="TX DEC0 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX0" value="SWR_MIC4"/>
+        <ctl name="DMIC0 ChMap" value="SWRM_TX2_CH1"/>
+        <ctl name="DMIC1_MIXER Switch" value="1"/>
         <ctl name="TX_AIF1_CAP Mixer DEC1" value="1"/>
-        <ctl name="TX DMIC MUX1" value="DMIC3"/>
+        <ctl name="TX DEC1 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX1" value="SWR_MIC5"/>
+        <ctl name="DMIC1 ChMap" value="SWRM_TX2_CH2"/>
+        <ctl name="DMIC2_MIXER Switch" value="1"/>
         <ctl name="TX_AIF1_CAP Mixer DEC2" value="1"/>
-        <ctl name="TX DMIC MUX2" value="DMIC0"/>
+        <ctl name="TX DEC2 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX2" value="SWR_MIC6"/>
+        <ctl name="DMIC2 ChMap" value="SWRM_TX2_CH3"/>
+        <ctl name="DMIC3_MIXER Switch" value="1"/>
         <ctl name="TX_AIF1_CAP Mixer DEC3" value="1"/>
-        <ctl name="TX DMIC MUX3" value="DMIC2"/>
-        <ctl name="TX_AIF1_CAP Mixer DEC4" value="1"/>
-        <ctl name="TX DMIC MUX4" value="DMIC1"/>
+        <ctl name="TX DEC3 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX3" value="SWR_MIC7"/>
+        <ctl name="DMIC3 ChMap" value="SWRM_TX2_CH4"/>
+        <ctl name="DMIC4_MIXER Switch" value="1"/>
     </path>
     <path name="dmic-nn">
-        <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two" />
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC4" />
-        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC5" />
-        <ctl name="TX_DEC1 Volume" value="104" />
-        <ctl name="TX_DEC2 Volume" value="104" />
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="Two"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC4" value="1"/>
+        <ctl name="TX DEC4 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX4" value="SWR_MIC8"/>
+        <ctl name="DMIC4 ChMap" value="SWRM_TX3_CH1"/>
+        <ctl name="DMIC5_MIXER Switch" value="1"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC5" value="1"/>
+        <ctl name="TX DEC5 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX5" value="SWR_MIC9"/>
+        <ctl name="DMIC5 ChMap" value="SWRM_TX3_CH2"/>
+        <ctl name="DMIC6_MIXER Switch" value="1"/>
     </path>
     <path name="three-mic-nn">
-        <ctl name="TX_CDC_DMA_TX_3 Channels" value="Three" />
-        <ctl name="TX_AIF1_CAP Mixer DEC1" value="1" />
-        <ctl name="TX DMIC MUX1" value="DMIC4" />
-        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1" />
-        <ctl name="TX DMIC MUX2" value="DMIC2" />
-        <ctl name="TX_AIF1_CAP Mixer DEC3" value="1" />
-        <ctl name="TX DMIC MUX3" value="DMIC5" />
-        <ctl name="TX_DEC1 Volume" value="104" />
-        <ctl name="TX_DEC2 Volume" value="104" />
-        <ctl name="TX_DEC3 Volume" value="104" />
+        <ctl name="TX_CDC_DMA_TX_3 Channels" value="Three"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC2" value="1"/>
+        <ctl name="TX DEC2 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX2" value="SWR_MIC6"/>
+        <ctl name="DMIC2 ChMap" value="SWRM_TX2_CH3"/>
+        <ctl name="DMIC3_MIXER Switch" value="1"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC4" value="1"/>
+        <ctl name="TX DEC4 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX4" value="SWR_MIC8"/>
+        <ctl name="DMIC4 ChMap" value="SWRM_TX3_CH1"/>
+        <ctl name="DMIC5_MIXER Switch" value="1"/>
+        <ctl name="TX_AIF1_CAP Mixer DEC5" value="1"/>
+        <ctl name="TX DEC5 MUX" value="SWR_MIC"/>
+        <ctl name="TX SMIC MUX5" value="SWR_MIC9"/>
+        <ctl name="DMIC5 ChMap" value="SWRM_TX3_CH2"/>
+        <ctl name="DMIC6_MIXER Switch" value="1"/>
     </path>
     <path name="voice-tty-vco-handset-mic">
         <path name="dmic1"/>
