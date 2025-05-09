@@ -5924,7 +5924,7 @@ static int out_set_soft_volume_params(struct audio_stream_out *stream)
     struct soft_step_volume_params *volume_params = NULL;
 
     int pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
-    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "Playback  %d Soft Vol Params", pcm_device_id);
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "Playback %d Soft Vol Params", pcm_device_id);
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s : Could not get ctl for mixer cmd - %s", __func__, mixer_ctl_name);
