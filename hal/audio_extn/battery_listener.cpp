@@ -25,6 +25,10 @@
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) 2025 Qualcomm Technologies, Inc. and/or its subsidiaries.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 #define LOG_TAG "audio_hw::BatteryListener"
 #include <log/log.h>
@@ -165,7 +169,9 @@ BatteryListenerImpl::BatteryListenerImpl(cb_fn_t cb) :
 
 BatteryListenerImpl::~BatteryListenerImpl()
 {
-    mThread->join();
+    if (mThread != NULL) {
+        mThread->join();
+    }
 }
 
 void BatteryListenerImpl::reset(){
@@ -190,7 +196,9 @@ void BatteryListenerImpl::serviceDied(uint64_t cookie __unused,
         ALOGI("health service died, reinit");
         mDone = true;
     }
-    mThread->join();
+    if (mThread != NULL) {
+        mThread->join();
+    }
     std::lock_guard<std::mutex> _l(mLock);
     init();
 }
