@@ -85,8 +85,8 @@
     <ctl name="MultiMedia16 Mixer QUAT_MI2S_TX" value="0"/>
     <ctl name="QUAT MI2S LOOPBACK Volume" value="0"/>
     <ctl name="WSA_CDC_DMA_RX_0 Port Mixer QUAT_MI2S_TX" value="0"/>
-    <ctl name="MultiMedia1 Mixer PRI_MI2S_TX" value="0" />
-    <ctl name="MultiMedia17 Mixer PRI_MI2S_TX" value="0" />
+    <ctl name="MultiMedia1 Mixer SEC_MI2S_TX" value="0" />
+    <ctl name="MultiMedia17 Mixer SEC_MI2S_TX" value="0" />
     <ctl name="QUAT_MI2S_RX Audio Mixer MultiMedia1" value="0" />
     <ctl name="QUAT_MI2S_RX Audio Mixer MultiMedia2" value="0" />
     <ctl name="QUAT_MI2S_RX Audio Mixer MultiMedia4" value="0" />
@@ -248,12 +248,12 @@
         <path name="voice-speaker-2-protected"/>
     </path>
     <path name="audio-record hdmi-in">
-        <ctl name="MultiMedia1 Mixer PRI_MI2S_TX" value="1" />
+        <ctl name="MultiMedia1 Mixer SEC_MI2S_TX" value="1" />
     </path>
     <path name="hdmi-in">
     </path>
     <path name="audio-record-compress2 hdmi-in">
-        <ctl name="MultiMedia17 Mixer PRI_MI2S_TX" value="1" />
+        <ctl name="MultiMedia17 Mixer SEC_MI2S_TX" value="1" />
     </path>
     <path name="dmic0">
         <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
