@@ -1,17 +1,6 @@
 /*
- * Copyright (C) 2025 The LineageOS Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-FileCopyrightText: 2025 The LineageOS Project
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #define LOG_TAG "audio_hw_lvacfs"
@@ -32,6 +21,16 @@
 #define ODM_LIB_PATH ODM_LIBS LVACFS_WRAPPER_LIB_NAME
 #define ODM_PARAMS_DIR_PATH "/odm/etc/lvacfs_params"
 #define VENDOR_PARAMS_DIR_PATH "/vendor/etc/lvacfs_params"
+
+#define LOAD_SYMBOL(handle, symbol_ptr, symbol_name)                           \
+    do {                                                                       \
+        (symbol_ptr) = (decltype(symbol_ptr))dlsym((handle), (symbol_name));   \
+        if (!(symbol_ptr)) {                                                   \
+            ALOGE("Failed to load symbol '%s': %s", (symbol_name), dlerror()); \
+            deinit();                                                          \
+            return;                                                            \
+        }                                                                     \
+    } while (0)
 
 struct lvacfs_wrapper_ops* lvacfs_wrapper_ops = NULL;
 static const char* lvacfs_params_file_path = NULL;
@@ -64,30 +63,26 @@ void lvacfs_init(void) {
         }
     }
 
-    if (!(lvacfs_wrapper_ops->create_instance = (lvacfs_create_instance_t)dlsym(
-                  lvacfs_wrapper_ops->lib_handle, "lvacfs_wrapper_CreateLibraryInstance")) ||
-        !(lvacfs_wrapper_ops->destroy_instance = (lvacfs_destroy_instance_t)dlsym(
-                  lvacfs_wrapper_ops->lib_handle, "lvacfs_wrapper_DestroyLibraryInstance")) ||
-        !(lvacfs_wrapper_ops->process = (lvacfs_process_t)dlsym(lvacfs_wrapper_ops->lib_handle,
-                                                                "lvacfs_wrapper_Process")) ||
-        !(lvacfs_wrapper_ops->update_zoom_info = (lvacfs_update_zoom_info_t)dlsym(
-                  lvacfs_wrapper_ops->lib_handle, "lvacfs_wrapper_UpdateZoomInfo")) ||
-        !(lvacfs_wrapper_ops->update_angle_info = (lvacfs_update_angle_info_t)dlsym(
-                  lvacfs_wrapper_ops->lib_handle, "lvacfs_wrapper_UpdateAngleInfo")) ||
-        !(lvacfs_wrapper_ops->set_params_file_path = (lvacfs_set_params_file_path_t)dlsym(
-                  lvacfs_wrapper_ops->lib_handle, "lvacfs_SetParamsFilePath")) ||
-        !(lvacfs_wrapper_ops->set_profile = (lvacfs_set_profile_t)dlsym(
-                  lvacfs_wrapper_ops->lib_handle, "lvacfs_wrapper_SetProfile")) ||
-        !(lvacfs_wrapper_ops->set_audio_direction = (lvacfs_set_audio_direction_t)dlsym(
-                  lvacfs_wrapper_ops->lib_handle, "lvacfs_wrapper_SetAudioDirection")) ||
-        !(lvacfs_wrapper_ops->set_device_orientation = (lvacfs_set_device_orientation_t)dlsym(
-                  lvacfs_wrapper_ops->lib_handle, "lvacfs_wrapper_SetDeviceOrientation")) ||
-        !(lvacfs_wrapper_ops->get_versions = (lvacfs_get_versions_t)dlsym(
-                  lvacfs_wrapper_ops->lib_handle, "lvacfs_wrapper_GetVersions"))) {
-        ALOGE("dlsym failed for one or more symbols");
-        lvacfs_deinit();
-        return;
-    }
+    LOAD_SYMBOL(lvacfs_wrapper_ops->lib_handle, lvacfs_wrapper_ops->create_instance,
+                "lvacfs_wrapper_CreateLibraryInstance");
+    LOAD_SYMBOL(lvacfs_wrapper_ops->lib_handle, lvacfs_wrapper_ops->destroy_instance,
+                "lvacfs_wrapper_DestroyLibraryInstance");
+    LOAD_SYMBOL(lvacfs_wrapper_ops->lib_handle, lvacfs_wrapper_ops->process,
+                "lvacfs_wrapper_Process");
+    LOAD_SYMBOL(lvacfs_wrapper_ops->lib_handle, lvacfs_wrapper_ops->update_zoom_info,
+                "lvacfs_wrapper_UpdateZoomInfo");
+    LOAD_SYMBOL(lvacfs_wrapper_ops->lib_handle, lvacfs_wrapper_ops->update_angle_info,
+                "lvacfs_wrapper_UpdateAngleInfo");
+    LOAD_SYMBOL(lvacfs_wrapper_ops->lib_handle, lvacfs_wrapper_ops->set_params_file_path,
+                "lvacfs_SetParamsFilePath");
+    LOAD_SYMBOL(lvacfs_wrapper_ops->lib_handle, lvacfs_wrapper_ops->set_profile,
+                "lvacfs_wrapper_SetProfile");
+    LOAD_SYMBOL(lvacfs_wrapper_ops->lib_handle, lvacfs_wrapper_ops->set_audio_direction,
+                "lvacfs_wrapper_SetAudioDirection");
+    LOAD_SYMBOL(lvacfs_wrapper_ops->lib_handle, lvacfs_wrapper_ops->set_device_orientation,
+                "lvacfs_wrapper_SetDeviceOrientation");
+    LOAD_SYMBOL(lvacfs_wrapper_ops->lib_handle, lvacfs_wrapper_ops->get_versions,
+                "lvacfs_wrapper_GetVersions");
 
     ALOGI("Feature LVACFS is Enabled");
 }

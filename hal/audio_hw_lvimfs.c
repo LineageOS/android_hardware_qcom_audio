@@ -1,17 +1,6 @@
 /*
- * Copyright (C) 2025 The LineageOS Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-FileCopyrightText: 2025 The LineageOS Project
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #define LOG_TAG "audio_hw_lvimfs"
@@ -27,11 +16,21 @@
 #define VENDOR_LIBS "/vendor/lib/"
 #define ODM_LIBS "/odm/lib/"
 #endif
-#define lvimfs_WRAPPER_LIB_NAME "liblvimfs_wrapper.so"
-#define VENDOR_LIB_PATH VENDOR_LIBS lvimfs_WRAPPER_LIB_NAME
-#define ODM_LIB_PATH ODM_LIBS lvimfs_WRAPPER_LIB_NAME
+#define LVIMFS_WRAPPER_LIB_NAME "liblvimfs_wrapper.so"
+#define VENDOR_LIB_PATH VENDOR_LIBS LVIMFS_WRAPPER_LIB_NAME
+#define ODM_LIB_PATH ODM_LIBS LVIMFS_WRAPPER_LIB_NAME
 #define ODM_PARAMS_DIR_PATH "/odm/etc/lvimfs_params"
 #define VENDOR_PARAMS_DIR_PATH "/vendor/etc/lvimfs_params"
+
+#define LOAD_SYMBOL(handle, symbol_ptr, symbol_name)                           \
+    do {                                                                       \
+        (symbol_ptr) = (decltype(symbol_ptr))dlsym((handle), (symbol_name));   \
+        if (!(symbol_ptr)) {                                                   \
+            ALOGE("Failed to load symbol '%s': %s", (symbol_name), dlerror()); \
+            deinit();                                                          \
+            return;                                                            \
+        }                                                                     \
+    } while (0)
 
 struct lvimfs_wrapper_ops* lvimfs_wrapper_ops = NULL;
 static const char* lvimfs_params_file_path = NULL;
@@ -58,26 +57,22 @@ void lvimfs_init(void) {
     if (!lvimfs_wrapper_ops->lib_handle) {
         lvimfs_wrapper_ops->lib_handle = dlopen(VENDOR_LIB_PATH, RTLD_NOW);
         if (!lvimfs_wrapper_ops->lib_handle) {
-            ALOGE("dlopen failed for %s", lvimfs_WRAPPER_LIB_NAME, dlerror());
+            ALOGE("dlopen failed for %s: %s", LVIMFS_WRAPPER_LIB_NAME, dlerror());
             lvimfs_deinit();
             return;
         }
     }
 
-    if (!(lvimfs_wrapper_ops->create_instance = (lvimfs_create_instance_t)dlsym(
-                  lvimfs_wrapper_ops->lib_handle, "lvimfs_wrapper_CreateLibraryInstance")) ||
-        !(lvimfs_wrapper_ops->destroy_instance = (lvimfs_destroy_instance_t)dlsym(
-                  lvimfs_wrapper_ops->lib_handle, "lvimfs_wrapper_DestroyLibraryInstance")) ||
-        !(lvimfs_wrapper_ops->process = (lvimfs_process_t)dlsym(lvimfs_wrapper_ops->lib_handle,
-                                                                "lvimfs_wrapper_Process")) ||
-        !(lvimfs_wrapper_ops->set_params_file_path = (lvimfs_set_params_file_path_t)dlsym(
-                  lvimfs_wrapper_ops->lib_handle, "lvimfs_wrapper_SetParamsFilePath")) ||
-        !(lvimfs_wrapper_ops->set_device = (lvimfs_set_device_t)dlsym(
-                  lvimfs_wrapper_ops->lib_handle, "lvimfs_wrapper_SetDevice"))) {
-        ALOGE("dlsym failed for one or more symbols");
-        lvimfs_deinit();
-        return;
-    }
+    LOAD_SYMBOL(lvimfs_wrapper_ops->lib_handle, lvimfs_wrapper_ops->create_instance,
+                "lvimfs_wrapper_CreateLibraryInstance");
+    LOAD_SYMBOL(lvimfs_wrapper_ops->lib_handle, lvimfs_wrapper_ops->destroy_instance,
+                "lvimfs_wrapper_DestroyLibraryInstance");
+    LOAD_SYMBOL(lvimfs_wrapper_ops->lib_handle, lvimfs_wrapper_ops->process,
+                "lvimfs_wrapper_Process");
+    LOAD_SYMBOL(lvimfs_wrapper_ops->lib_handle, lvimfs_wrapper_ops->set_params_file_path,
+                "lvimfs_wrapper_SetParamsFilePath");
+    LOAD_SYMBOL(lvimfs_wrapper_ops->lib_handle, lvimfs_wrapper_ops->set_device,
+                "lvimfs_wrapper_SetDevice");
 
     ALOGI("Feature LVIMFS is Enabled");
 }
