@@ -31,8 +31,8 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ *Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #define LOG_TAG "hardware_info"
@@ -639,6 +639,9 @@ static void update_hardware_info_lahaina(
         strlcpy(hw_info->name, "yupik", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "lahaina-yupikidprb3-snd-card",
                  sizeof("lahaina-yupikidprb3-snd-card"))) {
+        strlcpy(hw_info->name, "yupik", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-yupikidpaio-snd-card",
+                 sizeof("lahaina-yupikidpaio-snd-card"))) {
         strlcpy(hw_info->name, "yupik", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "lahaina-yupikqrd-snd-card",
                  sizeof("lahaina-yupikqrd-snd-card"))) {
