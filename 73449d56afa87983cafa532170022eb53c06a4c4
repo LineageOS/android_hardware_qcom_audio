@@ -33,6 +33,23 @@
       "message": "It doesn\u0027t hurt to merge it here as well",
       "revId": "73449d56afa87983cafa532170022eb53c06a4c4",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "3ae58f46_42a84917",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 22465
+      },
+      "writtenOn": "2025-06-26T10:27:40Z",
+      "side": 1,
+      "message": "Verified to work in 23.0, should be fine in 22.2",
+      "revId": "73449d56afa87983cafa532170022eb53c06a4c4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
