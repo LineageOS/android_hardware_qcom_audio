@@ -75,6 +75,12 @@ target_board_platform_cc_library_shared {
         "true": ["-DSOUND_TRIGGER_ENABLED"],
         default: [],
     }) + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "sdm845": [
+            "-DPLATFORM_SDM845",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=8",
+            "-DINCALL_STEREO_CAPTURE_ENABLED",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=sdm845",
+        ],
         "kona": [
             "-DPLATFORM_KONA",
             "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=4",
