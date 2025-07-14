@@ -93,6 +93,12 @@ target_board_platform_cc_library_shared {
             "-DINCALL_STEREO_CAPTURE_ENABLED",
             "-DSOUND_TRIGGER_PLATFORM_NAME=bengal",
         ],
+        "sdm845": [
+            "-DPLATFORM_SDM845",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=8",
+            "-DINCALL_STEREO_CAPTURE_ENABLED",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=sdm845",
+        ],
         default: [],
     }),
 
