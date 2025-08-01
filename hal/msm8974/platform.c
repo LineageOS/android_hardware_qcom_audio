@@ -80,6 +80,7 @@
 #define PLATFORM_INFO_XML_PATH_SHIMA_QRD "audio_platform_info_shimaqrd.xml"
 #define PLATFORM_INFO_XML_PATH_YUPIK_QRD "audio_platform_info_yupikqrd.xml"
 #define PLATFORM_INFO_XML_PATH_YUPIK_IDP "audio_platform_info_yupikidp.xml"
+#define PLATFORM_INFO_XML_PATH_YUPIK_IDPIOT "audio_platform_info_yupikidpiot.xml"
 #define PLATFORM_INFO_XML_PATH_YUPIK_IDPRB3 "audio_platform_info_yupikidprb3.xml"
 #define PLATFORM_INFO_XML_PATH_YUPIK_IDPAIO "audio_platform_info_yupikidpaio.xml"
 #define PLATFORM_INFO_XML_PATH_SCUBA_IDP "audio_platform_info_scubaidp.xml"
@@ -1972,6 +1973,8 @@ static void update_codec_type_and_interface(struct platform_data * my_data,
                    sizeof("lahaina-yupikidprb3-snd-card")) ||
          !strncmp(snd_card_name, "lahaina-yupikidpaio-snd-card",
                    sizeof("lahaina-yupikidpaio-snd-card")) ||
+         !strncmp(snd_card_name, "lahaina-yupikidpiot-snd-card",
+                   sizeof("lahaina-yupikidpiot-snd-card")) ||
          !strncmp(snd_card_name, "lahaina-yupikqrd-snd-card",
                    sizeof("lahaina-yupikqrd-snd-card")) ||
          !strncmp(snd_card_name, "kona-qrd-snd-card",
@@ -3693,6 +3696,10 @@ void *platform_init(struct audio_device *adev)
     } else if (!strncmp(snd_card_name, "lahaina-yupikidpaio-snd-card",
                sizeof("lahaina-yupikidpaio-snd-card"))) {
         platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_YUPIK_IDPAIO),
+	    my_data, PLATFORM);
+    } else if (!strncmp(snd_card_name, "lahaina-yupikidpiot-snd-card",
+               sizeof("lahaina-yupikidpiot-snd-card"))) {
+        platform_info_init(get_xml_file_path(PLATFORM_INFO_XML_PATH_YUPIK_IDPIOT),
             my_data, PLATFORM);
     } else if (!strncmp(snd_card_name, "lahaina-yupikqrd-snd-card",
                sizeof("lahaina-yupikqrd-snd-card"))) {

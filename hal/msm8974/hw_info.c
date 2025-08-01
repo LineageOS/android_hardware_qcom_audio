@@ -642,6 +642,9 @@ static void update_hardware_info_lahaina(
         strlcpy(hw_info->name, "yupik", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "lahaina-yupikidpaio-snd-card",
                  sizeof("lahaina-yupikidpaio-snd-card"))) {
+	strlcpy(hw_info->name, "yupik", sizeof(hw_info->name));
+    } else if (!strncmp(snd_card_name, "lahaina-yupikidpiot-snd-card",
+                 sizeof("lahaina-yupikidpiot-snd-card"))) {
         strlcpy(hw_info->name, "yupik", sizeof(hw_info->name));
     } else if (!strncmp(snd_card_name, "lahaina-yupikqrd-snd-card",
                  sizeof("lahaina-yupikqrd-snd-card"))) {
