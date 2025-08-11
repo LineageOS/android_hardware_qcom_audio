@@ -165,13 +165,13 @@ struct pcm_config pcm_config_cirrus_tx = {
 static struct cirrus_playback_session handle;
 
 #ifdef CIRRUS_FACTORY_CALIBRATION
-static void *audio_extn_cirrus_calibration_thread();
+static void *audio_extn_cirrus_calibration_thread(void*);
 #else
-static void *audio_extn_cirrus_config_thread();
+static void *audio_extn_cirrus_config_thread(void*);
 #endif
 
 #ifdef ENABLE_CIRRUS_DETECTION
-static void *audio_extn_cirrus_failure_detect_thread();
+static void *audio_extn_cirrus_failure_detect_thread(void*);
 #endif
 
 void spkr_prot_init(void *adev, spkr_prot_init_config_t spkr_prot_init_config_val) {
@@ -476,7 +476,7 @@ exit:
     return ret;
 }
 
-static void *audio_extn_cirrus_calibration_thread() {
+static void *audio_extn_cirrus_calibration_thread(void*) {
     struct audio_device *adev = handle.adev_handle;
     struct audio_usecase *uc_info_rx = NULL;
     int ret = 0;
@@ -576,7 +576,7 @@ exit:
 }
 
 #else
-static void *audio_extn_cirrus_config_thread(void) {
+static void *audio_extn_cirrus_config_thread(void*) {
     struct audio_device *adev = handle.adev_handle;
     struct crus_sp_ioctl_header header;
     struct cirrus_cal_result_t result;
@@ -659,7 +659,7 @@ exit:
 #endif
 
 #ifdef ENABLE_CIRRUS_DETECTION
-void *audio_extn_cirrus_failure_detect_thread() {
+void *audio_extn_cirrus_failure_detect_thread(void*) {
     struct audio_device *adev = handle.adev_handle;
     struct crus_sp_ioctl_header header;
     struct mixer_ctl *ctl = NULL;
