@@ -19,13 +19,18 @@ AM_CPPFLAGS += -Iinc
 AM_CPPFLAGS += -I ${WORKSPACE}/hardware/qcom/media/mm-core/inc/
 AM_CPPFLAGS += -I $(PKG_CONFIG_SYSROOT_DIR)/usr/include/audio-kernel
 
+if NO_STRLCPY_STRLCAT
+AM_CFLAGS += -Dstrlcpy=g_strlcpy
+AM_CPPFLAGS += -Dstrlcpy=g_strlcpy
+endif
+
 c_sources =src/omx_aac_aenc.cpp
 c_sources +=src/aenc_svr.c
 
 lib_LTLIBRARIES = libOmxAacEnc.la
 libOmxAacEnc_la_SOURCES = $(c_sources)
-libOmxAacEnc_la_CFLAGS = $(AM_CFLAGS) -fPIC $(GLIB_CFLAGS) -include glib.h -Dstrlcpy=g_strlcpy
-libOmxAacEnc_la_CPPFLAGS = $(AM_CPPFLAGS) -fPIC $(GLIB_CFLAGS) -include glib.h -Dstrlcpy=g_strlcpy
+libOmxAacEnc_la_CFLAGS = $(AM_CFLAGS) -fPIC $(GLIB_CFLAGS) -include glib.h
+libOmxAacEnc_la_CPPFLAGS = $(AM_CPPFLAGS) -fPIC $(GLIB_CFLAGS) -include glib.h
 libOmxAacEnc_la_LIBADD = -lmm-omxcore -lstdc++ -lpthread $(GLIB_LIBS) -ldl -llog
 libOmxAacEnc_la_LDFLAGS = -shared $(GLIB_LIBS) -avoid-version $(OMXAUDIO_LIBRARY_VERSION)
 
