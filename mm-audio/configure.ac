@@ -54,6 +54,9 @@ fi
 
 AM_CONDITIONAL(USE_GLIB, test "x${with_glib}" = "xyes")
 
+AC_CHECK_FUNCS([strlcpy],[STRLCPY=yes],[STRLCPY=no])
+AC_CHECK_FUNCS([strlcat],[STRLCAT=yes],[STRLCAT=no])
+AM_CONDITIONAL([NO_STRLCPY_STRLCAT], [test "x$STRLCPY" = "xno" && test "x$STRLCAT" = "xno"])
 
 # Checks for programs.
 AC_PROG_CC
