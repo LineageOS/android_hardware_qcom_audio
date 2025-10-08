@@ -209,7 +209,7 @@ PRODUCT_COPY_FILES += \
 
 #Copy generic APM XML file to common folder for runtime copy
 PRODUCT_COPY_FILES += \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_policy_configuration.xml
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_policy_configuration.xml
 
 # Audio configuration xml's common to Lahaina family
 PRODUCT_COPY_FILES += \
@@ -283,7 +283,7 @@ PRODUCT_COPY_FILES += \
 
 #Copy generic APM XML file to common folder for runtime copy
 PRODUCT_COPY_FILES += \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_policy_configuration.xml
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/lahaina/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)/audio_policy_configuration.xml
 
 # Audio configuration xml's common to yupik family
 PRODUCT_COPY_FILES += \
