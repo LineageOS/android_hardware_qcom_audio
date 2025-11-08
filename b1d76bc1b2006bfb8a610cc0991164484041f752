@@ -16,6 +16,24 @@
       "message": "Move it before kona",
       "revId": "b1d76bc1b2006bfb8a610cc0991164484041f752",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "5f4771b3_887b8fb8",
+        "filename": "hal/Android.bp",
+        "patchSetId": 4
+      },
+      "lineNbr": 96,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-11-08T08:50:23Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "686cfce9_82805cdd",
+      "revId": "b1d76bc1b2006bfb8a610cc0991164484041f752",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
