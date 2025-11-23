@@ -34,28 +34,28 @@ target_board_platform_cc_library_shared {
         "msm8974/hw_info.c",
         "msm8974/platform.c",
     ] + select(soong_config_variable("qtiaudio", "feature_a2dp_offload"), {
-        "true": ["audio_extn/a2dp.c"],
+        true: ["audio_extn/a2dp.c"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_cirrus_spkr_protection"), {
-        "true": ["audio_extn/cirrus_playback.c"],
+        true: ["audio_extn/cirrus_playback.c"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_hwdep_cal"), {
-        "true": ["audio_extn/hwdep_cal.c"],
+        true: ["audio_extn/hwdep_cal.c"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_maxx_audio"), {
-        "true": ["audio_extn/maxxaudio.c"],
+        true: ["audio_extn/maxxaudio.c"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_multi_voice_sessions"), {
-        "true": ["voice_extn/voice_extn.c"],
+        true: ["voice_extn/voice_extn.c"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_snd_monitor"), {
-        "true": ["audio_extn/sndmonitor.c"],
+        true: ["audio_extn/sndmonitor.c"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_usb_tunnel"), {
-        "true": ["audio_extn/usb.c"],
+        true: ["audio_extn/usb.c"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_sound_trigger"), {
-        "true": ["audio_extn/soundtrigger.c"],
+        true: ["audio_extn/soundtrigger.c"],
         default: [],
     }),
 
@@ -64,34 +64,34 @@ target_board_platform_cc_library_shared {
         "-D_GNU_SOURCE",
         "-DHW_VARIANTS_ENABLED",
     ] + select(soong_config_variable("qtiaudio", "feature_24bits_camcorder"), {
-        "true": ["-DENABLED_24BITS_CAMCORDER"],
+        true: ["-DENABLED_24BITS_CAMCORDER"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_a2dp_offload"), {
-        "true": ["-DA2DP_OFFLOAD_ENABLED"],
+        true: ["-DA2DP_OFFLOAD_ENABLED"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_cirrus_spkr_protection"), {
-        "true": ["-DSPKR_PROT_ENABLED"],
+        true: ["-DSPKR_PROT_ENABLED"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_flicker_sensor_input"), {
-        "true": ["-DFLICKER_SENSOR_INPUT"],
+        true: ["-DFLICKER_SENSOR_INPUT"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_hwdep_cal"), {
-        "true": ["-DHWDEP_CAL_ENABLED"],
+        true: ["-DHWDEP_CAL_ENABLED"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_maxx_audio"), {
-        "true": ["-DMAXXAUDIO_QDSP_ENABLED"],
+        true: ["-DMAXXAUDIO_QDSP_ENABLED"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_multi_voice_sessions"), {
-        "true": ["-DMULTI_VOICE_SESSION_ENABLED"],
+        true: ["-DMULTI_VOICE_SESSION_ENABLED"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_snd_monitor"), {
-        "true": ["-DSND_MONITOR_ENABLED"],
+        true: ["-DSND_MONITOR_ENABLED"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_usb_tunnel"), {
-        "true": ["-DUSB_TUNNEL_ENABLED"],
+        true: ["-DUSB_TUNNEL_ENABLED"],
         default: [],
     }) + select(soong_config_variable("qtiaudio", "feature_sound_trigger"), {
-        "true": ["-DSOUND_TRIGGER_ENABLED"],
+        true: ["-DSOUND_TRIGGER_ENABLED"],
         default: [],
     }) + select(soong_config_variable("ANDROID", "target_board_platform"), {
         "msm8996": [
