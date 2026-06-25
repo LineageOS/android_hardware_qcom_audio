@@ -59,7 +59,7 @@
 #if LINUX_ENABLED
 #define GEF_LIBRARY "libqtigef.so"
 #else
-#define GEF_LIBRARY "/vendor/lib/libqtigef.so"
+#define GEF_LIBRARY "libqtigef.so"
 #endif
 
 typedef void* (*gef_init_t)(void*);
