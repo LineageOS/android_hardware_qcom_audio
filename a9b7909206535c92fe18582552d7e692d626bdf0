@@ -16,6 +16,23 @@
       "message": "https://github.com/LineageOS/android_hardware_qcom_audio/commit/c54efee758c526b2ba627064b7f25b20df4ac7a5#diff-a2744be711b5b0d9667f7e5bf6cf13f4de374cf15d71fb23f077dbfd87973de4R61",
       "revId": "a9b7909206535c92fe18582552d7e692d626bdf0",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "027647f6_5956ec4c",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32253
+      },
+      "writtenOn": "2026-06-25T14:16:32Z",
+      "side": 1,
+      "message": "besides, you can\u0027t achieve a 64bit audio HAL on such platforms because the necessary blobs are not publicly available. i have my doubt you actually managed to test it in the first place.",
+      "revId": "a9b7909206535c92fe18582552d7e692d626bdf0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
