@@ -33,6 +33,42 @@
       "message": "besides, you can\u0027t achieve a 64bit audio HAL on such platforms because the necessary blobs are not publicly available. i have my doubt you actually managed to test it in the first place.",
       "revId": "a9b7909206535c92fe18582552d7e692d626bdf0",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a7422c85_de5a4a94",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 35551
+      },
+      "writtenOn": "2026-06-28T10:54:00Z",
+      "side": 1,
+      "message": "thanks, but why force hardcoded 32 bit by default for  effect",
+      "parentUuid": "5778c972_adaba49b",
+      "revId": "a9b7909206535c92fe18582552d7e692d626bdf0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "68eda3a2_53db9bff",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 35551
+      },
+      "writtenOn": "2026-06-28T10:54:00Z",
+      "side": 1,
+      "message": "libqtigef.so generated to lib64 too",
+      "parentUuid": "027647f6_5956ec4c",
+      "revId": "a9b7909206535c92fe18582552d7e692d626bdf0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
