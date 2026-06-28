@@ -87,6 +87,24 @@
       "parentUuid": "68eda3a2_53db9bff",
       "revId": "a9b7909206535c92fe18582552d7e692d626bdf0",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "93c19812_47a02bc6",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 29080
+      },
+      "writtenOn": "2026-06-28T11:28:47Z",
+      "side": 1,
+      "message": "Everyone uses 32-bit audio HAL, it doesn\u0027t matter",
+      "parentUuid": "a7422c85_de5a4a94",
+      "revId": "a9b7909206535c92fe18582552d7e692d626bdf0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
