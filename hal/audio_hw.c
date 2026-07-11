@@ -2611,11 +2611,13 @@ struct audio_usecase *get_usecase_from_list(const struct audio_device *adev,
     struct listnode *node;
 
     list_for_each(node, &adev->usecase_list) {
-        if (node != NULL) {
-            usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase && (usecase->id == uc_id))
-                return usecase;
+        if (node == NULL) {
+            ALOGE("%s: node is NULL", __func__);
+            return NULL;
         }
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase && (usecase->id == uc_id))
+            return usecase;
     }
     return NULL;
 }
@@ -5954,7 +5956,7 @@ static int out_set_soft_volume_params(struct audio_stream_out *stream)
     struct soft_step_volume_params *volume_params = NULL;
 
     int pcm_device_id = platform_get_pcm_device_id(out->usecase, PCM_PLAYBACK);
-    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "Playback  %d Soft Vol Params", pcm_device_id);
+    snprintf(mixer_ctl_name, sizeof(mixer_ctl_name), "Playback %d Soft Vol Params", pcm_device_id);
     ctl = mixer_get_ctl_by_name(adev->mixer, mixer_ctl_name);
     if (!ctl) {
         ALOGE("%s : Could not get ctl for mixer cmd - %s", __func__, mixer_ctl_name);

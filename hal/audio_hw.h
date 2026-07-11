@@ -34,9 +34,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 
- *  Changes from Qualcomm Innovation Center are provided under the following license:
-
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -336,7 +336,7 @@ enum {
     AUDIO_USECASE_MAX
 };
 
-const char * const use_case_table[AUDIO_USECASE_MAX];
+extern const char * const use_case_table[AUDIO_USECASE_MAX];
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 

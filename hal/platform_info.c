@@ -26,9 +26,9 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
- * Changes from Qualcomm Innovation Center are provided under the following license:
-
- * Copyright (c) 2022, 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -88,7 +88,7 @@
 #endif
 
 #define BUF_SIZE                    1024
-char vendor_config_path[VENDOR_CONFIG_PATH_MAX_LENGTH];
+extern char vendor_config_path[VENDOR_CONFIG_PATH_MAX_LENGTH];
 char platform_info_xml_path_file[VENDOR_CONFIG_FILE_MAX_LENGTH];
 
 typedef enum {

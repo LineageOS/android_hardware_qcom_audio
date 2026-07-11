@@ -459,8 +459,8 @@ static int update_custom_mtmx_coefficients_v2(struct audio_device *adev,
     char *mixer_name_suffix = "ChMixer Weight Ch";
     char mixer_ctl_name[128] = {0};
     struct audio_custom_mtmx_params_info *pinfo = &params->info;
-    int i = 0, err = 0;
-    int cust_ch_mixer_cfg[128], len = 0;
+    int i = 0, err = 0, len = 0;
+    long cust_ch_mixer_cfg[128];
 
     ALOGI("%s: ip_channels %d, op_channels %d, pcm_device_id %d",
           __func__, pinfo->ip_channels, pinfo->op_channels, pcm_device_id);
@@ -522,8 +522,8 @@ static void set_custom_mtmx_params_v2(struct audio_device *adev,
     char *mixer_name_prefix = "AudStr";
     char *mixer_name_suffix = "ChMixer Cfg";
     char mixer_ctl_name[128] = {0};
-    int chmixer_cfg[5] = {0}, len = 0;
-    int be_id = -1, err = 0;
+    long chmixer_cfg[5] = {0};
+    int be_id = -1, err = 0, len = 0;
 
     be_id = platform_get_snd_device_backend_index(pinfo->snd_device);
 
