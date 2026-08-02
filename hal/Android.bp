@@ -75,6 +75,11 @@ target_board_platform_cc_library_shared {
         "true": ["-DSOUND_TRIGGER_ENABLED"],
         default: [],
     }) + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "msm8998": [
+            "-DPLATFORM_MSM8998",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=8",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=msm8998",
+       ],
         "sdm660": [
             "-DPLATFORM_MSMFALCON",
             "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=8",
