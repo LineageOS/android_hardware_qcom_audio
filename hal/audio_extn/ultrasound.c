@@ -232,6 +232,14 @@ static snd_device_t us_get_output_snd_device(void)
 {
     snd_device_t snd_device;
 
+    ALOGD("%s: enter", __func__);
+
+    if (!us) {
+        ALOGE("%s: us is not ready, fallback to speaker!", __func__);
+        snd_device = SND_DEVICE_OUT_SPEAKER;
+        goto exit;
+    }
+
     snd_device = platform_get_output_snd_device(us->adev->platform,
                                                 us->adev->primary_output,
                                                 USECASE_TYPE_MAX);
@@ -249,8 +257,8 @@ static snd_device_t us_get_output_snd_device(void)
             break;
     }
 
+exit:
     ALOGD("%s: %s", __func__, platform_get_snd_device_name(snd_device));
-
     return snd_device;
 }
 
