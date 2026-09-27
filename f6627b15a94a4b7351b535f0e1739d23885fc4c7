@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6c68e6fd_3bedab88",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 30975
+      },
+      "writtenOn": "2026-09-27T03:36:07Z",
+      "side": 1,
+      "message": "Is there any reason for adding me as a reviewer? I don’t know anything about SM8150 devices.",
+      "revId": "f6627b15a94a4b7351b535f0e1739d23885fc4c7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
