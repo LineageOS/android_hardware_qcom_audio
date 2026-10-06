@@ -34,6 +34,23 @@
       "parentUuid": "6c68e6fd_3bedab88",
       "revId": "f6627b15a94a4b7351b535f0e1739d23885fc4c7",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ac09c719_e2ba036c",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 37455
+      },
+      "writtenOn": "2026-10-06T14:27:50Z",
+      "side": 1,
+      "message": "The fix works; no crashes.",
+      "revId": "f6627b15a94a4b7351b535f0e1739d23885fc4c7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
