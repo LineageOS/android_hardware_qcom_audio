@@ -29,6 +29,8 @@
 #define ULTRASOUND_CALIBRATION_MIXER "Ultrasound Calibration Data"
 #define ULTRASOUND_RAMPDOWN_MIXER "Ultrasound RampDown"
 #define ULTRASOUND_SUSPEND_MIXER "Ultrasound Suspend"
+#define ULTRASOUND_RX_PORT_MIXER "Ultrasound Rx Port"
+#define ULTRASOUND_PROXIMITY_PATH "ultrasound-proximity"
 
 enum {
     ULTRASOUND_STATUS_DEFAULT,
@@ -104,10 +106,28 @@ static void us_ramp_down(void)
         goto exit;
     }
 
+    rc = mixer_ctl_set_enum_by_string(ctl, "Off");
+    if (rc < 0)
+        ALOGE("%s: Could not set ctl, error:%d ", __func__, rc);
+
     usleep(10000);
 
 exit:
     ALOGD("%s: exit", __func__);
+}
+
+static int us_rx_port(bool on)
+{
+    struct mixer_ctl *ctl;
+
+    ctl = mixer_get_ctl_by_name(us->adev->mixer, ULTRASOUND_RX_PORT_MIXER);
+    if (!ctl) {
+        ALOGD("%s: Could not get ctl for mixer cmd - %s",
+                __func__, ULTRASOUND_RX_PORT_MIXER);
+        return -EINVAL;
+    }
+
+    return mixer_ctl_set_enum_by_string(ctl, on ? "On" : "Off");
 }
 
 void us_suspend(int val)
@@ -191,6 +211,9 @@ static void stop_us(void)
     us->state = ULTRASOUND_STATUS_STOPPED;
     us_ramp_down();
 
+    us_rx_port(false);
+    audio_route_reset_and_update_path(us->adev->audio_route, ULTRASOUND_PROXIMITY_PATH);
+
     if (us->rx_pcm) {
         pcm_close(us->rx_pcm);
         us->rx_pcm = NULL;
@@ -224,6 +247,8 @@ static void stop_us(void)
         list_remove(&tx_usecase->list);
         free(tx_usecase);
     }
+
+    us_suspend(0);
 
     ALOGD("%s: exit: status(%d)", __func__, rc);
 }
@@ -284,6 +309,20 @@ void us_start(void)
         goto exit;
     }
 
+    if (audio_route_apply_and_update_path(us->adev->audio_route, ULTRASOUND_PROXIMITY_PATH)) {
+        ALOGE("%s: Could not apply %s", __func__, ULTRASOUND_PROXIMITY_PATH);
+        rc = -EINVAL;
+        goto exit;
+    }
+
+    if (us_rx_port(true) < 0) {
+        ALOGE("%s: Could not enable %s", __func__, ULTRASOUND_RX_PORT_MIXER);
+        rc = -EINVAL;
+        goto exit;
+    }
+
+    us_suspend(1);
+
     rx_usecase = calloc(1, sizeof(struct audio_usecase));
     if (!rx_usecase) {
         ALOGE("%s: Out of memory!", __func__);
@@ -335,6 +374,13 @@ void us_start(void)
         goto exit;
     }
 
+    if (pcm_start(us->tx_pcm) < 0) {
+        ALOGE("%s: pcm start for TX failed; error = %s", __func__,
+              pcm_get_error(us->tx_pcm));
+        rc = -EINVAL;
+        goto exit;
+    }
+
     if (pcm_start(us->rx_pcm) < 0) {
         ALOGE("%s: pcm start for RX failed; error = %s", __func__,
               pcm_get_error(us->rx_pcm));
@@ -342,12 +388,7 @@ void us_start(void)
         goto exit;
     }
 
-    if (pcm_start(us->tx_pcm) < 0) {
-        ALOGE("%s: pcm start for TX failed; error = %s", __func__,
-              pcm_get_error(us->tx_pcm));
-        rc = -EINVAL;
-        goto exit;
-    }
+    us_suspend(0);
 
     us->state = ULTRASOUND_STATUS_STARTED;
 
