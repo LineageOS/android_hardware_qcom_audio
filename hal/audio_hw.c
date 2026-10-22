@@ -431,8 +431,8 @@ const char * const use_case_table[AUDIO_USECASE_MAX] = {
     [USECASE_AUDIO_FM_TUNER_EXT] = "fm-tuner-ext",
 
     /* For Elliptic Ultrasound proximity sensor */
-    [USECASE_AUDIO_ULTRASOUND_RX] = "ultrasound-output",
-    [USECASE_AUDIO_ULTRASOUND_TX] = "ultrasound-input",
+    [USECASE_AUDIO_ULTRASOUND_RX] = "ultrasound-proximity-output",
+    [USECASE_AUDIO_ULTRASOUND_TX] = "ultrasound-proximity-input",
 };
 
 static const audio_usecase_t offload_usecases[] = {
