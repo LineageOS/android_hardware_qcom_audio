@@ -49,6 +49,8 @@ static struct pcm_config pcm_config_us = {
 struct ultrasound_device {
     struct pcm *rx_pcm, *tx_pcm;
     int state;
+    bool suspended;
+    bool headset_connected;
     struct audio_device *adev;
 };
 
@@ -142,6 +144,8 @@ void us_suspend(int val)
         rc = -ENODEV;
         goto exit;
     }
+
+    us->suspended = val;
 
     ctl = mixer_get_ctl_by_name(us->adev->mixer, ULTRASOUND_SUSPEND_MIXER);
     if (!ctl) {
@@ -266,12 +270,14 @@ static snd_device_t us_get_output_snd_device(void)
         goto exit;
     }
 
+    if (us->headset_connected)
+        snd_device = SND_DEVICE_OUT_VOICE_HEADPHONES;
+
     list_for_each(node, &us->adev->usecase_list) {
         usecase = node_to_item(node, struct audio_usecase, list);
         if (usecase->type == PCM_CAPTURE || usecase->out_snd_device == SND_DEVICE_NONE)
             continue;
-        if (platform_check_backends_match(SND_DEVICE_OUT_VOICE_HANDSET,
-                                          usecase->out_snd_device)) {
+        if (platform_check_backends_match(snd_device, usecase->out_snd_device)) {
             snd_device = usecase->out_snd_device;
             if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)
                 snd_device = SND_DEVICE_OUT_HEADPHONES;
@@ -281,6 +287,53 @@ static snd_device_t us_get_output_snd_device(void)
 exit:
     ALOGD("%s: %s", __func__, platform_get_snd_device_name(snd_device));
     return snd_device;
+}
+
+static void us_select_rx_device(void)
+{
+    struct audio_usecase *usecase;
+    snd_device_t snd_device;
+
+    usecase = get_usecase_from_list(us->adev, USECASE_AUDIO_ULTRASOUND_RX);
+    if (!usecase)
+        return;
+
+    snd_device = us_get_output_snd_device();
+    if (snd_device == usecase->out_snd_device)
+        return;
+
+    disable_audio_route(us->adev, usecase);
+    disable_snd_device(us->adev, usecase->out_snd_device);
+    usecase->out_snd_device = snd_device;
+    enable_snd_device(us->adev, snd_device);
+    enable_audio_route(us->adev, usecase);
+}
+
+void us_set_device_connection(audio_devices_t device, bool connected)
+{
+    if (!us)
+        return;
+
+    if (device & (AUDIO_DEVICE_OUT_WIRED_HEADSET | AUDIO_DEVICE_OUT_WIRED_HEADPHONE))
+        us->headset_connected = connected;
+    else if (connected)
+        return;
+
+    if (us->state == ULTRASOUND_STATUS_STARTED)
+        us_select_rx_device();
+}
+
+void us_select_devices_pre(void)
+{
+    if (us && us->state == ULTRASOUND_STATUS_STARTED &&
+            !us->suspended && us->headset_connected)
+        us_suspend(1);
+}
+
+void us_select_devices_post(void)
+{
+    if (us && us->suspended && !us->headset_connected)
+        us_suspend(0);
 }
 
 void us_start(void)

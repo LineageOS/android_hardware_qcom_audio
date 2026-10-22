@@ -1885,10 +1885,6 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                 } else {
                     enable_snd_device(adev, derive_snd_device[usecase->id]);
                 }
-#ifdef ELLIPTIC_ULTRASOUND_ENABLED
-                if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX)
-                    us_suspend(0);
-#endif
             }
         }
 
@@ -2930,6 +2926,7 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         adev->last_logged_snd_device[uc_id][1] = in_snd_device;
     }
 
+    us_select_devices_pre();
 
     /*
      * Limitation: While in call, to do a device switch we need to disable
@@ -3092,6 +3089,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
         status = platform_switch_voice_call_usecase_route_post(adev->platform,
                                                                out_snd_device,
                                                                in_snd_device);
+
+    us_select_devices_post();
 
     if (is_btsco_device(out_snd_device, in_snd_device) || is_a2dp_device(out_snd_device)) {
          struct stream_in *in = adev_get_active_input(adev);
@@ -8963,6 +8962,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 adev->allow_afe_proxy_usage = false;
             }
         }
+        if (audio_is_output_device(device))
+            us_set_device_connection(device, true);
     }
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_DEVICE_DISCONNECT, value, sizeof(value));
@@ -8985,6 +8986,8 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 adev->allow_afe_proxy_usage = true;
             }
         }
+        if (audio_is_output_device(device))
+            us_set_device_connection(device, false);
     }
 
     audio_extn_qdsp_set_parameters(adev, parms);
