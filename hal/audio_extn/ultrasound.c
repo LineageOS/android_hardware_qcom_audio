@@ -255,31 +255,27 @@ static void stop_us(void)
 
 static snd_device_t us_get_output_snd_device(void)
 {
-    snd_device_t snd_device;
+    snd_device_t snd_device = SND_DEVICE_OUT_VOICE_HANDSET;
+    struct audio_usecase *usecase;
+    struct listnode *node;
 
     ALOGD("%s: enter", __func__);
 
     if (!us) {
-        ALOGE("%s: us is not ready, fallback to speaker!", __func__);
-        snd_device = SND_DEVICE_OUT_SPEAKER;
+        ALOGE("%s: us is not ready, fallback to handset!", __func__);
         goto exit;
     }
 
-    snd_device = platform_get_output_snd_device(us->adev->platform,
-                                                us->adev->primary_output,
-                                                USECASE_TYPE_MAX);
-    switch (snd_device) {
-        case SND_DEVICE_OUT_HANDSET:
-        case SND_DEVICE_OUT_VOICE_HANDSET:
-        case SND_DEVICE_OUT_VOICE_HANDSET_TMUS:
-        case SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET:
-        case SND_DEVICE_OUT_VOICE_HAC_HANDSET:
-        case SND_DEVICE_OUT_ANC_HANDSET:
-        case SND_DEVICE_OUT_VOIP_HANDSET:
-            break;
-        default:
-            snd_device = SND_DEVICE_OUT_SPEAKER;
-            break;
+    list_for_each(node, &us->adev->usecase_list) {
+        usecase = node_to_item(node, struct audio_usecase, list);
+        if (usecase->type == PCM_CAPTURE || usecase->out_snd_device == SND_DEVICE_NONE)
+            continue;
+        if (platform_check_backends_match(SND_DEVICE_OUT_VOICE_HANDSET,
+                                          usecase->out_snd_device)) {
+            snd_device = usecase->out_snd_device;
+            if (snd_device == SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES)
+                snd_device = SND_DEVICE_OUT_HEADPHONES;
+        }
     }
 
 exit:
