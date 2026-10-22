@@ -1834,24 +1834,6 @@ static void check_usecases_codec_backend(struct audio_device *adev,
                 /* Enable existing usecase on derived playback device */
                 derive_snd_device[usecase->id] = uc_derive_snd_device;
                 num_uc_to_switch++;
-#ifdef ELLIPTIC_ULTRASOUND_ENABLED
-                if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX) {
-                    switch (snd_device) {
-                        case SND_DEVICE_OUT_HANDSET:
-                        case SND_DEVICE_OUT_VOICE_HANDSET:
-                        case SND_DEVICE_OUT_VOICE_HANDSET_TMUS:
-                        case SND_DEVICE_OUT_VOICE_TTY_HCO_HANDSET:
-                        case SND_DEVICE_OUT_VOICE_HAC_HANDSET:
-                        case SND_DEVICE_OUT_ANC_HANDSET:
-                        case SND_DEVICE_OUT_VOIP_HANDSET:
-                            derive_snd_device[usecase->id] = snd_device;
-                            break;
-                        default:
-                            derive_snd_device[usecase->id] = SND_DEVICE_OUT_SPEAKER;
-                            break;
-                    }
-                }
-#endif
             }
         }
     }
