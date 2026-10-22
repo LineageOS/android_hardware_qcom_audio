@@ -10398,7 +10398,9 @@ static int adev_close(hw_device_t *device)
              audio_extn_spkr_prot_deinit();
         if (amplifier_close() != 0)
             ALOGE("Amplifier close failed");
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
         us_deinit();
+#endif
         audio_extn_battery_properties_listener_deinit();
         audio_extn_snd_mon_unregister_listener(adev);
         audio_extn_sound_trigger_deinit(adev);
@@ -10835,7 +10837,9 @@ static int adev_open(const hw_module_t *module, const char *name,
     if (amplifier_open(adev) != 0)
         ALOGE("Amplifier initialization failed");
 
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
     us_init(adev);
+#endif
 
     *device = &adev->device.common;
 
