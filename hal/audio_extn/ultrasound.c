@@ -40,7 +40,7 @@ static struct pcm_config pcm_config_us = {
     .channels = 1,
     .rate = 96000,
     .period_size = 1024,
-    .period_count = 2,
+    .period_count = 4,
     .format = PCM_FORMAT_S16_LE,
 };
 
