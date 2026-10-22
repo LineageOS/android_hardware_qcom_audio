@@ -318,13 +318,13 @@ void us_start(void)
     }
 
     tx_usecase->type = PCM_CAPTURE;
-    tx_usecase->in_snd_device = SND_DEVICE_IN_ULTRASOUND_MIC;
+    tx_usecase->in_snd_device = SND_DEVICE_IN_ULTRASOUND;
     tx_usecase->id = USECASE_AUDIO_ULTRASOUND_TX;
     list_init(&tx_usecase->device_list);
     reassign_device_list(&tx_usecase->device_list, AUDIO_DEVICE_IN_BUILTIN_MIC, "");
     list_add_tail(&us->adev->usecase_list, &tx_usecase->list);
 
-    enable_snd_device(us->adev, SND_DEVICE_IN_ULTRASOUND_MIC);
+    enable_snd_device(us->adev, SND_DEVICE_IN_ULTRASOUND);
     enable_audio_route(us->adev, tx_usecase);
     ALOGV("%s: Opening PCM capture device card_id(%d) device_id(%d)",
             __func__, us->adev->snd_card, tx_device_id);
