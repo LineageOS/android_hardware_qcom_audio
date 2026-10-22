@@ -51,6 +51,7 @@ struct ultrasound_device {
     int state;
     bool suspended;
     bool headset_connected;
+    struct stream_out rx_out;
     struct audio_device *adev;
 };
 
@@ -186,6 +187,17 @@ void us_init(struct audio_device *adev)
 
     us->adev = adev;
 
+    pthread_mutex_init(&us->rx_out.lock, (const pthread_mutexattr_t *) NULL);
+    pthread_mutex_init(&us->rx_out.pre_lock, (const pthread_mutexattr_t *) NULL);
+    list_init(&us->rx_out.device_list);
+    update_device_list(&us->rx_out.device_list, AUDIO_DEVICE_OUT_EARPIECE, "", true);
+    us->rx_out.dev = adev;
+    us->rx_out.sample_rate = pcm_config_us.rate;
+    us->rx_out.channel_mask = audio_channel_out_mask_from_count(pcm_config_us.channels);
+    us->rx_out.format = AUDIO_FORMAT_PCM_16_BIT;
+    us->rx_out.app_type_cfg.sample_rate = pcm_config_us.rate;
+    us->rx_out.app_type_cfg.bit_width = 16;
+
     us_cal_load();
 
 exit:
@@ -198,6 +210,9 @@ void us_deinit(void)
 
     if (us) {
         us_stop();
+        clear_devices(&us->rx_out.device_list);
+        pthread_mutex_destroy(&us->rx_out.lock);
+        pthread_mutex_destroy(&us->rx_out.pre_lock);
         free(us);
         us = NULL;
     }
@@ -382,7 +397,7 @@ void us_start(void)
     rx_usecase->type = PCM_PLAYBACK;
     rx_usecase->out_snd_device = us_get_output_snd_device();
     rx_usecase->id = USECASE_AUDIO_ULTRASOUND_RX;
-    rx_usecase->stream.out = us->adev->primary_output;
+    rx_usecase->stream.out = &us->rx_out;
     list_init(&rx_usecase->device_list);
     assign_devices(&rx_usecase->device_list, &us->adev->primary_output->device_list);
     list_add_tail(&us->adev->usecase_list, &rx_usecase->list);
