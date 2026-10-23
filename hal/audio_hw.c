@@ -1239,6 +1239,10 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_utils_send_app_type_cfg(adev, usecase);
     if (audio_extn_is_maxx_audio_enabled())
         audio_extn_ma_set_device(usecase);
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+    if (usecase->id != USECASE_AUDIO_ULTRASOUND_RX &&
+        usecase->id != USECASE_AUDIO_ULTRASOUND_TX)
+#endif
     audio_extn_utils_send_audio_calibration(adev, usecase);
     if ((usecase->type == PCM_PLAYBACK) && is_offload_usecase(usecase->id)) {
         out = usecase->stream.out;
