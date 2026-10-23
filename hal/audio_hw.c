@@ -2702,8 +2702,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 #ifdef ELLIPTIC_ULTRASOUND_ENABLED
     if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX ||
         usecase->id == USECASE_AUDIO_ULTRASOUND_TX) {
-        ALOGE("%s: Ultrasound usecase(%d)", __func__, uc_id);
-        return -EINVAL;
+        ALOGD("%s: Ultrasound usecase(%d)", __func__, uc_id);
+        if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX)
+            us_select_rx_device();
+        return 0;
     }
 #endif
 

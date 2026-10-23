@@ -305,7 +305,7 @@ exit:
     return snd_device;
 }
 
-static void us_select_rx_device(void)
+void us_select_rx_device(void)
 {
     struct audio_usecase *usecase;
     snd_device_t snd_device;
