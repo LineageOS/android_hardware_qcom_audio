@@ -45,6 +45,7 @@
 #include "acdb.h"
 #include "voice_extn.h"
 #include "edid.h"
+#include "ultrasound.h"
 #include "sound/compress_params.h"
 #include "sound/msmcal-hwdep.h"
 #include <dirent.h>
@@ -9928,6 +9929,10 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             struct audio_usecase *uc;
             uc = node_to_item(node, struct audio_usecase, list);
             struct stream_out *out = (struct stream_out*) uc->stream.out;
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+            if (uc->id == USECASE_AUDIO_ULTRASOUND_RX)
+                continue;
+#endif
             if (uc->type == PCM_PLAYBACK && out && usecase != uc) {
                 unsigned int out_channels = audio_channel_count_from_out_mask(out->channel_mask);
 
@@ -10189,6 +10194,12 @@ static bool platform_check_codec_backend_cfg(struct audio_device* adev,
             display_port_updated = true;
         }
     }
+
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+    if (us_check_and_set_codec_backend_cfg(usecase, snd_device, &sample_rate, &bit_width))
+        ALOGD("%s:becf: afe: set BE sample %d, bit_width %d for ultrasound",
+              __func__, sample_rate, bit_width);
+#endif
 
     ALOGI("%s:becf: afe: Codec selected backend: %d updated bit width: %d and sample rate: %d",
           __func__, backend_idx , bit_width, sample_rate);

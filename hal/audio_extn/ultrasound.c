@@ -195,6 +195,7 @@ void us_init(struct audio_device *adev)
     us->rx_out.sample_rate = pcm_config_us.rate;
     us->rx_out.channel_mask = audio_channel_out_mask_from_count(pcm_config_us.channels);
     us->rx_out.format = AUDIO_FORMAT_PCM_16_BIT;
+    us->rx_out.bit_width = 24;
     us->rx_out.app_type_cfg.sample_rate = pcm_config_us.rate;
     us->rx_out.app_type_cfg.bit_width = 16;
 
@@ -336,6 +337,34 @@ void us_set_device_connection(audio_devices_t device, bool connected)
 
     if (us->state == ULTRASOUND_STATUS_STARTED)
         us_select_rx_device();
+}
+
+bool us_check_and_set_codec_backend_cfg(struct audio_usecase *usecase,
+                                        snd_device_t snd_device,
+                                        unsigned int *sample_rate,
+                                        unsigned int *bit_width)
+{
+    struct audio_usecase *rx_usecase;
+    bool match = false;
+
+    if (!us || !usecase || snd_device == SND_DEVICE_OUT_SPEAKER)
+        return false;
+
+    if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX) {
+        match = true;
+    } else if (us->state == ULTRASOUND_STATUS_STARTED) {
+        rx_usecase = get_usecase_from_list(us->adev, USECASE_AUDIO_ULTRASOUND_RX);
+        match = rx_usecase &&
+                (rx_usecase->out_snd_device == snd_device ||
+                 platform_check_backends_match(rx_usecase->out_snd_device, snd_device));
+    }
+
+    if (match && usecase->type != PCM_CAPTURE) {
+        *sample_rate = us->rx_out.sample_rate;
+        *bit_width = us->rx_out.bit_width;
+    }
+
+    return match;
 }
 
 void us_select_devices_pre(void)

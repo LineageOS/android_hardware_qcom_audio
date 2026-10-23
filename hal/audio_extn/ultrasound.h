@@ -34,6 +34,10 @@ void us_start(void);
 void us_stop(void);
 void us_suspend(int val);
 void us_set_device_connection(audio_devices_t device, bool connected);
+bool us_check_and_set_codec_backend_cfg(struct audio_usecase *usecase,
+                                        snd_device_t snd_device,
+                                        unsigned int *sample_rate,
+                                        unsigned int *bit_width);
 void us_select_devices_pre(void);
 void us_select_devices_post(void);
 #endif
