@@ -519,6 +519,8 @@ int compress_voip_close_output_stream(struct audio_stream *stream)
     if (voip_data.out_stream_count > 0) {
         voip_data.out_stream_count--;
         ret = voip_stop_call(adev);
+        if (voip_data.pcm_rx)
+            pcm_stop(voip_data.pcm_rx);
         voip_data.out_stream = NULL;
         out->pcm = NULL;
     }
@@ -538,6 +540,8 @@ int compress_voip_close_input_stream(struct audio_stream *stream)
     if(voip_data.in_stream_count > 0) {
        voip_data.in_stream_count--;
        status = voip_stop_call(adev);
+       if (voip_data.pcm_tx)
+           pcm_stop(voip_data.pcm_tx);
        in->pcm = NULL;
     }
 
