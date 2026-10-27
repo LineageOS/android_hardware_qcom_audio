@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0a7c5849_9cfc03ee",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32442
+      },
+      "writtenOn": "2026-10-27T11:32:22Z",
+      "side": 1,
+      "message": "The chain builds/boots with ultrasound sensor working fine.",
+      "revId": "9ab31ee5027f30b86684ce4b4ecd46539293bd93",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
