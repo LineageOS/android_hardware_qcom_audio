@@ -91,6 +91,7 @@
 #include "sound/asound.h"
 
 #include "audio_amplifier.h"
+#include "ultrasound.h"
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
@@ -1364,6 +1365,8 @@ int enable_snd_device(struct audio_device *adev,
         return -EINVAL;
     }
 
+    audio_extn_ultrasound_pre_enable_snd_device(adev, snd_device);
+
     adev->snd_dev_ref_cnt[snd_device]++;
 
     if ((adev->snd_dev_ref_cnt[snd_device] > 1) &&
@@ -1586,6 +1589,8 @@ int disable_snd_device(struct audio_device *adev,
             }
         }
     }
+
+    audio_extn_ultrasound_update_routing(adev);
 
     return 0;
 }
@@ -2985,6 +2990,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
 
     usecase->in_snd_device = in_snd_device;
     usecase->out_snd_device = out_snd_device;
+
+    audio_extn_ultrasound_update_routing(adev);
 
     audio_extn_utils_update_stream_app_type_cfg_for_usecase(adev,
                                                             usecase);
@@ -9037,6 +9044,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
     }
 
     amplifier_set_parameters(parms);
+    audio_extn_ultrasound_set_parameters(adev, parms);
     audio_extn_set_parameters(adev, parms);
 done:
     str_parms_destroy(parms);
@@ -9168,6 +9176,7 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
         if (amplifier_set_mode(mode) != 0)
             ALOGE("Failed setting amplifier mode");
         adev->mode = mode;
+        audio_extn_ultrasound_update_routing(adev);
         if (mode == AUDIO_MODE_CALL_SCREEN) {
             adev->current_call_output = adev->primary_output;
             voice_start_call(adev);
@@ -10342,6 +10351,7 @@ static int adev_close(hw_device_t *device)
              audio_extn_spkr_prot_deinit();
         if (amplifier_close() != 0)
             ALOGE("Amplifier close failed");
+        audio_extn_ultrasound_deinit();
         audio_extn_battery_properties_listener_deinit();
         audio_extn_snd_mon_unregister_listener(adev);
         audio_extn_sound_trigger_deinit(adev);
@@ -10776,6 +10786,9 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     if (amplifier_open(adev) != 0)
         ALOGE("Amplifier initialization failed");
+
+    if (audio_extn_ultrasound_init(adev) != 0)
+        ALOGE("Ultrasound initialization failed");
 
     *device = &adev->device.common;
 
