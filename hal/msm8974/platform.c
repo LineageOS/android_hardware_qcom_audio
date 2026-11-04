@@ -2829,6 +2829,9 @@ const char * platform_get_snd_card_name_for_acdb_loader(const char *snd_card_nam
 
 static int platform_acdb_init(void *platform)
 {
+#ifdef INSTANCE_ID_ENABLED
+    static bool acdb_instance_id_support = false;
+#endif
     struct platform_data *my_data = (struct platform_data *)platform;
     char *cvd_version = NULL;
     const char *snd_card_name;
@@ -2855,6 +2858,10 @@ static int platform_acdb_init(void *platform)
     my_data->acdb_init_data.cvd_version = cvd_version;
     my_data->acdb_init_data.snd_card_name = strdup(snd_card_name);
     my_data->acdb_init_data.meta_key_list = &my_data->acdb_meta_key_list;
+#ifdef INSTANCE_ID_ENABLED
+    /* Let the ACDB loader report whether the ACDB files use instance IDs */
+    my_data->acdb_init_data.is_instance_id_supported = &acdb_instance_id_support;
+#endif
     if (my_data->acdb_init_v4) {
         result = my_data->acdb_init_v4(&my_data->acdb_init_data, ACDB_LOADER_INIT_V4);
     } else if (my_data->acdb_init_v3) {
@@ -2879,6 +2886,16 @@ cleanup:
     if (!result) {
         my_data->is_acdb_initialized = true;
         ALOGD("ACDB initialized");
+#ifdef INSTANCE_ID_ENABLED
+        /*
+         * The kernel packs calibration differently when the ACDB data carries
+         * instance IDs; tell it what the loader found, like the stock HAL.
+         */
+        ALOGD("%s: ACDB Instance ID support after ACDB init:%d", __func__,
+              acdb_instance_id_support);
+        check_and_set_instance_id_support(my_data->adev->mixer,
+                                          acdb_instance_id_support);
+#endif
         audio_hwdep_send_cal(my_data);
     } else {
         my_data->is_acdb_initialized = false;

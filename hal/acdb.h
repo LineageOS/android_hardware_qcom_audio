@@ -89,4 +89,8 @@ int acdb_init(int);
 int acdb_init_v2(struct mixer *);
 
 int acdb_set_metainfo_key(void *platform, char *name, int key);
+#ifdef INSTANCE_ID_ENABLED
+struct mixer;
+int check_and_set_instance_id_support(struct mixer *mixer, bool acdb_support);
+#endif
 #endif //ACDB_H
