@@ -75,6 +75,11 @@ target_board_platform_cc_library_shared {
         "true": ["-DSOUND_TRIGGER_ENABLED"],
         default: [],
     }) + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "sdm710": [
+            "-DPLATFORM_SDM710",
+            "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=8",
+            "-DSOUND_TRIGGER_PLATFORM_NAME=sdm710",
+        ],
         "sdm845": [
             "-DPLATFORM_SDM845",
             "-DMAX_TARGET_SPECIFIC_CHANNEL_CNT=8",
